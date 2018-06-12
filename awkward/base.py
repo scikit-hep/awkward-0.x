@@ -28,12 +28,5 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from awkward.indexed import indexedarray, byteindexedarray
-# from awkward.masked import maskedarray
-# from awkward.chunked import chunkedarray
-# from awkward.jagged import jaggedarray
-# from awkward.table import tablearray
-# from awkward.virtual import virtualarray
-
-# convenient access to the version number
-from awkward.version import __version__
+class AwkwardArray(object):
+    chartype = numpy.dtype(numpy.uint8)
