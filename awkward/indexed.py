@@ -99,9 +99,21 @@ class byteindexedarray(indexedarray):
             return numpy.frombuffer(self._content, dtype=AwkwardArray.chartype)[starts : starts + self._dtype.itemsize].view(self._dtype)[0]
 
         else:
-            out = numpy.empty(len(starts), dtype=self._dtype)
-            to = numpy.arange(0, len(starts) * self._dtype.itemsize, self._dtype.itemsize)
-            if len(out) != 0:
-                for offset in range(self._dtype.itemsize):
-                    numpy.frombuffer(out, dtype=AwkwardArray.chartype, offset=offset)[to] = numpy.frombuffer(self._content, dtype=AwkwardArray.chartype, offset=offset)[starts]
-            return out
+            if len(starts) == 0:
+                return numpy.empty(0, dtype=self._dtype)
+
+            else:
+                out = numpy.empty(len(starts), dtype=self._dtype)
+
+                srcidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.indextype)
+                srcidx[::self._dtype.itemsize] = starts
+                for offset in range(1, self._dtype.itemsize):
+                    srcidx[offset::self._dtype.itemsize] = srcidx[::self._dtype.itemsize] + offset
+                
+                dstidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.indextype)
+                dstidx[::self._dtype.itemsize] = numpy.arange(0, len(starts) * self._dtype.itemsize, self._dtype.itemsize)
+                for offset in range(1, self._dtype.itemsize):
+                    dstidx[offset::self._dtype.itemsize] = dstidx[::self._dtype.itemsize] + offset
+
+                numpy.frombuffer(out, dtype=AwkwardArray.chartype)[dstidx] = numpy.frombuffer(self._content, dtype=AwkwardArray.chartype)[srcidx]
+                return out
