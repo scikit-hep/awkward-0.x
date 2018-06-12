@@ -28,13 +28,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from awkward.indexed import IndexedArray, ByteIndexedArray
-# from awkward.masked import MaskedArray, BitMaskedArray
-# from awkward.chunked import ChunkedArray
-# from awkward.jagged import JaggedArray
-# from awkward.table import Table, LazyTable
-# from awkward.virtual import VirtualArray
-# from awkward.lazy import LazyArray
+import unittest
 
-# convenient access to the version number
-from awkward.version import __version__
+import numpy
+
+from awkward import *
+
+class TestIndexed(unittest.TestCase):
+    def runTest(self):
+        pass
+
+    def test_whatever(self):
+        print("hello")

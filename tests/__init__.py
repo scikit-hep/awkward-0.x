@@ -27,14 +27,3 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-from awkward.indexed import IndexedArray, ByteIndexedArray
-# from awkward.masked import MaskedArray, BitMaskedArray
-# from awkward.chunked import ChunkedArray
-# from awkward.jagged import JaggedArray
-# from awkward.table import Table, LazyTable
-# from awkward.virtual import VirtualArray
-# from awkward.lazy import LazyArray
-
-# convenient access to the version number
-from awkward.version import __version__

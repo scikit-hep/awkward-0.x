@@ -30,9 +30,12 @@
 
 import numpy
 
-import awkward.base
+# import awkward.base
 
-class indexedarray(AwkwardArray):
+class AwkwardArray(object):
+    chartype = numpy.dtype(numpy.uint8)
+
+class IndexedArray(AwkwardArray):
     indextype = numpy.dtype(numpy.int64)
 
     def __init__(self, index, content):
@@ -67,9 +70,9 @@ class indexedarray(AwkwardArray):
     def __getitem__(self, where):
         return self._content[self._index[where]]
 
-class byteindexedarray(indexedarray):
+class ByteIndexedArray(IndexedArray):
     def __init__(self, index, content, dtype):
-        super(byteindexedarray, self).__init__(index, content)
+        super(ByteIndexedArray, self).__init__(index, content)
         self.dtype = dtype
 
     @property
