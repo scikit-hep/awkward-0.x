@@ -1,0 +1,36 @@
+language: python
+
+os:
+  - linux
+
+python:
+  - 2.7
+  - 3.4
+  - 3.5
+  - 3.6
+  - pypy2.7-5.10.0
+  - pypy3.5
+
+addons:
+  apt:
+    packages:
+      - python-setuptools
+
+script:
+  python setup.py test
+
+install:
+  - pip install --upgrade setuptools_scm
+
+notifications:
+  slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
+
+deploy:
+  provider: pypi
+  user: pivarski
+  password:
+    secure: "ikLa/MRKf61oxq8v5TzzttHGgmc0YWwqAiQ2ivWrdEowRY3AB7jcviPQJ5jcEV8ecDitL8kOjrXyg+SHnWBrWQjkSFqxO5sNsVcLVkhp6DUW0JfyPCJYqxYMyqHSw9/sY9VHBHZIls5iJbTsmT81Bh3t0Bv3YP3eBVhaVr5L+fnc8QsJ8H5zm4qpNMxof80QPs7rxSex8CfVqFiBmKtm1QBE0m6FxwqNM+Eq1AASEb+pXRQ8zYsvcCX5zoG3URVKqv9Atq36SxdMPrUyI0EzB4LRTZH9u8qRfUBONOavci76EcNRnnItCt0TQOHwfeREm+133cJzcZ/dvZ399q0y5r1UVOcxeq1tQt9WT6SqhmaMlgixmZy/h1X0bIpdR46tSNDL/N5Qk+oXOEltBFoOfR4AwGrx3PSkQQ9xHRzCjZ+/ZwIkG0S7CP/wvav9keOv5kaPmYoSo7B8dWXkVAhCh3d0VVqstJo+YRgIqNys9hDqK3NB1N6iK6vcZXm/2ki2hpjOBFr8tScJstLeZQEXIYUXuiTBsFI9pGiyLfm6+dCwg2wtkNE7ZPibalTGqOFysUI+kM3UmZvvbTKefqyXzSR/TCLRhbISr0pPQXaY2vHSZBU1jtZAs5CxAB2orT5lmI4DSBpKvjfEuaoXAfq13C1iaPCXuVcun/XJxp8A1TE="
+  on:
+    tags: true
+    branch: master
+    condition: "$TRAVIS_PYTHON_VERSION = 2.7"
