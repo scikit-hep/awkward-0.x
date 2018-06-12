@@ -30,12 +30,9 @@
 
 import numpy
 
-# import awkward.base
+import awkward.base
 
-class AwkwardArray(object):
-    chartype = numpy.dtype(numpy.uint8)
-
-class IndexedArray(AwkwardArray):
+class IndexedArray(awkward.base.AwkwardArray):
     indextype = numpy.dtype(numpy.int64)
 
     def __init__(self, index, content):
@@ -48,7 +45,7 @@ class IndexedArray(AwkwardArray):
 
     @index.setter
     def index(self, value):
-        if not isinstance(value, AwkwardArray):
+        if not isinstance(value, awkward.base.AwkwardArray):
             value = numpy.array(value, dtype=getattr(value, "dtype", self.indextype), copy=False)
             if not issubclass(value.dtype.type, numpy.integer):
                 raise TypeError("index must have integer dtype")
@@ -63,7 +60,7 @@ class IndexedArray(AwkwardArray):
 
     @content.setter
     def content(self, value):
-        if not isinstance(value, AwkwardArray):
+        if not isinstance(value, awkward.base.AwkwardArray):
             value = numpy.array(value, copy=False).reshape(-1)
         self._content = value
 
@@ -99,7 +96,7 @@ class ByteIndexedArray(IndexedArray):
         starts = self._index[where]
 
         if len(starts.shape) == 0:
-            return numpy.frombuffer(self._content, dtype=AwkwardArray.chartype)[starts : starts + self._dtype.itemsize].view(self._dtype)[0]
+            return numpy.frombuffer(self._content, dtype=awkward.base.AwkwardArray.chartype)[starts : starts + self._dtype.itemsize].view(self._dtype)[0]
 
         else:
             if len(starts) == 0:
@@ -118,5 +115,5 @@ class ByteIndexedArray(IndexedArray):
                 for offset in range(1, self._dtype.itemsize):
                     dstidx[offset::self._dtype.itemsize] = dstidx[::self._dtype.itemsize] + offset
 
-                numpy.frombuffer(out, dtype=AwkwardArray.chartype)[dstidx] = numpy.frombuffer(self._content, dtype=AwkwardArray.chartype)[srcidx]
+                numpy.frombuffer(out, dtype=awkward.base.AwkwardArray.chartype)[dstidx] = numpy.frombuffer(self._content, dtype=awkward.base.AwkwardArray.chartype)[srcidx]
                 return out
