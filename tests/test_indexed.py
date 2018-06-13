@@ -79,7 +79,7 @@ class TestIndexed(unittest.TestCase):
         self.assertEqual(a[[True, False, True, False]].tolist(), [3, 1])
 
     def test_byteindexed_get5byte(self):
-        a = ByteIndexedArray([15, 10, 5, 1], b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x00\x03\x00\x00\x00\0x00", numpy.int32)
+        a = ByteIndexedArray([15, 10, 5, 1], b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x00\x03\x00\x00\x00\x00", numpy.int32)
         self.assertEqual([a[i] for i in range(len(a))], [3, 2, 1, 0])
         self.assertEqual(a[:].tolist(), [3, 2, 1, 0])
         self.assertEqual(a[[3, 2, 1, 0]].tolist(), [0, 1, 2, 3])
@@ -93,6 +93,10 @@ class TestIndexed(unittest.TestCase):
         a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4])
         a[0:2] = 999
         self.assertEqual(a.tolist(), [999.0, 999.0, 4.4, 999.0, 999.0, 4.4, 0.0])
+
+        a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4])
+        a[0:2] = 999, 314
+        self.assertEqual(a.tolist(), [999.0, 314.0, 4.4, 314.0, 314.0, 4.4, 0.0])
 
     def test_byteindexed_set(self):
         # HINT: if we pass a bytes literal into the ByteIndexedArray, this operation will change the
@@ -109,7 +113,45 @@ class TestIndexed(unittest.TestCase):
         self.assertEqual(a.content.tobytes(), b"\x00\x00\x00\x00{\x00\x00\x00{\x00\x00\x00\x03\x00\x00\x00")
         self.assertEqual(a.tolist(), [3, 123, 123, 0])
 
+        a = ByteIndexedArray([12, 8, 4, 0], numpy.array([0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0], dtype="u1").tobytes(), numpy.int32)
+        a[1:3] = 123, 125
+        self.assertEqual(a.content.tobytes(), b"\x00\x00\x00\x00}\x00\x00\x00{\x00\x00\x00\x03\x00\x00\x00")
+        self.assertEqual(a.tolist(), [3, 123, 125, 0])
+
         a = ByteIndexedArray([4, 12, 0, 8], numpy.array([0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0], dtype="u1").tobytes(), numpy.int32)
         a[1:3] = 123
         self.assertEqual(a.content.tobytes(), b"{\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00{\x00\x00\x00")
         self.assertEqual(a.tolist(), [1, 123, 123, 2])
+
+        a = ByteIndexedArray([4, 12, 0, 8], numpy.array([0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0], dtype="u1").tobytes(), numpy.int32)
+        a[1:3] = 123, 125
+        self.assertEqual(a.content.tobytes(), b"}\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00{\x00\x00\x00")
+        self.assertEqual(a.tolist(), [1, 123, 125, 2])
+
+    def test_byteindexed_set5byte(self):
+        # HINT: same deal. This is the intended behavior, by the way: ByteIndexedArrays are dangerous!
+
+        a = ByteIndexedArray([15, 10, 5, 1], numpy.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0], dtype="u1").tobytes(), numpy.int32)
+        a[1] = 123
+        self.assertEqual(a.content.tobytes(), b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00{\x00\x00\x00\x00\x03\x00\x00\x00\x00")
+        self.assertEqual(a.tolist(), [3, 123, 1, 0])
+
+        a = ByteIndexedArray([15, 10, 5, 1], numpy.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0], dtype="u1").tobytes(), numpy.int32)
+        a[1:3] = 123
+        self.assertEqual(a.content.tobytes(), b"\x00\x00\x00\x00\x00{\x00\x00\x00\x00{\x00\x00\x00\x00\x03\x00\x00\x00\x00")
+        self.assertEqual(a.tolist(), [3, 123, 123, 0])
+
+        a = ByteIndexedArray([15, 10, 5, 1], numpy.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0], dtype="u1").tobytes(), numpy.int32)
+        a[1:3] = 123, 125
+        self.assertEqual(a.content.tobytes(), b"\x00\x00\x00\x00\x00}\x00\x00\x00\x00{\x00\x00\x00\x00\x03\x00\x00\x00\x00")
+        self.assertEqual(a.tolist(), [3, 123, 125, 0])
+
+        a = ByteIndexedArray([5, 15, 1, 10], numpy.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0], dtype="u1").tobytes(), numpy.int32)
+        a[1:3] = 123
+        self.assertEqual(a.content.tobytes(), b"\x00{\x00\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x00{\x00\x00\x00\x00")
+        self.assertEqual(a.tolist(), [1, 123, 123, 2])
+
+        a = ByteIndexedArray([5, 15, 1, 10], numpy.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0], dtype="u1").tobytes(), numpy.int32)
+        a[1:3] = 123, 125
+        self.assertEqual(a.content.tobytes(), b"\x00}\x00\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x00{\x00\x00\x00\x00")
+        self.assertEqual(a.tolist(), [1, 123, 125, 2])
