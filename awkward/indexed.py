@@ -35,9 +35,10 @@ import awkward.base
 class IndexedArray(awkward.base.AwkwardArray):
     INDEXTYPE = numpy.dtype(numpy.int64)
 
-    def __init__(self, index, content):
+    def __init__(self, index, content, writeable=True):
         self.index = index
         self.content = content
+        self.writeable = writeable
 
     @property
     def index(self):
@@ -65,6 +66,14 @@ class IndexedArray(awkward.base.AwkwardArray):
         self._content = value
 
     @property
+    def writeable(self):
+        return self._writeable
+
+    @writeable.setter
+    def writeable(self, value):
+        self._writeable = bool(value)
+
+    @property
     def dtype(self):
         return self._content.dtype
 
@@ -79,11 +88,14 @@ class IndexedArray(awkward.base.AwkwardArray):
         return self._content[self._index[where]]
 
     def __setitem__(self, where, what):
+        if not self._writeable:
+            raise ValueError("assignment destination is read-only")
         self._content[self._index[where]] = what
 
 class ByteIndexedArray(IndexedArray):
-    def __init__(self, index, content, dtype):
-        super(ByteIndexedArray, self).__init__(index, content)
+    def __init__(self, index, content, dtype, writeable=True):
+        self._writeable = writeable
+        super(ByteIndexedArray, self).__init__(index, content, writeable=writeable)
         self.dtype = dtype
 
     @property
@@ -93,7 +105,16 @@ class ByteIndexedArray(IndexedArray):
     @content.setter
     def content(self, value):
         self._content = numpy.frombuffer(value, dtype=awkward.base.AwkwardArray.CHARTYPE)
-        self._content.flags.writeable = True
+        self._content.flags.writeable = self._writeable
+
+    @property
+    def writeable(self):
+        return self._writeable
+
+    @writeable.setter
+    def writeable(self, value):
+        self._writeable = bool(value)
+        self._content.flags.writeable = self._writeable
 
     @property
     def dtype(self):
@@ -131,12 +152,14 @@ class ByteIndexedArray(IndexedArray):
                 return hold
 
     def __setitem__(self, where, what):
+        if not self._writeable:
+            raise ValueError("assignment destination is read-only")
+
         starts = self._index[where]
 
         if len(starts.shape) == 0:
             pos, offset = divmod(starts, self._dtype.itemsize)
             buf = numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)
-            buf.flags.writeable = True
             buf[pos] = what
 
         else:
