@@ -31,4 +31,21 @@
 import numpy
 
 class AwkwardArray(object):
-    chartype = numpy.dtype(numpy.uint8)
+    CHARTYPE = numpy.dtype(numpy.uint8)
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i]
+
+    def __str__(self):
+        if len(self) <= 6:
+            return "[{0}]".format(", ".join(str(x) for x in self))
+        else:
+            return "[{0}, ..., {1}]".format(", ".join(str(x) for x in self[:3]), ", ".join(str(x) for x in self[-3:]))
+
+    def __repr__(self):
+        return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
+
+    def tolist(self):
+        return [x.tolist() if hasattr(x, "tolist") else x for x in self]
+

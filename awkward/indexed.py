@@ -33,7 +33,7 @@ import numpy
 import awkward.base
 
 class IndexedArray(awkward.base.AwkwardArray):
-    indextype = numpy.dtype(numpy.int64)
+    INDEXTYPE = numpy.dtype(numpy.int64)
 
     def __init__(self, index, content):
         self.index = index
@@ -46,7 +46,7 @@ class IndexedArray(awkward.base.AwkwardArray):
     @index.setter
     def index(self, value):
         if not isinstance(value, awkward.base.AwkwardArray):
-            value = numpy.array(value, dtype=getattr(value, "dtype", self.indextype), copy=False)
+            value = numpy.array(value, dtype=getattr(value, "dtype", self.INDEXTYPE), copy=False)
             if not issubclass(value.dtype.type, numpy.integer):
                 raise TypeError("index must have integer dtype")
             if len(value.shape) != 1:
@@ -61,11 +61,25 @@ class IndexedArray(awkward.base.AwkwardArray):
     @content.setter
     def content(self, value):
         if not isinstance(value, awkward.base.AwkwardArray):
-            value = numpy.array(value, copy=False).reshape(-1)
+            value = numpy.array(value, copy=False)
         self._content = value
+
+    @property
+    def dtype(self):
+        return self._content.dtype
+
+    @property
+    def shape(self):
+        return self._index.shape
+
+    def __len__(self):
+        return len(self._index)
 
     def __getitem__(self, where):
         return self._content[self._index[where]]
+
+    def __setitem__(self, where, what):
+        self._content[self._index[where]] = what
 
 class ByteIndexedArray(IndexedArray):
     def __init__(self, index, content, dtype):
@@ -78,11 +92,8 @@ class ByteIndexedArray(IndexedArray):
 
     @content.setter
     def content(self, value):
-        try:
-            memoryview(value)
-        except TypeError:
-            raise TypeError("content must support the buffer protocol")
-        self._content = value
+        self._content = numpy.frombuffer(value, dtype=awkward.base.AwkwardArray.CHARTYPE)
+        self._content.flags.writeable = True
 
     @property
     def dtype(self):
@@ -96,24 +107,51 @@ class ByteIndexedArray(IndexedArray):
         starts = self._index[where]
 
         if len(starts.shape) == 0:
-            return numpy.frombuffer(self._content, dtype=awkward.base.AwkwardArray.chartype)[starts : starts + self._dtype.itemsize].view(self._dtype)[0]
+            pos, offset = divmod(starts, self._dtype.itemsize)
+            return numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)[pos]
 
         else:
             if len(starts) == 0:
                 return numpy.empty(0, dtype=self._dtype)
 
             else:
-                out = numpy.empty(len(starts), dtype=self._dtype)
+                hold = numpy.empty(len(starts), dtype=self._dtype)
 
-                srcidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.indextype)
-                srcidx[::self._dtype.itemsize] = starts
+                contidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
+                contidx[::self._dtype.itemsize] = starts
                 for offset in range(1, self._dtype.itemsize):
-                    srcidx[offset::self._dtype.itemsize] = srcidx[::self._dtype.itemsize] + offset
+                    contidx[offset::self._dtype.itemsize] = contidx[::self._dtype.itemsize] + offset
                 
-                dstidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.indextype)
-                dstidx[::self._dtype.itemsize] = numpy.arange(0, len(starts) * self._dtype.itemsize, self._dtype.itemsize)
+                holdidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
+                holdidx[::self._dtype.itemsize] = numpy.arange(0, len(starts) * self._dtype.itemsize, self._dtype.itemsize)
                 for offset in range(1, self._dtype.itemsize):
-                    dstidx[offset::self._dtype.itemsize] = dstidx[::self._dtype.itemsize] + offset
+                    holdidx[offset::self._dtype.itemsize] = holdidx[::self._dtype.itemsize] + offset
 
-                numpy.frombuffer(out, dtype=awkward.base.AwkwardArray.chartype)[dstidx] = numpy.frombuffer(self._content, dtype=awkward.base.AwkwardArray.chartype)[srcidx]
-                return out
+                numpy.frombuffer(hold, dtype=awkward.base.AwkwardArray.CHARTYPE)[holdidx] = self._content[contidx]
+                return hold
+
+    def __setitem__(self, where, what):
+        starts = self._index[where]
+
+        if len(starts.shape) == 0:
+            pos, offset = divmod(starts, self._dtype.itemsize)
+            buf = numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)
+            buf.flags.writeable = True
+            buf[pos] = what
+
+        else:
+            if len(starts) != 0:
+                hold = numpy.empty(len(starts), dtype=self._dtype)
+                hold[:] = what
+
+                contidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
+                contidx[::self._dtype.itemsize] = starts
+                for offset in range(1, self._dtype.itemsize):
+                    contidx[offset::self._dtype.itemsize] = contidx[::self._dtype.itemsize] + offset
+                
+                holdidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
+                holdidx[::self._dtype.itemsize] = numpy.arange(0, len(starts) * self._dtype.itemsize, self._dtype.itemsize)
+                for offset in range(1, self._dtype.itemsize):
+                    holdidx[offset::self._dtype.itemsize] = holdidx[::self._dtype.itemsize] + offset
+
+                self._content[contidx] = numpy.frombuffer(hold, dtype=awkward.base.AwkwardArray.CHARTYPE)

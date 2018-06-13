@@ -32,6 +32,7 @@ Recommended dependencies:
 =========================
 
 - `Numba and LLVM <http://numba.pydata.org/numba-doc/latest/user/installing.html>`__ to JIT-compile functions (requires a particular version of LLVM, follow instructions)
+- `Dask <http://dask.pydata.org/en/latest/install.html>`__ to distribute work on arrays
 - `bcolz <http://bcolz.blosc.org/en/latest/install.html>`__ for on-the-fly compression
 - `pyarrow and Arrow-C++ <https://arrow.apache.org/docs/python/install.html>`__ for interoperability with other applications and fast Parquet reading/writing
 

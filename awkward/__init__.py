@@ -29,12 +29,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from awkward.indexed import IndexedArray, ByteIndexedArray
+# from awkward.jagged import JaggedArray, ByteJaggedArray
 # from awkward.masked import MaskedArray, BitMaskedArray
 # from awkward.chunked import ChunkedArray
-# from awkward.jagged import JaggedArray
-# from awkward.table import Table, LazyTable
 # from awkward.virtual import VirtualArray
 # from awkward.lazy import LazyArray
+# from awkward.table import Table
 
 # convenient access to the version number
 from awkward.version import __version__
