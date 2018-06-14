@@ -39,9 +39,9 @@ class AwkwardArray(object):
 
     def __str__(self):
         if len(self) <= 6:
-            return "[{0}]".format(", ".join(str(x) for x in self))
+            return "[{0}]".format(" ".join(str(x) for x in self))
         else:
-            return "[{0}, ..., {1}]".format(", ".join(str(x) for x in self[:3]), ", ".join(str(x) for x in self[-3:]))
+            return "[{0} ... {1}]".format(" ".join(str(x) for x in self[:3]), ", ".join(str(x) for x in self[-3:]))
 
     def __repr__(self):
         return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
