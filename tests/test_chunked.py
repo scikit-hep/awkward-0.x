@@ -64,7 +64,7 @@ class TestChunked(unittest.TestCase):
         a = ChunkedArray([])
         self.assertRaises(ValueError, lambda: a.dtype)
 
-    def test_chunked_get_index(self):
+    def test_chunked_get(self):
         a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
         self.assertEqual([a[i] for i in range(10)], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
@@ -121,5 +121,10 @@ class TestChunked(unittest.TestCase):
         self.assertEqual(a[:6:-2].tolist(), [9, 7])
         self.assertEqual(a[:7:-2].tolist(), [9])
         self.assertEqual(a[:8:-2].tolist(), [9])
+
+        self.assertEqual(a[[8, 6, 4, 5, 0]].tolist(), [8, 6, 4, 5, 0])
+        self.assertEqual(a[[6, 4, 5, 0]].tolist(), [6, 4, 5, 0])
+        self.assertEqual(a[[5, 6, 4, 5, 5, 5, 0]].tolist(), [5, 6, 4, 5, 5, 5, 0])
+        self.assertRaises(IndexError, lambda: a[[8, 6, 4, 5, 0, 99]])
 
 

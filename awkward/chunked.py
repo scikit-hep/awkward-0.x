@@ -117,6 +117,12 @@ class ChunkedArray(awkward.base.AwkwardArray):
             values.append(x)
         return "[{0}]".format(" ".join(str(x) for x in values))
 
+    def _chunkiterator(self):
+        sofar = 0
+        for chunk in self._chunks:
+            yield sofar, chunk
+            sofar += len(chunk)
+
     def _slicedchunks(self, start, stop, step):
         if step == 0:
             raise ValueError("slice step cannot be zero")
@@ -124,21 +130,16 @@ class ChunkedArray(awkward.base.AwkwardArray):
             step = 1
 
         slicedchunks = []
-        sofar = 0
         localstep = 1 if step > 0 else -1
-        for chunk in self._chunks:
+        for sofar, chunk in self._chunkiterator():
             if step > 0:
                 if start is None:
                     localstart = None
-                    pos = sofar
                 elif start < sofar:
                     localstart = None
-                    pos = sofar
                 elif sofar <= start < sofar + len(chunk):
                     localstart = start - sofar
-                    pos = start
                 else:
-                    sofar += len(chunk)
                     continue
 
                 if stop is None:
@@ -162,27 +163,29 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
                 if stop is None:
                     localstop = None
-                    pos = sofar
                 elif stop < sofar:
                     localstop = None
-                    pos = sofar
                 elif sofar <= stop < sofar + len(chunk):
                     localstop = stop - sofar
-                    pos = stop + 1
                 else:
-                    sofar += len(chunk)
                     continue
 
             slicedchunk = chunk[localstart:localstop:localstep]   # don't apply step here
             if len(slicedchunk) != 0:                             # avoid mixing empty list dtype
-                slicedchunks.append((pos, slicedchunk))
-
-            sofar += len(chunk)
+                slicedchunks.append(slicedchunk)
 
         if step > 0:
             return slicedchunks
         else:
             return list(reversed(slicedchunks))
+
+    def _zerolen(self):
+        try:
+            dtype = self.dtype
+        except ValueError:
+            return numpy.empty(0)
+        else:
+            return numpy.empty(0, dtype)
 
     def __getitem__(self, where):
         if not isinstance(where, tuple):
@@ -191,34 +194,27 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
         if isinstance(head, (numbers.Integral, numpy.integer)):
             if head < 0:
-                raise IndexError("negative indexes are not allowed because ChunkedArray cannot determine total length")
-            sofar = 0
-            for chunk in self._chunks:
+                raise IndexError("negative indexes are not allowed in ChunkedArray")
+            for sofar, chunk in self._chunkiterator():
                 if sofar <= head < sofar + len(chunk):
                     chunk = numpy.array(chunk, copy=False)
                     return chunk[(head - sofar,) + rest]
-                sofar += len(chunk)
-            raise IndexError("index {0} out of bounds for length {1}".format(head, sofar))
+            raise IndexError("index {0} out of bounds for length {1}".format(head, sofar + len(chunk)))
 
         elif isinstance(head, slice):
             start, stop, step = head.start, head.stop, head.step
             if (start is not None and start < 0) or (stop is not None and stop < 0):
-                raise IndexError("negative indexes are not allowed because ChunkedArray cannot determine total length")
+                raise IndexError("negative indexes are not allowed in ChunkedArray")
 
             slicedchunks = self._slicedchunks(start, stop, step)
 
             if len(slicedchunks) == 0:
-                try:
-                    dtype = self.dtype
-                except ValueError:
-                    return numpy.empty(0)
-                else:
-                    return numpy.empty(0, dtype)
+                return self._zerolen()
 
             if len(slicedchunks) == 1:
-                out = numpy.array(slicedchunks[0][1], copy=False)
+                out = numpy.array(slicedchunks[0], copy=False)
             else:
-                out = numpy.concatenate([slicedchunk for pos, slicedchunk in slicedchunks])
+                out = numpy.concatenate(slicedchunks)
 
             if step is None or step == 1:
                 return out
@@ -229,28 +225,32 @@ class ChunkedArray(awkward.base.AwkwardArray):
             head = numpy.array(head, copy=False)
             if len(head.shape) == 1 and issubclass(head.dtype.type, numpy.integer):
                 if len(head) == 0:
-                    try:
-                        dtype = self.dtype
-                    except ValueError:
-                        return numpy.empty(0)
-                    else:
-                        return numpy.empty(0, dtype)
+                    return self._zerolen()
 
                 if (head < 0).any():
-                    raise IndexError("negative indexes are not allowed because ChunkedArray cannot determine total length")
+                    raise IndexError("negative indexes are not allowed in ChunkedArray")
+                maxindex = head.max()
 
-                start, stop, step = head.min(), head.max(), None
-                slicedchunks = self._slicedchunks(start, stop, step)
+                # out = numpy.empty(len(head), dtype=self.dtype)
+                out = numpy.arange(len(head), dtype=self.dtype)
+                for sofar, chunk in self._chunkiterator():
+                    chunk = numpy.array(chunk, copy=False)
 
-                if stop - start > sum(len(x) for x in slicedchunks):
-                    raise IndexError("fancy index is out of bounds for ChunkedArray")
+                    indexes = head - sofar
+                    mask = (indexes >= 0)
+                    numpy.bitwise_and(mask, (indexes < len(chunk)), mask)
 
-                if len(slicedchunks) == 1:
-                    out = numpy.array(slicedchunks[0][1], copy=False)
-                else:
-                    out = numpy.concatenate([slicedchunk for pos, slicedchunk in slicedchunks])
+                    masked = indexes[mask]
+                    if len(masked) != 0:
+                        out[mask] = chunk[masked]
 
-                return out[head - start]
+                    if sofar + len(chunk) > maxindex:
+                        break
+
+                if maxindex >= sofar + len(chunk):
+                    raise IndexError("index {0} out of bounds for length {1}".format(maxindex, sofar + len(chunk)))
+
+                return out
 
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (numpy.bool, numpy.bool_)):
                 FOUR
