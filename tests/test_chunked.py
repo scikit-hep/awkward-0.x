@@ -28,23 +28,46 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import unittest
+
 import numpy
 
-class AwkwardArray(object):
-    CHARTYPE = numpy.dtype(numpy.uint8)
+from awkward import *
 
-    def __iter__(self):
-        for i in range(len(self)):
-            yield self[i]
+class TestChunked(unittest.TestCase):
+    def runTest(self):
+        pass
 
-    def __str__(self):
-        if len(self) <= 6:
-            return "[{0}]".format(" ".join(str(x) for x in self))
-        else:
-            return "[{0} ... {1}]".format(" ".join(str(x) for x in self[:3]), ", ".join(str(x) for x in self[-3:]))
+    def test_chunked_iteration(self):
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
-    def __repr__(self):
-        return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
+        a = ChunkedArray([[0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
-    def tolist(self):
-        return [x.tolist() if hasattr(x, "tolist") else x for x in self]
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9]])
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+        a = ChunkedArray([[]])
+        self.assertEqual(a.tolist(), [])
+
+        a = ChunkedArray([])
+        self.assertEqual(a.tolist(), [])
+
+    def test_chunked_dtype(self):
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        self.assertEqual(a.dtype, numpy.dtype(float))
+
+        a = ChunkedArray([[0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        self.assertEqual(a.dtype, numpy.dtype(int))
+
+        a = ChunkedArray([])
+        self.assertRaises(ValueError, lambda: a.dtype)
+
+    def test_chunked_get_index(self):
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        self.assertEqual([a[i] for i in range(10)], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        print [a[i : i + 1] for i in range(10)]
+
+
+

@@ -35,10 +35,11 @@ import numpy
 import awkward.base
 
 class ChunkedArray(awkward.base.AwkwardArray):
-    def __init__(self, chunks, writeable=True, appendable=True):
+    def __init__(self, chunks, writeable=True, appendable=True, appendsize=1024):
         self._appendable = appendable
         self.chunks = chunks
         self.writeable = writeable
+        self.appendsize = appendsize
 
     @property
     def chunks(self):
@@ -65,6 +66,26 @@ class ChunkedArray(awkward.base.AwkwardArray):
         self._writeable = bool(value)
 
     @property
+    def appendable(self):
+        return self._appendable
+
+    @appendable.setter
+    def appendable(self, value):
+        if value and not (hasattr(value, "append") and callable(value.append)):
+            raise TypeError("chunks must have an append method for appendable=True")
+        self._appendable = bool(value)
+
+    @property
+    def appendsize(self):
+        return self._appendsize
+
+    @appendsize.setter
+    def appendsize(self, value):
+        if not isinstance(value, (numbers.Integral, numpy.integer)) or value <= 0:
+            raise TypeError("appendsize must be a positive integer")
+        self._appendsize = value
+
+    @property
     def dtype(self):
         chunk = None
         for chunk in self._chunks:
@@ -72,16 +93,19 @@ class ChunkedArray(awkward.base.AwkwardArray):
         if chunk is None:
             raise ValueError("chunks is empty; cannot determine dtype")
         else:
-            return numpy.dtype((chunk.dtype, chunk.shape[1:]))
+            if not isinstance(chunk, awkward.base.AwkwardArray):
+                chunk = numpy.array(chunk, copy=False)
+            return numpy.dtype((chunk.dtype, getattr(chunk, "shape", (0,))[1:]))
+
+    @property
+    def dimension(self):
+        try:
+            return self.dtype.shape
+        except ValueError:
+            raise ValueError("chunks is empty; cannot determine dimension")
 
     def __iter__(self):
-        dtype = None
         for chunk in self._chunks:
-            if dtype is None:
-                dtype = chunk.dtype
-            elif dtype != chunk.dtype:
-                raise TypeError("chunk dtypes disagree: {0} versus {1}".format(dtype, chunk.dtype))
-
             for x in chunk:
                 yield x
 
@@ -104,6 +128,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
             sofar = 0
             for chunk in self._chunks:
                 if sofar <= head < sofar + len(chunk):
+                    chunk = numpy.array(chunk, copy=False)
                     return chunk[(head - sofar,) + rest]
                 sofar += len(chunk)
             raise IndexError("index {0} out of bounds for length {1}".format(head, sofar))
@@ -141,8 +166,9 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 try:
                     dtype = self.dtype
                 except ValueError:
-                    dtype = numpy.dtype(numpy.void)
-                return numpy.empty(0, dtype)
+                    return numpy.empty(0)
+                else:
+                    return numpy.empty(0, dtype)
 
             elif len(out) == 1:
                 return out[0]
