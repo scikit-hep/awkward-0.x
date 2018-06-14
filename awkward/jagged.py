@@ -28,6 +28,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import collections
+import itertools
+
 import numpy
 
 import awkward.base
@@ -53,10 +56,11 @@ class JaggedArray(awkward.base.AwkwardArray):
     def starts(self, value):
         if not isinstance(value, awkward.base.AwkwardArray):
             value = numpy.array(value, dtype=getattr(value, "dtype", self.INDEXTYPE), copy=False)
-            if not issubclass(value.dtype.type, numpy.integer):
-                raise TypeError("starts must have integer dtype")
-            if len(value.shape) != 1:
-                raise TypeError("starts must have 1-dimensional shape")
+
+        if not issubclass(value.dtype.type, numpy.integer):
+            raise TypeError("starts must have integer dtype")
+        if len(value.shape) != 1:
+            raise TypeError("starts must have 1-dimensional shape")
 
         self._starts = value
 
@@ -68,10 +72,11 @@ class JaggedArray(awkward.base.AwkwardArray):
     def stops(self, value):
         if not isinstance(value, awkward.base.AwkwardArray):
             value = numpy.array(value, dtype=getattr(value, "dtype", self.INDEXTYPE), copy=False)
-            if not issubclass(value.dtype.type, numpy.integer):
-                raise TypeError("stops must have integer dtype")
-            if len(value.shape) != 1:
-                raise TypeError("stops must have 1-dimensional shape")
+
+        if not issubclass(value.dtype.type, numpy.integer):
+            raise TypeError("stops must have integer dtype")
+        if len(value.shape) != 1:
+            raise TypeError("stops must have 1-dimensional shape")
 
         self._stops = value
 
@@ -101,17 +106,6 @@ class JaggedArray(awkward.base.AwkwardArray):
     def shape(self):
         return self._starts.shape
 
-    def __len__(self):
-        return len(self._starts)
-
-    def __getitem__(self, where):
-        starts = self._starts[where]
-        stops = self._stops[where]
-        if len(starts.shape) == 0 and len(stops.shape) == 0:
-            return self.content[starts:stops]
-        else:
-            return JaggedArray(starts, stops, self._content, writeable=self._writeable)
-
     def _offsets_aliased(self):
         return (self._starts.base is not None and self._stops.base is not None and self._starts.base is self._stops.base and
                 self._starts.ctypes.data == self._starts.base.ctypes.data and
@@ -133,6 +127,41 @@ class JaggedArray(awkward.base.AwkwardArray):
         if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
             raise TypeError("not all objects passed to JaggedArray.compatible are JaggedArrays")
         return all(numpy.array_equal(x._starts, jaggedarrays[0]._starts) and numpy.array_equal(x._stops, jaggedarrays[0]._stops) for x in jaggedarrays[1:])
+
+    def __len__(self):
+        return len(self._starts)
+
+    def __getitem__(self, where):
+        starts = self._starts[where]
+        stops = self._stops[where]
+        if len(starts.shape) == 0 and len(stops.shape) == 0:
+            return self.content[starts:stops]
+        else:
+            return JaggedArray(starts, stops, self._content, writeable=self._writeable)
+
+    def __setitem__(self, where, what):
+        if not self._writeable:
+            raise ValueError("assignment destination is read-only")
+
+        starts = self._starts[where]
+        stops = self._stops[where]
+
+        if len(starts.shape) == 0 and len(stops.shape) == 0:
+            self._content[starts:stops] = what
+
+        elif isinstance(what, collections.Sequence) and len(what) == 1:
+            for start, stop in itertools.izip(starts, stop):
+                self._content[start:stop] = what[0]
+
+        elif isinstance(what, collections.Sequence):
+            if len(what) != len(starts):
+                raise ValueError("cannot copy sequence with size {0} to array axis with dimension {1}".format(len(what), len(starts)))
+            for which, start, stop in itertools.izip(what, starts, stop):
+                self._content[start:stop] = which
+
+        else:
+            for start, stop in itertools.izip(starts, stops):
+                self._content[start:stop] = what
 
 class ByteJaggedArray(JaggedArray):
     pass

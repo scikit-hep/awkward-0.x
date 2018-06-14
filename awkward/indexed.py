@@ -48,10 +48,11 @@ class IndexedArray(awkward.base.AwkwardArray):
     def index(self, value):
         if not isinstance(value, awkward.base.AwkwardArray):
             value = numpy.array(value, dtype=getattr(value, "dtype", self.INDEXTYPE), copy=False)
-            if not issubclass(value.dtype.type, numpy.integer):
-                raise TypeError("index must have integer dtype")
-            if len(value.shape) != 1:
-                raise TypeError("index must have 1-dimensional shape")
+
+        if not issubclass(value.dtype.type, numpy.integer):
+            raise TypeError("index must have integer dtype")
+        if len(value.shape) != 1:
+            raise TypeError("index must have 1-dimensional shape")
 
         self._index = value
 
