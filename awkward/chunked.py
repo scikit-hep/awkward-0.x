@@ -123,7 +123,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
             yield sofar, chunk
             sofar += len(chunk)
 
-    def _slicedchunks(self, start, stop, step):
+    def _slicedchunks(self, start, stop, step, tail):
         if step == 0:
             raise ValueError("slice step cannot be zero")
         elif step is None:
@@ -132,6 +132,9 @@ class ChunkedArray(awkward.base.AwkwardArray):
         slicedchunks = []
         localstep = 1 if step > 0 else -1
         for sofar, chunk in self._chunkiterator():
+            if len(chunk) == 0:
+                continue
+
             if step > 0:
                 if start is None:
                     localstart = None
@@ -170,8 +173,11 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 else:
                     continue
 
-            slicedchunk = chunk[localstart:localstop:localstep]   # don't apply step here
-            if len(slicedchunk) != 0:                             # avoid mixing empty list dtype
+            if not isinstance(chunk, awkward.base.AwkwardArray):
+                chunk = numpy.array(chunk, copy=False)
+
+            slicedchunk = chunk[(slice(localstart, localstop, localstep),) + tail]
+            if len(slicedchunk) != 0:
                 slicedchunks.append(slicedchunk)
 
         if step > 0:
@@ -190,15 +196,19 @@ class ChunkedArray(awkward.base.AwkwardArray):
     def __getitem__(self, where):
         if not isinstance(where, tuple):
             where = (where,)
-        head, rest = where[0], where[1:]
+        head, tail = where[0], where[1:]
 
         if isinstance(head, (numbers.Integral, numpy.integer)):
             if head < 0:
                 raise IndexError("negative indexes are not allowed in ChunkedArray")
+
             for sofar, chunk in self._chunkiterator():
                 if sofar <= head < sofar + len(chunk):
-                    chunk = numpy.array(chunk, copy=False)
-                    return chunk[(head - sofar,) + rest]
+                    if not isinstance(chunk, awkward.base.AwkwardArray):
+                        chunk = numpy.array(chunk, copy=False)
+
+                    return chunk[(head - sofar,) + tail]
+
             raise IndexError("index {0} out of bounds for length {1}".format(head, sofar + len(chunk)))
 
         elif isinstance(head, slice):
@@ -206,13 +216,13 @@ class ChunkedArray(awkward.base.AwkwardArray):
             if (start is not None and start < 0) or (stop is not None and stop < 0):
                 raise IndexError("negative indexes are not allowed in ChunkedArray")
 
-            slicedchunks = self._slicedchunks(start, stop, step)
+            slicedchunks = self._slicedchunks(start, stop, step, tail)
 
             if len(slicedchunks) == 0:
                 return self._zerolen()
 
             if len(slicedchunks) == 1:
-                out = numpy.array(slicedchunks[0], copy=False)
+                out = slicedchunks[0]
             else:
                 out = numpy.concatenate(slicedchunks)
 
@@ -231,9 +241,16 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     raise IndexError("negative indexes are not allowed in ChunkedArray")
                 maxindex = head.max()
 
-                out = numpy.empty(len(head), dtype=self.dtype)
+                out = None
                 for sofar, chunk in self._chunkiterator():
-                    chunk = numpy.array(chunk, copy=False)
+                    if len(chunk) == 0:
+                        continue
+
+                    if not isinstance(chunk, awkward.base.AwkwardArray):
+                        chunk = numpy.array(chunk, copy=False)
+
+                    if out is None:
+                        out = numpy.empty(len(head), dtype=numpy.dtype((chunk.dtype, chunk.shape[1:])))
 
                     indexes = head - sofar
                     mask = (indexes >= 0)
@@ -241,15 +258,14 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
                     masked = indexes[mask]
                     if len(masked) != 0:
-                        out[mask] = chunk[masked]
+                        out[(mask,) + tail] = chunk[(masked,) + tail]
 
                     if sofar + len(chunk) > maxindex:
                         break
 
                 if maxindex >= sofar + len(chunk):
                     raise IndexError("index {0} out of bounds for length {1}".format(maxindex, sofar + len(chunk)))
-
-                return out
+                return out[(slice(None),) + tail]
 
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (numpy.bool, numpy.bool_)):
                 numtrue = numpy.count_nonzero(head)
@@ -257,23 +273,32 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 if len(self._chunks) == len(head) == 0 or numtrue == 0:
                     return self._zerolen()
 
+                out = None
                 this = next = 0
-                out = numpy.empty(numtrue, dtype=self.dtype)
                 for sofar, chunk in self._chunkiterator():
-                    chunk = numpy.array(chunk, copy=False)
+                    if len(chunk) == 0:
+                        continue
+
+                    if not isinstance(chunk, awkward.base.AwkwardArray):
+                        chunk = numpy.array(chunk, copy=False)
+
+                    if out is None:
+                        out = numpy.empty(numtrue, dtype=numpy.dtype((chunk.dtype, chunk.shape[1:])))
+
                     submask = head[sofar : sofar + len(chunk)]
 
                     next += numpy.count_nonzero(submask)
-                    out[this:next] = chunk[submask]
+                    out[(slice(this, next),) + tail] = chunk[(submask,) + tail]
                     this = next
 
                 if len(head) != sofar + len(chunk):
                     raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(sofar + len(chunk), len(head)))
-
-                return out
+                return out[(slice(None),) + tail]
 
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
+
+
 
 class PartitionedArray(ChunkedArray):
     pass

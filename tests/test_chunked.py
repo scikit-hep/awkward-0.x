@@ -132,3 +132,20 @@ class TestChunked(unittest.TestCase):
         self.assertEqual(a[[True, True, True, True, True, True, True, True, True, True]].tolist(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
         self.assertRaises(IndexError, lambda: a[[True, True, True, True, True, True, True, True, True, True, True]])
         self.assertRaises(IndexError, lambda: a[[True, True, True, True, True, True, True, True, True]])
+
+    def test_chunked_get2d(self):
+        a = ChunkedArray([[], [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]], [[5, 5], [6, 6]], [], [[7, 7], [8, 8], [9, 9]], []])
+        self.assertEqual([a[i].tolist() for i in range(10)], [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 7], [8, 8], [9, 9]])
+        self.assertEqual(a[4:].tolist(), [[4, 4], [5, 5], [6, 6], [7, 7], [8, 8], [9, 9]])
+        self.assertEqual(a[[8, 6, 4, 5, 0]].tolist(), [[8, 8], [6, 6], [4, 4], [5, 5], [0, 0]])
+        self.assertEqual(a[[True, False, True, False, True, False, True, False, True, False]].tolist(), [[0, 0], [2, 2], [4, 4], [6, 6], [8, 8]])
+
+        a = ChunkedArray([[], [[0.0, 0.0], [1.0, 1.1], [2.0, 2.2], [3.0, 3.3], [4.0, 4.4]], [[5.0, 5.5], [6.0, 6.6]], [], [[7.0, 7.7], [8.0, 8.8], [9.0, 9.9]], []])
+        self.assertEqual([a[i, 0].tolist() for i in range(10)], [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0])
+        self.assertEqual([a[i, 1].tolist() for i in range(10)], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[4:, 0].tolist(), [4.0, 5.0, 6.0, 7.0, 8.0, 9.0])
+        self.assertEqual(a[4:, 1].tolist(), [4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[[8, 6, 4, 5, 0], 0].tolist(), [8.0, 6.0, 4.0, 5.0, 0.0])
+        self.assertEqual(a[[8, 6, 4, 5, 0], 1].tolist(), [8.8, 6.6, 4.4, 5.5, 0.0])
+        self.assertEqual(a[[True, False, True, False, True, False, True, False, True, False], 0].tolist(), [0.0, 2.0, 4.0, 6.0, 8.0])
+        self.assertEqual(a[[True, False, True, False, True, False, True, False, True, False], 1].tolist(), [0.0, 2.2, 4.4, 6.6, 8.8])
