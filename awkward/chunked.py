@@ -231,8 +231,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     raise IndexError("negative indexes are not allowed in ChunkedArray")
                 maxindex = head.max()
 
-                # out = numpy.empty(len(head), dtype=self.dtype)
-                out = numpy.arange(len(head), dtype=self.dtype)
+                out = numpy.empty(len(head), dtype=self.dtype)
                 for sofar, chunk in self._chunkiterator():
                     chunk = numpy.array(chunk, copy=False)
 
@@ -253,7 +252,25 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 return out
 
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (numpy.bool, numpy.bool_)):
-                FOUR
+                numtrue = numpy.count_nonzero(head)
+
+                if len(self._chunks) == len(head) == 0 or numtrue == 0:
+                    return self._zerolen()
+
+                this = next = 0
+                out = numpy.empty(numtrue, dtype=self.dtype)
+                for sofar, chunk in self._chunkiterator():
+                    chunk = numpy.array(chunk, copy=False)
+                    submask = head[sofar : sofar + len(chunk)]
+
+                    next += numpy.count_nonzero(submask)
+                    out[this:next] = chunk[submask]
+                    this = next
+
+                if len(head) != sofar + len(chunk):
+                    raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(sofar + len(chunk), len(head)))
+
+                return out
 
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))

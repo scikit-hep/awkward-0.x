@@ -127,4 +127,8 @@ class TestChunked(unittest.TestCase):
         self.assertEqual(a[[5, 6, 4, 5, 5, 5, 0]].tolist(), [5, 6, 4, 5, 5, 5, 0])
         self.assertRaises(IndexError, lambda: a[[8, 6, 4, 5, 0, 99]])
 
-
+        self.assertEqual(a[[True, False, True, False, True, False, True, False, True, False]].tolist(), [0, 2, 4, 6, 8])
+        self.assertEqual(a[[False, False, False, False, False, False, False, False, False, False]].tolist(), [])
+        self.assertEqual(a[[True, True, True, True, True, True, True, True, True, True]].tolist(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        self.assertRaises(IndexError, lambda: a[[True, True, True, True, True, True, True, True, True, True, True]])
+        self.assertRaises(IndexError, lambda: a[[True, True, True, True, True, True, True, True, True]])
