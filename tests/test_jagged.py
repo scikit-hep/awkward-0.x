@@ -156,3 +156,39 @@ class TestJagged(unittest.TestCase):
         self.assertEqual([x.tolist() for x in a[[2, 0, 1, 2]]], [[4, 5], [1, 2, 3], [], [4, 5]])
         self.assertEqual([x.tolist() for x in a[[2, 0]]], [[4, 5], [1, 2, 3]])
         self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[1, 2, 3], []])
+
+    def test_bytejagged_set(self):
+        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
+        a[2] = 123
+        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff{\x00\x00\x00{\x00\x00\x00\xff")
+        self.assertEqual([a[i].tolist() for i in range(len(a))], [[1, 2, 3], [], [123, 123]])
+
+        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
+        a[2] = [123]
+        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff{\x00\x00\x00{\x00\x00\x00\xff")
+        self.assertEqual([a[i].tolist() for i in range(len(a))], [[1, 2, 3], [], [123, 123]])
+
+        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
+        a[2] = 123, 125
+        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff{\x00\x00\x00}\x00\x00\x00\xff")
+        self.assertEqual([a[i].tolist() for i in range(len(a))], [[1, 2, 3], [], [123, 125]])
+
+        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
+        a[:] = 123
+        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00{\x00\x00\x00{\x00\x00\x00{\x00\x00\x00\xff\xff{\x00\x00\x00{\x00\x00\x00\xff")
+        self.assertEqual([a[i].tolist() for i in range(len(a))], [[123, 123, 123], [], [123, 123]])
+
+        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
+        a[:] = [123]
+        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00{\x00\x00\x00{\x00\x00\x00{\x00\x00\x00\xff\xff{\x00\x00\x00{\x00\x00\x00\xff")
+        self.assertEqual([a[i].tolist() for i in range(len(a))], [[123, 123, 123], [], [123, 123]])
+
+        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
+        a[:] = [3, 2, 1, 5, 4]
+        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x03\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00\xff\xff\x05\x00\x00\x00\x04\x00\x00\x00\xff")
+        self.assertEqual([a[i].tolist() for i in range(len(a))], [[3, 2, 1], [], [5, 4]])
+
+        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
+        a[:] = JaggedArray.fromiterable([[3, 2, 1], [], [5, 4]])
+        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x03\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00\xff\xff\x05\x00\x00\x00\x04\x00\x00\x00\xff")
+        self.assertEqual([a[i].tolist() for i in range(len(a))], [[3, 2, 1], [], [5, 4]])

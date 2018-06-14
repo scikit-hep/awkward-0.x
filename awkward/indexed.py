@@ -165,19 +165,18 @@ class ByteIndexedArray(IndexedArray):
             buf = numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)
             buf[pos] = what
 
-        else:
-            if len(starts) != 0:
-                hold = numpy.empty(len(starts), dtype=self._dtype)
-                hold[:] = what
+        elif len(starts) != 0:
+            hold = numpy.empty(len(starts), dtype=self._dtype)
+            hold[:] = what
 
-                contidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
-                contidx[::self._dtype.itemsize] = starts
-                for offset in range(1, self._dtype.itemsize):
-                    contidx[offset::self._dtype.itemsize] = contidx[::self._dtype.itemsize] + offset
-                
-                holdidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
-                holdidx[::self._dtype.itemsize] = numpy.arange(0, len(starts) * self._dtype.itemsize, self._dtype.itemsize)
-                for offset in range(1, self._dtype.itemsize):
-                    holdidx[offset::self._dtype.itemsize] = holdidx[::self._dtype.itemsize] + offset
+            contidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
+            contidx[::self._dtype.itemsize] = starts
+            for offset in range(1, self._dtype.itemsize):
+                contidx[offset::self._dtype.itemsize] = contidx[::self._dtype.itemsize] + offset
 
-                self._content[contidx] = numpy.frombuffer(hold, dtype=self.CHARTYPE)
+            holdidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
+            holdidx[::self._dtype.itemsize] = numpy.arange(0, len(starts) * self._dtype.itemsize, self._dtype.itemsize)
+            for offset in range(1, self._dtype.itemsize):
+                holdidx[offset::self._dtype.itemsize] = holdidx[::self._dtype.itemsize] + offset
+
+            self._content[contidx] = numpy.frombuffer(hold, dtype=self.CHARTYPE)

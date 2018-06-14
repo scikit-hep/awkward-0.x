@@ -236,3 +236,47 @@ class ByteJaggedArray(JaggedArray):
             return self._content[starts:stops].view(self._dtype)
         else:
             return ByteJaggedArray(starts, stops, self._content, self._dtype, writeable=self._writeable)
+
+    def __setitem__(self, where, what):
+        if not self._writeable:
+            raise ValueError("assignment destination is read-only")
+
+        starts = self._starts[where]
+        stops = self._stops[where]
+
+        if len(starts.shape) == len(stops.shape) == 0:
+            startpos, offset = divmod(starts, self._dtype.itemsize)
+            stoppos = stops // self._dtype.itemsize
+            buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
+            buf[startpos:stoppos] = what
+
+        elif len(starts) != 0:
+            startposes, offsets = numpy.divmod(starts, self._dtype.itemsize)
+            stopposes = numpy.floor_divide(stops, self._dtype.itemsize)
+
+            if isinstance(what, (collections.Sequence, numpy.ndarray)) and len(what) == 1:
+                for startpos, stoppos, offset in itertools.izip(startposes, stopposes, offsets):
+                    buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
+                    buf[startpos:stoppos] = what
+
+            elif isinstance(what, (collections.Sequence, numpy.ndarray)):
+                if len(what) != (stopposes - startposes).sum():
+                    raise ValueError("cannot copy sequence with size {0} to ByteJaggedArray with dimension {1}".format(len(what), (stopposes - startposes).sum()))
+                this = next = 0
+                for startpos, stoppos, offset in itertools.izip(startposes, stopposes, offsets):
+                    next += stoppos - startpos
+                    buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
+                    buf[startpos:stoppos] = what[this:next]
+                    this = next
+
+            elif isinstance(what, JaggedArray):
+                if len(what) != len(startposes):
+                    raise ValueError("cannot copy JaggedArray with size {0} to ByteJaggedArray with dimension {1}".format(len(what), len(startposes)))
+                for which, startpos, stoppos, offset in itertools.izip(what, startposes, stopposes, offsets):
+                    buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
+                    buf[startpos:stoppos] = which
+
+            else:
+                for startpos, stoppos, offset in itertools.izip(startposes, stopposes, offsets):
+                    buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
+                    buf[startpos:stoppos] = what
