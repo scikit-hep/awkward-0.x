@@ -46,6 +46,10 @@ class TestJagged(unittest.TestCase):
         a = JaggedArray([5, 2, 99, -9], [8, 7, 99, 3], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         self.assertRaises(ValueError, lambda: a.offsets)
 
+    def test_jagged_iterable(self):
+        a = JaggedArray.fromiterable([[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
+        self.assertEqual([x.tolist() for x in a], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
+
     def test_jagged_compatible(self):
         a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         b = JaggedArray([0, 3, 3, 8, 10], [3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
@@ -128,3 +132,20 @@ class TestJagged(unittest.TestCase):
         a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         a[0:3] = JaggedArray.fromoffsets([0, 3, 3, 8], [101, 102, 103, 104, 105, 106, 107, 108])
         self.assertEqual([x.tolist() for x in a], [[101.0, 102.0, 103.0], [], [104.0, 105.0, 106.0, 107.0, 108.0], [8.8, 9.9], []])
+
+    def test_bytejagged_offsets(self):
+        a = ByteJaggedArray.fromoffsets([5, 17, 17, 25], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00\xff\xff", numpy.int32)
+        self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
+
+        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff\x04\x00\x00\x00\x05\x00\x00\x00\xff", numpy.int32)
+        self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
+
+    def test_bytejagged_iterable(self):
+        a = ByteJaggedArray.fromiterable([[1, 2, 3], [], [4, 5]])
+        self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])        
+        self.assertEqual(a.offsets.tolist(), [0, 24, 24, 40])
+        self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00")
+
+    # def test_bytejagged_get(self):
+    #     a = ByteJaggedArray
+

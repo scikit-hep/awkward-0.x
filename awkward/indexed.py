@@ -105,7 +105,7 @@ class ByteIndexedArray(IndexedArray):
 
     @content.setter
     def content(self, value):
-        self._content = numpy.frombuffer(value, dtype=awkward.base.AwkwardArray.CHARTYPE)
+        self._content = numpy.frombuffer(value, dtype=self.CHARTYPE)
         self._content.flags.writeable = self._writeable
 
     @property
@@ -129,8 +129,10 @@ class ByteIndexedArray(IndexedArray):
         starts = self._index[where]
 
         if len(starts.shape) == 0:
-            pos, offset = divmod(starts, self._dtype.itemsize)
-            return numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)[pos]
+            return self._content[starts : starts + self._dtype.itemsize].view(self._dtype)[0]
+            ### Note: the above is only 15% faster than
+            # pos, offset = divmod(starts, self._dtype.itemsize)
+            # return numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)[pos]
 
         else:
             if len(starts) == 0:
@@ -149,7 +151,7 @@ class ByteIndexedArray(IndexedArray):
                 for offset in range(1, self._dtype.itemsize):
                     holdidx[offset::self._dtype.itemsize] = holdidx[::self._dtype.itemsize] + offset
 
-                numpy.frombuffer(hold, dtype=awkward.base.AwkwardArray.CHARTYPE)[holdidx] = self._content[contidx]
+                numpy.frombuffer(hold, dtype=self.CHARTYPE)[holdidx] = self._content[contidx]
                 return hold
 
     def __setitem__(self, where, what):
@@ -178,4 +180,4 @@ class ByteIndexedArray(IndexedArray):
                 for offset in range(1, self._dtype.itemsize):
                     holdidx[offset::self._dtype.itemsize] = holdidx[::self._dtype.itemsize] + offset
 
-                self._content[contidx] = numpy.frombuffer(hold, dtype=awkward.base.AwkwardArray.CHARTYPE)
+                self._content[contidx] = numpy.frombuffer(hold, dtype=self.CHARTYPE)

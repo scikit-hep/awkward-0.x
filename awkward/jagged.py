@@ -42,6 +42,15 @@ class JaggedArray(awkward.base.AwkwardArray):
     def fromoffsets(cls, offsets, content, writeable=True):
         return cls(offsets[:-1], offsets[1:], content, writeable=writeable)
 
+    @classmethod
+    def fromiterable(cls, iterable, writeable=True):
+        offsets = [0]
+        content = []
+        for x in iterable:
+            offsets.append(offsets[-1] + len(x))
+            content.extend(x)
+        return cls(offsets[:-1], offsets[1:], content, writeable=writeable)
+
     def __init__(self, starts, stops, content, writeable=True):
         self.starts = starts
         self.stops = stops
@@ -134,7 +143,7 @@ class JaggedArray(awkward.base.AwkwardArray):
     def __getitem__(self, where):
         starts = self._starts[where]
         stops = self._stops[where]
-        if len(starts.shape) == 0 and len(stops.shape) == 0:
+        if len(starts.shape) == len(stops.shape) == 0:
             return self.content[starts:stops]
         else:
             return JaggedArray(starts, stops, self._content, writeable=self._writeable)
@@ -146,7 +155,7 @@ class JaggedArray(awkward.base.AwkwardArray):
         starts = self._starts[where]
         stops = self._stops[where]
 
-        if len(starts.shape) == 0 and len(stops.shape) == 0:
+        if len(starts.shape) == len(stops.shape) == 0:
             self._content[starts:stops] = what
 
         elif isinstance(what, (collections.Sequence, numpy.ndarray)) and len(what) == 1:
@@ -173,4 +182,57 @@ class JaggedArray(awkward.base.AwkwardArray):
                 self._content[start:stop] = what
 
 class ByteJaggedArray(JaggedArray):
-    pass
+    @classmethod
+    def fromoffsets(cls, offsets, content, dtype, writeable=True):
+        return cls(offsets[:-1], offsets[1:], content, dtype, writeable=writeable)
+
+    @classmethod
+    def fromiterable(cls, iterable, writeable=True):
+        offsets = [0]
+        content = []
+        for x in iterable:
+            offsets.append(offsets[-1] + len(x))
+            content.extend(x)
+        offsets = numpy.array(offsets, dtype=ByteJaggedArray.INDEXTYPE)
+        content = numpy.array(content)
+        offsets *= content.dtype.itemsize
+        return cls(offsets[:-1], offsets[1:], content, content.dtype, writeable=writeable)
+
+    def __init__(self, starts, stops, content, dtype, writeable=True):
+        self._writeable = writeable
+        super(ByteJaggedArray, self).__init__(starts, stops, content, writeable=writeable)
+        self.dtype = dtype
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = numpy.frombuffer(value, dtype=self.CHARTYPE)
+        self._content.flags.writeable = self._writeable
+
+    @property
+    def writeable(self):
+        return self._writeable
+
+    @writeable.setter
+    def writeable(self, value):
+        self._writeable = bool(value)
+        self._content.flags.writeable = self._writeable
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @dtype.setter
+    def dtype(self, value):
+        self._dtype = numpy.dtype(value)
+
+    def __getitem__(self, where):
+        starts = self._starts[where]
+        stops = self._stops[where]
+        if len(starts.shape) == len(stops.shape) == 0:
+            return self._content[starts:stops].view(self._dtype)
+        else:
+            return ByteJaggedArray(starts, stops, self._content, self._dtype, writeable=writeable)
