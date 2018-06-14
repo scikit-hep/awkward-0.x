@@ -149,14 +149,23 @@ class JaggedArray(awkward.base.AwkwardArray):
         if len(starts.shape) == 0 and len(stops.shape) == 0:
             self._content[starts:stops] = what
 
-        elif isinstance(what, collections.Sequence) and len(what) == 1:
-            for start, stop in itertools.izip(starts, stop):
+        elif isinstance(what, (collections.Sequence, numpy.ndarray)) and len(what) == 1:
+            for start, stop in itertools.izip(starts, stops):
                 self._content[start:stop] = what[0]
 
-        elif isinstance(what, collections.Sequence):
+        elif isinstance(what, (collections.Sequence, numpy.ndarray)):
+            if len(what) != (stops - starts).sum():
+                raise ValueError("cannot copy sequence with size {0} to JaggedArray with dimension {1}".format(len(what), (stops - starts).sum()))
+            this = next = 0
+            for start, stop in itertools.izip(starts, stops):
+                next += stop - start
+                self._content[start:stop] = what[this:next]
+                this = next
+
+        elif isinstance(what, JaggedArray):
             if len(what) != len(starts):
-                raise ValueError("cannot copy sequence with size {0} to array axis with dimension {1}".format(len(what), len(starts)))
-            for which, start, stop in itertools.izip(what, starts, stop):
+                raise ValueError("cannot copy JaggedArray with size {0} to JaggedArray with dimension {1}".format(len(what), len(starts)))
+            for which, start, stop in itertools.izip(what, starts, stops):
                 self._content[start:stop] = which
 
         else:

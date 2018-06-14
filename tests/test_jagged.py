@@ -98,4 +98,33 @@ class TestJagged(unittest.TestCase):
         self.assertEqual([x.tolist() for x in a[:-1]], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], []])
         self.assertEqual([x.tolist() for x in a[[2, 1, 0]]], [[[8.8, 9.9], []], [], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]]])
         self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], []])
-        
+
+    def test_jagged_set(self):
+        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a[3] = 999
+        self.assertEqual([x.tolist() for x in a], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [999.0, 999.0], []])
+
+        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a[3] = [999]
+        self.assertEqual([x.tolist() for x in a], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [999.0, 999.0], []])
+
+        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        def quickie():
+            a[3] = [123, 456, 789]
+        self.assertRaises(ValueError, quickie)
+
+        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a[0:3] = 999
+        self.assertEqual([x.tolist() for x in a], [[999.0, 999.0, 999.0], [], [999.0, 999.0, 999.0, 999.0, 999.0], [8.8, 9.9], []])
+
+        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a[0:3] = [999]
+        self.assertEqual([x.tolist() for x in a], [[999.0, 999.0, 999.0], [], [999.0, 999.0, 999.0, 999.0, 999.0], [8.8, 9.9], []])
+
+        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a[0:3] = [101, 102, 103, 104, 105, 106, 107, 108]
+        self.assertEqual([x.tolist() for x in a], [[101.0, 102.0, 103.0], [], [104.0, 105.0, 106.0, 107.0, 108.0], [8.8, 9.9], []])
+
+        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a[0:3] = JaggedArray.fromoffsets([0, 3, 3, 8], [101, 102, 103, 104, 105, 106, 107, 108])
+        self.assertEqual([x.tolist() for x in a], [[101.0, 102.0, 103.0], [], [104.0, 105.0, 106.0, 107.0, 108.0], [8.8, 9.9], []])
