@@ -137,29 +137,61 @@ class ChunkedArray(awkward.base.AwkwardArray):
             start, stop, step = head.start, head.stop, head.step
             if start < 0 or stop < 0:
                 raise IndexError("negative indexes are not allowed because ChunkArray cannot determine total length")
+            if step == 0:
+                raise ValueError("slice step cannot be zero")
 
             out = []
-            sofar = 0
+            sofar = carry = 0
             for chunk in self._chunks:
-                if start is None:
-                    localstart = 0
-                elif start < sofar:
-                    localstart = 0
-                elif sofar <= start < sofar + len(chunk):
-                    localstart = start - sofar
-                else:
-                    continue
+                if step is None or step > 0:
+                    if start is None:
+                        localstart = carry
+                    elif start < sofar:
+                        localstart = carry
+                    elif sofar <= start < sofar + len(chunk):
+                        localstart = start - sofar
+                    else:
+                        sofar += len(chunk)
+                        continue
 
-                if stop is None:
-                    localstop = len(chunk)
-                elif stop <= sofar:
-                    break
-                elif sofar <= stop < sofar + len(chunk):
-                    localstop = stop - sofar
+                    if stop is None:
+                        localstop = len(chunk)
+                    elif stop <= sofar:
+                        break
+                    elif sofar < stop < sofar + len(chunk):
+                        localstop = stop - sofar
+                    else:
+                        localstop = len(chunk)
+                        if step is not None:
+                            carry = (localstart - len(chunk)) % step
+                        
                 else:
-                    localstop = len(chunk)
+                    if start is None:
+                        localstart = len(chunk)
+                    elif start < sofar:
+                        break
+                    elif sofar <= start < sofar + len(chunk):
+                        localstart = start - sofar
+                    else:
+                        localstart = len(chunk) - 1 - carry
 
-                out.append(chunk[localstart:localstop:step])
+                    if stop is None:
+                        localstop = None
+                    elif stop < sofar:
+                        localstop = None
+                    elif sofar <= stop < sofar + len(chunk):
+                        localstop = stop - sofar
+                    else:
+                        sofar += len(chunk)
+                        continue
+
+                    if step is not None:
+                        carry = (localstart - -1) % -step
+
+                sliced = chunk[localstart:localstop:step]
+                if len(sliced) != 0:
+                    out.append(sliced)
+
                 sofar += len(chunk)
 
             if len(out) == 0:
@@ -171,7 +203,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     return numpy.empty(0, dtype)
 
             elif len(out) == 1:
-                return out[0]
+                return numpy.array(out[0], copy=False)
 
             else:
                 return numpy.concatenate(out)
