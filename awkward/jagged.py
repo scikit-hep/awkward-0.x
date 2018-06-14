@@ -235,4 +235,4 @@ class ByteJaggedArray(JaggedArray):
         if len(starts.shape) == len(stops.shape) == 0:
             return self._content[starts:stops].view(self._dtype)
         else:
-            return ByteJaggedArray(starts, stops, self._content, self._dtype, writeable=writeable)
+            return ByteJaggedArray(starts, stops, self._content, self._dtype, writeable=self._writeable)
