@@ -135,19 +135,22 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
         elif isinstance(head, slice):
             start, stop, step = head.start, head.stop, head.step
-            if start < 0 or stop < 0:
+            if (start is not None and start < 0) or (stop is not None and stop < 0):
                 raise IndexError("negative indexes are not allowed because ChunkArray cannot determine total length")
             if step == 0:
                 raise ValueError("slice step cannot be zero")
+            elif step is None:
+                step = 1
 
-            out = []
-            sofar = carry = 0
+            slicedchunks = []
+            sofar = 0
+            localstep = 1 if step > 0 else -1
             for chunk in self._chunks:
-                if step is None or step > 0:
+                if step > 0:
                     if start is None:
-                        localstart = carry
+                        localstart = None
                     elif start < sofar:
-                        localstart = carry
+                        localstart = None
                     elif sofar <= start < sofar + len(chunk):
                         localstart = start - sofar
                     else:
@@ -155,25 +158,23 @@ class ChunkedArray(awkward.base.AwkwardArray):
                         continue
 
                     if stop is None:
-                        localstop = len(chunk)
+                        localstop = None
                     elif stop <= sofar:
                         break
                     elif sofar < stop < sofar + len(chunk):
                         localstop = stop - sofar
                     else:
-                        localstop = len(chunk)
-                        if step is not None:
-                            carry = (localstart - len(chunk)) % step
-                        
+                        localstop = None
+
                 else:
                     if start is None:
-                        localstart = len(chunk)
+                        localstart = None
                     elif start < sofar:
                         break
                     elif sofar <= start < sofar + len(chunk):
                         localstart = start - sofar
                     else:
-                        localstart = len(chunk) - 1 - carry
+                        localstart = None
 
                     if stop is None:
                         localstop = None
@@ -184,17 +185,14 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     else:
                         sofar += len(chunk)
                         continue
-
-                    if step is not None:
-                        carry = (localstart - -1) % -step
-
-                sliced = chunk[localstart:localstop:step]
-                if len(sliced) != 0:
-                    out.append(sliced)
+                
+                slicedchunk = chunk[localstart:localstop:localstep]   # don't apply step here
+                if len(slicedchunk) != 0:                             # avoid mixing empty list dtype
+                    slicedchunks.append(slicedchunk)
 
                 sofar += len(chunk)
 
-            if len(out) == 0:
+            if len(slicedchunks) == 0:
                 try:
                     dtype = self.dtype
                 except ValueError:
@@ -202,11 +200,17 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 else:
                     return numpy.empty(0, dtype)
 
-            elif len(out) == 1:
-                return numpy.array(out[0], copy=False)
-
+            if len(slicedchunks) == 1:
+                out = numpy.array(slicedchunks[0], copy=False)
+            elif step < 0:
+                out = numpy.concatenate(list(reversed(slicedchunks)))
             else:
-                return numpy.concatenate(out)
+                out = numpy.concatenate(slicedchunks)
+
+            if step == 1:
+                return out
+            else:
+                return out[::abs(step)]
 
         else:
             head = numpy.array(head, copy=False)
