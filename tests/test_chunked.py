@@ -192,8 +192,12 @@ class TestChunked(unittest.TestCase):
         self.assertEqual(a.tolist(), [0, 999, 2, 3, 999, 5, 6, 999, 8, 9])
 
         a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
-        a[2::3] = 999
-        self.assertEqual(a.tolist(), [0, 1, 999, 3, 4, 999, 6, 7, 999, 9])
+        a[7:2:-1] = 999
+        self.assertEqual(a.tolist(), [0, 1, 2, 999, 999, 999, 999, 999, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[7:2:-2] = 999
+        self.assertEqual(a.tolist(), [0, 1, 2, 999, 4, 999, 6, 999, 8, 9])
 
         a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
         a[::4] = 999
@@ -222,3 +226,135 @@ class TestChunked(unittest.TestCase):
         a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
         a[[True, False, False, False, True, False, False, False, False, False]] = 999
         self.assertEqual(a.tolist(), [999, 1, 2, 3, 999, 5, 6, 7, 8, 9])
+
+    def test_chunked_set_singleton(self):
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[:] = [999]
+        self.assertEqual(a.tolist(), [999, 999, 999, 999, 999, 999, 999, 999, 999, 999])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[5:] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 999, 999, 999, 999, 999])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[:5] = [999]
+        self.assertEqual(a.tolist(), [999, 999, 999, 999, 999, 5, 6, 7, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[3:8] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 999, 999, 999, 999, 999, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[3:8:2] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 999, 4, 999, 6, 999, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[::3] = [999]
+        self.assertEqual(a.tolist(), [999, 1, 2, 999, 4, 5, 999, 7, 8, 999])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[1::3] = [999]
+        self.assertEqual(a.tolist(), [0, 999, 2, 3, 999, 5, 6, 999, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[7:2:-1] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 999, 999, 999, 999, 999, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[7:2:-2] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 999, 4, 999, 6, 999, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[::4] = [999]
+        self.assertEqual(a.tolist(), [999, 1, 2, 3, 999, 5, 6, 7, 999, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[1::4] = [999]
+        self.assertEqual(a.tolist(), [0, 999, 2, 3, 4, 999, 6, 7, 8, 999])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[numpy.empty(0, dtype=int)] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[[5]] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 999, 6, 7, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[[8, 6, 3, 4, 5]] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 999, 999, 999, 999, 7, 999, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[[True, False, True, False, True, False, True, False, True, False]] = [999]
+        self.assertEqual(a.tolist(), [999, 1, 999, 3, 999, 5, 999, 7, 999, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[[True, False, False, False, True, False, False, False, False, False]] = [999]
+        self.assertEqual(a.tolist(), [999, 1, 2, 3, 999, 5, 6, 7, 8, 9])
+
+    def test_chunked_set_sequence(self):
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[:] = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]
+        self.assertEqual(a.tolist(), [100, 101, 102, 103, 104, 105, 106, 107, 108, 109])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[5:] = [101, 102, 103, 104, 105]
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 101, 102, 103, 104, 105])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[:5] = [101, 102, 103, 104, 105]
+        self.assertEqual(a.tolist(), [101, 102, 103, 104, 105, 5, 6, 7, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[3:8] = [101, 102, 103, 104, 105]
+        self.assertEqual(a.tolist(), [0, 1, 2, 101, 102, 103, 104, 105, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[3:8:2] = [101, 102, 103]
+        self.assertEqual(a.tolist(), [0, 1, 2, 101, 4, 102, 6, 103, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[::3] = [101, 102, 103, 104]
+        self.assertEqual(a.tolist(), [101, 1, 2, 102, 4, 5, 103, 7, 8, 104])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[1::3] = [101, 102, 103]
+        self.assertEqual(a.tolist(), [0, 101, 2, 3, 102, 5, 6, 103, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[7:2:-1] = [101, 102, 103, 104, 105]
+        self.assertEqual(a.tolist(), [0, 1, 2, 105, 104, 103, 102, 101, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[7:2:-2] = [101, 102, 103]
+        self.assertEqual(a.tolist(), [0, 1, 2, 103, 4, 102, 6, 101, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[::4] = [101, 102, 103]
+        self.assertEqual(a.tolist(), [101, 1, 2, 3, 102, 5, 6, 7, 103, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[1::4] = [101, 102, 103]
+        self.assertEqual(a.tolist(), [0, 101, 2, 3, 4, 102, 6, 7, 8, 103])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        def quickie():
+            a[numpy.empty(0, dtype=int)] = [101, 102, 103]
+        self.assertRaises(ValueError, quickie)
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        def quickie():
+            a[[5]] = [101, 102, 103]
+        self.assertRaises(ValueError, quickie)
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[[8, 6, 3, 4, 5]] = [101, 102, 103, 104, 105]
+        self.assertEqual(a.tolist(), [0, 1, 2, 103, 104, 105, 102, 7, 101, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[[True, False, True, False, True, False, True, False, True, False]] = [101, 102, 103, 104, 105]
+        self.assertEqual(a.tolist(), [101, 1, 102, 3, 103, 5, 104, 7, 105, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])
+        a[[True, False, False, False, True, False, False, False, False, False]] = [101, 102]
+        self.assertEqual(a.tolist(), [101, 1, 2, 3, 102, 5, 6, 7, 8, 9])

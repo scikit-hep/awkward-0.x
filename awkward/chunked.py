@@ -311,8 +311,8 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 for slicedchunk in fullysliced:
                     slicedchunk[:] = what[0]
             elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
-                if len(what) != sum(len(x) for x in slicedchunk):
-                    raise ValueError("cannot copy sequence with size {0} to array with dimension {1}".format(len(what), sum(len(x) for x in slicedchunk)))
+                if len(what) != sum(len(x) for x in fullysliced):
+                    raise ValueError("cannot copy sequence with size {0} to array with dimension {1}".format(len(what), sum(len(x) for x in fullysliced)))
                 this = next = 0
                 for slicedchunk in fullysliced:
                     next += len(slicedchunk)
