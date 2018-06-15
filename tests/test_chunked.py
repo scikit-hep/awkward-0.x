@@ -374,5 +374,68 @@ class TestChunked(unittest.TestCase):
         self.assertEqual([a[-i : -i - 2 : -1].tolist() for i in range(1, 10)], [[9, 8], [8, 7], [7, 6], [6, 5], [5, 4], [4, 3], [3, 2], [2, 1], [1, 0]])
         self.assertEqual([a[-i : -i + 1].tolist() for i in range(2, 11)], [[8], [7], [6], [5], [4], [3], [2], [1], [0]])
         self.assertEqual([a[-i : -i + 2].tolist() for i in range(3, 11)], [[7, 8], [6, 7], [5, 6], [4, 5], [3, 4], [2, 3], [1, 2], [0, 1]])
+        self.assertEqual(a[[-2, -4, 7, 5, 3, -6, 5]].tolist(), [8, 6, 7, 5, 3, 4, 5])
+        self.assertEqual(a[[-2, -4, 7, 5, 3, -6, -5]].tolist(), [8, 6, 7, 5, 3, 4, 5])
 
+    def test_partitioned_set_const(self):
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[-4] = 999
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 5, 999, 7, 8, 9])
 
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[-4:-6:-1] = 999
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 999, 999, 7, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[-4::-2] = 999
+        self.assertEqual(a.tolist(), [999, 1, 999, 3, 999, 5, 999, 7, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[:-6:-2] = 999
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 999, 6, 999, 8, 999])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[[-2, -4, 7, 5, 3, -6, 5]] = 999
+        self.assertEqual(a.tolist(), [0, 1, 2, 999, 999, 999, 999, 999, 999, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[[-2, -4, 7, 5, 3, -6, -5]] = 999
+        self.assertEqual(a.tolist(), [0, 1, 2, 999, 999, 999, 999, 999, 999, 9])
+
+    def test_partitioned_set_singleton(self):
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[-4:-6:-1] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 999, 999, 7, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[-4::-2] = [999]
+        self.assertEqual(a.tolist(), [999, 1, 999, 3, 999, 5, 999, 7, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[:-6:-2] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 999, 6, 999, 8, 999])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[[-2, -4, 7, 5, 3, -6, 5]] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 999, 999, 999, 999, 999, 999, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[[-2, -4, 7, 5, 3, -6, -5]] = [999]
+        self.assertEqual(a.tolist(), [0, 1, 2, 999, 999, 999, 999, 999, 999, 9])
+
+    def test_partitioned_set_sequence(self):
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[-4:-6:-1] = [101, 102]
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 102, 101, 7, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[-4::-2] = [101, 102, 103, 104]
+        self.assertEqual(a.tolist(), [104, 1, 103, 3, 102, 5, 101, 7, 8, 9])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[:-6:-2] = [101, 102, 103]
+        self.assertEqual(a.tolist(), [0, 1, 2, 3, 4, 103, 6, 102, 8, 101])
+
+        a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
+        a[[-2, -4, 7, 5, 3, -6]] = [101, 102, 103, 104, 105, 106]
+        self.assertEqual(a.tolist(), [0, 1, 2, 105, 106, 104, 102, 103, 101, 9])
