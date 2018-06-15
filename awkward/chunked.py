@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import collections
 import numbers
 
 import numpy
@@ -274,11 +275,14 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
 
     def __setitem__(self, where, what):
+        if not self._writeable:
+            raise ValueError("assignment destination is read-only")
+
         if not isinstance(where, tuple):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, (numbers.Integral, number.integer)):
+        if isinstance(head, (numbers.Integral, numpy.integer)):
             if head < 0:
                 raise IndexError("negative indexes are not allowed in ChunkedArray")
 
@@ -300,7 +304,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 if step is not None and step != 1:
                     length = len(slicedchunk)
                     slicedchunk = slicedchunk[carry::abs(step)]
-                    carry = (length - carry) % abs(step)
+                    carry = (carry - length) % step
                 fullysliced.append(slicedchunk)
 
             if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
@@ -322,9 +326,12 @@ class ChunkedArray(awkward.base.AwkwardArray):
             head = numpy.array(head, copy=False)
             if len(head.shape) == 1 and issubclass(head.dtype.type, numpy.integer):
                 if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) != 1:
-                    what = numpy.array(what, copy=False)
-                    if (len(head),) + tail != what.shape:
-                        raise ValueError("shape mismatch: value array of shape {0} could not be broadcast to indexing result of shape {1}".format(what.shape, (len(head),) + tail))
+                    if hasattr(what, "shape"):
+                        whatshape = what.shape
+                    else:
+                        whatshape = (len(what),)
+                    if (len(head),) + tail != whatshape:
+                        raise ValueError("shape mismatch: value array of shape {0} could not be broadcast to indexing result of shape {1}".format(whatshape, (len(head),) + tail))
 
                 if len(head) == 0:
                     return
@@ -347,28 +354,52 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 if maxindex >= sofar + len(chunk):
                     raise IndexError("index {0} out of bounds for length {1}".format(maxindex, sofar + len(chunk)))
 
-                # must fill "self[where] = what" using the same order for where and what, which forces iteration
-                chunkindex = numpy.searchsorted(offsets, head, side="right") - 1
-                i = 0
-                for headi, chunki in awkward.base.util.izip(head, chunkindex):
-                    chunks[chunki][headi - offsets[chunki]] = what[i]
-                    i += 1
+                if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+                    for chunk, offset in awkward.util.izip(chunks, offsets):
+                        indexes = head - offset
+                        mask = (indexes >= 0)
+                        numpy.bitwise_and(mask, (indexes < len(chunk)), mask)
+                        chunk[indexes[mask]] = what[0]
+
+                elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
+                    # must fill "self[where] = what" using the same order for where and what, with locations scattered among a list of chunks
+                    # thus, Pythonic iteration is necessary
+                    chunkindex = numpy.searchsorted(offsets, head, side="right") - 1
+                    i = 0
+                    for headi, chunki in awkward.util.izip(head, chunkindex):
+                        chunks[chunki][headi - offsets[chunki]] = what[i]
+                        i += 1
+
+                else:
+                    for chunk, offset in awkward.util.izip(chunks, offsets):
+                        indexes = head - offset
+                        mask = (indexes >= 0)
+                        numpy.bitwise_and(mask, (indexes < len(chunk)), mask)
+                        chunk[indexes[mask]] = what
                     
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (numpy.bool, numpy.bool_)):
-                slicedchunks = []
+                submasks = []
                 for sofar, chunk in self._chunkiterator():
                     submask = head[sofar : sofar + len(chunk)]
-                    if numpy.count_nonzero(submask) != 0:
-                        selectedchunks.append(chunk[(submask,) + tail])
+                    submasks.append((submask, chunk))
 
                 if len(head) != sofar + len(chunk):
                     raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(sofar + len(chunk), len(head)))
 
-                this = next = 0
-                for selectedchunk in selectedchunks:
-                    next += len(selectedchunk)
-                    selectedchunk[:] = what[this:next]
-                    this = next
+                if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+                    for submask, chunk in submasks:
+                        chunk[submask] = what[0]
+
+                elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
+                    this = next = 0
+                    for submask, chunk in submasks:
+                        next += numpy.count_nonzero(submask)
+                        chunk[submask] = what[this:next]
+                        this = next
+
+                else:
+                    for submask, chunk in submasks:
+                        chunk[submask] = what
 
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
