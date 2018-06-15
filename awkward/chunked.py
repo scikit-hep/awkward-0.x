@@ -80,19 +80,21 @@ class ChunkedArray(awkward.base.AwkwardArray):
             raise TypeError("appendsize must be a positive integer")
         self._appendsize = value
 
-    def _chunkiterator(self):
+    def _chunkiterator(self, minindex):
         sofar = i = 0
         while i < len(self._chunks):
             if not isinstance(self._chunks[i], (awkward.base.AwkwardArray, numpy.ndarray)):
                 self._chunks[i] = numpy.array(self._chunks[i])
 
-            yield sofar, self._chunks[i]
+            if sofar + len(self._chunks[i]) > minindex:
+                yield sofar, self._chunks[i]
+
             sofar += len(self._chunks[i])
             i += 1
 
     @property
     def dtype(self):
-        for sofar, chunk in self._chunkiterator():
+        for sofar, chunk in self._chunkiterator(0):
             if len(chunk) > 0:
                 return numpy.dtype((chunk.dtype, getattr(chunk, "shape", (0,))[1:]))
         raise ValueError("chunks are empty; cannot determine dtype")
@@ -125,7 +127,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
         slicedchunks = []
         localstep = 1 if step > 0 else -1
-        for sofar, chunk in self._chunkiterator():
+        for sofar, chunk in self._chunkiterator(start if step > 0 else stop + 1 if stop is not None else 0):
             if len(chunk) == 0:
                 continue
 
@@ -193,7 +195,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
             if head < 0:
                 raise IndexError("negative indexes are not allowed in ChunkedArray")
 
-            for sofar, chunk in self._chunkiterator():
+            for sofar, chunk in self._chunkiterator(head):
                 if sofar <= head < sofar + len(chunk):
                     return chunk[(head - sofar,) + tail]
 
@@ -227,10 +229,10 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
                 if (head < 0).any():
                     raise IndexError("negative indexes are not allowed in ChunkedArray")
-                maxindex = head.max()
+                minindex, maxindex = head.min(), head.max()
 
                 out = None
-                for sofar, chunk in self._chunkiterator():
+                for sofar, chunk in self._chunkiterator(minindex):
                     if len(chunk) == 0:
                         continue
                     if out is None:
@@ -251,15 +253,13 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 return out[(slice(None),) + tail]
 
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (numpy.bool, numpy.bool_)):
-                numtrue = numpy.count_nonzero(head)
-
                 out = None
                 this = next = 0
-                for sofar, chunk in self._chunkiterator():
+                for sofar, chunk in self._chunkiterator(0):
                     if len(chunk) == 0:
                         continue
                     if out is None:
-                        out = numpy.empty(numtrue, dtype=numpy.dtype((chunk.dtype, chunk.shape[1:])))
+                        out = numpy.empty(numpy.count_nonzero(head), dtype=numpy.dtype((chunk.dtype, chunk.shape[1:])))
 
                     submask = head[sofar : sofar + len(chunk)]
 
@@ -286,7 +286,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
             if head < 0:
                 raise IndexError("negative indexes are not allowed in ChunkedArray")
 
-            for sofar, chunk in self._chunkiterator():
+            for sofar, chunk in self._chunkiterator(head):
                 if sofar <= head < sofar + len(chunk):
                     chunk[(head - sofar,) + tail] = what
                     return
@@ -338,11 +338,11 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
                 if (head < 0).any():
                     raise IndexError("negative indexes are not allowed in ChunkArray")
-                maxindex = head.max()
+                minindex, maxindex = head.min(), head.max()
 
                 chunks = []
                 offsets = []
-                for sofar, chunk in self._chunkiterator():
+                for sofar, chunk in self._chunkiterator(minindex):
                     chunks.append(chunk)
                     if len(offsets) == 0:
                         offsets.append(sofar)
@@ -379,7 +379,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (numpy.bool, numpy.bool_)):
                 submasks = []
-                for sofar, chunk in self._chunkiterator():
+                for sofar, chunk in self._chunkiterator(0):
                     submask = head[sofar : sofar + len(chunk)]
                     submasks.append((submask, chunk))
 
