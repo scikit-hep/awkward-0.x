@@ -158,24 +158,24 @@ class JaggedArray(awkward.base.AwkwardArray):
         if len(starts.shape) == len(stops.shape) == 0:
             self._content[starts:stops] = what
 
-        elif isinstance(what, (collections.Sequence, numpy.ndarray)) and len(what) == 1:
+        elif isinstance(what, JaggedArray):
+            if len(what) != len(starts):
+                raise ValueError("cannot copy JaggedArray with length {0} to JaggedArray with dimension {1}".format(len(what), len(starts)))
+            for which, start, stop in awkward.util.izip(what, starts, stops):
+                self._content[start:stop] = which
+
+        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
             for start, stop in awkward.util.izip(starts, stops):
                 self._content[start:stop] = what[0]
 
-        elif isinstance(what, (collections.Sequence, numpy.ndarray)):
+        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
             if len(what) != (stops - starts).sum():
-                raise ValueError("cannot copy sequence with size {0} to JaggedArray with dimension {1}".format(len(what), (stops - starts).sum()))
+                raise ValueError("cannot copy sequence with length {0} to JaggedArray with dimension {1}".format(len(what), (stops - starts).sum()))
             this = next = 0
             for start, stop in awkward.util.izip(starts, stops):
                 next += stop - start
                 self._content[start:stop] = what[this:next]
                 this = next
-
-        elif isinstance(what, JaggedArray):
-            if len(what) != len(starts):
-                raise ValueError("cannot copy JaggedArray with size {0} to JaggedArray with dimension {1}".format(len(what), len(starts)))
-            for which, start, stop in awkward.util.izip(what, starts, stops):
-                self._content[start:stop] = which
 
         else:
             for start, stop in awkward.util.izip(starts, stops):
@@ -254,27 +254,27 @@ class ByteJaggedArray(JaggedArray):
             startposes, offsets = numpy.divmod(starts, self._dtype.itemsize)
             stopposes = numpy.floor_divide(stops, self._dtype.itemsize)
 
-            if isinstance(what, (collections.Sequence, numpy.ndarray)) and len(what) == 1:
+            if isinstance(what, JaggedArray):
+                if len(what) != len(startposes):
+                    raise ValueError("cannot copy JaggedArray with length {0} to ByteJaggedArray with dimension {1}".format(len(what), len(startposes)))
+                for which, startpos, stoppos, offset in awkward.util.izip(what, startposes, stopposes, offsets):
+                    buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
+                    buf[startpos:stoppos] = which
+
+            elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
                 for startpos, stoppos, offset in awkward.util.izip(startposes, stopposes, offsets):
                     buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
-                    buf[startpos:stoppos] = what
+                    buf[startpos:stoppos] = what[0]
 
-            elif isinstance(what, (collections.Sequence, numpy.ndarray)):
+            elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
                 if len(what) != (stopposes - startposes).sum():
-                    raise ValueError("cannot copy sequence with size {0} to ByteJaggedArray with dimension {1}".format(len(what), (stopposes - startposes).sum()))
+                    raise ValueError("cannot copy sequence with length {0} to ByteJaggedArray with dimension {1}".format(len(what), (stopposes - startposes).sum()))
                 this = next = 0
                 for startpos, stoppos, offset in awkward.util.izip(startposes, stopposes, offsets):
                     next += stoppos - startpos
                     buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
                     buf[startpos:stoppos] = what[this:next]
                     this = next
-
-            elif isinstance(what, JaggedArray):
-                if len(what) != len(startposes):
-                    raise ValueError("cannot copy JaggedArray with size {0} to ByteJaggedArray with dimension {1}".format(len(what), len(startposes)))
-                for which, startpos, stoppos, offset in awkward.util.izip(what, startposes, stopposes, offsets):
-                    buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
-                    buf[startpos:stoppos] = which
 
             else:
                 for startpos, stoppos, offset in awkward.util.izip(startposes, stopposes, offsets):
