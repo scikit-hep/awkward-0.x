@@ -120,7 +120,19 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
         slicedchunks = []
         localstep = 1 if step > 0 else -1
-        for sofar, chunk in self._chunkiterator(start if step > 0 else stop + 1 if stop is not None else 0):
+
+        if step is None or step > 0:
+            if start is None:
+                minindex = 0
+            else:
+                minindex = start
+        else:
+            if stop is None:
+                minindex = 0
+            else:
+                minindex = stop + 1
+
+        for sofar, chunk in self._chunkiterator(minindex):
             if len(chunk) == 0:
                 continue
 
