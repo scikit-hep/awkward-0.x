@@ -32,7 +32,7 @@ from awkward.indexed import IndexedArray, ByteIndexedArray
 from awkward.jagged import JaggedArray, ByteJaggedArray
 from awkward.chunked import ChunkedArray, PartitionedArray
 # from awkward.masked import MaskedArray, BitMaskedArray
-# from awkward.virtual import VirtualArray, VirtualObjectArray
+from awkward.virtual import VirtualArray, VirtualObjectArray
 # from awkward.table import Table
 
 # convenient access to the version number
