@@ -93,7 +93,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
         offsets = [0]
         for chunk in self._chunks:
             offsets.append(offsets[-1] + len(chunk))
-        return PartitionedArray(self._chunks, offsets, writeable=self._writeable)
+        return PartitionedArray(offsets, self._chunks, writeable=self._writeable)
 
     def __iter__(self):
         i = 0
@@ -188,11 +188,12 @@ class ChunkedArray(awkward.base.AwkwardArray):
             if head < 0:
                 raise IndexError("negative indexes are not allowed in ChunkedArray")
 
+            sofar = None
             for sofar, chunk in self._chunkiterator(head):
                 if sofar <= head < sofar + len(chunk):
                     return chunk[(head - sofar,) + tail]
 
-            raise IndexError("index {0} out of bounds for length {1}".format(head, sofar + len(chunk)))
+            raise IndexError("index {0} out of bounds for length {1}".format(head, 0 if sofar is None else sofar + len(chunk)))
 
         elif isinstance(head, slice):
             start, stop, step = head.start, head.stop, head.step
@@ -224,6 +225,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     raise IndexError("negative indexes are not allowed in ChunkedArray")
                 minindex, maxindex = head.min(), head.max()
 
+                sofar = None
                 out = None
                 for sofar, chunk in self._chunkiterator(minindex):
                     if len(chunk) == 0:
@@ -242,7 +244,8 @@ class ChunkedArray(awkward.base.AwkwardArray):
                         break
 
                 if maxindex >= sofar + len(chunk):
-                    raise IndexError("index {0} out of bounds for length {1}".format(maxindex, sofar + len(chunk)))
+                    raise IndexError("index {0} out of bounds for length {1}".format(maxindex, 0 if sofar is None else sofar + len(chunk)))
+
                 return out[(slice(None),) + tail]
 
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (numpy.bool, numpy.bool_)):
@@ -262,6 +265,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
                 if len(head) != sofar + len(chunk):
                     raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(sofar + len(chunk), len(head)))
+
                 return out[(slice(None),) + tail]
 
             else:
@@ -279,12 +283,13 @@ class ChunkedArray(awkward.base.AwkwardArray):
             if head < 0:
                 raise IndexError("negative indexes are not allowed in ChunkedArray")
 
+            sofar = None
             for sofar, chunk in self._chunkiterator(head):
                 if sofar <= head < sofar + len(chunk):
                     chunk[(head - sofar,) + tail] = what
                     return
 
-            raise IndexError("index {0} out of bounds for length {1}".format(head, sofar + len(chunk)))
+            raise IndexError("index {0} out of bounds for length {1}".format(head, 0 if sofar is None else sofar + len(chunk)))
 
         elif isinstance(head, slice):
             start, stop, step = head.start, head.stop, head.step
@@ -333,6 +338,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     raise IndexError("negative indexes are not allowed in ChunkArray")
                 minindex, maxindex = head.min(), head.max()
 
+                sofar = None
                 chunks = []
                 offsets = []
                 for sofar, chunk in self._chunkiterator(minindex):
@@ -344,8 +350,8 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     if sofar + len(chunk) > maxindex:
                         break
 
-                if maxindex >= sofar + len(chunk):
-                    raise IndexError("index {0} out of bounds for length {1}".format(maxindex, sofar + len(chunk)))
+                if sofar is None or maxindex >= sofar + len(chunk):
+                    raise IndexError("index {0} out of bounds for length {1}".format(maxindex, 0 if sofar is None else sofar + len(chunk)))
 
                 if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
                     for chunk, offset in awkward.util.izip(chunks, offsets):
@@ -399,7 +405,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
 
 class PartitionedArray(ChunkedArray):
-    def __init__(self, chunks, offsets, writeable=True):
+    def __init__(self, offsets, chunks, writeable=True):
         super(PartitionedArray, self).__init__(chunks, writeable=writeable)
         self.offsets = offsets
         if len(self._offsets) != len(self._chunks) + 1:
@@ -485,6 +491,7 @@ class PartitionedArray(ChunkedArray):
 
         elif isinstance(head, slice):
             start, stop, step = head.indices(len(self))
+
             if step < 0 and start == -1:
                 start = None
             if step < 0 and stop == -1:
@@ -492,12 +499,16 @@ class PartitionedArray(ChunkedArray):
             assert start is None or start >= 0
             assert stop is None or stop >= 0
 
+            head = slice(start, stop, step)
+
         else:
             head = numpy.array(head, copy=False)
             if len(head.shape) == 1 and issubclass(head.dtype.type, numpy.integer):
-                head[head < 0] += len(self)
-                if (head < 0).any():
-                    raise IndexError("index {0} out of bounds for length {1}".format(head[head < 0][0] - len(self), len(self)))
+                mask = (head < 0)
+                if mask.any():
+                    head[mask] += len(self)
+                    if (head < 0).any():
+                        raise IndexError("index {0} out of bounds for length {1}".format(head[head < 0][0] - len(self), len(self)))
 
         return (head,) + tail
 
