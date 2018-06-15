@@ -37,11 +37,9 @@ import awkward.base
 import awkward.util
 
 class ChunkedArray(awkward.base.AwkwardArray):
-    def __init__(self, chunks, writeable=True, appendable=True, appendsize=1024):
+    def __init__(self, chunks, writeable=True):
         self.chunks = chunks
         self.writeable = writeable
-        self.appendable = appendable
-        self.appendsize = appendsize
 
     @property
     def chunks(self):
@@ -62,24 +60,6 @@ class ChunkedArray(awkward.base.AwkwardArray):
     def writeable(self, value):
         self._writeable = bool(value)
 
-    @property
-    def appendable(self):
-        return self._appendable
-
-    @appendable.setter
-    def appendable(self, value):
-        self._appendable = bool(value)
-
-    @property
-    def appendsize(self):
-        return self._appendsize
-
-    @appendsize.setter
-    def appendsize(self, value):
-        if not isinstance(value, (numbers.Integral, numpy.integer)) or value <= 0:
-            raise TypeError("appendsize must be a positive integer")
-        self._appendsize = value
-
     def _chunkiterator(self, minindex):
         sofar = i = 0
         while i < len(self._chunks):
@@ -96,7 +76,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
     def dtype(self):
         for sofar, chunk in self._chunkiterator(0):
             if len(chunk) > 0:
-                return numpy.dtype((chunk.dtype, getattr(chunk, "shape", (0,))[1:]))
+                return numpy.dtype((chunk.dtype, chunk.shape[1:]))
         raise ValueError("chunks are empty; cannot determine dtype")
 
     @property
@@ -106,10 +86,23 @@ class ChunkedArray(awkward.base.AwkwardArray):
         except ValueError:
             raise ValueError("chunks are empty; cannot determine dimension")
 
-    def __iter__(self):
+    def __len__(self):
+        return sum(len(chunk) for chunk in self._chunks)
+
+    def topartitioned(self):
+        offsets = [0]
         for chunk in self._chunks:
-            for x in chunk:
+            offsets.append(offsets[-1] + len(chunk))
+        return PartitionedArray(self._chunks, offsets, writeable=self._writeable)
+
+    def __iter__(self):
+        i = 0
+        while i < len(self._chunks):
+            if not isinstance(self._chunks[i], (awkward.base.AwkwardArray, numpy.ndarray)):
+                self._chunks[i] = numpy.array(self._chunks[i])
+            for x in self._chunks[i]:
                 yield x
+            i += 1
 
     def __str__(self):
         values = []
@@ -365,6 +358,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     # must fill "self[where] = what" using the same order for where and what, with locations scattered among a list of chunks
                     # thus, Pythonic iteration is necessary
                     chunkindex = numpy.searchsorted(offsets, head, side="right") - 1
+                    assert (chunkindex >= 0).all()
                     i = 0
                     for headi, chunki in awkward.util.izip(head, chunkindex):
                         chunks[chunki][headi - offsets[chunki]] = what[i]
@@ -405,4 +399,110 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
 
 class PartitionedArray(ChunkedArray):
-    pass
+    def __init__(self, chunks, offsets, writeable=True):
+        super(PartitionedArray, self).__init__(chunks, writeable=writeable)
+        self.offsets = offsets
+        if len(self._offsets) != len(self._chunks) + 1:
+            raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
+
+    @property
+    def offsets(self):
+        return self._offsets
+
+    @offsets.setter
+    def offsets(self, value):
+        if not isinstance(value, awkward.base.AwkwardArray):
+            value = numpy.array(value, copy=False)
+
+        if len(value) == 0:
+            raise ValueError("offsets must be non-empty")
+        if value[0] != 0:
+            raise ValueError("offsets must begin with zero")
+        if (value[1:] - value[:-1] < 0).any():
+            raise ValueError("offsets must be monotonically increasing")
+
+        self._offsets = value
+
+    def _chunkiterator(self, minindex):
+        if len(self._offsets) != len(self._chunks) + 1:
+            raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
+
+        i = numpy.searchsorted(self._offsets, minindex, side="right") - 1
+        assert i >= 0
+        sofar = self._offsets[i]
+        while i < len(self._chunks):
+            if not isinstance(self._chunks[i], (awkward.base.AwkwardArray, numpy.ndarray)):
+                self._chunks[i] = numpy.array(self._chunks[i])
+
+            if sofar + len(self._chunks[i]) > minindex:
+                yield sofar, self._chunks[i]
+
+            sofar += len(self._chunks[i])
+            i += 1
+
+    @property
+    def dtype(self):
+        if len(self._offsets) != len(self._chunks) + 1:
+            raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
+
+        for i, count in enumerate(self._offsets[1:] - self._offsets[:-1]):
+            if count > 0:
+                if not isinstance(self._chunks[i], (awkward.base.AwkwardArray, numpy.ndarray)):
+                    self._chunks[i] = numpy.array(self._chunks[i])
+                return numpy.dtype((self._chunks[i].dtype, self._chunks[i].shape[1:]))
+
+        raise ValueError("chunks are empty; cannot determine dtype")
+
+    def __len__(self):
+        return self._offsets[-1]
+
+    def __iter__(self):
+        if len(self._offsets) != len(self._chunks) + 1:
+            raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
+
+        i = 0
+        while i < len(self._chunks):
+            if not isinstance(self._chunks[i], (awkward.base.AwkwardArray, numpy.ndarray)):
+                self._chunks[i] = numpy.array(self._chunks[i])
+            for x in self._chunks[i]:
+                yield x
+            i += 1
+        
+    def __str__(self):
+        return super(ChunkedArray, self).__str__()
+
+    def _normalizeindex(self, where):
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
+        if isinstance(head, (numbers.Integral, numpy.integer)):
+            if head + len(self) < 0:
+                raise IndexError("index {0} out of bounds for length {1}".format(head, len(self)))
+            if head < 0:
+                head += len(self)
+            assert head >= 0
+
+        elif isinstance(head, slice):
+            start, stop, step = head.indices(len(self))
+            if step < 0 and start == -1:
+                start = None
+            if step < 0 and stop == -1:
+                stop = None
+            assert start is None or start >= 0
+            assert stop is None or stop >= 0
+
+        else:
+            head = numpy.array(head, copy=False)
+            if len(head.shape) == 1 and issubclass(head.dtype.type, numpy.integer):
+                head[head < 0] += len(self)
+                if (head < 0).any():
+                    raise IndexError("index {0} out of bounds for length {1}".format(head[head < 0][0] - len(self), len(self)))
+
+        return (head,) + tail
+
+    def __getitem__(self, where):
+        return super(PartitionedArray, self).__getitem__(self._normalizeindex(where))
+
+    def __setitem__(self, where, what):
+        super(PartitionedArray, self).__setitem__(self._normalizeindex(where), what)
