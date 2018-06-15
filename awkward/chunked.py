@@ -36,9 +36,9 @@ import awkward.base
 
 class ChunkedArray(awkward.base.AwkwardArray):
     def __init__(self, chunks, writeable=True, appendable=True, appendsize=1024):
-        self._appendable = appendable
         self.chunks = chunks
         self.writeable = writeable
+        self.appendable = appendable
         self.appendsize = appendsize
 
     @property
@@ -48,14 +48,9 @@ class ChunkedArray(awkward.base.AwkwardArray):
     @chunks.setter
     def chunks(self, value):
         try:
-            iter(value)
+            self._chunks = list(value)
         except TypeError:
             raise TypeError("chunks must be iterable")
-
-        if self._appendable and not (hasattr(value, "append") and callable(value.append)):
-            raise TypeError("because appendable=True, chunks must have an append method")
-
-        self._chunks = value
 
     @property
     def writeable(self):
@@ -71,8 +66,6 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
     @appendable.setter
     def appendable(self, value):
-        if value and not (hasattr(value, "append") and callable(value.append)):
-            raise TypeError("chunks must have an append method for appendable=True")
         self._appendable = bool(value)
 
     @property
@@ -85,24 +78,29 @@ class ChunkedArray(awkward.base.AwkwardArray):
             raise TypeError("appendsize must be a positive integer")
         self._appendsize = value
 
+    def _chunkiterator(self):
+        sofar = i = 0
+        while i < len(self._chunks):
+            if not isinstance(self._chunks[i], (awkward.base.AwkwardArray, numpy.ndarray)):
+                self._chunks[i] = numpy.array(self._chunks[i])
+
+            yield sofar, self._chunks[i]
+            sofar += len(self._chunks[i])
+            i += 1
+
     @property
     def dtype(self):
-        chunk = None
-        for chunk in self._chunks:
-            break
-        if chunk is None:
-            raise ValueError("chunks is empty; cannot determine dtype")
-        else:
-            if not isinstance(chunk, awkward.base.AwkwardArray):
-                chunk = numpy.array(chunk, copy=False)
-            return numpy.dtype((chunk.dtype, getattr(chunk, "shape", (0,))[1:]))
+        for sofar, chunk in self._chunkiterator():
+            if len(chunk) > 0:
+                return numpy.dtype((chunk.dtype, getattr(chunk, "shape", (0,))[1:]))
+        raise ValueError("chunks are empty; cannot determine dtype")
 
     @property
     def dimension(self):
         try:
             return self.dtype.shape
         except ValueError:
-            raise ValueError("chunks is empty; cannot determine dimension")
+            raise ValueError("chunks are empty; cannot determine dimension")
 
     def __iter__(self):
         for chunk in self._chunks:
@@ -116,12 +114,6 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 return "[{0} ...]".format(" ".join(str(x) for x in values))
             values.append(x)
         return "[{0}]".format(" ".join(str(x) for x in values))
-
-    def _chunkiterator(self):
-        sofar = 0
-        for chunk in self._chunks:
-            yield sofar, chunk
-            sofar += len(chunk)
 
     def _slicedchunks(self, start, stop, step, tail):
         if step == 0:
@@ -173,9 +165,6 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 else:
                     continue
 
-            if not isinstance(chunk, awkward.base.AwkwardArray):
-                chunk = numpy.array(chunk, copy=False)
-
             slicedchunk = chunk[(slice(localstart, localstop, localstep),) + tail]
             if len(slicedchunk) != 0:
                 slicedchunks.append(slicedchunk)
@@ -204,9 +193,6 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
             for sofar, chunk in self._chunkiterator():
                 if sofar <= head < sofar + len(chunk):
-                    if not isinstance(chunk, awkward.base.AwkwardArray):
-                        chunk = numpy.array(chunk, copy=False)
-
                     return chunk[(head - sofar,) + tail]
 
             raise IndexError("index {0} out of bounds for length {1}".format(head, sofar + len(chunk)))
@@ -246,9 +232,6 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     if len(chunk) == 0:
                         continue
 
-                    if not isinstance(chunk, awkward.base.AwkwardArray):
-                        chunk = numpy.array(chunk, copy=False)
-
                     if out is None:
                         out = numpy.empty(len(head), dtype=numpy.dtype((chunk.dtype, chunk.shape[1:])))
 
@@ -279,9 +262,6 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     if len(chunk) == 0:
                         continue
 
-                    if not isinstance(chunk, awkward.base.AwkwardArray):
-                        chunk = numpy.array(chunk, copy=False)
-
                     if out is None:
                         out = numpy.empty(numtrue, dtype=numpy.dtype((chunk.dtype, chunk.shape[1:])))
 
@@ -298,7 +278,23 @@ class ChunkedArray(awkward.base.AwkwardArray):
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
 
+    # def __setitem__(self, where, what):
+    #     if not isinstance(where, tuple):
+    #         where = (where,)
+    #     head, tail = where[0], where[1:]
+
+    #     if isinstance(head, (numbers.Integral, number.integer)):
+    #         if head < 0:
+    #             raise IndexError("negative indexes are not allowed in ChunkedArray")
+
+    #         for sofar, chunk in self._chunkiterator():
+    #             if sofar <= head < sofar + len(chunk):
+                    
 
 
+
+
+
+        
 class PartitionedArray(ChunkedArray):
     pass
