@@ -148,12 +148,17 @@ class JaggedArray(awkward.base.AwkwardArray):
     def counts(self):
         return self._stops - self._starts
 
-    # @property
-    # def parents(self):
+    @property
+    def parents(self):
+        out = numpy.empty(len(self._content), dtype=self.INDEXTYPE)
+        starts, stops = self._starts, self._stops
+        lenstarts = len(starts)
+        i = 0
+        while i < lenstarts:
+            out[starts[i]:stops[i]] = i
+            i += 1
+        return out
         
-
-
-
     def __len__(self):
         return len(self._starts)
 
