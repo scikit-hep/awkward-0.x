@@ -143,8 +143,14 @@ class TestJagged(unittest.TestCase):
     def test_bytejagged_iterable(self):
         a = ByteJaggedArray.fromiterable([[1, 2, 3], [], [4, 5]])
         self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])        
-        self.assertEqual(a.offsets.tolist(), [0, 24, 24, 40])
-        self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00")
+        if a.dtype.itemsize == 8:
+            self.assertEqual(a.offsets.tolist(), [0, 24, 24, 40])
+            self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00")
+        elif a.dtype.itemsize == 4:
+            self.assertEqual(a.offsets.tolist(), [0, 12, 12, 20])
+            self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00")
+        else:
+            raise AssertionError(a.dtype.itemsize)
 
     def test_bytejagged_get(self):
         a = ByteJaggedArray([5, 17, 19], [17, 17, 27], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff\x04\x00\x00\x00\x05\x00\x00\x00\xff", numpy.int32)
