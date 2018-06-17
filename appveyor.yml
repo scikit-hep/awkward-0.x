@@ -44,5 +44,5 @@ install:
   - "python --version"
 
 build_script:
-  - "pip install numpy meta --user"
+  - "pip install numpy --user"
   - "python setup.py test"

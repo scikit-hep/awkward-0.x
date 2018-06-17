@@ -273,7 +273,12 @@ class ByteJaggedArray(JaggedArray):
             buf[startpos:stoppos] = what
 
         elif len(starts) != 0:
-            startposes, offsets = numpy.divmod(starts, self._dtype.itemsize)
+            if hasattr(numpy, "divmod"):
+                startposes, offsets = numpy.divmod(starts, self._dtype.itemsize)
+            else:
+                startposes = numpy.floor_divide(starts, self._dtype.itemsize)
+                offsets = numpy.remainder(starts, self._dtype.itemsize)
+
             stopposes = numpy.floor_divide(stops, self._dtype.itemsize)
 
             if isinstance(what, JaggedArray):
