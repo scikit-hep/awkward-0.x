@@ -29,7 +29,7 @@ deploy:
   provider: pypi
   user: pivarski
   password:
-    secure: "???"
+    secure: "UV299wmXqrZHCDSeXgMqfqFi91KvEVG9V8OCKJT3H2ZVk9LJ6QEfmd5jhnU+5K+8WsIgiyhdoIE5Vn5rtkYnW0iYnow6rLMWGPfDTSt7KMtJlXuJxpbBaD46pLXS9nF2UGYJwy4Tg8OzYzjozFNht+s2xqhcmLLCTal+94lvs9b9J9k27nVdzQFgO8c9JE5rwkO5gAMGOPqlyumAElOVyTLBsqHkWY9rvKO0hesX/QhtiLZ5IVYsYgdy62+BOFepiJP0PzTaPJJmN2UxarOPyTTlIDE8odxTWrrcIW1Sw1Xff09Rsq+ZU48rMUfIWBOKdkWY8sFsj+NiPt5XdqAki84nrnjscjfbPAX0pYoOFg/HcEgBkd4t7IqzeKGq4lN9A8DbaANXllHeVc1UgYPiNxqfVX3msoiGCcKweKiA9ok3jtepnOsSYTSiCWLKSx+ojlWxQE/1g4q1pfH9xTliKcPXX9eQenCmmWP1Z+EzvZc1F4YoMaOq4whofzv8Y2MPjMj13+toWfE7/t5qOMeIm8Q7iK3xIYa8pJOGXQ5b9GMu58CyIGQ1ekSrluitD+STn0xevT2dldi9++3aZzVHmC14zCCMRI7mmIcP80dOcDT1uoSv1HC/r1ccUcQYtpBjWg2l3Rp+IOPUcYJgtFZrfeBrAorwGZcm7SGn96ailrM="
   on:
     tags: true
     branch: master

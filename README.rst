@@ -18,7 +18,7 @@ Install histbook like any other Python package:
 
 .. code-block:: bash
 
-    pip install awkward-arrays --user
+    pip install awkward --user
 
 or similar (use ``sudo``, ``virtualenv``, or ``conda`` if you wish).
 
