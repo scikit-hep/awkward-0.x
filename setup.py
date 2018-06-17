@@ -71,7 +71,7 @@ Reference documentation
 
     return description[start:stop].strip() # before + + after
     
-setup(name = "awkward-array",
+setup(name = "awkward",
       version = get_version(),
       packages = find_packages(exclude = ["tests"]),
       scripts = [],

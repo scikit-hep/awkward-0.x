@@ -43,6 +43,13 @@ class JaggedArray(awkward.base.AwkwardArray):
         return cls(offsets[:-1], offsets[1:], content, writeable=writeable)
 
     @classmethod
+    def fromcounts(cls, counts, content, writeable=True):
+        offsets = numpy.empty(len(counts) + 1, JaggedArray.INDEXTYPE)
+        offsets[0] = 0
+        numpy.cumsum(counts, offsets[1:])
+        return cls(offsets[:-1], offsets[1:], content, writeable=writeable)
+
+    @classmethod
     def fromiterable(cls, iterable, writeable=True):
         offsets = [0]
         content = []
@@ -50,6 +57,12 @@ class JaggedArray(awkward.base.AwkwardArray):
             offsets.append(offsets[-1] + len(x))
             content.extend(x)
         return cls(offsets[:-1], offsets[1:], content, writeable=writeable)
+
+    @staticmethod
+    def compatible(*jaggedarrays):
+        if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
+            raise TypeError("not all objects passed to JaggedArray.compatible are JaggedArrays")
+        return all(numpy.array_equal(x._starts, jaggedarrays[0]._starts) and numpy.array_equal(x._stops, jaggedarrays[0]._stops) for x in jaggedarrays[1:])
 
     def __init__(self, starts, stops, content, writeable=True):
         self.starts = starts
@@ -115,7 +128,7 @@ class JaggedArray(awkward.base.AwkwardArray):
     def shape(self):
         return self._starts.shape
 
-    def _offsets_aliased(self):
+    def _offsets_is_aliased(self):
         return (self._starts.base is not None and self._stops.base is not None and self._starts.base is self._stops.base and
                 self._starts.ctypes.data == self._starts.base.ctypes.data and
                 self._stops.ctypes.data == self._stops.base.ctypes.data + self._stops.dtype.itemsize and
@@ -124,18 +137,22 @@ class JaggedArray(awkward.base.AwkwardArray):
 
     @property
     def offsets(self):
-        if self._offsets_aliased():
+        if self._offsets_is_aliased():
             return self._starts.base
         elif numpy.array_equal(self._starts[1:], self.stops[:-1]):
             return numpy.append(self._starts, self.stops[-1])
         else:
             raise ValueError("starts and stops are not compatible with a single offsets array")
 
-    @staticmethod
-    def compatible(*jaggedarrays):
-        if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
-            raise TypeError("not all objects passed to JaggedArray.compatible are JaggedArrays")
-        return all(numpy.array_equal(x._starts, jaggedarrays[0]._starts) and numpy.array_equal(x._stops, jaggedarrays[0]._stops) for x in jaggedarrays[1:])
+    @property
+    def counts(self):
+        return self._stops - self._starts
+
+    # @property
+    # def parents(self):
+        
+
+
 
     def __len__(self):
         return len(self._starts)
