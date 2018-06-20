@@ -40,20 +40,39 @@ class TestVirtual(unittest.TestCase):
 
     def test_virtual_nocache(self):
         a = VirtualArray(lambda: [1, 2, 3])
+        self.assertFalse(a.ismaterialized)
         self.assertTrue(numpy.array_equal(a[:], numpy.array([1, 2, 3])))
+        self.assertTrue(a.ismaterialized)
 
     def test_virtual_transientcache(self):
         cache = {}
         a = VirtualArray(lambda: [1, 2, 3], cache=cache)
+        self.assertFalse(a.ismaterialized)
         a[:]
+        self.assertTrue(a.ismaterialized)
         self.assertEqual(list(cache), [a.TransientKey(id(a))])
         self.assertEqual(list(cache), [a.key])
         self.assertTrue(numpy.array_equal(cache[a.key], numpy.array([1, 2, 3])))
+        del a
 
     def test_virtual_persistentcache(self):
         cache = {}
         a = VirtualArray(lambda: [1, 2, 3], cache=cache, persistentkey="find-me-again")
+        self.assertFalse(a.ismaterialized)
         a[:]
+        self.assertTrue(a.ismaterialized)
         self.assertEqual(list(cache), ["find-me-again"])
         self.assertEqual(list(cache), [a.key])
         self.assertTrue(numpy.array_equal(cache[a.key], numpy.array([1, 2, 3])))
+        del a
+
+    def test_virtual_dontmaterialize(self):
+        a = VirtualArray(lambda: [1, 2, 3], dtype=int, shape=(3,))
+        self.assertFalse(a.ismaterialized)
+        self.assertEqual(a.dtype, numpy.dtype(int))
+        self.assertEqual(a.shape, (3,))
+        self.assertEqual(len(a), 3)
+        self.assertEqual(a._array, None)
+        self.assertFalse(a.ismaterialized)
+        self.assertTrue(numpy.array_equal(a[:], numpy.array([1, 2, 3])))
+        self.assertTrue(a.ismaterialized)

@@ -159,6 +159,13 @@ class VirtualArray(awkward.base.AwkwardArray):
                 self._cache[self.key] = something
                 return something
 
+    @property
+    def ismaterialized(self):
+        if self._cache is None:
+            return isinstance(self._array, (numpy.ndarray, awkward.base.AwkwardArray))
+        else:
+            return self._array is not None and self._array in self._cache
+
     def materialize(self):
         array = self._toarray(self.generator(), self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
 
