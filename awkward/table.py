@@ -175,7 +175,15 @@ class Table(awkward.base.AwkwardArray):
             return self._check_length(self._content[where])[self.start:self.stop:self.step]
 
         elif isinstance(where, (numbers.Integral, numpy.integer)):
-            return self.Row(self, self._start + self._step*where)
+            if where < 0:
+                normwhere = where + self._length
+            else:
+                normwhere = where
+
+            if not 0 <= normwhere < self._length:
+                IndexError("index {0} out of bounds for length {1}".format(where, self._length))
+
+            return self.Row(self, self._start + self._step*normwhere)
 
         elif isinstance(where, slice):
             out = self.__class__(self._length, self._content)
