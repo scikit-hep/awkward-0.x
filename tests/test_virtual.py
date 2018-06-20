@@ -44,6 +44,21 @@ class TestVirtual(unittest.TestCase):
         self.assertTrue(numpy.array_equal(a[:], numpy.array([1, 2, 3])))
         self.assertTrue(a.ismaterialized)
 
+        a = VirtualArray(lambda: range(10))
+        self.assertFalse(a.ismaterialized)
+        self.assertTrue(numpy.array_equal(a[::2], numpy.array([0, 2, 4, 6, 8])))
+        self.assertTrue(a.ismaterialized)
+
+        a = VirtualArray(lambda: range(10))
+        self.assertFalse(a.ismaterialized)
+        self.assertTrue(numpy.array_equal(a[[5, 3, 6, 0, 6]], numpy.array([5, 3, 6, 0, 6])))
+        self.assertTrue(a.ismaterialized)
+
+        a = VirtualArray(lambda: range(10))
+        self.assertFalse(a.ismaterialized)
+        self.assertTrue(numpy.array_equal(a[[True, False, True, False, True, False, True, False, True, False]], numpy.array([0, 2, 4, 6, 8])))
+        self.assertTrue(a.ismaterialized)
+
     def test_virtual_transientcache(self):
         cache = {}
         a = VirtualArray(lambda: [1, 2, 3], cache=cache)
