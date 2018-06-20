@@ -37,6 +37,31 @@ import awkward.base
 import awkward.util
 
 class Table(awkward.base.AwkwardArray):
+    class Row(object):
+        __slots__ = ["_table", "_index"]
+
+        def __init__(self, table, index):
+            super(Table.Row, self).__setattr__("_table", table)
+            super(Table.Row, self).__setattr__("_index", index)
+
+        def __repr__(self):
+            return "<Table.Row {0}>".format(self._index)
+
+        def __getattr__(self, name):
+            return self._table._content[name][self._index]
+
+        def __getitem__(self, name):
+            return self._table._content[name][self._index]
+
+        def __setattr__(self, name, what):
+            self._table._content[name][self._index] = what
+
+        def __setitem__(self, name, what):
+            self._table._content[name][self._index] = what
+
+        def __dir__(self):
+            return list(self._table._content)
+
     def __init__(self, length, columns1={}, *columns2, **columns3):
         self.step = 1
         self.start = 0
@@ -150,7 +175,7 @@ class Table(awkward.base.AwkwardArray):
             return self._check_length(self._content[where])[self.start:self.stop:self.step]
 
         elif isinstance(where, (numbers.Integral, numpy.integer)):
-            return numpy.array([tuple(self._check_length(x)[self.start:self.stop:self.step][where] for x in self._content.values())], dtype=self.dtype)[0]
+            return self.Row(self, self._start + self._step*where)
 
         elif isinstance(where, slice):
             out = self.__class__(self._length, self._content)
@@ -220,27 +245,18 @@ class Table(awkward.base.AwkwardArray):
                 else:
                     for n in where:
                         self._check_length(self._content[n])[self.start:self.stop:self.step] = what
-            
-    class Row(object):
-        def __init__(self, table, index):
-            self._table = table
-            self._index = index
-
-        def __repr__(self):
-            return "<Table.Row {0}>".format(self._index)
-
-        def __getattr__(self, name):
-            return self._table._content[name][self._index]
-
-        def __getitem__(self, name):
-            return self._table._content[name][self._index]
 
     def __iter__(self):
         i = self._start
         stop = self._start + self._step*self._length
-        while i < stop:
-            yield self.Row(self, i)
-            i += self._step
+        if self._step > 0:
+            while i < stop:
+                yield self.Row(self, i)
+                i += self._step
+        else:
+            while i > stop:
+                yield self.Row(self, i)
+                i += self._step
 
     def __repr__(self):
         return "<Table {0} x {1} at {2:012x}>".format(self._length, len(self._content), id(self))

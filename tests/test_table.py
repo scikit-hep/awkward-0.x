@@ -40,4 +40,30 @@ class TestTable(unittest.TestCase):
 
     def test_table_get(self):
         a = Table(10, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        print(a[5:][0])
+
+        self.assertEqual(a[5]["f0"], 5)
+        self.assertEqual(a["f0"][5], 5)
+
+        self.assertEqual(a[5]["f1"], 5.5)
+        self.assertEqual(a["f1"][5], 5.5)
+
+        self.assertEqual(a[5:]["f0"][0], 5)
+        self.assertEqual(a["f0"][5:][0], 5)
+        self.assertEqual(a[5:][0]["f0"], 5)
+
+        self.assertEqual(a[::-2]["f0"][-1], 1)
+        self.assertEqual(a["f0"][::-2][-1], 1)
+        self.assertEqual(a[::-2][-1]["f0"], 1)
+
+        self.assertEqual(a[[5, 3, 7, 5]]["f0"].tolist(), [5, 3, 7, 5])
+        self.assertEqual(a["f0"][[5, 3, 7, 5]].tolist(), [5, 3, 7, 5])
+
+        self.assertEqual(a["f0"][[True, False, True, False, True, False, True, False, True, False]].tolist(), [0, 2, 4, 6, 8])
+        self.assertEqual(a[[True, False, True, False, True, False, True, False, True, False]]["f0"].tolist(), [0, 2, 4, 6, 8])
+
+    def test_table_set(self):
+        a = Table(10, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a.tolist(), [{"f0": 0, "f1": 0.0}, {"f0": 1, "f1": 1.1}, {"f0": 2, "f1": 2.2}, {"f0": 3, "f1": 3.3}, {"f0": 4, "f1": 4.4}, {"f0": 5, "f1": 5.5}, {"f0": 6, "f1": 6.6}, {"f0": 7, "f1": 7.7}, {"f0": 8, "f1": 8.8}, {"f0": 9, "f1": 9.9}])
+
+        a[5]["f0"] = 999
+        print(a.tolist())
