@@ -125,7 +125,7 @@ class Table(awkward.base.AwkwardArray):
 
     @property
     def dtype(self):
-        return numpy.dtype([(n, x.dtype) for n, x in self._content])
+        return numpy.dtype([(n, x.dtype) for n, x in self._content.items()])
 
     @property
     def shape(self):
@@ -149,15 +149,18 @@ class Table(awkward.base.AwkwardArray):
         if isinstance(where, awkward.util.string):
             return self._check_length(self._content[where])[self.start:self.stop:self.step]
 
+        elif isinstance(where, (numbers.Integral, numpy.integer)):
+            return numpy.array([tuple(self._check_length(x)[where] for x in self._content.values())], dtype=self.dtype)[0]
+
         elif isinstance(where, slice):
             out = self.__class__(self._length, self._content)
             start, stop, step = where.indices(self._length)
 
-            out.start = self._start + self._step*start
-            out.step = self._step*step
+            out._start = self._start + self._step*start
+            out._step = self._step*step
 
             d, m = divmod(abs(start - stop), abs(step))
-            out.length = d + (1 if m != 0 else 0)
+            out._length = d + (1 if m != 0 else 0)
 
             return out
             
@@ -166,10 +169,16 @@ class Table(awkward.base.AwkwardArray):
                 assert all(isinstance(x, awkward.util.string) for x in where)
 
             except (TypeError, AssertionError):
-                return Table(self._length, dict((n, self._check_length(x)[where][self.start:self.stop:self.step]) for n, x in self._content.items()))
+                out = Table(self._length, dict((n, self._check_length(x)[where]) for n, x in self._content.items()))
+                out._start = self._start
+                out._step = self._step
+                return out
 
             else:
-                return Table(self._length, dict((n, self._check_length(self._content[n])[self.start:self.stop:self.step]) for n in where))
+                out = Table(self._length, dict((n, self._check_length(self._content[n])) for n in where))
+                out._start = self._start
+                out._step = self._step
+                return out
 
     def __setitem__(self, where, what):
         if isinstance(where, awkward.util.string):
@@ -179,7 +188,8 @@ class Table(awkward.base.AwkwardArray):
             except KeyError:
                 if self._start != 0 or self._step != 1:
                     raise TypeError("only add new columns to the original table, not a table view (start is {0} and step is {1})".format(self._start, self._step))
-                self._content[where] = what
+
+                self._content[where] = self._toarray(what, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
 
             else:
                 self._check_length(array)[self.start:self.stop:self.step] = what
