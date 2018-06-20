@@ -82,7 +82,7 @@ class VirtualArray(awkward.base.AwkwardArray):
 
     @cache.setter
     def cache(self, value):
-        if not callable(getattr(value, "__getitem__", None)) or not callable(getattr(value, "__setitem__", None)) or not callable(getattr(value, "__delitem__", None)):
+        if not value is None and not (callable(getattr(value, "__getitem__", None)) and callable(getattr(value, "__setitem__", None)) and callable(getattr(value, "__delitem__", None))):
             raise TypeError("cache must be a dict or have __getitem__/__setitem__/__delitem__ methods")
         self._cache = value
 
@@ -105,10 +105,14 @@ class VirtualArray(awkward.base.AwkwardArray):
 
     @property
     def shape(self):
-        if self._dtype is not None:
-            return self._dtype
+        if self._shape is not None:
+            return self._shape
         else:
-            return self.array.dtype
+            return self.array.shape
+
+    @property
+    def writable(self):
+        return False
 
     @property
     def key(self):
@@ -135,7 +139,7 @@ class VirtualArray(awkward.base.AwkwardArray):
             return self.materialize()
 
         elif self._cache is None:
-            if isinstance(something, (VirtualArray.TransientKey, string)):
+            if isinstance(something, (VirtualArray.TransientKey, awkward.util.string)):
                 # abnormal state (6)
                 return self.materialize()
             else:
@@ -143,7 +147,7 @@ class VirtualArray(awkward.base.AwkwardArray):
                 return something
 
         else:
-            if isinstance(something, (VirtualArray.TransientKey, string)):
+            if isinstance(something, (VirtualArray.TransientKey, awkward.util.string)):
                 try:
                     # state (5)
                     return self._cache[something]
@@ -185,13 +189,13 @@ class VirtualArray(awkward.base.AwkwardArray):
                 pass
 
     def __len__(self):
-        return self._shape[0]
+        return self.shape[0]
 
     def __getitem__(self, where):
         return self.array[where]
 
     def __setitem__(self, where, what):
-        self.array[where] = what
+        raise ValueError("assignment destination is read-only")
         
 class VirtualObjectArray(awkward.base.AwkwardArray):
     def __init__(self, generator, content):
@@ -215,3 +219,37 @@ class VirtualObjectArray(awkward.base.AwkwardArray):
     @content.setter
     def content(self, value):
         self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+
+    @property
+    def dtype(self):
+        return numpy.dtype(object)
+
+    @property
+    def shape(self):
+        return self._content.shape
+
+    @property
+    def writable(self):
+        return False
+
+    def __len__(self):
+        return len(self._content)
+
+    def __getitem__(self, where):
+        content = self._content[where]
+
+        if len(content.shape) == 0:
+            return self.generator(content)
+
+        elif len(content.shape) == 1:
+            return [self.generator(x) for x in content]
+
+        else:
+            def recurse(row):
+                if len(row.shape) == 1:
+                    return [self.generator(x) for x in row]
+                else:
+                    return [recurse(x) for x in row]
+
+    def __setitem__(self, where, what):
+        raise ValueError("assignment destination is read-only")
