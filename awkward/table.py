@@ -150,7 +150,7 @@ class Table(awkward.base.AwkwardArray):
             return self._check_length(self._content[where])[self.start:self.stop:self.step]
 
         elif isinstance(where, (numbers.Integral, numpy.integer)):
-            return numpy.array([tuple(self._check_length(x)[where] for x in self._content.values())], dtype=self.dtype)[0]
+            return numpy.array([tuple(self._check_length(x)[self.start:self.stop:self.step][where] for x in self._content.values())], dtype=self.dtype)[0]
 
         elif isinstance(where, slice):
             out = self.__class__(self._length, self._content)
@@ -169,9 +169,14 @@ class Table(awkward.base.AwkwardArray):
                 assert all(isinstance(x, awkward.util.string) for x in where)
 
             except (TypeError, AssertionError):
-                out = Table(self._length, dict((n, self._check_length(x)[where]) for n, x in self._content.items()))
-                out._start = self._start
-                out._step = self._step
+                where = numpy.array(where, copy=False)
+                out = Table(0, dict((n, self._check_length(x)[self.start:self.stop:self.step][where]) for n, x in self._content.items()))
+                if len(where.shape) == 1 and issubclass(where.dtype.type, numpy.integer):
+                    out._length = len(where)
+                elif len(where.shape) == 1 and issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
+                    out._length = numpy.count_nonzero(where)
+                else:
+                    raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(where.shape, where.dtype))
                 return out
 
             else:
@@ -187,8 +192,7 @@ class Table(awkward.base.AwkwardArray):
 
             except KeyError:
                 if self._start != 0 or self._step != 1:
-                    raise TypeError("only add new columns to the original table, not a table view (start is {0} and step is {1})".format(self._start, self._step))
-
+                    raise TypeError("only add new columns to the original table, not a table slice (start is {0} and step is {1})".format(self._start, self._step))
                 self._content[where] = self._toarray(what, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
 
             else:
@@ -204,8 +208,8 @@ class Table(awkward.base.AwkwardArray):
 
             else:
                 if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
-                    for x in self._content.values():
-                        self._check_length(x)[n][self.start:self.stop:self.step] = what[0]
+                    for n in where:
+                        self._check_length(self._content[n])[self.start:self.stop:self.step] = what[0]
 
                 elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
                     if len(what) != len(where):
@@ -214,8 +218,8 @@ class Table(awkward.base.AwkwardArray):
                         self._check_length(self._content[n])[self.start:self.stop:self.step] = wht
 
                 else:
-                    for x in self._content.values():
-                        self._check_length(x)[self.start:self.stop:self.step] = what
+                    for n in where:
+                        self._check_length(self._content[n])[self.start:self.stop:self.step] = what
             
     class Row(object):
         def __init__(self, table, index):
@@ -226,16 +230,20 @@ class Table(awkward.base.AwkwardArray):
             return "<Table.Row {0}>".format(self._index)
 
         def __getattr__(self, name):
-            return self._table[name][self._index]
+            return self._table._content[name][self._index]
 
         def __getitem__(self, name):
-            return self._table[name][self._index]
+            return self._table._content[name][self._index]
 
     def __iter__(self):
-        i = 0
-        while i < self._length:
+        i = self._start
+        stop = self._start + self._step*self._length
+        while i < stop:
             yield self.Row(self, i)
-            i += 1
+            i += self._step
+
+    def __repr__(self):
+        return "<Table {0} x {1} at {2:012x}>".format(self._length, len(self._content), id(self))
 
     def tolist(self):
         return [dict((n, self._check_length(x)[self.start:self.stop:self.step][i]) for n, x in self._content.items()) for i in range(self._length)]
