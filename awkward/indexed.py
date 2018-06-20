@@ -46,13 +46,14 @@ class IndexedArray(awkward.base.AwkwardArray):
 
     @index.setter
     def index(self, value):
-        if not isinstance(value, awkward.base.AwkwardArray):
-            value = numpy.array(value, dtype=getattr(value, "dtype", self.INDEXTYPE), copy=False)
+        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
 
-        if not issubclass(value.dtype.type, numpy.integer):
-            raise TypeError("index must have integer dtype")
         if len(value.shape) != 1:
             raise TypeError("index must have 1-dimensional shape")
+        if value.shape[0] == 0:
+            value = value.view(self.INDEXTYPE)
+        if not issubclass(value.dtype.type, numpy.integer):
+            raise TypeError("index must have integer dtype")
 
         self._index = value
 
@@ -62,9 +63,7 @@ class IndexedArray(awkward.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        if not isinstance(value, awkward.base.AwkwardArray):
-            value = numpy.array(value, copy=False)
-        self._content = value
+        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
 
     @property
     def writeable(self):
@@ -105,7 +104,7 @@ class ByteIndexedArray(IndexedArray):
 
     @content.setter
     def content(self, value):
-        self._content = numpy.frombuffer(value, dtype=self.CHARTYPE)
+        self._content = self._toarray(value, self.CHARTYPE, numpy.ndarray).view(self.CHARTYPE).reshape(-1)
         self._content.flags.writeable = self._writeable
 
     @property

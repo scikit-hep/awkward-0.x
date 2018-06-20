@@ -33,5 +33,7 @@ import sys
 
 if sys.version_info[0] <= 2:
     izip = itertools.izip
+    string = basestring
 else:
     izip = zip
+    string = str

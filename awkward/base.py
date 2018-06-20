@@ -32,6 +32,7 @@ import numpy
 
 class AwkwardArray(object):
     CHARTYPE = numpy.dtype(numpy.uint8)
+    INDEXTYPE = numpy.dtype(numpy.int64)
 
     def __iter__(self):
         for i in range(len(self)):
@@ -48,3 +49,12 @@ class AwkwardArray(object):
 
     def tolist(self):
         return [x.tolist() if hasattr(x, "tolist") else x for x in self]
+
+    def _toarray(self, value, defaultdtype, passthrough):
+        if isinstance(value, passthrough):
+            return value
+        else:
+            try:
+                return numpy.frombuffer(value, dtype=getattr(value, "dtype", defaultdtype)).reshape(getattr(value, "shape", -1))
+            except AttributeError:
+                return numpy.array(value, copy=False)

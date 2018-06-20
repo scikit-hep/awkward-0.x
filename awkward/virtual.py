@@ -33,25 +33,27 @@ import numbers
 import numpy
 
 import awkward.base
+import awkward.util
 
 class VirtualArray(awkward.base.AwkwardArray):
-    class Key(object):
+    class TransientKey(object):
         def __init__(self, id):
             self._id = id
         def __repr__(self):
-            return "<VirtualArray.Key {0}>".format(self._id)
+            return "<VirtualArray.TransientKey {0}>".format(self._id)
         def __hash__(self):
-            return hash((VirtualArray.Key, self._id))
+            return hash((VirtualArray.TransientKey, self._id))
         def __eq__(self, other):
-            return isinstance(other, VirtualArray.Key) and self._id == other._id
+            return isinstance(other, VirtualArray.TransientKey) and self._id == other._id
         def __ne__(self, other):
             return not self.__eq__(other)
         def __getstate__(self):
-            raise RuntimeError("VirtualArray.Keys are not unique across processes, and hence should not be serialized")
+            raise RuntimeError("VirtualArray.TransientKeys are not unique across processes, and hence should not be serialized")
 
-    def __init__(self, generator, cache=None, dtype=None, shape=None):
+    def __init__(self, generator, cache=None, persistentkey=None, dtype=None, shape=None):
         self.generator = generator
         self.cache = cache
+        self.persistentkey = persistentkey
         self._array = None
 
         if dtype is None:
@@ -85,16 +87,35 @@ class VirtualArray(awkward.base.AwkwardArray):
         self._cache = value
 
     @property
+    def persistentkey(self):
+        return self._persistentkey
+
+    @persistentkey.setter
+    def persistentkey(self, value):
+        if value is not None and not isinstance(value, awkward.util.string):
+            raise TypeError("persistentkey must be a string or None")
+        self._persistentkey = value
+
+    @property
     def dtype(self):
-        return self._dtype
+        if self._dtype is not None:
+            return self._dtype
+        else:
+            return self.array.dtype
 
     @property
     def shape(self):
-        return self._shape
+        if self._dtype is not None:
+            return self._dtype
+        else:
+            return self.array.dtype
 
     @property
     def key(self):
-        return self.Key(id(self))
+        if self._persistentkey is not None:
+            return self._persistentkey
+        else:
+            return self.TransientKey(id(self))
 
     @property
     def array(self):
@@ -114,7 +135,7 @@ class VirtualArray(awkward.base.AwkwardArray):
             return self.materialize()
 
         elif self._cache is None:
-            if isinstance(something, VirtualArray.Key):
+            if isinstance(something, (VirtualArray.TransientKey, string)):
                 # abnormal state (6)
                 return self.materialize()
             else:
@@ -122,7 +143,7 @@ class VirtualArray(awkward.base.AwkwardArray):
                 return something
 
         else:
-            if isinstance(something, VirtualArray.Key):
+            if isinstance(something, (VirtualArray.TransientKey, string)):
                 try:
                     # state (5)
                     return self._cache[something]
@@ -145,25 +166,24 @@ class VirtualArray(awkward.base.AwkwardArray):
 
         if self._cache is None:
             # states (1), (2), and (6)
-            self._array, self._dtype, self._shape = array, array.dtype, array.shape
+            self._array = array
         else:
             # states (3) and (4)
             self._array = self.key
-            self._cache[self._array], self._dtype, self._shape = array, array.dtype, array.shape
+            self._cache[self._array] = array
 
         return array
 
     def __del__(self):
-        # after this object is garbage collected, its id may be reused: remove its key (based on id) from the cache
-        if self._cache is not None and isinstance(self._array, VirtualArray.Key):
+        # TransientKeys are based on runtime ids, which Python may reuse after an object is garbage collected
+        # they *MUST* be removed from the cache to avoid confusion; persistentkeys can (and should) stay in
+        if self._cache is not None and isinstance(self._array, VirtualArray.TransientKey):
             try:
                 del self._cache[self._array]
             except:
                 pass
 
     def __len__(self):
-        if self._shape is None:
-            self.materialize()
         return self._shape[0]
 
     def __getitem__(self, where):
@@ -173,4 +193,24 @@ class VirtualArray(awkward.base.AwkwardArray):
         self.array[where] = what
         
 class VirtualObjectArray(awkward.base.AwkwardArray):
-    pass
+    def __init__(self, generator, content):
+        self.generator = generator
+        self.content = content
+
+    @property
+    def generator(self):
+        return self._generator
+
+    @generator.setter
+    def generator(self, value):
+        if not callable(value):
+            raise TypeError("generator must be a callable (of one argument: the array slice)")
+        self._generator = value
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))

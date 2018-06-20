@@ -63,8 +63,8 @@ class ChunkedArray(awkward.base.AwkwardArray):
     def _chunkiterator(self, minindex):
         sofar = i = 0
         while i < len(self._chunks):
-            if not isinstance(self._chunks[i], (awkward.base.AwkwardArray, numpy.ndarray)):
-                self._chunks[i] = numpy.array(self._chunks[i])
+            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
+                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
 
             if sofar + len(self._chunks[i]) > minindex:
                 yield sofar, self._chunks[i]
@@ -98,8 +98,8 @@ class ChunkedArray(awkward.base.AwkwardArray):
     def __iter__(self):
         i = 0
         while i < len(self._chunks):
-            if not isinstance(self._chunks[i], (awkward.base.AwkwardArray, numpy.ndarray)):
-                self._chunks[i] = numpy.array(self._chunks[i])
+            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
+                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
             for x in self._chunks[i]:
                 yield x
             i += 1
@@ -429,8 +429,7 @@ class PartitionedArray(ChunkedArray):
 
     @offsets.setter
     def offsets(self, value):
-        if not isinstance(value, awkward.base.AwkwardArray):
-            value = numpy.array(value, copy=False)
+        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
 
         if len(value) == 0:
             raise ValueError("offsets must be non-empty")
@@ -449,8 +448,8 @@ class PartitionedArray(ChunkedArray):
         assert i >= 0
         sofar = self._offsets[i]
         while i < len(self._chunks):
-            if not isinstance(self._chunks[i], (awkward.base.AwkwardArray, numpy.ndarray)):
-                self._chunks[i] = numpy.array(self._chunks[i])
+            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
+                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
 
             if sofar + len(self._chunks[i]) > minindex:
                 yield sofar, self._chunks[i]
@@ -465,8 +464,8 @@ class PartitionedArray(ChunkedArray):
 
         for i, count in enumerate(self._offsets[1:] - self._offsets[:-1]):
             if count > 0:
-                if not isinstance(self._chunks[i], (awkward.base.AwkwardArray, numpy.ndarray)):
-                    self._chunks[i] = numpy.array(self._chunks[i])
+                if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
+                    self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
                 return numpy.dtype((self._chunks[i].dtype, self._chunks[i].shape[1:]))
 
         raise ValueError("chunks are empty; cannot determine dtype")
@@ -480,8 +479,8 @@ class PartitionedArray(ChunkedArray):
 
         i = 0
         while i < len(self._chunks):
-            if not isinstance(self._chunks[i], (awkward.base.AwkwardArray, numpy.ndarray)):
-                self._chunks[i] = numpy.array(self._chunks[i])
+            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
+                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
             for x in self._chunks[i]:
                 yield x
             i += 1
