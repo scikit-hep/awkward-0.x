@@ -156,7 +156,8 @@ class VirtualArray(awkward.base.AwkwardArray):
                 return something
 
     def materialize(self):
-        array = self.generator()
+        array = self._toarray(self.generator(), self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+
         if self._dtype is not None and self._dtype != array.dtype:
             raise ValueError("materialized array has dtype {0}, expected dtype {1}".format(array.dtype, self._dtype))
         if self._shape is not None and self._shape != array.shape:
