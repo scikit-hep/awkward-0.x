@@ -128,10 +128,8 @@ class ByteIndexedArray(IndexedArray):
         starts = self._index[where]
 
         if len(starts.shape) == 0:
-            return self._content[starts : starts + self._dtype.itemsize].view(self._dtype)[0]
-            ### Note: the above is only 15% faster than
-            # pos, offset = divmod(starts, self._dtype.itemsize)
-            # return numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)[pos]
+            pos, offset = divmod(starts, self._dtype.itemsize)
+            return numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)[pos]
 
         else:
             if len(starts) == 0:

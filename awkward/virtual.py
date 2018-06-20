@@ -244,19 +244,10 @@ class VirtualObjectArray(awkward.base.AwkwardArray):
 
     def __getitem__(self, where):
         content = self._content[where]
-
-        if len(content.shape) == 0:
+        if isinstance(where, (numbers.Integral, numpy.integer)):
             return self.generator(content)
-
-        elif len(content.shape) == 1:
-            return [self.generator(x) for x in content]
-
         else:
-            def recurse(row):
-                if len(row.shape) == 1:
-                    return [self.generator(x) for x in row]
-                else:
-                    return [recurse(x) for x in row]
+            return [self.generator(x) for x in content]
 
     def __setitem__(self, where, what):
         raise ValueError("assignment destination is read-only")
