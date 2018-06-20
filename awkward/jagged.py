@@ -74,16 +74,7 @@ class JaggedArray(awkward.base.AwkwardArray):
 
     @starts.setter
     def starts(self, value):
-        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
-
-        if len(value.shape) != 1:
-            raise TypeError("starts must have 1-dimensional shape")
-        if value.shape[0] == 0:
-            value = value.view(self.INDEXTYPE)
-        if not issubclass(value.dtype.type, numpy.integer):
-            raise TypeError("starts must have integer dtype")
-
-        self._starts = value
+        self._starts = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
 
     @property
     def stops(self):
@@ -91,16 +82,7 @@ class JaggedArray(awkward.base.AwkwardArray):
 
     @stops.setter
     def stops(self, value):
-        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
-
-        if len(value.shape) != 1:
-            raise TypeError("stops must have 1-dimensional shape")
-        if value.shape[0] == 0:
-            value = value.view(self.INDEXTYPE)
-        if not issubclass(value.dtype.type, numpy.integer):
-            raise TypeError("stops must have integer dtype")
-
-        self._stops = value
+        self._stops = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
 
     @property
     def content(self):
@@ -120,14 +102,15 @@ class JaggedArray(awkward.base.AwkwardArray):
 
     @property
     def dtype(self):
-        return self._content.dtype
+        return numpy.dtype(object)   # specifically, subarrays
 
     @property
     def shape(self):
-        return self._starts.shape
+        return (len(self._starts),)
 
     def _offsets_is_aliased(self):
-        return (self._starts.base is not None and self._stops.base is not None and self._starts.base is self._stops.base and
+        return (isinstance(self._starts, numpy.ndarray) and isinstance(self._stops, numpy.ndarray) and
+                self._starts.base is not None and self._stops.base is not None and self._starts.base is self._stops.base and
                 self._starts.ctypes.data == self._starts.base.ctypes.data and
                 self._stops.ctypes.data == self._stops.base.ctypes.data + self._stops.dtype.itemsize and
                 len(self._starts) == len(self._starts.base) - 1 and
@@ -157,12 +140,32 @@ class JaggedArray(awkward.base.AwkwardArray):
             i += 1
         return out
         
-    def __len__(self):
-        return len(self._starts)
+    def __len__(self):                 # length is determined by starts
+        return len(self._starts)       # data can grow by appending contents and stops before starts
+
+    def _check_startsstops(self):
+        if len(self._starts.shape) != 1:
+            raise TypeError("starts must have 1-dimensional shape")
+        if self._starts.shape[0] == 0:
+            self._starts = self._starts.view(self.INDEXTYPE)
+        if not issubclass(self._starts.dtype.type, numpy.integer):
+            raise TypeError("starts must have integer dtype")
+
+        if len(self._stops.shape) != 1:
+            raise TypeError("stops must have 1-dimensional shape")
+        if self._stops.shape[0] == 0:
+            self._stops = self._stops.view(self.INDEXTYPE)
+        if not issubclass(self._stops.dtype.type, numpy.integer):
+            raise TypeError("stops must have integer dtype")
+
+        if len(self._starts) > len(self._stops):
+            raise ValueError("starts must be have as many or fewer elements as stops")
 
     def __getitem__(self, where):
+        self._check_startsstops()
         starts = self._starts[where]
         stops = self._stops[where]
+
         if len(starts.shape) == len(stops.shape) == 0:
             return self.content[starts:stops]
         else:
@@ -172,6 +175,7 @@ class JaggedArray(awkward.base.AwkwardArray):
         if not self._writeable:
             raise ValueError("assignment destination is read-only")
 
+        self._check_startsstops()
         starts = self._starts[where]
         stops = self._stops[where]
 
@@ -250,8 +254,10 @@ class ByteJaggedArray(JaggedArray):
         self._dtype = numpy.dtype(value)
 
     def __getitem__(self, where):
+        self._check_startsstops()
         starts = self._starts[where]
         stops = self._stops[where]
+
         if len(starts.shape) == len(stops.shape) == 0:
             return self._content[starts:stops].view(self._dtype)
         else:
@@ -261,6 +267,7 @@ class ByteJaggedArray(JaggedArray):
         if not self._writeable:
             raise ValueError("assignment destination is read-only")
 
+        self._check_startsstops()
         starts = self._starts[where]
         stops = self._stops[where]
 
