@@ -36,9 +36,10 @@ import numpy
 import awkward.base
 
 class MaskedArray(awkward.base.AwkwardArray):
-    def __init__(self, mask, content, writeable=True):
+    def __init__(self, mask, content, validwhen=False, writeable=True):
         self.mask = mask
         self.content = content
+        self.validwhen = validwhen
         self.writeable = writeable
 
     @property
@@ -65,6 +66,14 @@ class MaskedArray(awkward.base.AwkwardArray):
     @content.setter
     def content(self, value):
         self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        
+    @property
+    def validwhen(self):
+        return self._validwhen
+
+    @validwhen.setter
+    def validwhen(self, value):
+        self._validwhen = bool(value)
 
     @property
     def writeable(self):
@@ -87,24 +96,24 @@ class MaskedArray(awkward.base.AwkwardArray):
 
     def __getitem__(self, where):
         if self._isstring(where):
-            return MaskedArray(self._mask, self._content[where], writeable=self._writeable)
+            return MaskedArray(self._mask, self._content[where], validwhen=self._validwhen, writeable=self._writeable)
 
         if not isinstance(where, tuple):
             where = (where,)
         head, tail = where[0], where[1:]
 
         if isinstance(head, (numbers.Integral, numpy.integer)):
-            if self._mask[head]:
+            if self._mask[head] != self._validwhen:
                 return numpy.ma.masked
             else:
                 return self._content[where]
 
         else:
-            return MaskedArray(self._mask[head], self._content[where], writeable=self._writeable)
+            return MaskedArray(self._mask[head], self._content[where], validwhen=self._validwhen, writeable=self._writeable)
 
     def __setitem__(self, where, what):
         if self._isstring(where):
-            MaskedArray(self._mask, self._content[where], writeable=self._writeable)[:] = what
+            MaskedArray(self._mask, self._content[where], validwhen=self._validwhen, writeable=self._writeable)[:] = what
             return
 
         if not self._writeable:
@@ -115,32 +124,45 @@ class MaskedArray(awkward.base.AwkwardArray):
         head, tail = where[0], where[1:]
 
         if isinstance(what, numpy.ma.core.MaskedConstant) or (isinstance(what, collections.Sequence) and len(what) == 1 and isinstance(what[0], numpy.ma.core.MaskedConstant)):
-            self._mask[head] = True
+            self._mask[head] = not self._validwhen
             
         elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
             if isinstance(what[0], numpy.ma.core.MaskedConstant):
-                self._mask[head] = True
+                self._mask[head] = not self._validwhen
             else:
-                self._mask[head] = False
+                self._mask[head] = self._validwhen
                 self._content[where] = what[0]
 
         elif isinstance(what, MaskedArray):
-            self._mask[head] = what._mask
+            if self._validwhen == what._validwhen:
+                self._mask[head] = what._mask
+            else:
+                self._mask[head] = numpy.logical_not(what._mask)
             self._content[where] = what._content
 
         elif isinstance(what, collections.Sequence):
-            self._mask[head] = [isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
+            if self._validwhen == False:
+                self._mask[head] = [isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
+            else:
+                self._mask[head] = [not isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
             self._content[where] = [x if not isinstance(x, numpy.ma.core.MaskedConstant) else 0 for x in what]
 
         elif isinstance(what, (numpy.ndarray, awkward.base.AwkwardArray)):
-            self._mask[head] = False
+            self._mask[head] = self._validwhen
             self._content[where] = what
 
         else:
-            self._mask[head] = False
+            self._mask[head] = self._validwhen
             self._content[where] = what
 
 class BitMaskedArray(MaskedArray):
+    def __init__(self, mask, content, validwhen=False, lsb=True, writeable=True):
+        self.mask = mask
+        self.content = content
+        self.validwhen = validwhen
+        self.lsb = lsb
+        self.writeable = writeable
+
     @property
     def mask(self):
         return self._mask
@@ -153,16 +175,86 @@ class BitMaskedArray(MaskedArray):
             raise TypeError("mask must have 1-dimensional shape")
 
         self._mask = value.view(self.BITMASKTYPE)
+        
+    @property
+    def lsb(self):
+        return self._lsb
+
+    @lsb.setter
+    def lsb(self, value):
+        self._lsb = bool(value)
+
+    def _maskvalues(self, where):
+        bytepos = numpy.right_shift(where, 3)
+
+        # TODO: this assumes self.lsb
+        # also need to check better cases!
+
+        out = numpy.bitwise_and(self._mask[bytepos], numpy.left_shift(1, where - bytepos*8)).astype(numpy.bool_)
+        if self._validwhen == True:
+            return out
+        else:
+            return numpy.logical_not(out)
+
+    # FIXME: nothing below is valid
 
     def __getitem__(self, where):
         if self._isstring(where):
-            return BitMaskedArray(self._mask, self._content[where], writeable=self._writeable)
-        
-        HERE
+            return MaskedArray(self._mask, self._content[where], validwhen=self._validwhen, writeable=self._writeable)
+
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
+        if isinstance(head, (numbers.Integral, numpy.integer)):
+            if self._mask[head] != self._validwhen:
+                return numpy.ma.masked
+            else:
+                return self._content[where]
+
+        else:
+            return MaskedArray(self._mask[head], self._content[where], validwhen=self._validwhen, writeable=self._writeable)
 
     def __setitem__(self, where, what):
         if self._isstring(where):
-            BitMaskedArray(self._mask, self._content[where], writeable=self._writeable)[:] = what
+            MaskedArray(self._mask, self._content[where], validwhen=self._validwhen, writeable=self._writeable)[:] = what
             return
 
-        THERE
+        if not self._writeable:
+            raise ValueError("assignment destination is read-only")
+
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
+        if isinstance(what, numpy.ma.core.MaskedConstant) or (isinstance(what, collections.Sequence) and len(what) == 1 and isinstance(what[0], numpy.ma.core.MaskedConstant)):
+            self._mask[head] = not self._validwhen
+            
+        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+            if isinstance(what[0], numpy.ma.core.MaskedConstant):
+                self._mask[head] = not self._validwhen
+            else:
+                self._mask[head] = self._validwhen
+                self._content[where] = what[0]
+
+        elif isinstance(what, MaskedArray):
+            if self._validwhen == what._validwhen:
+                self._mask[head] = what._mask
+            else:
+                self._mask[head] = numpy.logical_not(what._mask)
+            self._content[where] = what._content
+
+        elif isinstance(what, collections.Sequence):
+            if self._validwhen == False:
+                self._mask[head] = [isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
+            else:
+                self._mask[head] = [not isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
+            self._content[where] = [x if not isinstance(x, numpy.ma.core.MaskedConstant) else 0 for x in what]
+
+        elif isinstance(what, (numpy.ndarray, awkward.base.AwkwardArray)):
+            self._mask[head] = self._validwhen
+            self._content[where] = what
+
+        else:
+            self._mask[head] = self._validwhen
+            self._content[where] = what

@@ -39,7 +39,7 @@ class TestMasked(unittest.TestCase):
         pass
 
     def test_masked_get(self):
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9])
         self.assertTrue(numpy.ma.is_masked(a[0]))
         self.assertFalse(numpy.ma.is_masked(a[1]))
@@ -48,54 +48,124 @@ class TestMasked(unittest.TestCase):
         self.assertTrue(numpy.ma.is_masked(a[5:][1]))
 
     def test_masked_set(self):
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[5] = 999
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 999.0, None, 7.7, None, 9.9])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[6] = 999
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 5.5, 999.0, 7.7, None, 9.9])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[5] = numpy.ma.masked
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, None, None, 7.7, None, 9.9])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[6] = numpy.ma.masked
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[5:] = 999
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 999.0, 999.0, 999.0, 999.0, 999.0])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[5:] = [999]
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 999.0, 999.0, 999.0, 999.0, 999.0])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[5:] = [1, 2, 3, 4, 5]
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 1.0, 2.0, 3.0, 4.0, 5.0])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[5:] = numpy.ma.masked
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, None, None, None, None, None])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[[3, 2, 1]] = [1, 2, 3]
         self.assertEqual(a.tolist(), [None, 3.0, 2.0, 1.0, None, 5.5, None, 7.7, None, 9.9])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[[3, 2, 1]] = [1, 2, numpy.ma.masked]
         self.assertEqual(a.tolist(), [None, None, 2.0, 1.0, None, 5.5, None, 7.7, None, 9.9])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[[True, True, True, True, True, False, False, False, False, False]] = [101, 102, 103, 104, 105]
         self.assertEqual(a.tolist(), [101.0, 102.0, 103.0, 104.0, 105.0, 5.5, None, 7.7, None, 9.9])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
         a[[True, True, True, True, True, False, False, False, False, False]] = [101, 102, numpy.ma.masked, 104, 105]
         self.assertEqual(a.tolist(), [101.0, 102.0, None, 104.0, 105.0, 5.5, None, 7.7, None, 9.9])
 
-        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        a[[3, 2, 1]] = MaskedArray([False, False, True], [1, 2, 3])
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
+        a[[3, 2, 1]] = MaskedArray([False, False, True], [1, 2, 3], validwhen=False)
+        self.assertEqual(a.tolist(), [None, None, 2.0, 1.0, None, 5.5, None, 7.7, None, 9.9])
+
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
+        a[[3, 2, 1]] = MaskedArray([True, True, False], [1, 2, 3], validwhen=True)
+        self.assertEqual(a.tolist(), [None, None, 2.0, 1.0, None, 5.5, None, 7.7, None, 9.9])
+
+    def test_masked_get_flip(self):
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9])
+        self.assertTrue(numpy.ma.is_masked(a[0]))
+        self.assertFalse(numpy.ma.is_masked(a[1]))
+        self.assertEqual(a[5:].tolist(), [5.5, None, 7.7, None, 9.9])
+        self.assertFalse(numpy.ma.is_masked(a[5:][0]))
+        self.assertTrue(numpy.ma.is_masked(a[5:][1]))
+
+    def test_masked_set_flip(self):
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[5] = 999
+        self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 999.0, None, 7.7, None, 9.9])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[6] = 999
+        self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 5.5, 999.0, 7.7, None, 9.9])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[5] = numpy.ma.masked
+        self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, None, None, 7.7, None, 9.9])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[6] = numpy.ma.masked
+        self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[5:] = 999
+        self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 999.0, 999.0, 999.0, 999.0, 999.0])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[5:] = [999]
+        self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 999.0, 999.0, 999.0, 999.0, 999.0])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[5:] = [1, 2, 3, 4, 5]
+        self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 1.0, 2.0, 3.0, 4.0, 5.0])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[5:] = numpy.ma.masked
+        self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, None, None, None, None, None])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[[3, 2, 1]] = [1, 2, 3]
+        self.assertEqual(a.tolist(), [None, 3.0, 2.0, 1.0, None, 5.5, None, 7.7, None, 9.9])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[[3, 2, 1]] = [1, 2, numpy.ma.masked]
+        self.assertEqual(a.tolist(), [None, None, 2.0, 1.0, None, 5.5, None, 7.7, None, 9.9])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[[True, True, True, True, True, False, False, False, False, False]] = [101, 102, 103, 104, 105]
+        self.assertEqual(a.tolist(), [101.0, 102.0, 103.0, 104.0, 105.0, 5.5, None, 7.7, None, 9.9])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[[True, True, True, True, True, False, False, False, False, False]] = [101, 102, numpy.ma.masked, 104, 105]
+        self.assertEqual(a.tolist(), [101.0, 102.0, None, 104.0, 105.0, 5.5, None, 7.7, None, 9.9])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[[3, 2, 1]] = MaskedArray([False, False, True], [1, 2, 3], validwhen=False)
+        self.assertEqual(a.tolist(), [None, None, 2.0, 1.0, None, 5.5, None, 7.7, None, 9.9])
+
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
+        a[[3, 2, 1]] = MaskedArray([True, True, False], [1, 2, 3], validwhen=True)
         self.assertEqual(a.tolist(), [None, None, 2.0, 1.0, None, 5.5, None, 7.7, None, 9.9])
