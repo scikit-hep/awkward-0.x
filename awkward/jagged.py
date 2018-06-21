@@ -163,7 +163,7 @@ class JaggedArray(awkward.base.AwkwardArray):
 
     def __getitem__(self, where):
         if self._isstring(where):
-            return JaggedArray(self._starts, self._stops, self._content[where], writeable=writeable)
+            return JaggedArray(self._starts, self._stops, self._content[where], writeable=self._writeable)
 
         self._check_startsstops()
         starts = self._starts[where]
