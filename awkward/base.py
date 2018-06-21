@@ -57,6 +57,8 @@ class AwkwardArray(object):
         for x in self:
             if isinstance(x, awkward.table.Table.Row):
                 out.append(dict((n, x[n]) for n in x._table._content))
+            elif isinstance(x, numpy.ma.core.MaskedConstant):
+                out.append(None)
             else:
                 try:
                     out.append(x.tolist())

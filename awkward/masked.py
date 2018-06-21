@@ -114,7 +114,10 @@ class MaskedArray(awkward.base.AwkwardArray):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+        if isinstance(what, numpy.ma.core.MaskedConstant) or (isinstance(what, collections.Sequence) and len(what) == 1 and isinstance(what[0], numpy.ma.core.MaskedConstant)):
+            self._mask[head] = True
+            
+        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
             if isinstance(what[0], numpy.ma.core.MaskedConstant):
                 self._mask[head] = True
             else:
@@ -134,11 +137,8 @@ class MaskedArray(awkward.base.AwkwardArray):
             self._content[where] = what
 
         else:
-            if isinstance(what, numpy.ma.core.MaskedConstant):
-                self._mask[head] = True
-            else:
-                self._mask[head] = False
-                self._content[where] = what
+            self._mask[head] = False
+            self._content[where] = what
 
 class BitMaskedArray(MaskedArray):
     @property
