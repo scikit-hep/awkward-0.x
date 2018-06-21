@@ -50,7 +50,8 @@ class AwkwardArray(object):
         return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
 
     def tolist(self):
-        return [x.tolist() if hasattr(x, "tolist") else x for x in self]
+        import awkward.table
+        return [x.tolist() if hasattr(x, "tolist") else dict((n, x[n]) for n in x._table._content) if isinstance(x, awkward.table.Table.Row) else x for x in self]
 
     def _toarray(self, value, defaultdtype, passthrough):
         if isinstance(value, passthrough):
