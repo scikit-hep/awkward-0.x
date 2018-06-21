@@ -156,6 +156,33 @@ class MaskedArray(awkward.base.AwkwardArray):
             self._content[where] = what
 
 class BitMaskedArray(MaskedArray):
+    @staticmethod
+    def frombools(mask, content, validwhen=False, lsb=True, writeable=True):
+        mask = numpy.array(mask, copy=False)
+
+        if len(mask.shape) != 1:
+            raise TypeError("mask must have 1-dimensional shape")
+        if not issubclass(mask.dtype.type, (numpy.bool, numpy.bool_)):
+            raise TypeError("mask must have boolean type")
+
+        if lsb:
+            # maybe pad the length for reshape
+            length = 8*((len(mask) + 8 - 1) >> 3)   # ceil(len(mask) / 8.0) * 8
+            if length != len(mask):
+                out = numpy.empty(length, dtype=numpy.bool_)
+                out[:len(mask)] = mask
+            else:
+                out = mask
+
+            # reverse the order in groups of 8
+            out = out.reshape(-1, 8)[:,::-1].reshape(-1)
+
+        else:
+            # numpy.packbits encodes as msb (most significant bit); already in the right order
+            out = mask
+
+        return BitMaskedArray(numpy.packbits(out), content, validwhen=validwhen, lsb=lsb, writeable=writeable)
+
     def __init__(self, mask, content, validwhen=False, lsb=True, writeable=True):
         self.mask = mask
         self.content = content
@@ -184,12 +211,13 @@ class BitMaskedArray(MaskedArray):
     def lsb(self, value):
         self._lsb = bool(value)
 
-    def _ismasked(self, where):
+    def _maskwhere(self, where):
         if isinstance(where, (numbers.Integral, numpy.integer)):
             pass       # see below
 
         elif isinstance(where, slice):
-            return self._ismasked(numpy.arange(*where.indices(len(self._content))))
+            # assumes a small slice; for a big slice, it could be faster to unpack the whole mask
+            return self._maskwhere(numpy.arange(*where.indices(len(self._content))))
 
         else:
             where = numpy.array(where, copy=False)
@@ -197,36 +225,33 @@ class BitMaskedArray(MaskedArray):
                 pass   # see below
 
             elif len(where.shape) == 1 and issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
-                # scales with the size of the whole mask, so go ahead and unpack the mask
+                # scales with the size of the mask anyway, so go ahead and unpack the whole mask
+                unpacked = numpy.unpackbits(self._mask).view(self.MASKTYPE)
 
-                unpacked = numpy.unpackbits(self._mask).astype(self.BITMASKTYPE)
                 if self.lsb:
                     unpacked = unpacked[:len(where)]
                 else:
                     unpacked = unpacked.reshape(-1, 8)[:,::-1].reshape(-1)[:len(where)]
 
-                out = unpacked[where]
-                if self._validwhen == True:
-                    return numpy.logical_not(out)
-                else:
-                    return out
+                return unpacked[where]
 
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(where.shape, where.dtype))
 
-        # handle single integer case and array of integers case with the same code
-
+        # from above: handle single integer case and array of integers case with the same code
         bytepos = numpy.right_shift(where, 3)   # where // 8
         bitpos  = where - 8*bytepos             # where % 8
-        if self.lsb:
-            out = numpy.bitwise_and(self._mask[bytepos], numpy.left_shift(1, bitpos)).astype(numpy.bool_)
-        else:
-            out = numpy.bitwise_and(self._mask[bytepos], numpy.right_shift(128, bitpos)).astype(numpy.bool_)
 
-        if self._validwhen == True:
-            return out
+        if self.lsb:
+            out = numpy.left_shift(1, bitpos)
         else:
-            return numpy.logical_not(out)
+            out = numpy.right_shift(128, bitpos)
+
+        if len(out.shape) == 0:
+            return numpy.bitwise_and(out, self._mask[bytepos]) > 0
+        else:
+            numpy.bitwise_and(out, self._mask[bytepos], out)
+            return out.astype(numpy.bool_)
 
     def __getitem__(self, where):
         if self._isstring(where):
@@ -237,13 +262,13 @@ class BitMaskedArray(MaskedArray):
         head, tail = where[0], where[1:]
 
         if isinstance(head, (numbers.Integral, numpy.integer)):
-            if self._ismasked(head):
+            if self._maskwhere(head) != self._validwhen:
                 return numpy.ma.masked
             else:
                 return self._content[where]
 
         else:
-            return MaskedArray(self._ismasked(head), self._content[where], validwhen=self._validwhen, writeable=self._writeable)
+            return MaskedArray(self._maskwhere(head), self._content[where], validwhen=self._validwhen, writeable=self._writeable)
 
     # FIXME: nothing below is valid
 
