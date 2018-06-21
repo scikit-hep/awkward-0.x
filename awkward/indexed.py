@@ -33,8 +33,6 @@ import numpy
 import awkward.base
 
 class IndexedArray(awkward.base.AwkwardArray):
-    INDEXTYPE = numpy.dtype(numpy.int64)
-
     def __init__(self, index, content, writeable=True):
         self.index = index
         self.content = content
@@ -79,7 +77,7 @@ class IndexedArray(awkward.base.AwkwardArray):
 
     @property
     def shape(self):
-        return self._index.shape
+        return (len(self._index),) + self._content.shape[1:]
 
     def __len__(self):
         return len(self._index)

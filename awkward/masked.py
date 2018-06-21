@@ -28,12 +28,64 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from awkward.indexed import IndexedArray, ByteIndexedArray
-from awkward.masked import MaskedArray, BitMaskedArray, FilteredArray, BitFilteredArray
-from awkward.jagged import JaggedArray, ByteJaggedArray
-from awkward.chunked import ChunkedArray, PartitionedArray
-from awkward.virtual import VirtualArray, VirtualObjectArray
-from awkward.table import Table
+import numpy
 
-# convenient access to the version number
-from awkward.version import __version__
+import awkward.base
+
+class MaskedArray(awkward.base.AwkwardArray):
+    def __init__(self, mask, content, writeable=True):
+        self.mask = mask
+        self.content = content
+        self.writeable = writeable
+
+    @property
+    def mask(self):
+        return self._mask
+
+    @mask.setter
+    def mask(self, value):
+        value = self._toarray(value, self.MASKTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+
+        if len(value.shape) != 1:
+            raise TypeError("mask must have 1-dimensional shape")
+        if value.shape[0] == 0:
+            value = value.view(self.MASKTYPE)
+        if not issubclass(value.dtype.type, (numpy.bool_, numpy.bool)):
+            raise TypeError("mask must have boolean dtype")
+
+        self._mask = value
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+
+    @property
+    def writeable(self):
+        return self._writeable
+
+    @writeable.setter
+    def writeable(self, value):
+        self._writeable = bool(value)
+
+    @property
+    def dtype(self):
+        return self._content.dtype
+
+    @property
+    def shape(self):
+        return self._content.shape
+
+
+
+class BitMaskedArray(MaskedArray):
+    pass
+
+class FilteredArray(MaskedArray):
+    pass
+
+class BitFilteredArray(BitMaskedArray):
+    pass

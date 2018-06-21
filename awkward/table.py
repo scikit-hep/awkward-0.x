@@ -47,14 +47,20 @@ class Table(awkward.base.AwkwardArray):
         def __repr__(self):
             return "<Table.Row {0}>".format(self._index)
 
-        def __getattr__(self, name):
-            return self._table._content[name][self._index]
+        def __hasattr__(self, name):
+            return name in self._table._content
 
-        def __getitem__(self, name):
+        def __getattr__(self, name):
             return self._table._content[name][self._index]
 
         def __setattr__(self, name, what):
             self._table._content[name][self._index] = what
+
+        def __contains__(self, name):
+            return name in self._table._content
+
+        def __getitem__(self, name):
+            return self._table._content[name][self._index]
 
         def __setitem__(self, name, what):
             self._table._content[name][self._index] = what

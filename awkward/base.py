@@ -35,6 +35,8 @@ import awkward.util
 class AwkwardArray(object):
     CHARTYPE = numpy.dtype(numpy.uint8)
     INDEXTYPE = numpy.dtype(numpy.int64)
+    MASKTYPE = numpy.dtype(numpy.bool_)
+    BITMASKTYPE = numpy.dtype(numpy.uint8)
 
     def __iter__(self):
         for i in range(len(self)):
@@ -51,7 +53,16 @@ class AwkwardArray(object):
 
     def tolist(self):
         import awkward.table
-        return [x.tolist() if hasattr(x, "tolist") else dict((n, x[n]) for n in x._table._content) if isinstance(x, awkward.table.Table.Row) else x for x in self]
+        out = []
+        for x in self:
+            if isinstance(x, awkward.table.Table.Row):
+                out.append(dict((n, x[n]) for n in x._table._content))
+            else:
+                try:
+                    out.append(x.tolist())
+                except AttributeError:
+                    out.append(x)
+        return out
 
     def _toarray(self, value, defaultdtype, passthrough):
         if isinstance(value, passthrough):
