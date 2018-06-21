@@ -80,4 +80,22 @@ class TestMasked(unittest.TestCase):
         a[5:] = numpy.ma.masked
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, None, None, None, None, None])
 
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a[[3, 2, 1]] = [1, 2, 3]
+        self.assertEqual(a.tolist(), [None, 3.0, 2.0, 1.0, None, 5.5, None, 7.7, None, 9.9])
 
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a[[3, 2, 1]] = [1, 2, numpy.ma.masked]
+        self.assertEqual(a.tolist(), [None, None, 2.0, 1.0, None, 5.5, None, 7.7, None, 9.9])
+
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a[[True, True, True, True, True, False, False, False, False, False]] = [101, 102, 103, 104, 105]
+        self.assertEqual(a.tolist(), [101.0, 102.0, 103.0, 104.0, 105.0, 5.5, None, 7.7, None, 9.9])
+
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a[[True, True, True, True, True, False, False, False, False, False]] = [101, 102, numpy.ma.masked, 104, 105]
+        self.assertEqual(a.tolist(), [101.0, 102.0, None, 104.0, 105.0, 5.5, None, 7.7, None, 9.9])
+
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a[[3, 2, 1]] = MaskedArray([False, False, True], [1, 2, 3])
+        self.assertEqual(a.tolist(), [None, None, 2.0, 1.0, None, 5.5, None, 7.7, None, 9.9])

@@ -126,7 +126,7 @@ class MaskedArray(awkward.base.AwkwardArray):
 
         elif isinstance(what, MaskedArray):
             self._mask[head] = what._mask
-            self._content[where] = self._content[where]
+            self._content[where] = what._content
 
         elif isinstance(what, collections.Sequence):
             self._mask[head] = [isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
