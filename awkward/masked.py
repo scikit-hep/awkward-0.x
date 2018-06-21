@@ -288,7 +288,7 @@ class BitMaskedArray(MaskedArray):
 
         elif isinstance(where, slice):
             # assumes a small slice; for a big slice, it could be faster to unpack the whole mask
-            return self._setmask(numpy.arange(*where.indices(len(self._content))), valid)
+            self._setmask(numpy.arange(*where.indices(len(self._content))), valid)
 
         else:
             where = numpy.array(where, copy=False)
