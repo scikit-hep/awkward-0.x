@@ -229,9 +229,9 @@ class BitMaskedArray(MaskedArray):
                 unpacked = numpy.unpackbits(self._mask).view(self.MASKTYPE)
 
                 if self.lsb:
-                    unpacked = unpacked[:len(where)]
-                else:
                     unpacked = unpacked.reshape(-1, 8)[:,::-1].reshape(-1)[:len(where)]
+                else:
+                    unpacked = unpacked[:len(where)]
 
                 return unpacked[where]
 

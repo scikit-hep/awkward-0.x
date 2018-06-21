@@ -46,6 +46,8 @@ class TestMasked(unittest.TestCase):
         self.assertEqual(a[5:].tolist(), [5.5, None, 7.7, None, 9.9])
         self.assertFalse(numpy.ma.is_masked(a[5:][0]))
         self.assertTrue(numpy.ma.is_masked(a[5:][1]))
+        self.assertEqual(a[[3, 2, 1]].tolist(), [3.3, None, 1.1])
+        self.assertEqual(a[[True, True, True, True, True, False, False, False, False, False]].tolist(), [None, 1.1, None, 3.3, None])
 
     def test_masked_set(self):
         a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False)
@@ -112,6 +114,8 @@ class TestMasked(unittest.TestCase):
         self.assertEqual(a[5:].tolist(), [5.5, None, 7.7, None, 9.9])
         self.assertFalse(numpy.ma.is_masked(a[5:][0]))
         self.assertTrue(numpy.ma.is_masked(a[5:][1]))
+        self.assertEqual(a[[3, 2, 1]].tolist(), [3.3, None, 1.1])
+        self.assertEqual(a[[True, True, True, True, True, False, False, False, False, False]].tolist(), [None, 1.1, None, 3.3, None])
 
     def test_masked_set_flip(self):
         a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True)
@@ -178,6 +182,8 @@ class TestMasked(unittest.TestCase):
         self.assertEqual(a[5:].tolist(), [5.5, None, 7.7, None, 9.9])
         self.assertFalse(numpy.ma.is_masked(a[5:][0]))
         self.assertTrue(numpy.ma.is_masked(a[5:][1]))
+        self.assertEqual(a[[3, 2, 1]].tolist(), [3.3, None, 1.1])
+        self.assertEqual(a[[True, True, True, True, True, False, False, False, False, False]].tolist(), [None, 1.1, None, 3.3, None])
 
         a = BitMaskedArray.frombools([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=False, lsb=False)
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9])
@@ -186,6 +192,8 @@ class TestMasked(unittest.TestCase):
         self.assertEqual(a[5:].tolist(), [5.5, None, 7.7, None, 9.9])
         self.assertFalse(numpy.ma.is_masked(a[5:][0]))
         self.assertTrue(numpy.ma.is_masked(a[5:][1]))
+        self.assertEqual(a[[3, 2, 1]].tolist(), [3.3, None, 1.1])
+        self.assertEqual(a[[True, True, True, True, True, False, False, False, False, False]].tolist(), [None, 1.1, None, 3.3, None])
 
     def test_bitmasked_get_flip(self):
         a = BitMaskedArray.frombools([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True, lsb=True)
@@ -195,6 +203,8 @@ class TestMasked(unittest.TestCase):
         self.assertEqual(a[5:].tolist(), [5.5, None, 7.7, None, 9.9])
         self.assertFalse(numpy.ma.is_masked(a[5:][0]))
         self.assertTrue(numpy.ma.is_masked(a[5:][1]))
+        self.assertEqual(a[[3, 2, 1]].tolist(), [3.3, None, 1.1])
+        self.assertEqual(a[[True, True, True, True, True, False, False, False, False, False]].tolist(), [None, 1.1, None, 3.3, None])
 
         a = BitMaskedArray.frombools([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], validwhen=True, lsb=False)
         self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9])
@@ -203,6 +213,8 @@ class TestMasked(unittest.TestCase):
         self.assertEqual(a[5:].tolist(), [5.5, None, 7.7, None, 9.9])
         self.assertFalse(numpy.ma.is_masked(a[5:][0]))
         self.assertTrue(numpy.ma.is_masked(a[5:][1]))
+        self.assertEqual(a[[3, 2, 1]].tolist(), [3.3, None, 1.1])
+        self.assertEqual(a[[True, True, True, True, True, False, False, False, False, False]].tolist(), [None, 1.1, None, 3.3, None])
 
     def test_bitmasked_arrow(self):
         # Apache Arrow layout example
@@ -221,5 +233,3 @@ class TestMasked(unittest.TestCase):
         # doubled
         a = BitMaskedArray.frombools([True, True, False, True, False, True, True, True, False, True, False, True], [0, 1, 999, 2, 999, 3, 0, 1, 999, 2, 999, 3], validwhen=True, lsb=True)
         self.assertEqual(a.tolist(), [0, 1, None, 2, None, 3, 0, 1, None, 2, None, 3])
-
-
