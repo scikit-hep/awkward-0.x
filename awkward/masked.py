@@ -286,10 +286,26 @@ class BitMaskedArray(MaskedArray):
             else:
                 self._mask[bytepos] &= numpy.bitwise_not(bitmask)
 
+        elif isinstance(where, slice):
+            # assumes a small slice; for a big slice, it could be faster to unpack the whole mask
+            return self._setmask(numpy.arange(*where.indices(len(self._content))), valid)
+
         else:
-            tmp = self.boolmask
-            tmp[where] = not (self._validwhen ^ valid)
-            self.boolmask = tmp
+            where = numpy.array(where, copy=False)
+            if len(where.shape) == 1 and issubclass(where.dtype.type, numpy.integer):
+                bytepos, bitmask = self._maskat(where)
+                if self._validwhen == valid:
+                    numpy.bitwise_or.at(self._mask, bytepos, bitmask)
+                else:
+                    numpy.bitwise_and.at(self._mask, bytepos, numpy.bitwise_not(bitmask))
+
+            elif len(where.shape) == 1 and issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
+                tmp = self.boolmask
+                tmp[where] = not (self._validwhen ^ valid)
+                self.boolmask = tmp
+
+            else:
+                raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(where.shape, where.dtype))
 
     def __getitem__(self, where):
         if self._isstring(where):
