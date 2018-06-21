@@ -60,6 +60,14 @@ class MaskedArray(awkward.base.AwkwardArray):
         self._mask = value
 
     @property
+    def boolmask(self):
+        return self._mask
+
+    @boolmask.setter
+    def boolmask(self, value):
+        self.mask = value
+
+    @property
     def content(self):
         return self._content
 
@@ -135,9 +143,9 @@ class MaskedArray(awkward.base.AwkwardArray):
 
         elif isinstance(what, MaskedArray):
             if self._validwhen == what._validwhen:
-                self._mask[head] = what._mask
+                self._mask[head] = what.boolmask
             else:
-                self._mask[head] = numpy.logical_not(what._mask)
+                self._mask[head] = numpy.logical_not(what.boolmask)
             self._content[where] = what._content
 
         elif isinstance(what, collections.Sequence):
@@ -157,31 +165,10 @@ class MaskedArray(awkward.base.AwkwardArray):
 
 class BitMaskedArray(MaskedArray):
     @staticmethod
-    def frombools(mask, content, validwhen=False, lsb=True, writeable=True):
-        mask = numpy.array(mask, copy=False)
-
-        if len(mask.shape) != 1:
-            raise TypeError("mask must have 1-dimensional shape")
-        if not issubclass(mask.dtype.type, (numpy.bool, numpy.bool_)):
-            raise TypeError("mask must have boolean type")
-
-        if lsb:
-            # maybe pad the length for reshape
-            length = 8*((len(mask) + 8 - 1) >> 3)   # ceil(len(mask) / 8.0) * 8
-            if length != len(mask):
-                out = numpy.empty(length, dtype=numpy.bool_)
-                out[:len(mask)] = mask
-            else:
-                out = mask
-
-            # reverse the order in groups of 8
-            out = out.reshape(-1, 8)[:,::-1].reshape(-1)
-
-        else:
-            # numpy.packbits encodes as msb (most significant bit); already in the right order
-            out = mask
-
-        return BitMaskedArray(numpy.packbits(out), content, validwhen=validwhen, lsb=lsb, writeable=writeable)
+    def fromboolmask(mask, content, validwhen=False, lsb=True, writeable=True):
+        out = BitMaskedArray([], content, validwhen=validwhen, lsb=lsb, writeable=writeable)
+        out.boolmask = mask
+        return out
 
     def __init__(self, mask, content, validwhen=False, lsb=True, writeable=True):
         self.mask = mask
@@ -202,6 +189,40 @@ class BitMaskedArray(MaskedArray):
             raise TypeError("mask must have 1-dimensional shape")
 
         self._mask = value.view(self.BITMASKTYPE)
+
+    @property
+    def boolmask(self):
+        out = numpy.unpackbits(self._mask)
+        if self._lsb:
+            out = out.reshape(-1, 8)[:,::-1].reshape(-1)
+        return out.view(self.MASKTYPE)[:len(self._content)]
+
+    @boolmask.setter
+    def boolmask(self, value):
+        value = numpy.array(value, copy=False)
+
+        if len(value.shape) != 1:
+            raise TypeError("boolmask must have 1-dimensional shape")
+        if not issubclass(value.dtype.type, (numpy.bool, numpy.bool_)):
+            raise TypeError("boolmask must have boolean type")
+
+        if self._lsb:
+            # maybe pad the length for reshape
+            length = 8*((len(value) + 8 - 1) >> 3)   # ceil(len(value) / 8.0) * 8
+            if length != len(value):
+                out = numpy.empty(length, dtype=numpy.bool_)
+                out[:len(value)] = value
+            else:
+                out = value
+
+            # reverse the order in groups of 8
+            out = out.reshape(-1, 8)[:,::-1].reshape(-1)
+
+        else:
+            # numpy.packbits encodes as msb (most significant bit); already in the right order
+            out = value
+
+        self._mask = numpy.packbits(out)
         
     @property
     def lsb(self):
@@ -257,6 +278,19 @@ class BitMaskedArray(MaskedArray):
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(where.shape, where.dtype))
 
+    def _setmask(self, where, valid):
+        if isinstance(where, (numbers.Integral, numpy.integer)):        
+            bytepos, bitmask = self._maskat(where)
+            if self._validwhen == valid:
+                self._mask[bytepos] |= bitmask
+            else:
+                self._mask[bytepos] &= numpy.bitwise_not(bitmask)
+
+        else:
+            tmp = self.boolmask
+            tmp[where] = not (self._validwhen ^ valid)
+            self.boolmask = tmp
+
     def __getitem__(self, where):
         if self._isstring(where):
             return MaskedArray(self._mask, self._content[where], validwhen=self._validwhen, writeable=self._writeable)
@@ -287,56 +321,39 @@ class BitMaskedArray(MaskedArray):
         head, tail = where[0], where[1:]
 
         if isinstance(what, numpy.ma.core.MaskedConstant) or (isinstance(what, collections.Sequence) and len(what) == 1 and isinstance(what[0], numpy.ma.core.MaskedConstant)):
-            bytepos, bitmask = self._maskat(where)
-            if self._validwhen == True:
-                self._mask[bytepos] &= numpy.bitwise_not(bitmask)
-            else:
-                self._mask[bytepos] |= bitmask
+            self._setmask(head, False)
 
         elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
-            bytepos, bitmask = self._maskat(where)
-
             if isinstance(what[0], numpy.ma.core.MaskedConstant):
-                if self._validwhen == True:
-                    self._mask[bytepos] &= numpy.bitwise_not(bitmask)
-                else:
-                    self._mask[bytepos] |= bitmask
-
+                self._setmask(head, False)
             else:
-                bytepos, bitmask = self._maskat(where)
-                if self._validwhen == True:
-                    self._mask[bytepos] |= bitmask
-                else:
-                    self._mask[bytepos] &= numpy.bitwise_not(bitmask)
+                self._setmask(head, True)
                 self._content[where] = what[0]
 
-        # FIXME: start invalid
-
         elif isinstance(what, MaskedArray):
+            tmp = self.boolmask
             if self._validwhen == what._validwhen:
-                self._mask[head] = what._mask
+                tmp[head] = what.boolmask
             else:
-                self._mask[head] = numpy.logical_not(what._mask)
+                tmp[head] = numpy.logical_not(what.boolmask)
+            self.boolmask = tmp
+
             self._content[where] = what._content
 
         elif isinstance(what, collections.Sequence):
+            tmp = self.boolmask
             if self._validwhen == False:
-                self._mask[head] = [isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
+                tmp[head] = [isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
             else:
-                self._mask[head] = [not isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
+                tmp[head] = [not isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
+            self.boolmask = tmp
+
             self._content[where] = [x if not isinstance(x, numpy.ma.core.MaskedConstant) else 0 for x in what]
 
         elif isinstance(what, (numpy.ndarray, awkward.base.AwkwardArray)):
-            self._mask[head] = self._validwhen
+            self._setmask(head, True)
             self._content[where] = what
 
-        # FIXME: end invalid
-
         else:
-            bytepos, bitmask = self._maskat(where)
-            if self._validwhen == True:
-                self._mask[bytepos] |= bitmask
-            else:
-                self._mask[bytepos] &= numpy.bitwise_not(bitmask)
-
+            self._setmask(head, True)
             self._content[where] = what
