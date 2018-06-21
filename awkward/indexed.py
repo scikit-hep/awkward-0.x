@@ -83,11 +83,18 @@ class IndexedArray(awkward.base.AwkwardArray):
 
     def __len__(self):
         return len(self._index)
-
+        
     def __getitem__(self, where):
+        if self._isstring(where):
+            return IndexedArray(self._index, self._content[where], writeable=self._writeable)
+
         return self._content[self._index[where]]
 
     def __setitem__(self, where, what):
+        if self._isstring(where):
+            IndexedArray(self._index, self._content[where], writeable=self._writeable)[:] = what
+            return
+
         if not self._writeable:
             raise ValueError("assignment destination is read-only")
         self._content[self._index[where]] = what
@@ -123,8 +130,11 @@ class ByteIndexedArray(IndexedArray):
     @dtype.setter
     def dtype(self, value):
         self._dtype = numpy.dtype(value)
-
+        
     def __getitem__(self, where):
+        if self._isstring(where):
+            return ByteIndexedArray(self._index, self._content[where], self._dtype, writeable=self._writeable)
+
         starts = self._index[where]
 
         if len(starts.shape) == 0:
@@ -152,6 +162,10 @@ class ByteIndexedArray(IndexedArray):
                 return hold
 
     def __setitem__(self, where, what):
+        if self._isstring(where):
+            ByteIndexedArray(self._index, self._content[where], self._dtype, writeable=self._writeable)[:] = what
+            return
+
         if not self._writeable:
             raise ValueError("assignment destination is read-only")
 

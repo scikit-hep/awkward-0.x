@@ -162,6 +162,9 @@ class JaggedArray(awkward.base.AwkwardArray):
             raise ValueError("starts must be have as many or fewer elements as stops")
 
     def __getitem__(self, where):
+        if self._isstring(where):
+            return JaggedArray(self._starts, self._stops, self._content[where], writeable=writeable)
+
         self._check_startsstops()
         starts = self._starts[where]
         stops = self._stops[where]
@@ -172,6 +175,10 @@ class JaggedArray(awkward.base.AwkwardArray):
             return JaggedArray(starts, stops, self._content, writeable=self._writeable)
 
     def __setitem__(self, where, what):
+        if self._isstring(where):
+            JaggedArray(self._starts, self._stops, self._content[where], writeable=writeable)[:] = what
+            return
+
         if not self._writeable:
             raise ValueError("assignment destination is read-only")
 
@@ -254,6 +261,9 @@ class ByteJaggedArray(JaggedArray):
         self._dtype = numpy.dtype(value)
 
     def __getitem__(self, where):
+        if self._isstring(where):
+            return ByteJaggedArray(self._starts, self._stops, self._content[where], self._dtype, writeable=writeable)
+
         self._check_startsstops()
         starts = self._starts[where]
         stops = self._stops[where]
@@ -264,6 +274,10 @@ class ByteJaggedArray(JaggedArray):
             return ByteJaggedArray(starts, stops, self._content, self._dtype, writeable=self._writeable)
 
     def __setitem__(self, where, what):
+        if self._isstring(where):
+            ByteJaggedArray(self._starts, self._stops, self._content[where], self._dtype, writeable=writeable)[:] = what
+            return
+
         if not self._writeable:
             raise ValueError("assignment destination is read-only")
 

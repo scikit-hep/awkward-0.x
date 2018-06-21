@@ -30,6 +30,8 @@
 
 import numpy
 
+import awkward.util
+
 class AwkwardArray(object):
     CHARTYPE = numpy.dtype(numpy.uint8)
     INDEXTYPE = numpy.dtype(numpy.int64)
@@ -58,3 +60,13 @@ class AwkwardArray(object):
                 return numpy.frombuffer(value, dtype=getattr(value, "dtype", defaultdtype)).reshape(getattr(value, "shape", -1))
             except AttributeError:
                 return numpy.array(value, copy=False)
+
+    def _isstring(self, where):
+        if isinstance(where, awkward.util.string):
+            return True
+        try:
+            assert all(isinstance(x, awkward.util.string) for x in where)
+        except (TypeError, AssertionError):
+            return False
+        else:
+            return True

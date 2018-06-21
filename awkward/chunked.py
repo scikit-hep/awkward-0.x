@@ -30,6 +30,7 @@
 
 import collections
 import numbers
+import itertools
 
 import numpy
 
@@ -61,10 +62,19 @@ class ChunkedArray(awkward.base.AwkwardArray):
         self._writeable = bool(value)
 
     def _chunkiterator(self, minindex):
+        dtype = None
+
         sofar = i = 0
         while i < len(self._chunks):
             if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
                 self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+
+            if len(self._chunks[i]) != 0:
+                thisdtype = numpy.dtype((self._chunks[i].dtype, self._chunks[i].shape[1:]))
+                if dtype is None:
+                    dtype = thisdtype
+                elif dtype != thisdtype:
+                    raise ValueError("chunk starting at index {0} has dtype {1}, different from {2}".format(sofar, thisdtype, dtype))
 
             if sofar + len(self._chunks[i]) > minindex:
                 yield sofar, self._chunks[i]
@@ -75,7 +85,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
     @property
     def dtype(self):
         for sofar, chunk in self._chunkiterator(0):
-            if len(chunk) > 0:
+            if len(chunk) != 0:
                 return numpy.dtype((chunk.dtype, chunk.shape[1:]))
         raise ValueError("chunks are empty; cannot determine dtype")
 
@@ -88,6 +98,10 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
     def __len__(self):
         return sum(len(chunk) for chunk in self._chunks)
+
+    @property
+    def shape(self):
+        return (len(self),) + self.dimension
 
     def topartitioned(self):
         offsets = [0]
@@ -192,6 +206,14 @@ class ChunkedArray(awkward.base.AwkwardArray):
             return numpy.empty(0, dtype)
 
     def __getitem__(self, where):
+        if self._isstring(where):
+            chunks = []
+            offsets = [0]
+            for sofar, chunk in self._chunkiterator(0):
+                chunks.append(chunk[where])
+                offsets.append(offsets[-1] + len(chunks[-1]))
+            return PartitionedArray(offsets, chunks, writeable=self._writeable)
+
         if not isinstance(where, tuple):
             where = (where,)
         head, tail = where[0], where[1:]
@@ -284,6 +306,18 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
 
     def __setitem__(self, where, what):
+        if self._isstring(where):
+            if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) != 1:
+                what = numpy.array(what, copy=False)
+                if self.shape != what.shape:
+                    raise ValueError("shape mismatch: value array of shape {0} could not be broadcast to indexing result of shape {1}".format(what.shape, self.shape))
+                for sofar, chunk in self._chunkiterator(0):
+                    chunk[where] = what[sofar : sofar + len(chunk)]
+            else:
+                for sofar, chunk in self._chunkiterator(0):
+                    chunk[where] = what
+            return
+
         if not self._writeable:
             raise ValueError("assignment destination is read-only")
 
@@ -441,6 +475,8 @@ class PartitionedArray(ChunkedArray):
         self._offsets = value
 
     def _chunkiterator(self, minindex):
+        dtype = None
+
         if len(self._offsets) != len(self._chunks) + 1:
             raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
 
@@ -450,6 +486,16 @@ class PartitionedArray(ChunkedArray):
         while i < len(self._chunks):
             if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
                 self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+
+            if len(self._chunks[i]) != 0:
+                thisdtype = numpy.dtype((self._chunks[i].dtype, self._chunks[i].shape[1:]))
+                if dtype is None:
+                    dtype = thisdtype
+                elif dtype != thisdtype:
+                    raise ValueError("chunk starting at index {0} has dtype {1}, different from {2}".format(sofar, thisdtype, dtype))
+
+            if sofar + len(self._chunks[i]) != self._offsets[i + 1]:
+                raise ValueError("partitioning is wrong: chunk starting at index {0} has length {1}, the sum of which is not equal to the next offset at {2}".format(sofar, len(self._chunks[i]), self._offsets[i + 1]))
 
             if sofar + len(self._chunks[i]) > minindex:
                 yield sofar, self._chunks[i]
@@ -524,7 +570,13 @@ class PartitionedArray(ChunkedArray):
         return (head,) + tail
 
     def __getitem__(self, where):
-        return super(PartitionedArray, self).__getitem__(self._normalizeindex(where))
+        if self._isstring(where):
+            return super(PartitionedArray, self).__getitem__(where)
+        else:
+            return super(PartitionedArray, self).__getitem__(self._normalizeindex(where))
 
     def __setitem__(self, where, what):
-        super(PartitionedArray, self).__setitem__(self._normalizeindex(where), what)
+        if self._isstring(where):
+            super(PartitionedArray, self).__setitem__(where, what)
+        else:
+            super(PartitionedArray, self).__setitem__(self._normalizeindex(where), what)
