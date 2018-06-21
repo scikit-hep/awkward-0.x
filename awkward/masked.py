@@ -211,9 +211,26 @@ class BitMaskedArray(MaskedArray):
     def lsb(self, value):
         self._lsb = bool(value)
 
+    def _maskat(self, where):
+        bytepos = numpy.right_shift(where, 3)    # where // 8
+        bitpos  = where - 8*bytepos              # where % 8
+
+        if self.lsb:
+            bitmask = numpy.left_shift(1, bitpos)
+        else:
+            bitmask = numpy.right_shift(128, bitpos)
+
+        if isinstance(bitmask, numpy.ndarray):
+            bitmask = bitmask.astype(self.BITMASKTYPE)
+        else:
+            bitmask = self.BITMASKTYPE.type(bitmask)
+
+        return bytepos, bitmask
+
     def _maskwhere(self, where):
         if isinstance(where, (numbers.Integral, numpy.integer)):
-            pass       # see below
+            bytepos, bitmask = self._maskat(where)
+            return numpy.bitwise_and(self._mask[bytepos], bitmask) != 0
 
         elif isinstance(where, slice):
             # assumes a small slice; for a big slice, it could be faster to unpack the whole mask
@@ -222,8 +239,10 @@ class BitMaskedArray(MaskedArray):
         else:
             where = numpy.array(where, copy=False)
             if len(where.shape) == 1 and issubclass(where.dtype.type, numpy.integer):
-                pass   # see below
-
+                byteposes, bitmasks = self._maskat(where)
+                numpy.bitwise_and(bitmasks, self._mask[byteposes], bitmasks)
+                return bitmasks.astype(numpy.bool_)
+        
             elif len(where.shape) == 1 and issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
                 # scales with the size of the mask anyway, so go ahead and unpack the whole mask
                 unpacked = numpy.unpackbits(self._mask).view(self.MASKTYPE)
@@ -237,21 +256,6 @@ class BitMaskedArray(MaskedArray):
 
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(where.shape, where.dtype))
-
-        # from above: handle single integer case and array of integers case with the same code
-        bytepos = numpy.right_shift(where, 3)   # where // 8
-        bitpos  = where - 8*bytepos             # where % 8
-
-        if self.lsb:
-            out = numpy.left_shift(1, bitpos)
-        else:
-            out = numpy.right_shift(128, bitpos)
-
-        if len(out.shape) == 0:
-            return numpy.bitwise_and(out, self._mask[bytepos]) > 0
-        else:
-            numpy.bitwise_and(out, self._mask[bytepos], out)
-            return out.astype(numpy.bool_)
 
     def __getitem__(self, where):
         if self._isstring(where):
@@ -270,8 +274,6 @@ class BitMaskedArray(MaskedArray):
         else:
             return MaskedArray(self._maskwhere(head), self._content[where], validwhen=self._validwhen, writeable=self._writeable)
 
-    # FIXME: nothing below is valid
-
     def __setitem__(self, where, what):
         if self._isstring(where):
             MaskedArray(self._mask, self._content[where], validwhen=self._validwhen, writeable=self._writeable)[:] = what
@@ -285,14 +287,30 @@ class BitMaskedArray(MaskedArray):
         head, tail = where[0], where[1:]
 
         if isinstance(what, numpy.ma.core.MaskedConstant) or (isinstance(what, collections.Sequence) and len(what) == 1 and isinstance(what[0], numpy.ma.core.MaskedConstant)):
-            self._mask[head] = not self._validwhen
-            
-        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
-            if isinstance(what[0], numpy.ma.core.MaskedConstant):
-                self._mask[head] = not self._validwhen
+            bytepos, bitmask = self._maskat(where)
+            if self._validwhen == True:
+                self._mask[bytepos] &= numpy.bitwise_not(bitmask)
             else:
-                self._mask[head] = self._validwhen
+                self._mask[bytepos] |= bitmask
+
+        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+            bytepos, bitmask = self._maskat(where)
+
+            if isinstance(what[0], numpy.ma.core.MaskedConstant):
+                if self._validwhen == True:
+                    self._mask[bytepos] &= numpy.bitwise_not(bitmask)
+                else:
+                    self._mask[bytepos] |= bitmask
+
+            else:
+                bytepos, bitmask = self._maskat(where)
+                if self._validwhen == True:
+                    self._mask[bytepos] |= bitmask
+                else:
+                    self._mask[bytepos] &= numpy.bitwise_not(bitmask)
                 self._content[where] = what[0]
+
+        # FIXME: start invalid
 
         elif isinstance(what, MaskedArray):
             if self._validwhen == what._validwhen:
@@ -312,6 +330,13 @@ class BitMaskedArray(MaskedArray):
             self._mask[head] = self._validwhen
             self._content[where] = what
 
+        # FIXME: end invalid
+
         else:
-            self._mask[head] = self._validwhen
+            bytepos, bitmask = self._maskat(where)
+            if self._validwhen == True:
+                self._mask[bytepos] |= bitmask
+            else:
+                self._mask[bytepos] &= numpy.bitwise_not(bitmask)
+
             self._content[where] = what
