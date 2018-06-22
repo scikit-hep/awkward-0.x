@@ -66,7 +66,8 @@ class AwkwardArray(object):
                     out.append(x)
         return out
 
-    def _toarray(self, value, defaultdtype, passthrough):
+    @staticmethod
+    def _toarray(value, defaultdtype, passthrough):
         if isinstance(value, passthrough):
             return value
         else:
@@ -75,7 +76,8 @@ class AwkwardArray(object):
             except AttributeError:
                 return numpy.array(value, copy=False)
 
-    def _isstring(self, where):
+    @staticmethod
+    def _isstring(where):
         if isinstance(where, awkward.util.string):
             return True
         try:
