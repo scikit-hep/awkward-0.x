@@ -30,9 +30,9 @@
 
 import numpy
 
-import awkward.base
+import awkward.array.base
 
-class IndexedArray(awkward.base.AwkwardArray):
+class IndexedArray(awkward.array.base.AwkwardArray):
     def __init__(self, index, content, writeable=True):
         self.index = index
         self.content = content
@@ -44,7 +44,7 @@ class IndexedArray(awkward.base.AwkwardArray):
 
     @index.setter
     def index(self, value):
-        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
         if len(value.shape) != 1:
             raise TypeError("index must have 1-dimensional shape")
@@ -61,7 +61,7 @@ class IndexedArray(awkward.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
     @property
     def writeable(self):

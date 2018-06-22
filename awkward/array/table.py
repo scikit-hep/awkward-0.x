@@ -33,10 +33,10 @@ import numbers
 
 import numpy
 
-import awkward.base
+import awkward.array.base
 import awkward.util
 
-class Table(awkward.base.AwkwardArray):
+class Table(awkward.array.base.AwkwardArray):
     class Row(object):
         __slots__ = ["_table", "_index"]
 
@@ -85,7 +85,7 @@ class Table(awkward.base.AwkwardArray):
                 if len(columns2) != 0:
                     raise TypeError("only one positional argument when the first argument is a dict")
 
-        elif isinstance(columns1, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
+        elif isinstance(columns1, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
             self["f0"] = columns1
             for i, x in enumerate(columns2):
                 self["f" + str(i + 1)] = x
@@ -232,7 +232,7 @@ class Table(awkward.base.AwkwardArray):
             except KeyError:
                 if self._start != 0 or self._step != 1:
                     raise TypeError("only add new columns to the original table, not a table slice (start is {0} and step is {1})".format(self._start, self._step))
-                self._content[where] = self._toarray(what, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+                self._content[where] = self._toarray(what, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
             else:
                 self._check_length(array)[self.start:self.stop:self.step] = what
@@ -246,11 +246,11 @@ class Table(awkward.base.AwkwardArray):
                     self._check_length(x)[self.start:self.stop:self.step][where] = what
 
             else:
-                if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+                if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
                     for n in where:
                         self._check_length(self._content[n])[self.start:self.stop:self.step] = what[0]
 
-                elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
+                elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
                     if len(what) != len(where):
                         raise ValueError("cannot copy seqence with size {0} to array axis with dimension {1}".format(len(what), len(where)))
                     for wht, n in zip(what, where):

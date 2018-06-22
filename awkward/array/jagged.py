@@ -32,10 +32,10 @@ import collections
 
 import numpy
 
-import awkward.base
+import awkward.array.base
 import awkward.util
 
-class JaggedArray(awkward.base.AwkwardArray):
+class JaggedArray(awkward.array.base.AwkwardArray):
     @classmethod
     def fromoffsets(cls, offsets, content, writeable=True):
         return cls(offsets[:-1], offsets[1:], content, writeable=writeable)
@@ -74,7 +74,7 @@ class JaggedArray(awkward.base.AwkwardArray):
 
     @starts.setter
     def starts(self, value):
-        self._starts = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        self._starts = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
     @property
     def stops(self):
@@ -82,7 +82,7 @@ class JaggedArray(awkward.base.AwkwardArray):
 
     @stops.setter
     def stops(self, value):
-        self._stops = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        self._stops = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
     @property
     def content(self):
@@ -90,7 +90,7 @@ class JaggedArray(awkward.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
     @property
     def writeable(self):
@@ -195,11 +195,11 @@ class JaggedArray(awkward.base.AwkwardArray):
             for which, start, stop in awkward.util.izip(what, starts, stops):
                 self._content[start:stop] = which
 
-        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
             for start, stop in awkward.util.izip(starts, stops):
                 self._content[start:stop] = what[0]
 
-        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
+        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
             if len(what) != (stops - starts).sum():
                 raise ValueError("cannot copy sequence with length {0} to JaggedArray with dimension {1}".format(len(what), (stops - starts).sum()))
             this = next = 0
@@ -307,12 +307,12 @@ class ByteJaggedArray(JaggedArray):
                     buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
                     buf[startpos:stoppos] = which
 
-            elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+            elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
                 for startpos, stoppos, offset in awkward.util.izip(startposes, stopposes, offsets):
                     buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
                     buf[startpos:stoppos] = what[0]
 
-            elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
+            elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
                 if len(what) != (stopposes - startposes).sum():
                     raise ValueError("cannot copy sequence with length {0} to ByteJaggedArray with dimension {1}".format(len(what), (stopposes - startposes).sum()))
                 this = next = 0

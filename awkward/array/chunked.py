@@ -34,10 +34,10 @@ import itertools
 
 import numpy
 
-import awkward.base
+import awkward.array.base
 import awkward.util
 
-class ChunkedArray(awkward.base.AwkwardArray):
+class ChunkedArray(awkward.array.base.AwkwardArray):
     def __init__(self, chunks, writeable=True):
         self.chunks = chunks
         self.writeable = writeable
@@ -66,8 +66,8 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
         sofar = i = 0
         while i < len(self._chunks):
-            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
-                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.array.base.AwkwardArray)):
+                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
             if len(self._chunks[i]) != 0:
                 thisdtype = numpy.dtype((self._chunks[i].dtype, self._chunks[i].shape[1:]))
@@ -112,8 +112,8 @@ class ChunkedArray(awkward.base.AwkwardArray):
     def __iter__(self):
         i = 0
         while i < len(self._chunks):
-            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
-                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.array.base.AwkwardArray)):
+                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
             for x in self._chunks[i]:
                 yield x
             i += 1
@@ -307,7 +307,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
 
     def __setitem__(self, where, what):
         if self._isstring(where):
-            if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) != 1:
+            if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) != 1:
                 what = numpy.array(what, copy=False)
                 if self.shape != what.shape:
                     raise ValueError("shape mismatch: value array of shape {0} could not be broadcast to indexing result of shape {1}".format(what.shape, self.shape))
@@ -351,10 +351,10 @@ class ChunkedArray(awkward.base.AwkwardArray):
                     carry = (carry - length) % step
                 fullysliced.append(slicedchunk)
 
-            if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+            if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
                 for slicedchunk in fullysliced:
                     slicedchunk[:] = what[0]
-            elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
+            elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
                 if len(what) != sum(len(x) for x in fullysliced):
                     raise ValueError("cannot copy sequence with size {0} to array with dimension {1}".format(len(what), sum(len(x) for x in fullysliced)))
                 this = next = 0
@@ -369,7 +369,7 @@ class ChunkedArray(awkward.base.AwkwardArray):
         else:
             head = numpy.array(head, copy=False)
             if len(head.shape) == 1 and issubclass(head.dtype.type, numpy.integer):
-                if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) != 1:
+                if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) != 1:
                     if hasattr(what, "shape"):
                         whatshape = what.shape
                     else:
@@ -399,14 +399,14 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 if sofar is None or maxindex >= sofar + len(chunk):
                     raise IndexError("index {0} out of bounds for length {1}".format(maxindex, 0 if sofar is None else sofar + len(chunk)))
 
-                if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+                if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
                     for chunk, offset in awkward.util.izip(chunks, offsets):
                         indexes = head - offset
                         mask = (indexes >= 0)
                         numpy.bitwise_and(mask, (indexes < len(chunk)), mask)
                         chunk[indexes[mask]] = what[0]
 
-                elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
+                elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
                     # must fill "self[where] = what" using the same order for where and what, with locations scattered among a list of chunks
                     # thus, Pythonic iteration is necessary
                     chunkindex = numpy.searchsorted(offsets, head, side="right") - 1
@@ -432,11 +432,11 @@ class ChunkedArray(awkward.base.AwkwardArray):
                 if len(head) != sofar + len(chunk):
                     raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(sofar + len(chunk), len(head)))
 
-                if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+                if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
                     for submask, chunk in submasks:
                         chunk[submask] = what[0]
 
-                elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)):
+                elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
                     this = next = 0
                     for submask, chunk in submasks:
                         next += numpy.count_nonzero(submask)
@@ -463,7 +463,7 @@ class PartitionedArray(ChunkedArray):
 
     @offsets.setter
     def offsets(self, value):
-        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
         if len(value) == 0:
             raise ValueError("offsets must be non-empty")
@@ -484,8 +484,8 @@ class PartitionedArray(ChunkedArray):
         assert i >= 0
         sofar = self._offsets[i]
         while i < len(self._chunks):
-            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
-                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.array.base.AwkwardArray)):
+                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
             if len(self._chunks[i]) != 0:
                 thisdtype = numpy.dtype((self._chunks[i].dtype, self._chunks[i].shape[1:]))
@@ -510,8 +510,8 @@ class PartitionedArray(ChunkedArray):
 
         for i, count in enumerate(self._offsets[1:] - self._offsets[:-1]):
             if count > 0:
-                if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
-                    self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+                if not isinstance(self._chunks[i], (numpy.ndarray, awkward.array.base.AwkwardArray)):
+                    self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
                 return numpy.dtype((self._chunks[i].dtype, self._chunks[i].shape[1:]))
 
         raise ValueError("chunks are empty; cannot determine dtype")
@@ -525,8 +525,8 @@ class PartitionedArray(ChunkedArray):
 
         i = 0
         while i < len(self._chunks):
-            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.base.AwkwardArray)):
-                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+            if not isinstance(self._chunks[i], (numpy.ndarray, awkward.array.base.AwkwardArray)):
+                self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
             for x in self._chunks[i]:
                 yield x
             i += 1

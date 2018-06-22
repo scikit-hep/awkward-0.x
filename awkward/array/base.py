@@ -52,10 +52,10 @@ class AwkwardArray(object):
         return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
 
     def tolist(self):
-        import awkward.table
+        import awkward.array.table
         out = []
         for x in self:
-            if isinstance(x, awkward.table.Table.Row):
+            if isinstance(x, awkward.array.table.Table.Row):
                 out.append(dict((n, x[n]) for n in x._table._content))
             elif isinstance(x, numpy.ma.core.MaskedConstant):
                 out.append(None)

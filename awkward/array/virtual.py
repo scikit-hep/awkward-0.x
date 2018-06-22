@@ -32,10 +32,10 @@ import numbers
 
 import numpy
 
-import awkward.base
+import awkward.array.base
 import awkward.util
 
-class VirtualArray(awkward.base.AwkwardArray):
+class VirtualArray(awkward.array.base.AwkwardArray):
     class TransientKey(object):
         def __init__(self, id):
             self._id = id
@@ -162,12 +162,12 @@ class VirtualArray(awkward.base.AwkwardArray):
     @property
     def ismaterialized(self):
         if self._cache is None:
-            return isinstance(self._array, (numpy.ndarray, awkward.base.AwkwardArray))
+            return isinstance(self._array, (numpy.ndarray, awkward.array.base.AwkwardArray))
         else:
             return self._array is not None and self._array in self._cache
 
     def materialize(self):
-        array = self._toarray(self.generator(), self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        array = self._toarray(self.generator(), self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
         if self._dtype is not None and self._dtype != array.dtype:
             raise ValueError("materialized array has dtype {0}, expected dtype {1}".format(array.dtype, self._dtype))
@@ -204,7 +204,7 @@ class VirtualArray(awkward.base.AwkwardArray):
     def __setitem__(self, where, what):
         raise ValueError("assignment destination is read-only")
         
-class VirtualObjectArray(awkward.base.AwkwardArray):
+class VirtualObjectArray(awkward.array.base.AwkwardArray):
     def __init__(self, generator, content):
         self.generator = generator
         self.content = content
@@ -225,7 +225,7 @@ class VirtualObjectArray(awkward.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
     @property
     def dtype(self):

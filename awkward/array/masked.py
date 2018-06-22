@@ -33,9 +33,9 @@ import numbers
 
 import numpy
 
-import awkward.base
+import awkward.array.base
 
-class MaskedArray(awkward.base.AwkwardArray):
+class MaskedArray(awkward.array.base.AwkwardArray):
     def __init__(self, mask, content, validwhen=False, writeable=True):
         self.mask = mask
         self.content = content
@@ -48,7 +48,7 @@ class MaskedArray(awkward.base.AwkwardArray):
 
     @mask.setter
     def mask(self, value):
-        value = self._toarray(value, self.MASKTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        value = self._toarray(value, self.MASKTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
         if len(value.shape) != 1:
             raise TypeError("mask must have 1-dimensional shape")
@@ -73,7 +73,7 @@ class MaskedArray(awkward.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
         
     @property
     def validwhen(self):
@@ -134,7 +134,7 @@ class MaskedArray(awkward.base.AwkwardArray):
         if isinstance(what, numpy.ma.core.MaskedConstant) or (isinstance(what, collections.Sequence) and len(what) == 1 and isinstance(what[0], numpy.ma.core.MaskedConstant)):
             self._mask[head] = not self._validwhen
             
-        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
             if isinstance(what[0], numpy.ma.core.MaskedConstant):
                 self._mask[head] = not self._validwhen
             else:
@@ -155,7 +155,7 @@ class MaskedArray(awkward.base.AwkwardArray):
                 self._mask[head] = [not isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
             self._content[where] = [x if not isinstance(x, numpy.ma.core.MaskedConstant) else 0 for x in what]
 
-        elif isinstance(what, (numpy.ndarray, awkward.base.AwkwardArray)):
+        elif isinstance(what, (numpy.ndarray, awkward.array.base.AwkwardArray)):
             self._mask[head] = self._validwhen
             self._content[where] = what
 
@@ -183,7 +183,7 @@ class BitMaskedArray(MaskedArray):
 
     @mask.setter
     def mask(self, value):
-        value = self._toarray(value, self.BITMASKTYPE, (numpy.ndarray, awkward.base.AwkwardArray))
+        value = self._toarray(value, self.BITMASKTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
         if len(value.shape) != 1:
             raise TypeError("mask must have 1-dimensional shape")
@@ -339,7 +339,7 @@ class BitMaskedArray(MaskedArray):
         if isinstance(what, numpy.ma.core.MaskedConstant) or (isinstance(what, collections.Sequence) and len(what) == 1 and isinstance(what[0], numpy.ma.core.MaskedConstant)):
             self._setmask(head, False)
 
-        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.base.AwkwardArray)) and len(what) == 1:
+        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
             if isinstance(what[0], numpy.ma.core.MaskedConstant):
                 self._setmask(head, False)
             else:
@@ -366,7 +366,7 @@ class BitMaskedArray(MaskedArray):
 
             self._content[where] = [x if not isinstance(x, numpy.ma.core.MaskedConstant) else 0 for x in what]
 
-        elif isinstance(what, (numpy.ndarray, awkward.base.AwkwardArray)):
+        elif isinstance(what, (numpy.ndarray, awkward.array.base.AwkwardArray)):
             self._setmask(head, True)
             self._content[where] = what
 
