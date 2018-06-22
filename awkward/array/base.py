@@ -32,7 +32,7 @@ import numpy
 
 import awkward.util
 
-class AwkwardArray(numpy.lib.mixins.NDArrayOperatorsMixin):
+class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     CHARTYPE = numpy.dtype(numpy.uint8)
     INDEXTYPE = numpy.dtype(numpy.int64)
     MASKTYPE = numpy.dtype(numpy.bool_)
