@@ -48,7 +48,7 @@ Tutorial
 Interactive tutorial
 ====================
 
-.. Run `this tutorial <https://mybinder.org/v2/gh/diana-hep/histbook/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
+.. Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/histbook/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
 
 (...)
 

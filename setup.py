@@ -44,9 +44,9 @@ def get_description():
     start = description.index(".. inclusion-marker-1-5-do-not-remove")
     stop = description.index(".. inclusion-marker-3-do-not-remove")
 
-    before = """.. image:: https://raw.githubusercontent.com/diana-hep/awkward-array/master/docs/source/logo-500px.png
+    before = """.. image:: https://raw.githubusercontent.com/scikit-hep/awkward-array/master/docs/source/logo-500px.png
    :alt: awkward-array
-   :target: https://github.com/diana-hep/awkward-array
+   :target: https://github.com/scikit-hep/awkward-array
 
 |
 
@@ -57,12 +57,12 @@ def get_description():
 Tutorial
 ========
 
-See the `project homepage <https://github.com/diana-hep/awkward-array>`__ for a `tutorial <https://github.com/diana-hep/awkward-array#tutorial>`__.
+See the `project homepage <https://github.com/scikit-hep/awkward-array>`__ for a `tutorial <https://github.com/scikit-hep/awkward-array#tutorial>`__.
 
 Interactive tutorial
 ====================
 
-Run `this tutorial <https://mybinder.org/v2/gh/diana-hep/awkward-array/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
+Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/awkward-array/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
 
 Reference documentation
 =======================
@@ -82,8 +82,8 @@ setup(name = "awkward",
       author_email = "pivarski@fnal.gov",
       maintainer = "Jim Pivarski (DIANA-HEP)",
       maintainer_email = "pivarski@fnal.gov",
-      url = "https://github.com/diana-hep/awkward-array",
-      download_url = "https://github.com/diana-hep/awkward-array/releases",
+      url = "https://github.com/scikit-hep/awkward-array",
+      download_url = "https://github.com/scikit-hep/awkward-array/releases",
       license = "BSD 3-clause",
       test_suite = "tests",
       install_requires = ["numpy"],
