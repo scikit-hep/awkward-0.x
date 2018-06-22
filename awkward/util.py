@@ -111,8 +111,9 @@ except AttributeError:
         __floordiv__, __rfloordiv__, __ifloordiv__ = _numeric_methods(
             um.floor_divide, 'floordiv')
         __mod__, __rmod__, __imod__ = _numeric_methods(um.remainder, 'mod')
-        __divmod__ = _binary_method(um.divmod, 'divmod')
-        __rdivmod__ = _reflected_binary_method(um.divmod, 'divmod')
+        if hasattr(um, "divmod"):
+            __divmod__ = _binary_method(um.divmod, 'divmod')
+            __rdivmod__ = _reflected_binary_method(um.divmod, 'divmod')
         # __idivmod__ does not exist
         # TODO: handle the optional third argument for __pow__?
         __pow__, __rpow__, __ipow__ = _numeric_methods(um.power, 'pow')
