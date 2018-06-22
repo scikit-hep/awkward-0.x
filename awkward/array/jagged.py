@@ -49,6 +49,43 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return cls(offsets[:-1], offsets[1:], content, writeable=writeable)
 
     @classmethod
+    def fromuniques(cls, uniques, content, writeable=True):
+        uniques = JaggedArray._toarray(uniques, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if len(uniques) != len(content):
+            raise ValueError("uniques array must have the same length as content")
+        changes = numpy.nonzero(uniques[1:] != uniques[:-1])[0] + 1
+        offsets = numpy.empty(len(changes) + 2, dtype=JaggedArray.INDEXTYPE)
+        offsets[0] = 0
+        offsets[-1] = len(content)
+        offsets[1:-1] = changes
+        starts, stops = offsets[:-1], offsets[1:]
+        return JaggedArray(starts, stops, content, writeable=writeable)
+
+    @classmethod
+    def fromparents(cls, parents, content, writeable=True):
+        if len(parents) != len(content):
+            raise ValueError("parents array must have the same length as content")
+
+        tmp = numpy.nonzero(parents[1:] != parents[:-1])[0] + 1
+
+        changes = numpy.empty(len(tmp) + 2, dtype=JaggedArray.INDEXTYPE)
+        changes[0] = 0
+        changes[-1] = len(parents)
+        changes[1:-1] = tmp
+
+        length = parents.max() + 1
+        starts = numpy.zeros(length, dtype=JaggedArray.INDEXTYPE)
+        counts = numpy.zeros(length, dtype=JaggedArray.INDEXTYPE)
+
+        where = parents[changes[:-1]]
+        real = (where >= 0)
+
+        starts[where[real]] = (changes[:-1])[real]
+        counts[where[real]] = (changes[1:] - changes[:-1])[real]
+
+        return JaggedArray(starts, starts + counts, content, writeable=writeable)
+
+    @classmethod
     def fromiterable(cls, iterable, writeable=True):
         offsets = [0]
         content = []
@@ -61,7 +98,32 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     def compatible(*jaggedarrays):
         if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
             raise TypeError("not all objects passed to JaggedArray.compatible are JaggedArrays")
-        return all(numpy.array_equal(x._starts, jaggedarrays[0]._starts) and numpy.array_equal(x._stops, jaggedarrays[0]._stops) for x in jaggedarrays[1:])
+
+        if len(jaggedarrays) == 0:
+            return True
+
+        # empty subarrays can be represented by any start,stop as long as start == stop
+        relevant, relevantstarts, relevantstops = None, None, None
+
+        first = jaggedarrays[0]
+        for next in jaggedarrays[1:]:
+            if first._starts is not next._starts:
+                if relevant is None:
+                    relevant = (first.counts != 0)
+                if relevantstarts is None:
+                    relevantstarts = first._starts[relevant]
+                if not numpy.array_equal(relevantstarts, next._starts[relevant]):
+                    return False
+
+            if first._stops is not next._stops:
+                if relevant is None:
+                    relevant = (first.counts != 0)
+                if relevantstops is None:
+                    relevantstops = first._stops[relevant]
+                if not numpy.array_equal(relevantstops, next._stops[relevant]):
+                    return False
+
+        return True
 
     def __init__(self, starts, stops, content, writeable=True):
         self.starts = starts
@@ -138,7 +200,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
     @property
     def parents(self):
-        out = numpy.empty(len(self._content), dtype=self.INDEXTYPE)
+        out = numpy.full(len(self._content), -1, dtype=self.INDEXTYPE)
         starts, stops = self._starts, self._stops
         lenstarts = len(starts)
         i = 0
@@ -277,24 +339,34 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return JaggedArray(starts, stops, content, writeable=writeable)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        prepared = []
+        inputs = list(inputs)
         starts, stops = None, None
 
-        for arg in inputs:
-            if isinstance(arg, (numbers.Number, numpy.number)):
-                prepared.append(arg)
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], (numbers.Number, numpy.number)):
+                pass
 
-            elif isinstance(arg, ByteJaggedArray):
+            elif isinstance(inputs[i], JaggedArray):
                 if starts is stops is None:
-                    prepared.append(arg.tojagged())
-                    starts, stops = prepared[-1].starts, prepared[-1].stops
+                    inputs[i] = inputs[i].tojagged(copy=False)
+                    starts, stops = inputs[i].starts, inputs[i].stops
                 else:
-                    prepared.append(arg.tojagged(starts, stops))
+                    inputs[i] = arg.tojagged(starts, stops)
 
-            # elif isinstance(
+            else:
+                inputs[i] = numpy.array(inputs[i], copy=False)
+
+        if any(isinstance(x, JaggedArray) for x in inputs) and any(isinstance(x, numpy.ndarray) for x in inputs):
+            for jaggedarray in inputs:
+                if isinstance(jaggedarray, JaggedArray):
+                    break
+
+            parents = jaggedarray.parents
 
 
-                    
+
+
+
 class ByteJaggedArray(JaggedArray):
     @classmethod
     def fromoffsets(cls, offsets, content, dtype, writeable=True):
