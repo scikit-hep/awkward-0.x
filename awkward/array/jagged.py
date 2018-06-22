@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import collections
+import numbers
 
 import numpy
 
@@ -74,7 +75,10 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
     @starts.setter
     def starts(self, value):
-        self._starts = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if (value < 0).any():
+            raise ValueError("starts must be a non-negative array")
+        self._starts = value
 
     @property
     def stops(self):
@@ -82,7 +86,10 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
     @stops.setter
     def stops(self, value):
-        self._stops = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if (value < 0).any():
+            raise ValueError("stops must be a non-negative array")
+        self._stops = value
 
     @property
     def content(self):
@@ -143,22 +150,27 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     def __len__(self):                 # length is determined by starts
         return len(self._starts)       # data can grow by appending contents and stops before starts
 
-    def _check_startsstops(self):
-        if len(self._starts.shape) != 1:
+    def _check_startsstops(self, starts=None, stops=None):
+        if starts is None:
+            starts = self._starts
+        if stops is None:
+            stops = self._stops
+
+        if len(starts.shape) != 1:
             raise TypeError("starts must have 1-dimensional shape")
-        if self._starts.shape[0] == 0:
-            self._starts = self._starts.view(self.INDEXTYPE)
-        if not issubclass(self._starts.dtype.type, numpy.integer):
+        if starts.shape[0] == 0:
+            starts = starts.view(self.INDEXTYPE)
+        if not issubclass(starts.dtype.type, numpy.integer):
             raise TypeError("starts must have integer dtype")
 
-        if len(self._stops.shape) != 1:
+        if len(stops.shape) != 1:
             raise TypeError("stops must have 1-dimensional shape")
-        if self._stops.shape[0] == 0:
-            self._stops = self._stops.view(self.INDEXTYPE)
-        if not issubclass(self._stops.dtype.type, numpy.integer):
+        if stops.shape[0] == 0:
+            stops = stops.view(self.INDEXTYPE)
+        if not issubclass(stops.dtype.type, numpy.integer):
             raise TypeError("stops must have integer dtype")
 
-        if len(self._starts) > len(self._stops):
+        if len(starts) > len(stops):
             raise ValueError("starts must be have as many or fewer elements as stops")
 
     def __getitem__(self, where):
@@ -212,6 +224,77 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             for start, stop in awkward.util.izip(starts, stops):
                 self._content[start:stop] = what
 
+    def tojagged(self, starts=None, stops=None, copy=True, writeable=True):
+        if starts is None and stops is None:
+            if copy:
+                starts, stops = self._starts.copy(), self._stops.copy()
+            else:
+                starts, stops = self._starts, self._stops
+
+        elif stops is None:
+            starts = self._toarray(starts, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+            if len(self) != len(starts):
+                raise IndexError("cannot fit JaggedArray of length {0} into starts of length {1}".format(len(self), len(starts)))
+
+            stops = starts + self.counts
+
+            if (stops[:-1] > starts[1:]).any():
+                raise IndexError("cannot fit contents of JaggedArray into the given starts array")
+
+        elif starts is None:
+            stops = self._toarray(stops, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+            if len(self) != len(stops):
+                raise IndexError("cannot fit JaggedArray of length {0} into stops of length {1}".format(len(self), len(stops)))
+
+            starts = stops - self.counts
+
+            if (stops[:-1] > starts[1:]).any():
+                raise IndexError("cannot fit contents of JaggedArray into the given stops array")
+
+        else:
+            if not numpy.array_equal(stops - starts, self.counts):
+                raise IndexError("cannot fit contents of JaggedArray into the given starts and stops arrays")
+
+        if not copy and starts is self._starts and stops is self._stops:
+            return self
+
+        elif (starts is self._starts or numpy.array_equal(starts, self._starts)) and (stops is self._stops or numpy.array_equal(stops, self._stops)):
+            if copy:
+                return JaggedArray(starts, stops, self._content.copy(), writeable=writeable)
+            else:
+                return JaggedArray(starts, stops, self._content, writeable=writeable)
+
+        else:
+            selfstarts, selfstops, selfcontent = self._starts, self._stops, self._content
+            content = numpy.empty(stops.max(), dtype=selfcontent.dtype)
+            
+            lenstarts = len(starts)
+            i = 0
+            while i < lenstarts:
+                content[starts[i]:stops[i]] = selfcontent[selfstarts[i]:selfstops[i]]
+                i += 1
+            
+            return JaggedArray(starts, stops, content, writeable=writeable)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        prepared = []
+        starts, stops = None, None
+
+        for arg in inputs:
+            if isinstance(arg, (numbers.Number, numpy.number)):
+                prepared.append(arg)
+
+            elif isinstance(arg, ByteJaggedArray):
+                if starts is stops is None:
+                    prepared.append(arg.tojagged())
+                    starts, stops = prepared[-1].starts, prepared[-1].stops
+                else:
+                    prepared.append(arg.tojagged(starts, stops))
+
+            # elif isinstance(
+
+
+                    
 class ByteJaggedArray(JaggedArray):
     @classmethod
     def fromoffsets(cls, offsets, content, dtype, writeable=True):
@@ -326,3 +409,49 @@ class ByteJaggedArray(JaggedArray):
                 for startpos, stoppos, offset in awkward.util.izip(startposes, stopposes, offsets):
                     buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
                     buf[startpos:stoppos] = what
+
+    def tojagged(self, starts=None, stops=None, copy=True, writeable=True):
+        counts = self.counts
+
+        if starts is None and stops is None:
+            offsets = numpy.empty(len(self) + 1, dtype=self.INDEXTYPE)
+            offsets[0] = 0
+            numpy.cumsum(counts // self.dtype.itemsize, out=offsets[1:])
+            starts, stops = offsets[:-1], offsets[1:]
+            
+        elif stops is None:
+            starts = self._toarray(starts, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+            if len(self) != len(starts):
+                raise IndexError("cannot fit ByteJaggedArray of length {0} into starts of length {1}".format(len(self), len(starts)))
+
+            stops = starts + (counts // self.dtype.itemsize)
+
+            if (stops[:-1] > starts[1:]).any():
+                raise IndexError("cannot fit contents of ByteJaggedArray into the given starts array")
+
+        elif starts is None:
+            stops = self._toarray(stops, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+            if len(self) != len(stops):
+                raise IndexError("cannot fit ByteJaggedArray of length {0} into stops of length {1}".format(len(self), len(stops)))
+
+            starts = stops - (counts // self.dtype.itemsize)
+
+            if (stops[:-1] > starts[1:]).any():
+                raise IndexError("cannot fit contents of ByteJaggedArray into the given stops array")
+
+        else:
+            if not numpy.array_equal(stops - starts, counts):
+                raise IndexError("cannot fit contents of ByteJaggedArray into the given starts and stops arrays")
+
+        self._check_startsstops(starts, stops)
+
+        selfstarts, selfstops, selfcontent, selfdtype = self._starts, self._stops, self._content, self._dtype
+        content = numpy.empty(counts.sum() // selfdtype.itemsize, dtype=selfdtype)
+
+        lenstarts = len(starts)
+        i = 0
+        while i < lenstarts:
+            content[starts[i]:stops[i]] = selfcontent[selfstarts[i]:selfstops[i]].view(selfdtype)
+            i += 1
+
+        return JaggedArray(starts, stops, content, writeable=writeable)
