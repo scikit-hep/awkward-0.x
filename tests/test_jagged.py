@@ -43,7 +43,7 @@ class TestJagged(unittest.TestCase):
         a = JaggedArray.fromoffsets(offsets, [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         self.assertTrue(offsets is a.offsets)
 
-        a = JaggedArray([5, 2, 99, -9], [8, 7, 99, 3], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = JaggedArray([5, 2, 99, 1], [8, 7, 99, 3], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         self.assertRaises(ValueError, lambda: a.offsets)
 
     def test_jagged_iterable(self):
@@ -66,7 +66,7 @@ class TestJagged(unittest.TestCase):
         self.assertEqual([x.tolist() for x in a[[True, False, True, False, True]]], [[0.0, 1.1, 2.2], [3.3, 4.4, 5.5, 6.6, 7.7], []])
 
     def test_jagged_get_startsstops(self):
-        a = JaggedArray([5, 2, 99, -9], [8, 7, 99, 3], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = JaggedArray([5, 2, 99, 1], [8, 7, 99, 3], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         self.assertEqual([x.tolist() for x in a], [[5.5, 6.6, 7.7], [2.2, 3.3, 4.4, 5.5, 6.6], [], [1.1, 2.2]])
         self.assertEqual([x.tolist() for x in a[:]], [[5.5, 6.6, 7.7], [2.2, 3.3, 4.4, 5.5, 6.6], [], [1.1, 2.2]])
 

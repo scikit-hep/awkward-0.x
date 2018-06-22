@@ -350,6 +350,9 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return JaggedArray(self._starts, self._stops, content, writeable=writeable)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if method != "__call__":
+            return NotImplemented
+
         inputs = list(inputs)
         starts, stops = None, None
 
@@ -362,7 +365,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                     inputs[i] = inputs[i].tojagged(copy=False)
                     starts, stops = inputs[i].starts, inputs[i].stops
                 else:
-                    inputs[i] = arg.tojagged(starts, stops)
+                    inputs[i] = inputs[i].tojagged(starts, stops)
 
             else:
                 inputs[i] = numpy.array(inputs[i], copy=False)
@@ -380,6 +383,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 if parents is None:
                     parents = jaggedarray.parents
                     good = (parents >= 0)
+
                 content = numpy.empty(len(parents), dtype=data.dtype)
                 if len(data.shape) == 0:
                     content[good] = data
@@ -398,6 +402,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         if isinstance(result, tuple):
             return tuple(JaggedArray(starts, stops, x) for x in result)
+        elif method == "at":
+            return None
         else:
             return JaggedArray(starts, stops, result)
 
