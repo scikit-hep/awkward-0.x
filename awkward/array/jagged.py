@@ -338,7 +338,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             
             return JaggedArray(starts, stops, content, writeable=writeable)
 
-    def makecompatible(self, data):
+    def makecompatible(self, data, writeable=True):
         data = self._toarray(data, self._content.dtype, (numpy.ndarray, awkward.array.base.AwkwardArray))
         parents = self.parents
         good = (parents >= 0)
@@ -347,7 +347,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             content[good] = data
         else:
             content[good] = data[parents[good]]
-        return JaggedArray(self._starts, self._stops, content, writeable=self._writeable)
+        return JaggedArray(self._starts, self._stops, content, writeable=writeable)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         inputs = list(inputs)
@@ -367,16 +367,27 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             else:
                 inputs[i] = numpy.array(inputs[i], copy=False)
 
-        if any(isinstance(x, JaggedArray) for x in inputs) and any(isinstance(x, numpy.ndarray) for x in inputs):
-            for jaggedarray in inputs:
-                if isinstance(jaggedarray, JaggedArray):
-                    break
+        for jaggedarray in inputs:
+            if isinstance(jaggedarray, JaggedArray):
+                break
 
-            parents = jaggedarray.parents
+        if any(isinstance(x, numpy.ndarray) for x in inputs):
+            for i in range(len(inputs)):
+                if isinstance(inputs[i], (numbers.Number, numpy.number)):
+                    pass
+                elif isinstance(inputs[i], JaggedArray):
+                    inputs[i] = inputs[i].content
+                elif isinstance(inputs[i], numpy.ndarray):
+                    inputs[i] = jaggedarray.makecompatible(inputs[i]).content
+                else:
+                    raise AssertionError(inputs[i])
 
+        result = getattr(ufunc, method)(*inputs, **kwargs)
 
-
-
+        if isinstance(result, tuple):
+            return tuple(JaggedArray(jaggedarray._starts, jaggedarray._stops, x) for x in result)
+        else:
+            return JaggedArray(jaggedarray._starts, jaggedarray._stops, result)
 
 class ByteJaggedArray(JaggedArray):
     @classmethod
