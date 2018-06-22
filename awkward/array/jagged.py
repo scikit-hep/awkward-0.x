@@ -338,6 +338,17 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             
             return JaggedArray(starts, stops, content, writeable=writeable)
 
+    def makecompatible(self, data):
+        data = self._toarray(data, self._content.dtype, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        parents = self.parents
+        good = (parents >= 0)
+        content = numpy.empty(len(parents), dtype=data.dtype)
+        if len(data.shape) == 0:
+            content[good] = data
+        else:
+            content[good] = data[parents[good]]
+        return JaggedArray(self._starts, self._stops, content, writeable=self._writeable)
+
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         inputs = list(inputs)
         starts, stops = None, None
