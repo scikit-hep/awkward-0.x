@@ -249,22 +249,30 @@ class TestCombine(unittest.TestCase):
         pass
     
     def test_JaggedArray_ChunkedArray(self):
-        pass
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], ChunkedArray([[0.0, 1.1, 2.2, 3.3], [4.4, 5.5, 6.6, 7.7, 8.8, 9.9]]))
+        self.assertEqual(a.tolist(), [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
+        self.assertEqual(a[2].tolist(), [3.3, 4.4])
+        self.assertEqual(a[2:4].tolist(), [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
 
     def test_JaggedArray_PartitionedArray(self):
-        pass
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], PartitionedArray([0, 4, 10], [[0.0, 1.1, 2.2, 3.3], [4.4, 5.5, 6.6, 7.7, 8.8, 9.9]]))
+        self.assertEqual(a.tolist(), [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
+        self.assertEqual(a[2].tolist(), [3.3, 4.4])
+        self.assertEqual(a[2:4].tolist(), [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
 
     def test_JaggedArray_AppendableArray(self):
         pass
 
     def test_JaggedArray_IndexedArray(self):
+        # a = JaggedArray(, , IndexedArray())
         pass
 
     def test_JaggedArray_ByteIndexedArray(self):
         pass
 
     def test_JaggedArray_JaggedArray(self):
-        pass
+        a = JaggedArray([0, 2, 2], [2, 2, 4], JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        self.assertEqual(a.tolist(), [[[0.0, 1.1, 2.2], []], [], [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]])
 
     def test_JaggedArray_ByteJaggedArray(self):
         pass
@@ -279,7 +287,10 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_JaggedArray_Table(self):
-        pass
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], Table(10, one=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], two=[0, 100, 200, 300, 400, 500, 600, 700, 800, 900]))
+        self.assertEqual(a.tolist(), [[{"one": 0.0, "two": 0}, {"one": 1.1, "two": 100}, {"one": 2.2, "two": 200}], [], [{"one": 3.3, "two": 300}, {"one": 4.4, "two": 400}], [{"one": 5.5, "two": 500}, {"one": 6.6, "two": 600}, {"one": 7.7, "two": 700}, {"one": 8.8, "two": 800}, {"one": 9.9, "two": 900}]])
+        self.assertEqual(a["one"].tolist(), [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
+        self.assertEqual(a["two"].tolist(), [[0, 100, 200], [], [300, 400], [500, 600, 700, 800, 900]])
 
     def test_JaggedArray_VirtualArray(self):
         pass
