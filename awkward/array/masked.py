@@ -115,7 +115,6 @@ class MaskedArray(awkward.array.base.AwkwardArray):
                 return numpy.ma.masked
             else:
                 return self._content[where]
-
         else:
             return MaskedArray(self._mask[head], self._content[where], validwhen=self._validwhen, writeable=self._writeable)
 

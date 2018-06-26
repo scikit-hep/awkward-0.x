@@ -264,8 +264,8 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_JaggedArray_IndexedArray(self):
-        # a = JaggedArray(, , IndexedArray())
-        pass
+        a = JaggedArray([0, 3, 3], [3, 3, 5], IndexedArray([9, 8, 7, 4, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        self.assertEqual(a.tolist(), [[9.9, 8.8, 7.7], [], [4.4, 4.4]])
 
     def test_JaggedArray_ByteIndexedArray(self):
         pass
@@ -278,7 +278,8 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_JaggedArray_MaskedArray(self):
-        pass
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], MaskedArray([False, False, True, True, False, False, False, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        self.assertEqual(a.tolist(), [[0.0, 1.1, None], [], [None, 4.4], [5.5, 6.6, 7.7, None, 9.9]])
 
     def test_JaggedArray_BitMaskedArray(self):
         pass
@@ -293,10 +294,12 @@ class TestCombine(unittest.TestCase):
         self.assertEqual(a["two"].tolist(), [[0, 100, 200], [], [300, 400], [500, 600, 700, 800, 900]])
 
     def test_JaggedArray_VirtualArray(self):
-        pass
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], VirtualArray(lambda: [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        self.assertEqual(a.tolist(), [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
 
     def test_JaggedArray_VirtualObjectArray(self):
-        pass
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], VirtualObjectArray(str, [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        self.assertEqual(a.tolist(), [["0.0", "1.1", "2.2"], [], ["3.3", "4.4"], ["5.5", "6.6", "7.7", "8.8", "9.9"]])
 
     def test_JaggedArray_PersistentArray(self):
         pass
@@ -359,13 +362,15 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_MaskedArray_JaggedArray(self):
-        pass
+        a = MaskedArray([True, False, False, True], JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        self.assertEqual(a.tolist(), [None, [], [3.3, 4.4], None])
 
     def test_MaskedArray_ByteJaggedArray(self):
         pass
 
     def test_MaskedArray_MaskedArray(self):
-        pass
+        a = MaskedArray([False, False, False, False, False, True, True, True, True, True], MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        self.assertEqual(a.tolist(), [0.0, None, 2.2, None, 4.4, None, None, None, None, None])
 
     def test_MaskedArray_BitMaskedArray(self):
         pass
@@ -374,7 +379,10 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_MaskedArray_Table(self):
-        pass
+        a = MaskedArray([False, True, False, True, False, True, False, True, False, True], Table(10, one=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], two=[0, 100, 200, 300, 400, 500, 600, 700, 800, 900]))
+        self.assertEqual(a[2]["one"], 2.2)
+        self.assertEqual(a[2]["two"], 200)
+        self.assertEqual(a.tolist(), [{"one": 0.0, "two": 0}, None, {"one": 2.2, "two": 200}, None, {"one": 4.4, "two": 400}, None, {"one": 6.6, "two": 600}, None, {"one": 8.8, "two": 800}, None])
 
     def test_MaskedArray_VirtualArray(self):
         pass

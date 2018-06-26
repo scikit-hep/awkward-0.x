@@ -180,7 +180,13 @@ class Table(awkward.array.base.AwkwardArray):
     def __getitem__(self, where):
         # TODO: optimized special case for step == 1 start == 0 getting integer index
 
-        if isinstance(where, awkward.util.string):
+        if isinstance(where, tuple):
+            if len(where) == 1:
+                where = where[0]
+            else:
+                raise IndexError("only integers, slices (`:`), ellipsis (`...`), numpy.newaxis (`None`) and integer or boolean arrays are valid indices")
+
+        if self._isstring(where):
             return self._check_length(self._content[where])[self.start:self.stop:self.step]
 
         elif isinstance(where, (numbers.Integral, numpy.integer)):
@@ -233,7 +239,13 @@ class Table(awkward.array.base.AwkwardArray):
                 return out
 
     def __setitem__(self, where, what):
-        if isinstance(where, awkward.util.string):
+        if isinstance(where, tuple):
+            if len(where) == 1:
+                where = where[0]
+            else:
+                raise IndexError("only integers, slices (`:`), ellipsis (`...`), numpy.newaxis (`None`) and integer or boolean arrays are valid indices")
+
+        if self._isstring(where):
             try:
                 array = self._content[where]
 
