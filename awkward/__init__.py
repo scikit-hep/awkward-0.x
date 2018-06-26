@@ -28,12 +28,13 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from awkward.array.indexed import IndexedArray, ByteIndexedArray
-from awkward.array.masked import MaskedArray, BitMaskedArray
-from awkward.array.jagged import JaggedArray, ByteJaggedArray
 from awkward.array.chunked import ChunkedArray, PartitionedArray
-from awkward.array.virtual import VirtualArray, VirtualObjectArray
+from awkward.array.indexed import IndexedArray, ByteIndexedArray
+from awkward.array.jagged import JaggedArray, ByteJaggedArray
+from awkward.array.masked import MaskedArray, BitMaskedArray
+from awkward.array.sparse import SparseArray
 from awkward.array.table import Table
+from awkward.array.virtual import VirtualArray, VirtualObjectArray, PersistentArray
 
 # convenient access to the version number
 from awkward.version import __version__

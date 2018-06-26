@@ -251,3 +251,66 @@ class VirtualObjectArray(awkward.array.base.AwkwardArray):
 
     def __setitem__(self, where, what):
         raise ValueError("assignment destination is read-only")
+
+class PersistentArray(awkward.array.base.AwkwardArray):
+    def __init__(self, dtype, shape, read, write):
+        self.dtype = dtype
+        self.shape = shape
+        self.read = read
+        self.write = write
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @dtype.setter
+    def dtype(self, value):
+        self._dtype = numpy.dtype(value)
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @shape.setter
+    def shape(self, value):
+        if isinstance(value, tuple) and len(value) != 0 and all(isinstance(x, (numbers.Integral, numpy.integer)) and x >= 0 for x in value):
+            self._shape = value
+        else:
+            raise TypeError("shape must be None (unknown) or a non-empty tuple of non-negative integers")
+
+    @property
+    def read(self):
+        return self._read
+
+    @read.setter
+    def read(self, value):
+        if value is not None and not callable(value):
+            raise TypeError("read must be None or a callable (of one argument)")
+        self._read = value
+
+    @property
+    def write(self):
+        return self._write
+
+    @write.setter
+    def write(self, value):
+        if value is not None and not callable(value):
+            raise TypeError("write must be None or a callable (of two arguments)")
+        self._write = value
+
+    @property
+    def writable(self):
+        return self._write is not None
+
+    def __len__(self):
+        return self.shape[0]
+
+    def __getitem__(self, where):
+        if self._read is None:
+            raise ValueError("PersistentArray has no read method")
+        return self._read(where)
+
+    def __setitem__(self, where, what):
+        if self._write is None:
+            raise ValueError("PersistentArray has no write method")
+        self._write(where, what)
