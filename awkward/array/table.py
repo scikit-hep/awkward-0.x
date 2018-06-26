@@ -51,7 +51,10 @@ class Table(awkward.array.base.AwkwardArray):
             return name in self._table._content
 
         def __getattr__(self, name):
-            return self._table._content[name][self._index]
+            try:
+                return self._table._content[name][self._index]
+            except KeyError as err:
+                raise AttributeError(str(err))
 
         def __setattr__(self, name, what):
             self._table._content[name][self._index] = what
@@ -294,6 +297,12 @@ class Table(awkward.array.base.AwkwardArray):
 
     def __repr__(self):
         return "<Table {0} x {1} at {2:012x}>".format(self._length, len(self._content), id(self))
+
+    def _try_tolist(self, x):
+        if isinstance(x, self.Row):
+            return dict((n, x[n]) for n in x._table._content)
+        else:
+            return super(Table, self)._try_tolist(x)
 
     def tolist(self):
         return [dict((n, self._try_tolist(self._check_length(x)[self.start:self.stop:self.step][i])) for n, x in self._content.items()) for i in range(self._length)]

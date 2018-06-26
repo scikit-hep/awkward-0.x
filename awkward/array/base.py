@@ -54,8 +54,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def __repr__(self):
         return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
 
-    @staticmethod
-    def _try_tolist(x):
+    def _try_tolist(self, x):
         try:
             return x.tolist()
         except AttributeError:

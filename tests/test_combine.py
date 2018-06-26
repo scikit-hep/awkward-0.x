@@ -512,7 +512,8 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_Table_Table(self):
-        pass
+        a = Table(5, one=[0.0, 1.1, 2.2, 3.3, 4.4], two=Table(5, x=[0, 100, 200, 300, 400], y=[False, True, False, True, False]))
+        self.assertEqual(a.tolist(), [{"one": 0.0, "two": {"x": 0, "y": False}}, {"one": 1.1, "two": {"x": 100, "y": True}}, {"one": 2.2, "two": {"x": 200, "y": False}}, {"one": 3.3, "two": {"x": 300, "y": True}}, {"one": 4.4, "two": {"x": 400, "y": False}}])
 
     def test_Table_VirtualArray(self):
         pass
