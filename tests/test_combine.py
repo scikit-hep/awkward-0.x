@@ -1,0 +1,627 @@
+#!/usr/bin/env python
+
+# Copyright (c) 2018, DIANA-HEP
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+# 
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+# 
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import unittest
+
+import numpy
+
+from awkward import *
+
+class TestCombine(unittest.TestCase):
+    def runTest(self):
+        pass
+
+    def test_ChunkedArray_ChunkedArray(self):
+        pass
+
+    def test_ChunkedArray_PartitionedArray(self):
+        pass
+
+    def test_ChunkedArray_AppendableArray(self):
+        pass
+
+    def test_ChunkedArray_IndexedArray(self):
+        pass
+
+    def test_ChunkedArray_ByteIndexedArray(self):
+        pass
+
+    def test_ChunkedArray_JaggedArray(self):
+        pass
+
+    def test_ChunkedArray_ByteJaggedArray(self):
+        pass
+
+    def test_ChunkedArray_MaskedArray(self):
+        pass
+
+    def test_ChunkedArray_BitMaskedArray(self):
+        pass
+
+    def test_ChunkedArray_SparseArray(self):
+        pass
+
+    def test_ChunkedArray_Table(self):
+        pass
+
+    def test_ChunkedArray_VirtualArray(self):
+        pass
+
+    def test_ChunkedArray_VirtualObjectArray(self):
+        pass
+
+    def test_ChunkedArray_PersistentArray(self):
+        pass
+
+    def test_PartitionedArray_ChunkedArray(self):
+        pass
+
+    def test_PartitionedArray_PartitionedArray(self):
+        pass
+
+    def test_PartitionedArray_AppendableArray(self):
+        pass
+
+    def test_PartitionedArray_IndexedArray(self):
+        pass
+
+    def test_PartitionedArray_ByteIndexedArray(self):
+        pass
+
+    def test_PartitionedArray_JaggedArray(self):
+        pass
+
+    def test_PartitionedArray_ByteJaggedArray(self):
+        pass
+
+    def test_PartitionedArray_MaskedArray(self):
+        pass
+
+    def test_PartitionedArray_BitMaskedArray(self):
+        pass
+
+    def test_PartitionedArray_SparseArray(self):
+        pass
+
+    def test_PartitionedArray_Table(self):
+        pass
+
+    def test_PartitionedArray_VirtualArray(self):
+        pass
+
+    def test_PartitionedArray_VirtualObjectArray(self):
+        pass
+
+    def test_PartitionedArray_PersistentArray(self):
+        pass
+    
+    def test_AppendableArray_ChunkedArray(self):
+        pass
+
+    def test_AppendableArray_PartitionedArray(self):
+        pass
+
+    def test_AppendableArray_AppendableArray(self):
+        pass
+
+    def test_AppendableArray_IndexedArray(self):
+        pass
+
+    def test_AppendableArray_ByteIndexedArray(self):
+        pass
+
+    def test_AppendableArray_JaggedArray(self):
+        pass
+
+    def test_AppendableArray_ByteJaggedArray(self):
+        pass
+
+    def test_AppendableArray_MaskedArray(self):
+        pass
+
+    def test_AppendableArray_BitMaskedArray(self):
+        pass
+
+    def test_AppendableArray_SparseArray(self):
+        pass
+
+    def test_AppendableArray_Table(self):
+        pass
+
+    def test_AppendableArray_VirtualArray(self):
+        pass
+
+    def test_AppendableArray_VirtualObjectArray(self):
+        pass
+
+    def test_AppendableArray_PersistentArray(self):
+        pass
+    
+    def test_IndexedArray_ChunkedArray(self):
+        pass
+
+    def test_IndexedArray_PartitionedArray(self):
+        pass
+
+    def test_IndexedArray_AppendableArray(self):
+        pass
+
+    def test_IndexedArray_IndexedArray(self):
+        pass
+
+    def test_IndexedArray_ByteIndexedArray(self):
+        pass
+
+    def test_IndexedArray_JaggedArray(self):
+        pass
+
+    def test_IndexedArray_ByteJaggedArray(self):
+        pass
+
+    def test_IndexedArray_MaskedArray(self):
+        pass
+
+    def test_IndexedArray_BitMaskedArray(self):
+        pass
+
+    def test_IndexedArray_SparseArray(self):
+        pass
+
+    def test_IndexedArray_Table(self):
+        pass
+
+    def test_IndexedArray_VirtualArray(self):
+        pass
+
+    def test_IndexedArray_VirtualObjectArray(self):
+        pass
+
+    def test_IndexedArray_PersistentArray(self):
+        pass
+    
+    def test_ByteIndexedArray_ChunkedArray(self):
+        pass
+
+    def test_ByteIndexedArray_PartitionedArray(self):
+        pass
+
+    def test_ByteIndexedArray_AppendableArray(self):
+        pass
+
+    def test_ByteIndexedArray_IndexedArray(self):
+        pass
+
+    def test_ByteIndexedArray_ByteIndexedArray(self):
+        pass
+
+    def test_ByteIndexedArray_JaggedArray(self):
+        pass
+
+    def test_ByteIndexedArray_ByteJaggedArray(self):
+        pass
+
+    def test_ByteIndexedArray_MaskedArray(self):
+        pass
+
+    def test_ByteIndexedArray_BitMaskedArray(self):
+        pass
+
+    def test_ByteIndexedArray_SparseArray(self):
+        pass
+
+    def test_ByteIndexedArray_Table(self):
+        pass
+
+    def test_ByteIndexedArray_VirtualArray(self):
+        pass
+
+    def test_ByteIndexedArray_VirtualObjectArray(self):
+        pass
+
+    def test_ByteIndexedArray_PersistentArray(self):
+        pass
+    
+    def test_JaggedArray_ChunkedArray(self):
+        pass
+
+    def test_JaggedArray_PartitionedArray(self):
+        pass
+
+    def test_JaggedArray_AppendableArray(self):
+        pass
+
+    def test_JaggedArray_IndexedArray(self):
+        pass
+
+    def test_JaggedArray_ByteIndexedArray(self):
+        pass
+
+    def test_JaggedArray_JaggedArray(self):
+        pass
+
+    def test_JaggedArray_ByteJaggedArray(self):
+        pass
+
+    def test_JaggedArray_MaskedArray(self):
+        pass
+
+    def test_JaggedArray_BitMaskedArray(self):
+        pass
+
+    def test_JaggedArray_SparseArray(self):
+        pass
+
+    def test_JaggedArray_Table(self):
+        pass
+
+    def test_JaggedArray_VirtualArray(self):
+        pass
+
+    def test_JaggedArray_VirtualObjectArray(self):
+        pass
+
+    def test_JaggedArray_PersistentArray(self):
+        pass
+    
+    def test_ByteJaggedArray_ChunkedArray(self):
+        pass
+
+    def test_ByteJaggedArray_PartitionedArray(self):
+        pass
+
+    def test_ByteJaggedArray_AppendableArray(self):
+        pass
+
+    def test_ByteJaggedArray_IndexedArray(self):
+        pass
+
+    def test_ByteJaggedArray_ByteIndexedArray(self):
+        pass
+
+    def test_ByteJaggedArray_JaggedArray(self):
+        pass
+
+    def test_ByteJaggedArray_ByteJaggedArray(self):
+        pass
+
+    def test_ByteJaggedArray_MaskedArray(self):
+        pass
+
+    def test_ByteJaggedArray_BitMaskedArray(self):
+        pass
+
+    def test_ByteJaggedArray_SparseArray(self):
+        pass
+
+    def test_ByteJaggedArray_Table(self):
+        pass
+
+    def test_ByteJaggedArray_VirtualArray(self):
+        pass
+
+    def test_ByteJaggedArray_VirtualObjectArray(self):
+        pass
+
+    def test_ByteJaggedArray_PersistentArray(self):
+        pass
+    
+    def test_MaskedArray_ChunkedArray(self):
+        pass
+
+    def test_MaskedArray_PartitionedArray(self):
+        pass
+
+    def test_MaskedArray_AppendableArray(self):
+        pass
+
+    def test_MaskedArray_IndexedArray(self):
+        pass
+
+    def test_MaskedArray_ByteIndexedArray(self):
+        pass
+
+    def test_MaskedArray_JaggedArray(self):
+        pass
+
+    def test_MaskedArray_ByteJaggedArray(self):
+        pass
+
+    def test_MaskedArray_MaskedArray(self):
+        pass
+
+    def test_MaskedArray_BitMaskedArray(self):
+        pass
+
+    def test_MaskedArray_SparseArray(self):
+        pass
+
+    def test_MaskedArray_Table(self):
+        pass
+
+    def test_MaskedArray_VirtualArray(self):
+        pass
+
+    def test_MaskedArray_VirtualObjectArray(self):
+        pass
+
+    def test_MaskedArray_PersistentArray(self):
+        pass
+    
+    def test_BitMaskedArray_ChunkedArray(self):
+        pass
+
+    def test_BitMaskedArray_PartitionedArray(self):
+        pass
+
+    def test_BitMaskedArray_AppendableArray(self):
+        pass
+
+    def test_BitMaskedArray_IndexedArray(self):
+        pass
+
+    def test_BitMaskedArray_ByteIndexedArray(self):
+        pass
+
+    def test_BitMaskedArray_JaggedArray(self):
+        pass
+
+    def test_BitMaskedArray_ByteJaggedArray(self):
+        pass
+
+    def test_BitMaskedArray_MaskedArray(self):
+        pass
+
+    def test_BitMaskedArray_BitMaskedArray(self):
+        pass
+
+    def test_BitMaskedArray_SparseArray(self):
+        pass
+
+    def test_BitMaskedArray_Table(self):
+        pass
+
+    def test_BitMaskedArray_VirtualArray(self):
+        pass
+
+    def test_BitMaskedArray_VirtualObjectArray(self):
+        pass
+
+    def test_BitMaskedArray_PersistentArray(self):
+        pass
+    
+    def test_SparseArray_ChunkedArray(self):
+        pass
+
+    def test_SparseArray_PartitionedArray(self):
+        pass
+
+    def test_SparseArray_AppendableArray(self):
+        pass
+
+    def test_SparseArray_IndexedArray(self):
+        pass
+
+    def test_SparseArray_ByteIndexedArray(self):
+        pass
+
+    def test_SparseArray_JaggedArray(self):
+        pass
+
+    def test_SparseArray_ByteJaggedArray(self):
+        pass
+
+    def test_SparseArray_MaskedArray(self):
+        pass
+
+    def test_SparseArray_BitMaskedArray(self):
+        pass
+
+    def test_SparseArray_SparseArray(self):
+        pass
+
+    def test_SparseArray_Table(self):
+        pass
+
+    def test_SparseArray_VirtualArray(self):
+        pass
+
+    def test_SparseArray_VirtualObjectArray(self):
+        pass
+
+    def test_SparseArray_PersistentArray(self):
+        pass
+    
+    def test_Table_ChunkedArray(self):
+        pass
+
+    def test_Table_PartitionedArray(self):
+        pass
+
+    def test_Table_AppendableArray(self):
+        pass
+
+    def test_Table_IndexedArray(self):
+        pass
+
+    def test_Table_ByteIndexedArray(self):
+        pass
+
+    def test_Table_JaggedArray(self):
+        pass
+
+    def test_Table_ByteJaggedArray(self):
+        pass
+
+    def test_Table_MaskedArray(self):
+        pass
+
+    def test_Table_BitMaskedArray(self):
+        pass
+
+    def test_Table_SparseArray(self):
+        pass
+
+    def test_Table_Table(self):
+        pass
+
+    def test_Table_VirtualArray(self):
+        pass
+
+    def test_Table_VirtualObjectArray(self):
+        pass
+
+    def test_Table_PersistentArray(self):
+        pass
+    
+    def test_VirtualArray_ChunkedArray(self):
+        pass
+
+    def test_VirtualArray_PartitionedArray(self):
+        pass
+
+    def test_VirtualArray_AppendableArray(self):
+        pass
+
+    def test_VirtualArray_IndexedArray(self):
+        pass
+
+    def test_VirtualArray_ByteIndexedArray(self):
+        pass
+
+    def test_VirtualArray_JaggedArray(self):
+        pass
+
+    def test_VirtualArray_ByteJaggedArray(self):
+        pass
+
+    def test_VirtualArray_MaskedArray(self):
+        pass
+
+    def test_VirtualArray_BitMaskedArray(self):
+        pass
+
+    def test_VirtualArray_SparseArray(self):
+        pass
+
+    def test_VirtualArray_Table(self):
+        pass
+
+    def test_VirtualArray_VirtualArray(self):
+        pass
+
+    def test_VirtualArray_VirtualObjectArray(self):
+        pass
+
+    def test_VirtualArray_PersistentArray(self):
+        pass
+    
+    def test_VirtualObjectArray_ChunkedArray(self):
+        pass
+
+    def test_VirtualObjectArray_PartitionedArray(self):
+        pass
+
+    def test_VirtualObjectArray_AppendableArray(self):
+        pass
+
+    def test_VirtualObjectArray_IndexedArray(self):
+        pass
+
+    def test_VirtualObjectArray_ByteIndexedArray(self):
+        pass
+
+    def test_VirtualObjectArray_JaggedArray(self):
+        pass
+
+    def test_VirtualObjectArray_ByteJaggedArray(self):
+        pass
+
+    def test_VirtualObjectArray_MaskedArray(self):
+        pass
+
+    def test_VirtualObjectArray_BitMaskedArray(self):
+        pass
+
+    def test_VirtualObjectArray_SparseArray(self):
+        pass
+
+    def test_VirtualObjectArray_Table(self):
+        pass
+
+    def test_VirtualObjectArray_VirtualArray(self):
+        pass
+
+    def test_VirtualObjectArray_VirtualObjectArray(self):
+        pass
+
+    def test_VirtualObjectArray_PersistentArray(self):
+        pass
+    
+    def test_PersistentArray_ChunkedArray(self):
+        pass
+
+    def test_PersistentArray_PartitionedArray(self):
+        pass
+
+    def test_PersistentArray_AppendableArray(self):
+        pass
+
+    def test_PersistentArray_IndexedArray(self):
+        pass
+
+    def test_PersistentArray_ByteIndexedArray(self):
+        pass
+
+    def test_PersistentArray_JaggedArray(self):
+        pass
+
+    def test_PersistentArray_ByteJaggedArray(self):
+        pass
+
+    def test_PersistentArray_MaskedArray(self):
+        pass
+
+    def test_PersistentArray_BitMaskedArray(self):
+        pass
+
+    def test_PersistentArray_SparseArray(self):
+        pass
+
+    def test_PersistentArray_Table(self):
+        pass
+
+    def test_PersistentArray_VirtualArray(self):
+        pass
+
+    def test_PersistentArray_VirtualObjectArray(self):
+        pass
+
+    def test_PersistentArray_PersistentArray(self):
+        pass
