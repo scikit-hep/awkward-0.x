@@ -146,9 +146,12 @@ class Table(awkward.array.base.AwkwardArray):
         if not isinstance(value, (numbers.Integral, numpy.integer)) or value < 0:
             raise TypeError("stop must be a non-negative integer")
 
-        # length = int(math.ceil(float(abs(value - self._start)) / abs(self._step)))
-        d, m = divmod(abs(self._start, value), abs(self._step))
-        self._length = d + (1 if m != 0 else 0)
+        if (self._step > 0 and value - self._start > 0) or (self._step < 0 and value - self._start < 0):
+            # length = int(math.ceil(float(abs(value - self._start)) / abs(self._step)))
+            d, m = divmod(abs(self._start - value), abs(self._step))
+            self._length = d + (1 if m != 0 else 0)
+        else:
+            self._length = 0
 
     @property
     def writeable(self):
@@ -194,12 +197,17 @@ class Table(awkward.array.base.AwkwardArray):
         elif isinstance(where, slice):
             out = self.__class__(self._length, self._content)
             start, stop, step = where.indices(self._length)
+            if step == 0:
+                raise ValueError("slice step cannot be zero")
 
             out._start = self._start + self._step*start
             out._step = self._step*step
 
-            d, m = divmod(abs(start - stop), abs(step))
-            out._length = d + (1 if m != 0 else 0)
+            if (step > 0 and stop - start > 0) or (step < 0 and stop - start < 0):
+                d, m = divmod(abs(start - stop), abs(step))
+                out._length = d + (1 if m != 0 else 0)
+            else:
+                out._length = 0
 
             return out
             

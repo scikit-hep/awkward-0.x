@@ -28,7 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from awkward.array.chunked import ChunkedArray, PartitionedArray
+from awkward.array.chunked import ChunkedArray, PartitionedArray, AppendableArray
 from awkward.array.indexed import IndexedArray, ByteIndexedArray
 from awkward.array.jagged import JaggedArray, ByteJaggedArray
 from awkward.array.masked import MaskedArray, BitMaskedArray

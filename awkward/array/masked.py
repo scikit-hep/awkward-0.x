@@ -100,7 +100,7 @@ class MaskedArray(awkward.array.base.AwkwardArray):
         return self._content.shape
 
     def __len__(self):
-        return self._content.shape[0]
+        return len(self._content)
 
     def __getitem__(self, where):
         if self._isstring(where):

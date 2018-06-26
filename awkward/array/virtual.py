@@ -276,7 +276,7 @@ class PersistentArray(awkward.array.base.AwkwardArray):
         if isinstance(value, tuple) and len(value) != 0 and all(isinstance(x, (numbers.Integral, numpy.integer)) and x >= 0 for x in value):
             self._shape = value
         else:
-            raise TypeError("shape must be None (unknown) or a non-empty tuple of non-negative integers")
+            raise TypeError("shape must be a non-empty tuple of non-negative integers")
 
     @property
     def read(self):

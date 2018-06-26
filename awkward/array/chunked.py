@@ -580,3 +580,10 @@ class PartitionedArray(ChunkedArray):
             super(PartitionedArray, self).__setitem__(where, what)
         else:
             super(PartitionedArray, self).__setitem__(self._normalizeindex(where), what)
+
+class AppendableArray(PartitionedArray):
+    def __init__(self, offsets, chunks, length, chunksize=1024**2, writeable=True):
+        raise NotImplementedError
+        super(AppendableArray, self).__init__(offsets, chunks, writeable=writeable)
+        self.length = length
+        self.chunksize = chunksize
