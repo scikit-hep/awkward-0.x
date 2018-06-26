@@ -186,7 +186,7 @@ class Table(awkward.array.base.AwkwardArray):
             else:
                 raise IndexError("only integers, slices (`:`), ellipsis (`...`), numpy.newaxis (`None`) and integer or boolean arrays are valid indices")
 
-        if self._isstring(where):
+        if isinstance(where, awkward.util.string):
             return self._check_length(self._content[where])[self.start:self.stop:self.step]
 
         elif isinstance(where, (numbers.Integral, numpy.integer)):
@@ -245,7 +245,7 @@ class Table(awkward.array.base.AwkwardArray):
             else:
                 raise IndexError("only integers, slices (`:`), ellipsis (`...`), numpy.newaxis (`None`) and integer or boolean arrays are valid indices")
 
-        if self._isstring(where):
+        if isinstance(where, awkward.util.string):
             try:
                 array = self._content[where]
 
@@ -296,4 +296,4 @@ class Table(awkward.array.base.AwkwardArray):
         return "<Table {0} x {1} at {2:012x}>".format(self._length, len(self._content), id(self))
 
     def tolist(self):
-        return [dict((n, self._check_length(x)[self.start:self.stop:self.step][i]) for n, x in self._content.items()) for i in range(self._length)]
+        return [dict((n, self._try_tolist(self._check_length(x)[self.start:self.stop:self.step][i])) for n, x in self._content.items()) for i in range(self._length)]

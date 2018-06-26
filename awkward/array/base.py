@@ -54,19 +54,23 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def __repr__(self):
         return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
 
+    @staticmethod
+    def _try_tolist(x):
+        try:
+            return x.tolist()
+        except AttributeError:
+            return x
+
     def tolist(self):
         import awkward.array.table
         out = []
         for x in self:
             if isinstance(x, awkward.array.table.Table.Row):
-                out.append(dict((n, x[n]) for n in x._table._content))
+                out.append(dict((n, self._try_tolist(x[n])) for n in x._table._content))
             elif isinstance(x, numpy.ma.core.MaskedConstant):
                 out.append(None)
             else:
-                try:
-                    out.append(x.tolist())
-                except AttributeError:
-                    out.append(x)
+                out.append(self._try_tolist(x))
         return out
 
     @staticmethod

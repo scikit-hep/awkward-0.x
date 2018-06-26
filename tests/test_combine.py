@@ -478,22 +478,26 @@ class TestCombine(unittest.TestCase):
         pass
     
     def test_Table_ChunkedArray(self):
-        pass
+        a = Table(10, one=ChunkedArray([[0.0, 1.1, 2.2, 3.3], [4.4, 5.5, 6.6, 7.7, 8.8, 9.9]]), two=ChunkedArray([[0, 100, 200, 300, 400, 500, 600], [700, 800, 900]]))
+        self.assertEqual(a.tolist(), [{"one": 0.0, "two": 0}, {"one": 1.1, "two": 100}, {"one": 2.2, "two": 200}, {"one": 3.3, "two": 300}, {"one": 4.4, "two": 400}, {"one": 5.5, "two": 500}, {"one": 6.6, "two": 600}, {"one": 7.7, "two": 700}, {"one": 8.8, "two": 800}, {"one": 9.9, "two": 900}])
 
     def test_Table_PartitionedArray(self):
-        pass
+        a = Table(10, one=PartitionedArray([0, 4, 10], [[0.0, 1.1, 2.2, 3.3], [4.4, 5.5, 6.6, 7.7, 8.8, 9.9]]), two=PartitionedArray([0, 7, 10], [[0, 100, 200, 300, 400, 500, 600], [700, 800, 900]]))
+        self.assertEqual(a.tolist(), [{"one": 0.0, "two": 0}, {"one": 1.1, "two": 100}, {"one": 2.2, "two": 200}, {"one": 3.3, "two": 300}, {"one": 4.4, "two": 400}, {"one": 5.5, "two": 500}, {"one": 6.6, "two": 600}, {"one": 7.7, "two": 700}, {"one": 8.8, "two": 800}, {"one": 9.9, "two": 900}])
 
     def test_Table_AppendableArray(self):
         pass
 
     def test_Table_IndexedArray(self):
-        pass
+        a = Table(5, one=IndexedArray([8, 6, 4, 2, 0], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]), two=IndexedArray([0, 1, 2, 2, 1], [0, 100, 200]))
+        self.assertEqual(a.tolist(), [{"one": 8.8, "two": 0}, {"one": 6.6, "two": 100}, {"one": 4.4, "two": 200}, {"one": 2.2, "two": 200}, {"one": 0.0, "two": 100}])
 
     def test_Table_ByteIndexedArray(self):
         pass
 
     def test_Table_JaggedArray(self):
-        pass
+        a = Table(4, one=JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]), two=[0, 100, 200, 300])
+        self.assertEqual(a.tolist(), [{"one": [0.0, 1.1, 2.2], "two": 0}, {"one": [], "two": 100}, {"one": [3.3, 4.4], "two": 200}, {"one": [5.5, 6.6, 7.7, 8.8, 9.9], "two": 300}])
 
     def test_Table_ByteJaggedArray(self):
         pass
