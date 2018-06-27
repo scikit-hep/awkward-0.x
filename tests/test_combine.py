@@ -53,6 +53,9 @@ class TestCombine(unittest.TestCase):
     def test_ChunkedArray_ByteIndexedArray(self):
         pass
 
+    def test_ChunkedArray_IndexedMaskedArray(self):
+        pass
+
     def test_ChunkedArray_UnionArray(self):
         pass
 
@@ -96,6 +99,9 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_PartitionedArray_ByteIndexedArray(self):
+        pass
+
+    def test_PartitionedArray_IndexedMaskedArray(self):
         pass
 
     def test_PartitionedArray_UnionArray(self):
@@ -143,6 +149,9 @@ class TestCombine(unittest.TestCase):
     def test_AppendableArray_ByteIndexedArray(self):
         pass
 
+    def test_AppendableArray_IndexedMaskedArray(self):
+        pass
+
     def test_AppendableArray_UnionArray(self):
         pass
 
@@ -186,6 +195,9 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_IndexedArray_ByteIndexedArray(self):
+        pass
+
+    def test_IndexedArray_IndexedMaskedArray(self):
         pass
 
     def test_IndexedArray_UnionArray(self):
@@ -233,6 +245,9 @@ class TestCombine(unittest.TestCase):
     def test_ByteIndexedArray_ByteIndexedArray(self):
         pass
 
+    def test_ByteIndexedArray_IndexedMaskedArray(self):
+        pass
+
     def test_ByteIndexedArray_UnionArray(self):
         pass
 
@@ -263,6 +278,54 @@ class TestCombine(unittest.TestCase):
     def test_ByteIndexedArray_PersistentArray(self):
         pass
     
+    def test_IndexedMaskedArray_ChunkedArray(self):
+        pass
+
+    def test_IndexedMaskedArray_PartitionedArray(self):
+        pass
+
+    def test_IndexedMaskedArray_AppendableArray(self):
+        pass
+
+    def test_IndexedMaskedArray_IndexedArray(self):
+        pass
+
+    def test_IndexedMaskedArray_ByteIndexedArray(self):
+        pass
+
+    def test_IndexedMaskedArray_IndexedMaskedArray(self):
+        pass
+
+    def test_IndexedMaskedArray_UnionArray(self):
+        pass
+
+    def test_IndexedMaskedArray_JaggedArray(self):
+        pass
+
+    def test_IndexedMaskedArray_ByteJaggedArray(self):
+        pass
+
+    def test_IndexedMaskedArray_MaskedArray(self):
+        pass
+
+    def test_IndexedMaskedArray_BitMaskedArray(self):
+        pass
+
+    def test_IndexedMaskedArray_SparseArray(self):
+        pass
+
+    def test_IndexedMaskedArray_Table(self):
+        pass
+
+    def test_IndexedMaskedArray_VirtualArray(self):
+        pass
+
+    def test_IndexedMaskedArray_VirtualObjectArray(self):
+        pass
+
+    def test_IndexedMaskedArray_PersistentArray(self):
+        pass
+
     def test_UnionArray_ChunkedArray(self):
         pass
 
@@ -276,6 +339,9 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_UnionArray_ByteIndexedArray(self):
+        pass
+
+    def test_UnionArray_IndexedMaskedArray(self):
         pass
 
     def test_UnionArray_UnionArray(self):
@@ -330,6 +396,9 @@ class TestCombine(unittest.TestCase):
     def test_JaggedArray_ByteIndexedArray(self):
         pass
 
+    def test_JaggedArray_IndexedMaskedArray(self):
+        pass
+
     def test_JaggedArray_UnionArray(self):
         pass
 
@@ -382,6 +451,9 @@ class TestCombine(unittest.TestCase):
     def test_ByteJaggedArray_ByteIndexedArray(self):
         pass
 
+    def test_ByteJaggedArray_IndexedMaskedArray(self):
+        pass
+
     def test_ByteJaggedArray_UnionArray(self):
         pass
 
@@ -425,6 +497,9 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_MaskedArray_ByteIndexedArray(self):
+        pass
+
+    def test_MaskedArray_IndexedMaskedArray(self):
         pass
 
     def test_MaskedArray_UnionArray(self):
@@ -477,6 +552,9 @@ class TestCombine(unittest.TestCase):
     def test_BitMaskedArray_ByteIndexedArray(self):
         pass
 
+    def test_BitMaskedArray_IndexedMaskedArray(self):
+        pass
+
     def test_BitMaskedArray_UnionArray(self):
         pass
 
@@ -520,6 +598,9 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_SparseArray_ByteIndexedArray(self):
+        pass
+
+    def test_SparseArray_IndexedMaskedArray(self):
         pass
 
     def test_SparseArray_UnionArray(self):
@@ -570,6 +651,9 @@ class TestCombine(unittest.TestCase):
     def test_Table_ByteIndexedArray(self):
         pass
 
+    def test_Table_IndexedMaskedArray(self):
+        pass
+
     def test_Table_UnionArray(self):
         pass
 
@@ -617,6 +701,9 @@ class TestCombine(unittest.TestCase):
     def test_VirtualArray_ByteIndexedArray(self):
         pass
 
+    def test_VirtualArray_IndexedMaskedArray(self):
+        pass
+
     def test_VirtualArray_UnionArray(self):
         pass
 
@@ -662,6 +749,9 @@ class TestCombine(unittest.TestCase):
     def test_VirtualObjectArray_ByteIndexedArray(self):
         pass
 
+    def test_VirtualObjectArray_IndexedMaskedArray(self):
+        pass
+
     def test_VirtualObjectArray_UnionArray(self):
         pass
 
@@ -705,6 +795,9 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_PersistentArray_ByteIndexedArray(self):
+        pass
+
+    def test_PersistentArray_IndexedMaskedArray(self):
         pass
 
     def test_PersistentArray_UnionArray(self):

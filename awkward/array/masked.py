@@ -123,6 +123,8 @@ class MaskedArray(awkward.array.base.AwkwardArray):
             MaskedArray(self._mask, self._content[where], maskedwhen=self._maskedwhen, writeable=self._writeable)[:] = what
             return
 
+        import awkward.array.indexed
+
         if not self._writeable:
             raise ValueError("assignment destination is read-only")
 
@@ -141,11 +143,18 @@ class MaskedArray(awkward.array.base.AwkwardArray):
                 self._content[where] = what[0]
 
         elif isinstance(what, MaskedArray):
+            self._content[where] = what._content
             if self._maskedwhen == what._maskedwhen:
                 self._mask[head] = what.boolmask
             else:
                 self._mask[head] = numpy.logical_not(what.boolmask)
-            self._content[where] = what._content
+
+        elif isinstance(what, awkward.array.indexed.IndexedMaskedArray):
+            boolmask = (what._index == what._maskedwhen)
+            notboolmask = numpy.logical_not(boolmask)
+            self._content[where][notboolmask] = what._content[notboolmask]
+            self._mask[head][boolmask] = self._maskedwhen
+            self._mask[head][notboolmask] = not self._maskedwhen
 
         elif isinstance(what, collections.Sequence):
             if self._maskedwhen:
@@ -331,6 +340,8 @@ class BitMaskedArray(MaskedArray):
             MaskedArray(self._mask, self._content[where], maskedwhen=self._maskedwhen, writeable=self._writeable)[:] = what
             return
 
+        import awkward.array.indexed
+
         if not self._writeable:
             raise ValueError("assignment destination is read-only")
 
@@ -357,6 +368,15 @@ class BitMaskedArray(MaskedArray):
             self.boolmask = tmp
 
             self._content[where] = what._content
+
+        elif isinstance(what, awkward.array.indexed.IndexedMaskedArray):
+            boolmask = (what._index == what._maskedwhen)
+            notboolmask = numpy.logical_not(boolmask)
+            self._content[where][notboolmask] = what._content[notboolmask]
+            tmp = self.boolmask
+            tmp[head][boolmask] = self._maskedwhen
+            tmp[head][notboolmask] = not self._maskedwhen
+            self.boolmask = tmp
 
         elif isinstance(what, collections.Sequence):
             tmp = self.boolmask
