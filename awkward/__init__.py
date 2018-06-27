@@ -36,7 +36,7 @@ from awkward.array.sparse import SparseArray
 from awkward.array.table import Table
 from awkward.array.virtual import VirtualArray, VirtualObjectArray, PersistentArray
 
-from awkward.generate import fromiterable
+from awkward.generate import fromiter
 
 # convenient access to the version number
 from awkward.version import __version__

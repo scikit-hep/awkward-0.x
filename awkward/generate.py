@@ -42,7 +42,7 @@ from awkward.array.sparse import SparseArray
 from awkward.array.table import Table
 from awkward.array.virtual import VirtualArray, VirtualObjectArray, PersistentArray
 
-def fromiterable(iterable, chunksize=1024, references=False, writeable=True):
+def fromiter(iterable, chunksize=1024, references=False):
     if references:
         raise NotImplementedError    # keep all ids in a hashtable to create pointers
 
@@ -59,8 +59,7 @@ def fromiterable(iterable, chunksize=1024, references=False, writeable=True):
             if not isinstance(chunks[-1], UnionArray):
                 chunks[-1] = UnionArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
                                         numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
-                                        [chunks[-1]],
-                                        writeable=writeable)
+                                        [chunks[-1]])
                 chunks[-1]._nextindex = [offsets[-1] - offsets[-2]]
                 chunks[-1]._tags[: offsets[-1] - offsets[-2]] = 0
                 chunks[-1]._index[: offsets[-1] - offsets[-2]] = numpy.arange(offsets[-1] - offsets[-2], dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
@@ -134,9 +133,7 @@ def fromiterable(iterable, chunksize=1024, references=False, writeable=True):
 
             else:
                 def newchunk():
-                    out = JaggedArray.fromoffsets(numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
-                                                  PartitionedArray([0], [], writeable=writeable),
-                                                  writeable=writeable)
+                    out = JaggedArray.fromoffsets(numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), PartitionedArray([0], []))
                     out._starts[0] = 0
                     out._content._offsets = [0]  # as an appendable list, not a Numpy array
                     return out
@@ -157,4 +154,4 @@ def fromiterable(iterable, chunksize=1024, references=False, writeable=True):
     for x in iterable:
         recurse(x, chunks, offsets)
 
-    return PartitionedArray(offsets, chunks, writeable=writeable)
+    return PartitionedArray(offsets, chunks)

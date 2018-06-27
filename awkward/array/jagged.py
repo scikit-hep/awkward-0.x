@@ -86,7 +86,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return JaggedArray(starts, starts + counts, content, writeable=writeable)
 
     @classmethod
-    def fromiterable(cls, iterable, writeable=True):
+    def fromiter(cls, iterable, writeable=True):
         offsets = [0]
         content = []
         for x in iterable:
@@ -413,7 +413,7 @@ class ByteJaggedArray(JaggedArray):
         return cls(offsets[:-1], offsets[1:], content, dtype, writeable=writeable)
 
     @classmethod
-    def fromiterable(cls, iterable, writeable=True):
+    def fromiter(cls, iterable, writeable=True):
         offsets = [0]
         content = []
         for x in iterable:

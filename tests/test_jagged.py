@@ -47,7 +47,7 @@ class TestJagged(unittest.TestCase):
         self.assertRaises(ValueError, lambda: a.offsets)
 
     def test_jagged_iterable(self):
-        a = JaggedArray.fromiterable([[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
+        a = JaggedArray.fromiter([[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
         self.assertEqual([x.tolist() for x in a], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
 
     def test_jagged_compatible(self):
@@ -141,7 +141,7 @@ class TestJagged(unittest.TestCase):
         self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
 
     def test_bytejagged_iterable(self):
-        a = ByteJaggedArray.fromiterable([[1, 2, 3], [], [4, 5]])
+        a = ByteJaggedArray.fromiter([[1, 2, 3], [], [4, 5]])
         self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])        
         if a.dtype.itemsize == 8:
             self.assertEqual(a.offsets.tolist(), [0, 24, 24, 40])
@@ -195,6 +195,6 @@ class TestJagged(unittest.TestCase):
         self.assertEqual([a[i].tolist() for i in range(len(a))], [[3, 2, 1], [], [5, 4]])
 
         a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
-        a[:] = JaggedArray.fromiterable([[3, 2, 1], [], [5, 4]])
+        a[:] = JaggedArray.fromiter([[3, 2, 1], [], [5, 4]])
         self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x03\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00\xff\xff\x05\x00\x00\x00\x04\x00\x00\x00\xff")
         self.assertEqual([a[i].tolist() for i in range(len(a))], [[3, 2, 1], [], [5, 4]])
