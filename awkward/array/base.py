@@ -38,9 +38,6 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     MASKTYPE = numpy.dtype(numpy.bool_)
     BITMASKTYPE = numpy.dtype(numpy.uint8)
 
-    def __array__(self):
-        raise Exception    # FIXME: temporary, I just want to be sure we don't convert to Numpy in the tests
-
     def __iter__(self):
         for i in range(len(self)):
             yield self[i]

@@ -46,71 +46,66 @@ def fromiterable(iterable, chunksize=1024, references=False, writeable=True):
     if references:
         raise NotImplementedError    # keep all ids in a hashtable to create pointers
 
-    def recurse(obj, chunks, offsets):
-        newchunk = (len(chunks) == 0 or offsets[-1] - offsets[-2] == len(chunks[-1]))
+    def add(chunks, offsets, newchunk, ismine, fillobj):
+        if len(chunks) == 0 or offsets[-1] - offsets[-2] == len(chunks[-1]):
+            chunks.append(newchunk())
+            offsets.append(offsets[-1])
 
+        if ismine(chunks[-1]):
+            fillobj(chunks[-1], offsets[-1] - offsets[-2])
+            offsets[-1] += 1
+
+        else:
+            if not isinstance(chunks[-1], UnionArray):
+                chunks[-1] = UnionArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
+                                        numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
+                                        [chunks[-1]],
+                                        writeable=writeable)
+                chunks[-1]._nextindex = [offsets[-1] - offsets[-2]]
+                chunks[-1]._tags[: offsets[-1] - offsets[-2]] = 0
+                chunks[-1]._index[: offsets[-1] - offsets[-2]] = numpy.arange(offsets[-1] - offsets[-2], dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
+
+            if not any(ismine(content) for content in chunks[-1]._contents):
+                chunks[-1]._nextindex.append(0)
+                chunks[-1]._contents = chunks[-1]._contents + (newchunk(),)
+
+            for tag, content in enumerate(chunks[-1]._contents):
+                if ismine(content):
+                    nextindex = chunks[-1]._nextindex[tag]
+                    chunks[-1]._nextindex[tag] += 1
+                    fillobj(content, nextindex)
+                    chunks[-1]._tags[offsets[-1] - offsets[-2]] = tag
+                    chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
+                    offsets[-1] += 1
+                    break
+
+    def recurse(obj, chunks, offsets):
         if obj is None:
             HERE
 
         elif isinstance(obj, (bool, numpy.bool, numpy.bool_)):
-            if newchunk:
-                chunks.append(numpy.empty(chunksize, dtype=numpy.bool_))
-                offsets.append(offsets[-1])
+            def newchunk():
+                return numpy.empty(chunksize, dtype=numpy.bool_)
 
-            if isinstance(chunks[-1], numpy.ndarray) and chunks[-1].dtype == numpy.dtype(numpy.bool_):
-                chunks[-1][offsets[-1] - offsets[-2]] = obj
-                offsets[-1] += 1
+            def ismine(x):
+                return isinstance(x, numpy.ndarray) and x.dtype == numpy.dtype(numpy.bool_)
 
-            else:
-                if not isinstance(chunks[-1], UnionArray):
-                    chunks[-1] = UnionArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), [chunks[-1]], writeable=writeable)
-                    chunks[-1]._nextindex = [offsets[-1] - offsets[-2]]
-                    chunks[-1]._tags[: offsets[-1] - offsets[-2]] = 0
-                    chunks[-1]._index[: offsets[-1] - offsets[-2]] = numpy.arange(offsets[-1] - offsets[-2], dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
+            def fillobj(array, where):
+                array[where] = obj
 
-                if not any(isinstance(content, numpy.ndarray) and content.dtype == numpy.dtype(numpy.bool_) for content in chunks[-1]._contents):
-                    chunks[-1]._nextindex.append(0)
-                    chunks[-1]._contents = chunks[-1]._contents + (numpy.empty(chunksize, dtype=numpy.bool_),)
-
-                for tag, content in enumerate(chunks[-1]._contents):
-                    if isinstance(content, numpy.ndarray) and content.dtype == numpy.dtype(numpy.bool_):
-                        nextindex = chunks[-1]._nextindex[tag]
-                        chunks[-1]._nextindex[tag] += 1
-                        content[nextindex] = obj
-                        chunks[-1]._tags[offsets[-1] - offsets[-2]] = tag
-                        chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
-                        offsets[-1] += 1
-                        break
+            add(chunks, offsets, newchunk, ismine, fillobj)
 
         elif isinstance(obj, (numbers.Integral, numpy.integer)):
-            if newchunk:
-                chunks.append(numpy.empty(chunksize, dtype=numpy.int64))
-                offsets.append(offsets[-1])
+            def newchunk():
+                return numpy.empty(chunksize, dtype=numpy.int64)
 
-            if isinstance(chunks[-1], numpy.ndarray) and chunks[-1].dtype == numpy.dtype(numpy.int64):
-                chunks[-1][offsets[-1] - offsets[-2]] = obj
-                offsets[-1] += 1
+            def ismine(x):
+                return isinstance(x, numpy.ndarray) and x.dtype == numpy.dtype(numpy.int64)
 
-            else:
-                if not isinstance(chunks[-1], UnionArray):
-                    chunks[-1] = UnionArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), [chunks[-1]], writeable=writeable)
-                    chunks[-1]._nextindex = [offsets[-1] - offsets[-2]]
-                    chunks[-1]._tags[: offsets[-1] - offsets[-2]] = 0
-                    chunks[-1]._index[: offsets[-1] - offsets[-2]] = numpy.arange(offsets[-1] - offsets[-2], dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
+            def fillobj(array, where):
+                array[where] = obj
 
-                if not any(isinstance(content, numpy.ndarray) and content.dtype == numpy.dtype(numpy.int64) for content in chunks[-1]._contents):
-                    chunks[-1]._nextindex.append(0)
-                    chunks[-1]._contents = chunks[-1]._contents + (numpy.empty(chunksize, dtype=numpy.int64),)
-
-                for tag, content in enumerate(chunks[-1]._contents):
-                    if isinstance(content, numpy.ndarray) and content.dtype == numpy.dtype(numpy.int64):
-                        nextindex = chunks[-1]._nextindex[tag]
-                        chunks[-1]._nextindex[tag] += 1
-                        content[nextindex] = obj
-                        chunks[-1]._tags[offsets[-1] - offsets[-2]] = tag
-                        chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
-                        offsets[-1] += 1
-                        break
+            add(chunks, offsets, newchunk, ismine, fillobj)
 
         elif isinstance(obj, (numbers.Real, numpy.floating)):
             HERE
@@ -138,24 +133,24 @@ def fromiterable(iterable, chunksize=1024, references=False, writeable=True):
                 HERE
 
             else:
-                if newchunk:
-                    chunks.append(JaggedArray.fromoffsets(numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
-                                                          PartitionedArray([0], [], writeable=writeable),
-                                                          writeable=writeable))
-                    chunks[-1]._starts[0] = 0
-                    chunks[-1]._content._offsets = [0]  # as a list, not a Numpy array
-                    offsets.append(offsets[-1])
+                def newchunk():
+                    out = JaggedArray.fromoffsets(numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
+                                                  PartitionedArray([0], [], writeable=writeable),
+                                                  writeable=writeable)
+                    out._starts[0] = 0
+                    out._content._offsets = [0]  # as an appendable list, not a Numpy array
+                    return out
 
-                if isinstance(chunks[-1], JaggedArray):
-                    localindex = offsets[-1] - offsets[-2]
-                    chunks[-1]._stops[localindex] = chunks[-1]._starts[localindex]
+                def ismine(x):
+                    return isinstance(x, JaggedArray)
+
+                def fillobj(array, where):
+                    array._stops[where] = array._starts[where]
                     for x in it:
-                        recurse(x, chunks[-1]._content._chunks, chunks[-1]._content._offsets)
-                        chunks[-1]._stops[localindex] += 1
-                    offsets[-1] += 1
+                        recurse(x, array._content._chunks, array._content._offsets)
+                        array._stops[where] += 1
 
-                else:
-                    raise NotImplementedError
+                add(chunks, offsets, newchunk, ismine, fillobj)
 
     chunks = []
     offsets = [0]

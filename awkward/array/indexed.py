@@ -278,17 +278,12 @@ class UnionArray(awkward.array.base.AwkwardArray):
         tags = self._tags[head]
         index = self._index[head]
         assert tags.shape == index.shape
-        uniques, inverse = numpy.unique(tags, return_inverse=True)
 
+        uniques = numpy.unique(tags)
         if len(uniques) == 1:
-            return self._contents[uniques[0]][(index,) + tail]    # one tag, return a view
-
+            return self._contents[uniques[0]][(index,) + tail]
         else:
-            out = numpy.empty(len(tags), dtype=self.dtype)       # many tags, create anew
-            for i, tag in enumerate(uniques):
-                selection = (i == inverse)
-                out[selection] = self._contents[tag][(index[selection],) + tail]
-            return out
+            return UnionArray(tags, index, self._contents, writeable=self._writeable)
 
     def __setitem__(self, where, what):
         if self._isstring(where):
