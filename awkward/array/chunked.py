@@ -508,8 +508,8 @@ class PartitionedArray(ChunkedArray):
         if len(self._offsets) != len(self._chunks) + 1:
             raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
 
-        for i, count in enumerate(self._offsets[1:] - self._offsets[:-1]):
-            if count > 0:
+        for i in range(len(self._offsets) - 1):
+            if self._offsets[i + 1] - self._offsets[i] > 0:
                 if not isinstance(self._chunks[i], (numpy.ndarray, awkward.array.base.AwkwardArray)):
                     self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
                 return numpy.dtype((self._chunks[i].dtype, self._chunks[i].shape[1:]))

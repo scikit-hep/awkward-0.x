@@ -138,7 +138,24 @@ def fromiterable(iterable, chunksize=1024, references=False, writeable=True):
                 HERE
 
             else:
-                HERE
+                if newchunk:
+                    chunks.append(JaggedArray.fromoffsets(numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
+                                                          PartitionedArray([0], [], writeable=writeable),
+                                                          writeable=writeable))
+                    chunks[-1]._starts[0] = 0
+                    chunks[-1]._content._offsets = [0]  # as a list, not a Numpy array
+                    offsets.append(offsets[-1])
+
+                if isinstance(chunks[-1], JaggedArray):
+                    localindex = offsets[-1] - offsets[-2]
+                    chunks[-1]._stops[localindex] = chunks[-1]._starts[localindex]
+                    for x in it:
+                        recurse(x, chunks[-1]._content._chunks, chunks[-1]._content._offsets)
+                        chunks[-1]._stops[localindex] += 1
+                    offsets[-1] += 1
+
+                else:
+                    raise NotImplementedError
 
     chunks = []
     offsets = [0]
