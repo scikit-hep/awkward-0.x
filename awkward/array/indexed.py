@@ -192,6 +192,23 @@ class ByteIndexedArray(IndexedArray):
 
             self._content[contidx] = numpy.frombuffer(hold, dtype=self.CHARTYPE)
 
+class IndexMaskedArray(IndexedArray):
+    def __init__(self, index, content, maskedwhen=-1, writeable=True):
+        super(IndexMaskedArray, self).__init__(index, content, writeable=writeable)
+        self.maskedwhen = maskedwhen
+
+    @property
+    def maskedwhen(self):
+        return self._maskedwhen
+
+    @maskedwhen.setter
+    def maskedwhen(self, value):
+        if not isinstance(value, (numbers.Integral, numpy.integer)):
+            raise TypeError("maskedwhen must be an integer")
+        self._maskedwhen = value
+
+    # TODO
+
 class UnionArray(awkward.array.base.AwkwardArray):
     @classmethod
     def fromtags(cls, tags, contents, writeable=True):

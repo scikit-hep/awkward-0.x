@@ -117,7 +117,7 @@ class TestTable(unittest.TestCase):
 
     def test_masked_table(self):
         a = Table(10, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        self.assertEqual(MaskedArray([False, True, True, True, True, False, False, False, False, True], a, validwhen=True)["f1"].tolist(), [None, 1.1, 2.2, 3.3, 4.4, None, None, None, None, 9.9])
+        self.assertEqual(MaskedArray([False, True, True, True, True, False, False, False, False, True], a, maskedwhen=False)["f1"].tolist(), [None, 1.1, 2.2, 3.3, 4.4, None, None, None, None, 9.9])
         MaskedArray([False, True, True, True, True, False, False, False, False, True], a)["f1"] = 999
         self.assertEqual(a.tolist(), [{"f0": 0, "f1": 999.0}, {"f0": 1, "f1": 999.0}, {"f0": 2, "f1": 999.0}, {"f0": 3, "f1": 999.0}, {"f0": 4, "f1": 999.0}, {"f0": 5, "f1": 999.0}, {"f0": 6, "f1": 999.0}, {"f0": 7, "f1": 999.0}, {"f0": 8, "f1": 999.0}, {"f0": 9, "f1": 999.0}])
 

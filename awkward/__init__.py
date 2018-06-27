@@ -29,7 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from awkward.array.chunked import ChunkedArray, PartitionedArray, AppendableArray
-from awkward.array.indexed import IndexedArray, ByteIndexedArray, UnionArray
+from awkward.array.indexed import IndexedArray, ByteIndexedArray, IndexMaskedArray, UnionArray
 from awkward.array.jagged import JaggedArray, ByteJaggedArray
 from awkward.array.masked import MaskedArray, BitMaskedArray
 from awkward.array.sparse import SparseArray
