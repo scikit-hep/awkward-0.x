@@ -583,14 +583,12 @@ class PartitionedArray(ChunkedArray):
 
 class AppendableArray(PartitionedArray):
     @classmethod
-    def empty(cls, dtype, dimension=(), chunksize=1024**2, writeable=True):
-        return AppendableArray([0], [], dtype, dimension=dimension, chunksize=chunksize, writeable=writeable)
+    def empty(cls, generator, writeable=True):
+        return AppendableArray([0], [], generator, writeable=writeable)
 
-    def __init__(self, offsets, chunks, dtype, dimension=(), chunksize=1024**2, writeable=True):
+    def __init__(self, offsets, chunks, generator, writeable=True):
         super(AppendableArray, self).__init__(offsets, chunks, writeable=writeable)
-        self.dtype = dtype
-        self.dimension = dimension
-        self.chunksize = chunksize
+        self.generator = generator
 
     @property
     def offsets(self):
@@ -601,41 +599,21 @@ class AppendableArray(PartitionedArray):
         self._offsets = list(value)
 
     @property
-    def dtype(self):
-        return self._dtype
+    def generator(self):
+        return self._generator
 
-    @dtype.setter
-    def dtype(self, value):
-        self._dtype = numpy.dtype(value)
-
-    @property
-    def dimension(self):
-        return self._dimension
-
-    @dimension.setter
-    def dimension(self, value):
-        if isinstance(value, tuple) and all(isinstance(x, (numbers.Integral, numpy.integer)) and x >= 0 for x in value):
-            self._dimension = value
-        else:
-            raise TypeError("dimension must be a tuple of non-negative integers")
-
-    @property
-    def chunksize(self):
-        return self._chunksize
-
-    @chunksize.setter
-    def chunksize(self, value):
-        if not isinstance(value, (numbers.Integral, numpy.integer)) or value <= 0:
-            raise TypeError("chunksize must be a positive integer")
-
-        self._chunksize = value
+    @generator.setter
+    def generator(self, value):
+        if not callable(value):
+            raise TypeError("generator must be a callable (of zero arguments)")
+        self._generator = value
 
     def append(self, value):
         if len(self._offsets) != len(self._chunks) + 1:
             raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
 
-        if len(self._chunks) == 0 or self._offsets[-1] - self._offsets[-2] >= self._chunksize:
-            self._chunks.append(numpy.empty((self._chunksize,) + self._dimension))
+        if len(self._chunks) == 0 or self._offsets[-1] - self._offsets[-2] == len(self._chunks[-1]):
+            self._chunks.append(self._generator())
             self._offsets.append(self._offsets[-1])
 
         laststart = self._offsets[-1] - self._offsets[-2]
@@ -647,8 +625,8 @@ class AppendableArray(PartitionedArray):
             raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
 
         while len(values) > 0:
-            if len(self._chunks) == 0 or self._offsets[-1] - self._offsets[-2] >= self._chunksize:
-                self._chunks.append(-999 * numpy.ones((self._chunksize,) + self._dimension))
+            if len(self._chunks) == 0 or self._offsets[-1] - self._offsets[-2] >= len(self._chunks[-1]):
+                self._chunks.append(self._generator())
                 self._offsets.append(self._offsets[-1])
 
             laststart = self._offsets[-1] - self._offsets[-2]

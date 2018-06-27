@@ -441,7 +441,7 @@ class TestChunked(unittest.TestCase):
         self.assertEqual(a.tolist(), [0, 1, 2, 105, 106, 104, 102, 103, 101, 9])
 
     def test_appendable_append(self):
-        a = AppendableArray.empty(numpy.float64, chunksize=3)
+        a = AppendableArray.empty(lambda: numpy.empty(3, numpy.float64))
         self.assertEqual(a.tolist(), [])
         self.assertEqual(len(a.chunks), 0)
         self.assertEqual(a.offsets, [0])
@@ -497,7 +497,7 @@ class TestChunked(unittest.TestCase):
         self.assertEqual(a.offsets, [0, 3, 6, 9, 10])
 
     def test_appendable_extend(self):
-        a = AppendableArray.empty(numpy.float64, chunksize=3)
+        a = AppendableArray.empty(lambda: numpy.empty(3, numpy.float64))
         self.assertEqual(a.tolist(), [])
         self.assertEqual(len(a.chunks), 0)
         self.assertEqual(a.offsets, [0])
