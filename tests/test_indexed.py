@@ -175,3 +175,7 @@ class TestIndexed(unittest.TestCase):
         a = IndexedArray([1, 2, 3], ByteIndexedArray([12, 8, 4, 0], b"\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00", numpy.int32))
         self.assertEqual([a[i] for i in range(len(a))], [2, 1, 0])
         self.assertEqual(a[:].tolist(), [2, 1, 0])
+
+    def test_union_get(self):
+        a = UnionArray([0, 1, 0, 1, 0, 1, 0, 1, 0, 1], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]])
+        self.assertEqual(a.tolist(), [0.0, 100, 2.2, 300, 4.4, 500, 6.6, 700, 8.8, 900])

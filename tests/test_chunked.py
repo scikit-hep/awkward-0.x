@@ -439,3 +439,90 @@ class TestChunked(unittest.TestCase):
         a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
         a[[-2, -4, 7, 5, 3, -6]] = [101, 102, 103, 104, 105, 106]
         self.assertEqual(a.tolist(), [0, 1, 2, 105, 106, 104, 102, 103, 101, 9])
+
+    def test_appendable_append(self):
+        a = AppendableArray.empty(numpy.float64, chunksize=3)
+        self.assertEqual(a.tolist(), [])
+        self.assertEqual(len(a.chunks), 0)
+        self.assertEqual(a.offsets, [0])
+
+        a.append(0.0)
+        self.assertEqual(a.tolist(), [0.0])
+        self.assertEqual(len(a.chunks), 1)
+        self.assertEqual(a.offsets, [0, 1])
+
+        a.append(1.1)
+        self.assertEqual(a.tolist(), [0.0, 1.1])
+        self.assertEqual(len(a.chunks), 1)
+        self.assertEqual(a.offsets, [0, 2])
+
+        a.append(2.2)
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2])
+        self.assertEqual(len(a.chunks), 1)
+        self.assertEqual(a.offsets, [0, 3])
+
+        a.append(3.3)
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2, 3.3])
+        self.assertEqual(len(a.chunks), 2)
+        self.assertEqual(a.offsets, [0, 3, 4])
+
+        a.append(4.4)
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2, 3.3, 4.4])
+        self.assertEqual(len(a.chunks), 2)
+        self.assertEqual(a.offsets, [0, 3, 5])
+
+        a.append(5.5)
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2, 3.3, 4.4, 5.5])
+        self.assertEqual(len(a.chunks), 2)
+        self.assertEqual(a.offsets, [0, 3, 6])
+
+        a.append(6.6)
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
+        self.assertEqual(len(a.chunks), 3)
+        self.assertEqual(a.offsets, [0, 3, 6, 7])
+
+        a.append(7.7)
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7])
+        self.assertEqual(len(a.chunks), 3)
+        self.assertEqual(a.offsets, [0, 3, 6, 8])
+
+        a.append(8.8)
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8])
+        self.assertEqual(len(a.chunks), 3)
+        self.assertEqual(a.offsets, [0, 3, 6, 9])
+
+        a.append(9.9)
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(len(a.chunks), 4)
+        self.assertEqual(a.offsets, [0, 3, 6, 9, 10])
+
+    def test_appendable_extend(self):
+        a = AppendableArray.empty(numpy.float64, chunksize=3)
+        self.assertEqual(a.tolist(), [])
+        self.assertEqual(len(a.chunks), 0)
+        self.assertEqual(a.offsets, [0])
+
+        a.extend([0.0, 1.1])
+        self.assertEqual(a.tolist(), [0.0, 1.1])
+        self.assertEqual(len(a.chunks), 1)
+        self.assertEqual(a.offsets, [0, 2])
+
+        a.extend([2.2, 3.3])
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2, 3.3])
+        self.assertEqual(len(a.chunks), 2)
+        self.assertEqual(a.offsets, [0, 3, 4])
+
+        a.extend([4.4, 5.5])
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2, 3.3, 4.4, 5.5])
+        self.assertEqual(len(a.chunks), 2)
+        self.assertEqual(a.offsets, [0, 3, 6])
+
+        a.extend([6.6, 7.7])
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7])
+        self.assertEqual(len(a.chunks), 3)
+        self.assertEqual(a.offsets, [0, 3, 6, 8])
+
+        a.extend([8.8, 9.9])
+        self.assertEqual(a.tolist(), [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(len(a.chunks), 4)
+        self.assertEqual(a.offsets, [0, 3, 6, 9, 10])

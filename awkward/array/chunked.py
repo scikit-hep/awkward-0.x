@@ -494,8 +494,8 @@ class PartitionedArray(ChunkedArray):
                 elif dtype != thisdtype:
                     raise ValueError("chunk starting at index {0} has dtype {1}, different from {2}".format(sofar, thisdtype, dtype))
 
-            if sofar + len(self._chunks[i]) != self._offsets[i + 1]:
-                raise ValueError("partitioning is wrong: chunk starting at index {0} has length {1}, the sum of which is not equal to the next offset at {2}".format(sofar, len(self._chunks[i]), self._offsets[i + 1]))
+            if sofar + len(self._chunks[i]) < self._offsets[i + 1]:
+                raise ValueError("partitioning is wrong: chunk starting at index {0} has length {1}, which is too short to reach the next offset at {2}".format(sofar, len(self._chunks[i]), self._offsets[i + 1]))
 
             if sofar + len(self._chunks[i]) > minindex:
                 yield sofar, self._chunks[i]
@@ -527,7 +527,7 @@ class PartitionedArray(ChunkedArray):
         while i < len(self._chunks):
             if not isinstance(self._chunks[i], (numpy.ndarray, awkward.array.base.AwkwardArray)):
                 self._chunks[i] = self._toarray(self._chunks[i], self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-            for x in self._chunks[i]:
+            for x in self._chunks[i][: self._offsets[i + 1] - self._offsets[i]]:
                 yield x
             i += 1
         
@@ -582,8 +582,82 @@ class PartitionedArray(ChunkedArray):
             super(PartitionedArray, self).__setitem__(self._normalizeindex(where), what)
 
 class AppendableArray(PartitionedArray):
-    def __init__(self, offsets, chunks, length, chunksize=1024**2, writeable=True):
-        raise NotImplementedError
+    @classmethod
+    def empty(cls, dtype, dimension=(), chunksize=1024**2, writeable=True):
+        return AppendableArray([0], [], dtype, dimension=dimension, chunksize=chunksize, writeable=writeable)
+
+    def __init__(self, offsets, chunks, dtype, dimension=(), chunksize=1024**2, writeable=True):
         super(AppendableArray, self).__init__(offsets, chunks, writeable=writeable)
-        self.length = length
+        self.dtype = dtype
+        self.dimension = dimension
         self.chunksize = chunksize
+
+    @property
+    def offsets(self):
+        return self._offsets
+
+    @offsets.setter
+    def offsets(self, value):
+        self._offsets = list(value)
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @dtype.setter
+    def dtype(self, value):
+        self._dtype = numpy.dtype(value)
+
+    @property
+    def dimension(self):
+        return self._dimension
+
+    @dimension.setter
+    def dimension(self, value):
+        if isinstance(value, tuple) and all(isinstance(x, (numbers.Integral, numpy.integer)) and x >= 0 for x in value):
+            self._dimension = value
+        else:
+            raise TypeError("dimension must be a tuple of non-negative integers")
+
+    @property
+    def chunksize(self):
+        return self._chunksize
+
+    @chunksize.setter
+    def chunksize(self, value):
+        if not isinstance(value, (numbers.Integral, numpy.integer)) or value <= 0:
+            raise TypeError("chunksize must be a positive integer")
+
+        self._chunksize = value
+
+    def append(self, value):
+        if len(self._offsets) != len(self._chunks) + 1:
+            raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
+
+        if len(self._chunks) == 0 or self._offsets[-1] - self._offsets[-2] >= self._chunksize:
+            self._chunks.append(numpy.empty((self._chunksize,) + self._dimension))
+            self._offsets.append(self._offsets[-1])
+
+        laststart = self._offsets[-1] - self._offsets[-2]
+        self._chunks[-1][laststart] = value
+        self._offsets[-1] += 1
+
+    def extend(self, values):
+        if len(self._offsets) != len(self._chunks) + 1:
+            raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
+
+        while len(values) > 0:
+            if len(self._chunks) == 0 or self._offsets[-1] - self._offsets[-2] >= self._chunksize:
+                self._chunks.append(-999 * numpy.ones((self._chunksize,) + self._dimension))
+                self._offsets.append(self._offsets[-1])
+
+            laststart = self._offsets[-1] - self._offsets[-2]
+            available = len(self._chunks[-1]) - laststart
+            if len(values) < available:
+                self._chunks[-1][laststart : laststart + len(values)] = values
+                self._offsets[-1] += len(values)
+                values = []
+            else:
+                self._chunks[-1][laststart:] = values[:available]
+                self._offsets[-1] += available
+                values = values[available:]

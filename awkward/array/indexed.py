@@ -193,6 +193,10 @@ class ByteIndexedArray(IndexedArray):
             self._content[contidx] = numpy.frombuffer(hold, dtype=self.CHARTYPE)
 
 class UnionArray(awkward.array.base.AwkwardArray):
+    @classmethod
+    def fromtags(cls, tags, contents, writeable=True):
+        raise NotImplementedError
+
     def __init__(self, tags, index, contents, writeable=True):
         self.tags = tags
         self.index = index
@@ -277,13 +281,13 @@ class UnionArray(awkward.array.base.AwkwardArray):
         uniques, inverse = numpy.unique(tags, return_inverse=True)
 
         if len(uniques) == 1:
-            return self._content[uniques[0]][(index,) + tail]    # one tag, return a view
+            return self._contents[uniques[0]][(index,) + tail]    # one tag, return a view
 
         else:
             out = numpy.empty(len(tags), dtype=self.dtype)       # many tags, create anew
             for i, tag in enumerate(uniques):
                 selection = (i == inverse)
-                out[selection] = self._content[tag][(index[selection],) + tail]
+                out[selection] = self._contents[tag][(index[selection],) + tail]
             return out
 
     def __setitem__(self, where, what):
@@ -309,7 +313,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
         if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
             for i, tag in enumerate(uniques):
                 selection = (i == inverse)
-                self._content[tag][(index[selection],) + tail] = what[0]
+                self._contents[tag][(index[selection],) + tail] = what[0]
 
         elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
             if len(what) != len(tags):
@@ -318,9 +322,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 what = numpy.array(what)
             for i, tag in enumerate(uniques):
                 selection = (i == inverse)
-                self._content[tag][(index[selection],) + tail] = what[selection]
+                self._contents[tag][(index[selection],) + tail] = what[selection]
 
         else:
             for i, tag in enumerate(uniques):
                 selection = (i == inverse)
-                self._content[tag][(index[selection],) + tail] = what
+                self._contents[tag][(index[selection],) + tail] = what
