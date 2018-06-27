@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import collections
+
 import numpy
 
 import awkward.array.base
@@ -189,3 +191,136 @@ class ByteIndexedArray(IndexedArray):
                 holdidx[offset::self._dtype.itemsize] = holdidx[::self._dtype.itemsize] + offset
 
             self._content[contidx] = numpy.frombuffer(hold, dtype=self.CHARTYPE)
+
+class UnionArray(awkward.array.base.AwkwardArray):
+    def __init__(self, tags, index, contents, writeable=True):
+        self.tags = tags
+        self.index = index
+        self.contents = contents
+        self.writeable = writeable
+
+    @property
+    def tags(self):
+        return self._tags
+
+    @tags.setter
+    def tags(self, value):
+        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+
+        if len(value.shape) != 1:
+            raise TypeError("tags must have 1-dimensional shape")
+        if value.shape[0] == 0:
+            value = value.view(self.INDEXTYPE)
+        if not issubclass(value.dtype.type, numpy.integer):
+            raise TypeError("tags must have integer dtype")
+
+        self._tags = value
+
+    @property
+    def index(self):
+        return self._index
+
+    @index.setter
+    def index(self, value):
+        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+
+        if len(value.shape) != 1:
+            raise TypeError("index must have 1-dimensional shape")
+        if value.shape[0] == 0:
+            value = value.view(self.INDEXTYPE)
+        if not issubclass(value.dtype.type, numpy.integer):
+            raise TypeError("index must have integer dtype")
+
+        self._index = value
+
+    @property
+    def contents(self):
+        return self._contents
+
+    @contents.setter
+    def contents(self, value):
+        self._contents = tuple(self._toarray(x, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray)) for x in value)
+
+    @property
+    def writeable(self):
+        return self._writeable
+
+    @writeable.setter
+    def writeable(self, value):
+        self._writeable = bool(value)
+
+    @property
+    def dtype(self):
+        return numpy.dtype(object)
+
+    @property
+    def shape(self):
+        return (len(self._tags),)
+
+    def __len__(self):
+        return len(self._tags)
+
+    def __getitem__(self, where):
+        if self._isstring(where):
+            return UnionArray(self._tags, self._index, tuple(x[where] for x in self._contents), writeable=writeable)
+
+        if self._tags.shape != self._index.shape:
+            raise ValueError("tags shape ({0}) does not match index shape ({1})".format(self._tags.shape, self._index.shape))
+
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
+        tags = self._tags[head]
+        index = self._index[head]
+        assert tags.shape == index.shape
+        uniques, inverse = numpy.unique(tags, return_inverse=True)
+
+        if len(uniques) == 1:
+            return self._content[uniques[0]][(index,) + tail]    # one tag, return a view
+
+        else:
+            out = numpy.empty(len(tags), dtype=self.dtype)       # many tags, create anew
+            for i, tag in enumerate(uniques):
+                selection = (i == inverse)
+                out[selection] = self._content[tag][(index[selection],) + tail]
+            return out
+
+    def __setitem__(self, where, what):
+        if self._isstring(where):
+            UnionArray(self._tags, self._index, tuple(x[where] for x in self._contents), writeable=writeable)[:] = what
+            return
+
+        if not self._writeable:
+            raise ValueError("assignment destination is read-only")
+
+        if self._tags.shape != self._index.shape:
+            raise ValueError("tags shape ({0}) does not match index shape ({1})".format(self._tags.shape, self._index.shape))
+
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
+        tags = self._tags[head]
+        index = self._index[head]
+        assert tags.shape == index.shape
+        uniques, inverse = numpy.unique(tags, return_inverse=True)
+
+        if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
+            for i, tag in enumerate(uniques):
+                selection = (i == inverse)
+                self._content[tag][(index[selection],) + tail] = what[0]
+
+        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
+            if len(what) != len(tags):
+                raise ValueError("cannot copy seqence with size {0} to array axis with dimension {1}".format(len(what), len(tags)))
+            if isinstance(what, collections.Sequence):
+                what = numpy.array(what)
+            for i, tag in enumerate(uniques):
+                selection = (i == inverse)
+                self._content[tag][(index[selection],) + tail] = what[selection]
+
+        else:
+            for i, tag in enumerate(uniques):
+                selection = (i == inverse)
+                self._content[tag][(index[selection],) + tail] = what

@@ -53,6 +53,9 @@ class TestCombine(unittest.TestCase):
     def test_ChunkedArray_ByteIndexedArray(self):
         pass
 
+    def test_ChunkedArray_UnionArray(self):
+        pass
+
     def test_ChunkedArray_JaggedArray(self):
         pass
 
@@ -93,6 +96,9 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_PartitionedArray_ByteIndexedArray(self):
+        pass
+
+    def test_PartitionedArray_UnionArray(self):
         pass
 
     def test_PartitionedArray_JaggedArray(self):
@@ -137,6 +143,9 @@ class TestCombine(unittest.TestCase):
     def test_AppendableArray_ByteIndexedArray(self):
         pass
 
+    def test_AppendableArray_UnionArray(self):
+        pass
+
     def test_AppendableArray_JaggedArray(self):
         pass
 
@@ -177,6 +186,9 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_IndexedArray_ByteIndexedArray(self):
+        pass
+
+    def test_IndexedArray_UnionArray(self):
         pass
 
     def test_IndexedArray_JaggedArray(self):
@@ -221,6 +233,9 @@ class TestCombine(unittest.TestCase):
     def test_ByteIndexedArray_ByteIndexedArray(self):
         pass
 
+    def test_ByteIndexedArray_UnionArray(self):
+        pass
+
     def test_ByteIndexedArray_JaggedArray(self):
         pass
 
@@ -248,6 +263,51 @@ class TestCombine(unittest.TestCase):
     def test_ByteIndexedArray_PersistentArray(self):
         pass
     
+    def test_UnionArray_ChunkedArray(self):
+        pass
+
+    def test_UnionArray_PartitionedArray(self):
+        pass
+
+    def test_UnionArray_AppendableArray(self):
+        pass
+
+    def test_UnionArray_IndexedArray(self):
+        pass
+
+    def test_UnionArray_ByteIndexedArray(self):
+        pass
+
+    def test_UnionArray_UnionArray(self):
+        pass
+
+    def test_UnionArray_JaggedArray(self):
+        pass
+
+    def test_UnionArray_ByteJaggedArray(self):
+        pass
+
+    def test_UnionArray_MaskedArray(self):
+        pass
+
+    def test_UnionArray_BitMaskedArray(self):
+        pass
+
+    def test_UnionArray_SparseArray(self):
+        pass
+
+    def test_UnionArray_Table(self):
+        pass
+
+    def test_UnionArray_VirtualArray(self):
+        pass
+
+    def test_UnionArray_VirtualObjectArray(self):
+        pass
+
+    def test_UnionArray_PersistentArray(self):
+        pass
+    
     def test_JaggedArray_ChunkedArray(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], ChunkedArray([[0.0, 1.1, 2.2, 3.3], [4.4, 5.5, 6.6, 7.7, 8.8, 9.9]]))
         self.assertEqual(a.tolist(), [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
@@ -268,6 +328,9 @@ class TestCombine(unittest.TestCase):
         self.assertEqual(a.tolist(), [[9.9, 8.8, 7.7], [], [4.4, 4.4]])
 
     def test_JaggedArray_ByteIndexedArray(self):
+        pass
+
+    def test_JaggedArray_UnionArray(self):
         pass
 
     def test_JaggedArray_JaggedArray(self):
@@ -319,6 +382,9 @@ class TestCombine(unittest.TestCase):
     def test_ByteJaggedArray_ByteIndexedArray(self):
         pass
 
+    def test_ByteJaggedArray_UnionArray(self):
+        pass
+
     def test_ByteJaggedArray_JaggedArray(self):
         pass
 
@@ -359,6 +425,9 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_MaskedArray_ByteIndexedArray(self):
+        pass
+
+    def test_MaskedArray_UnionArray(self):
         pass
 
     def test_MaskedArray_JaggedArray(self):
@@ -408,6 +477,9 @@ class TestCombine(unittest.TestCase):
     def test_BitMaskedArray_ByteIndexedArray(self):
         pass
 
+    def test_BitMaskedArray_UnionArray(self):
+        pass
+
     def test_BitMaskedArray_JaggedArray(self):
         pass
 
@@ -448,6 +520,9 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_SparseArray_ByteIndexedArray(self):
+        pass
+
+    def test_SparseArray_UnionArray(self):
         pass
 
     def test_SparseArray_JaggedArray(self):
@@ -495,6 +570,9 @@ class TestCombine(unittest.TestCase):
     def test_Table_ByteIndexedArray(self):
         pass
 
+    def test_Table_UnionArray(self):
+        pass
+
     def test_Table_JaggedArray(self):
         a = Table(4, one=JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]), two=[0, 100, 200, 300])
         self.assertEqual(a.tolist(), [{"one": [0.0, 1.1, 2.2], "two": 0}, {"one": [], "two": 100}, {"one": [3.3, 4.4], "two": 200}, {"one": [5.5, 6.6, 7.7, 8.8, 9.9], "two": 300}])
@@ -539,6 +617,9 @@ class TestCombine(unittest.TestCase):
     def test_VirtualArray_ByteIndexedArray(self):
         pass
 
+    def test_VirtualArray_UnionArray(self):
+        pass
+
     def test_VirtualArray_JaggedArray(self):
         pass
 
@@ -581,6 +662,9 @@ class TestCombine(unittest.TestCase):
     def test_VirtualObjectArray_ByteIndexedArray(self):
         pass
 
+    def test_VirtualObjectArray_UnionArray(self):
+        pass
+
     def test_VirtualObjectArray_JaggedArray(self):
         pass
 
@@ -621,6 +705,9 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_PersistentArray_ByteIndexedArray(self):
+        pass
+
+    def test_PersistentArray_UnionArray(self):
         pass
 
     def test_PersistentArray_JaggedArray(self):
