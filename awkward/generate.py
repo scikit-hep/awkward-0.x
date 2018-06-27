@@ -35,7 +35,7 @@ import numpy
 import awkward.array.base
 import awkward.util
 from awkward.array.chunked import ChunkedArray, PartitionedArray, AppendableArray
-from awkward.array.indexed import IndexedArray, ByteIndexedArray, UnionArray
+from awkward.array.indexed import IndexedArray, ByteIndexedArray, IndexedMaskedArray, UnionArray
 from awkward.array.jagged import JaggedArray, ByteJaggedArray
 from awkward.array.masked import MaskedArray, BitMaskedArray
 from awkward.array.sparse import SparseArray
@@ -53,6 +53,24 @@ def fromiter(iterable, chunksize=1024, references=False):
 
         if ismine(chunks[-1]):
             fillobj(chunks[-1], offsets[-1] - offsets[-2])
+            offsets[-1] += 1
+
+        elif isinstance(chunks[-1], IndexedMaskedArray) and len(chunks[-1]._content) == 0:
+            chunks[-1]._content = newchunk()
+
+            nextindex = chunks[-1]._nextindex
+            chunks[-1]._nextindex += 1
+            chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
+
+            fillobj(chunks[-1]._content, nextindex)
+            offsets[-1] += 1
+
+        elif isinstance(chunks[-1], IndexedMaskedArray) and ismine(chunks[-1]._content):
+            nextindex = chunks[-1]._nextindex
+            chunks[-1]._nextindex += 1
+            chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
+
+            fillobj(chunks[-1]._content, nextindex)
             offsets[-1] += 1
 
         else:
@@ -80,7 +98,18 @@ def fromiter(iterable, chunksize=1024, references=False):
 
     def recurse(obj, chunks, offsets):
         if obj is None:
-            HERE
+            if len(chunks) == 0 or offsets[-1] - offsets[-2] == len(chunks[-1]):
+                chunks.append(IndexedMaskedArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), []))
+                chunks[-1]._nextindex = 0
+                offsets.append(offsets[-1])
+
+            if not isinstance(chunks[-1], IndexedMaskedArray):
+                chunks[-1] = IndexedMaskedArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), chunks[-1])
+                chunks[-1]._index[: offsets[-1] - offsets[-2]] = numpy.arange(offsets[-1] - offsets[-2], dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
+                chunks[-1]._nextindex = offsets[-1] - offsets[-2]
+
+            chunks[-1]._index[offsets[-1] - offsets[-2]] = chunks[-1]._maskedwhen
+            offsets[-1] += 1
 
         elif isinstance(obj, (bool, numpy.bool, numpy.bool_)):
             def newchunk():
