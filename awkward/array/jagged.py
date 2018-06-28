@@ -412,14 +412,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         else:
             return JaggedArray(starts, stops, result)
         
-    def parents_from_offsets(self, offsets, content):
-        out = numpy.full(len(content), -1, dtype=self.INDEXTYPE)
-        lenstarts = len(offsets)-1
-        i = 0
-        while i < lenstarts:
-            out[offsets[i]:offsets[i+1]] = i
-            i += 1
-        return out
 
     def argproduct(self, other):
         import awkward.array.table 
@@ -436,13 +428,22 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         starts2 = other.starts
         stops2 = other.stops
         counts2 = stops2 - starts2
+        
 
         pairs_counts = numpy.zeros(len(starts1)+1, dtype=self.INDEXTYPE)
-        pairs_counts[1:] = numpy.cumsum(counts1*counts2)
-        pairs_counts = pairs_counts.astype(self.INDEXTYPE)
+        pairs_counts[1:] = numpy.cumsum(counts1*counts2, dtype=self.INDEXTYPE)
 
-        pairs_indices = numpy.arange(pairs_counts[-1]).astype(self.INDEXTYPE)
-        pairs_parents = self.parents_from_offsets(pairs_counts, pairs_indices)
+        def parents_from_offsets(offsets, content):
+            out = numpy.full(len(content), -1, dtype=self.INDEXTYPE)
+            lenstarts = len(offsets)-1
+            i = 0
+            while i < lenstarts:
+                out[offsets[i]:offsets[i+1]] = i
+                i += 1
+            return out
+        
+        pairs_indices = numpy.arange(pairs_counts[-1], dtype=self.INDEXTYPE)
+        pairs_parents = parents_from_offsets(pairs_counts, pairs_indices)
         pairs_parents = pairs_parents.astype(self.INDEXTYPE)
 
         left = numpy.empty_like(pairs_indices)
@@ -454,36 +455,14 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return JaggedArray(pairs_counts[:-1], pairs_counts[1:], awkward.array.table.Table(pairs_indices[-1], left, right), writeable=self._writeable)
     
     def product(self, other):
-        import awkward.array.table 
-        if not isinstance(other, JaggedArray):
-            raise ValueError("array given isn't instance of JaggedArray; need JaggedArrays to proceed")
-        
-        if (len(self._starts) != len(other)):
-            raise ValueError("Number of events in each array must be equal")
-        
-        starts1 = self._starts
-        stops1 = self._stops
-        counts1 = stops1 - starts1
+        import awkward.array.table
+        product_indexes = self.argproduct(other)
+        dictvals = product_indexes._content._content.values()
+        arr_list = []
+        for v in dictvals:
+            arr_list.append(v)
 
-        starts2 = other.starts
-        stops2 = other.stops
-        counts2 = stops2 - starts2
-
-        pairs_counts = numpy.zeros(len(starts1)+1, dtype=self.INDEXTYPE)
-        pairs_counts[1:] = numpy.cumsum(counts1*counts2)
-        pairs_counts = pairs_counts.astype(self.INDEXTYPE)
-
-        pairs_indices = numpy.arange(pairs_counts[-1]).astype(self.INDEXTYPE)
-        pairs_parents = self.parents_from_offsets(pairs_counts, pairs_indices)
-        pairs_parents = pairs_parents.astype(self.INDEXTYPE)
-
-        left = numpy.empty_like(pairs_indices)
-        right = numpy.empty_like(pairs_indices)
-
-        left[pairs_indices] = starts1[pairs_parents[pairs_indices]] + numpy.floor((pairs_indices - pairs_counts[pairs_parents[pairs_indices]])/counts2[pairs_parents[pairs_indices]]).astype(self.INDEXTYPE)
-        right[pairs_indices] = starts2[pairs_parents[pairs_indices]] + (pairs_indices - pairs_counts[pairs_parents[pairs_indices]]) - counts2[pairs_parents[pairs_indices]] * numpy.floor((pairs_indices - pairs_counts[pairs_parents[pairs_indices]])/counts2[pairs_parents[pairs_indices]])
-
-        return JaggedArray(pairs_counts[:-1], pairs_counts[1:], awkward.array.table.Table(pairs_indices[-1], self._content[left], other.content[right]), writeable=self._writeable)
+        return JaggedArray(product_indexes.starts, product_indexes.stops, awkward.array.table.Table( len(arr_list[0], self._content[arr_list[0]], other.content[arr_list[1]])))
 
 
 class ByteJaggedArray(JaggedArray):
