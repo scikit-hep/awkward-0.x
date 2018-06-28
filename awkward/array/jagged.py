@@ -35,7 +35,7 @@ import numpy
 
 import awkward.array.base
 import awkward.util
-from awkward import Table
+from awkward.array.table import Table
 
 class JaggedArray(awkward.array.base.AwkwardArray):
     @classmethod
