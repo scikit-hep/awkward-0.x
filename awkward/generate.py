@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import codecs
 import numbers
 
 import numpy
@@ -47,6 +48,7 @@ def fromiter(iterable, chunksize=1024, references=False):
         raise NotImplementedError    # keep all ids in a hashtable to create pointers
 
     tobytes = lambda x: x.tobytes()
+    tostring = lambda x: codecs.utf_8_decode(x.tobytes())[0]
 
     def add(chunks, offsets, newchunk, ismine, promote, fillobj):
         if len(chunks) == 0 or offsets[-1] - offsets[-2] == len(chunks[-1]):
@@ -220,7 +222,27 @@ def fromiter(iterable, chunksize=1024, references=False):
             add(chunks, offsets, newchunk, ismine, promote, fillobj)
 
         elif isinstance(obj, awkward.util.string):
-            raise NotImplementedError
+            # str -> VirtualObjectArray of JaggedArray
+
+            def newchunk():
+                out = VirtualObjectArray(tostring, JaggedArray.fromoffsets(
+                    numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
+                    AppendableArray.empty(lambda: numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.CHARTYPE))))
+                out._content._starts[0] = 0
+                return out
+
+            def ismine(x):
+                return isinstance(x, VirtualObjectArray) and x._generator is tostring
+
+            def promote(x):
+                return x
+
+            def fillobj(array, where):
+                bytes = codecs.utf_8_encode(obj)[0]
+                array._content._stops[where] = array._content._starts[where] + len(bytes)
+                array._content._content.extend(numpy.fromstring(bytes, dtype=awkward.array.base.AwkwardArray.CHARTYPE))
+                
+            add(chunks, offsets, newchunk, ismine, promote, fillobj)
 
         elif isinstance(obj, dict):
             HERE

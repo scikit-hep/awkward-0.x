@@ -122,9 +122,9 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         values = []
         for x in self:
             if len(values) == 7:
-                return "[{0} ...]".format(" ".join(str(x) for x in values))
+                return "[{0} ...]".format(" ".join(str(x) if isinstance(x, (numpy.ndarray, awkward.array.base.AwkwardArray)) else repr(x) for x in values))
             values.append(x)
-        return "[{0}]".format(" ".join(str(x) for x in values))
+        return "[{0}]".format(" ".join(str(x) if isinstance(x, (numpy.ndarray, awkward.array.base.AwkwardArray)) else repr(x) for x in values))
 
     def _slicedchunks(self, start, stop, step, tail):
         if step == 0:
