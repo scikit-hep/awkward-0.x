@@ -45,7 +45,10 @@ class Table(awkward.array.base.AwkwardArray):
             super(Table.Row, self).__setattr__("_index", index)
 
         def __repr__(self):
-            return "<Table.Row {0}>".format(self._index)
+            if isinstance(self._table, NamedTable):
+                return "<{0} {1}>".format(self._table._name, self._index)
+            else:
+                return "<Table.Row {0}>".format(self._index)
 
         def __hasattr__(self, name):
             return name in self._table._content
@@ -89,9 +92,9 @@ class Table(awkward.array.base.AwkwardArray):
                     raise TypeError("only one positional argument when the first argument is a dict")
 
         elif isinstance(columns1, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
-            self["f0"] = columns1
+            self["_0"] = columns1
             for i, x in enumerate(columns2):
-                self["f" + str(i + 1)] = x
+                self["_" + str(i + 1)] = x
 
         else:
             raise TypeError("positional arguments may be a single dict or varargs of unnamed arrays")
@@ -207,7 +210,8 @@ class Table(awkward.array.base.AwkwardArray):
             return self.Row(self, self._start + self._step*normwhere)
 
         elif isinstance(where, slice):
-            out = self.__class__(self._length, self._content)
+            out = self.__class__.__new__(self.__class__)
+            out.__dict__.update(self.__dict__)
             start, stop, step = where.indices(self._length)
             if step == 0:
                 raise ValueError("slice step cannot be zero")
@@ -309,3 +313,21 @@ class Table(awkward.array.base.AwkwardArray):
 
     def tolist(self):
         return [dict((n, self._try_tolist(self._check_length(x)[self.start:self.stop:self.step][i])) for n, x in self._content.items()) for i in range(self._length)]
+
+class NamedTable(Table):
+    def __init__(self, length, name, columns1={}, *columns2, **columns3):
+        super(NamedTable, self).__init__(length, columns1, *columns2, **columns3)
+        self.name = name
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if not isinstance(value, awkward.util.string):
+            raise TypeError("name must be a string")
+        self._name = value
+
+    def __repr__(self):
+        return "<{0} {1} x {2} at {3:012x}>".format(self._name, self._length, len(self._content), id(self))

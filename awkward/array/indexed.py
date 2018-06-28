@@ -354,7 +354,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     def __getitem__(self, where):
         if self._isstring(where):
-            return UnionArray(self._tags, self._index, tuple(x[where] for x in self._contents), writeable=writeable)
+            return UnionArray(self._tags, self._index, tuple(x[where] for x in self._contents), writeable=self._writeable)
 
         if self._tags.shape != self._index.shape:
             raise ValueError("tags shape ({0}) does not match index shape ({1})".format(self._tags.shape, self._index.shape))
@@ -375,7 +375,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     def __setitem__(self, where, what):
         if self._isstring(where):
-            UnionArray(self._tags, self._index, tuple(x[where] for x in self._contents), writeable=writeable)[:] = what
+            UnionArray(self._tags, self._index, tuple(x[where] for x in self._contents), writeable=self._writeable)[:] = what
             return
 
         if not self._writeable:

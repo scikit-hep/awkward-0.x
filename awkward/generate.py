@@ -40,7 +40,7 @@ from awkward.array.chunked import PartitionedArray, AppendableArray
 from awkward.array.indexed import IndexedMaskedArray, UnionArray
 from awkward.array.jagged import JaggedArray
 from awkward.array.masked import BitMaskedArray
-from awkward.array.table import Table
+from awkward.array.table import Table, NamedTable
 from awkward.array.virtual import VirtualObjectArray
 
 def fromiter(iterable, chunksize=1024, maskmissing=True, references=False):
@@ -330,7 +330,43 @@ def fromiter(iterable, chunksize=1024, maskmissing=True, references=False):
 
             except TypeError:
                 # object attributes -> Table columns
-                HERE
+
+                def newchunk(obj):
+                    return NamedTable(chunksize, obj.__class__.__name__, collections.OrderedDict((n, []) for n in dir(obj) if not n.startswith("_")))
+
+                if maskmissing:
+                    def ismine(obj, x):
+                        return isinstance(x, NamedTable) and obj.__class__.__name__ == x._name
+
+                    def promote(obj, x):
+                        for n in dir(obj):
+                            if not n.startswith("_") and not n in x._content:
+                                x._content[n] = IndexedMaskedArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), [])
+                                x._content[n]._index[: offsets[-1] - offsets[-2]] = x._content[n]._maskedwhen
+                                x._content[n]._nextindex = 0
+                        return x
+
+                else:
+                    def ismine(obj, x):
+                        return isinstance(x, NamedTable) and obj.__class__.__name__ == x._name and all(n in x._content for n in dir(obj) if not n.startswith("_"))
+
+                    def promote(obj, x):
+                        return x
+
+                def fillobj(obj, array, where):
+                    for n in dir(obj):
+                        if not n.startswith("_"):
+                            if len(array._content[n]) == 0:
+                                subchunks = []
+                                suboffsets = [offsets[-2]]
+                            else:
+                                subchunks = [array._content[n]]
+                                suboffsets = [offsets[-2], offsets[-1]]
+
+                            fill(getattr(obj, n), subchunks, suboffsets)
+                            array._content[n] = subchunks[-1]
+
+                insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
 
             else:
                 # iterable -> JaggedArray (and recurse)
@@ -403,6 +439,9 @@ def fromiter(iterable, chunksize=1024, maskmissing=True, references=False):
                 offsets = numpy.array(offsets[: length + 1])
 
             return JaggedArray.fromoffsets(offsets, trim(offsets[-1], array._content))
+
+        elif isinstance(array, NamedTable):
+            return NamedTable(length, array._name, collections.OrderedDict((n, trim(length, x)) for n, x in array._content.items()))
 
         elif isinstance(array, Table):
             return Table(length, collections.OrderedDict((n, trim(length, x)) for n, x in array._content.items()))
