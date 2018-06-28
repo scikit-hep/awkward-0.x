@@ -51,7 +51,7 @@ def fromiter(iterable, chunksize=1024, references=False):
 
     def insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj):
         if len(chunks) == 0 or offsets[-1] - offsets[-2] == len(chunks[-1]):
-            chunks.append(newchunk())
+            chunks.append(newchunk(obj))
             offsets.append(offsets[-1])
 
         if ismine(chunks[-1]):
@@ -60,7 +60,7 @@ def fromiter(iterable, chunksize=1024, references=False):
             offsets[-1] += 1
 
         elif isinstance(chunks[-1], IndexedMaskedArray) and len(chunks[-1]._content) == 0:
-            chunks[-1]._content = newchunk()
+            chunks[-1]._content = newchunk(obj)
 
             nextindex = chunks[-1]._nextindex
             chunks[-1]._nextindex += 1
@@ -79,6 +79,25 @@ def fromiter(iterable, chunksize=1024, references=False):
             fillobj(obj, chunks[-1]._content, nextindex)
             offsets[-1] += 1
 
+        elif isinstance(chunks[-1], UnionArray) and any(isinstance(content, IndexedMaskedArray) and ismine(content._content) for content in chunks[-1]._contents):
+            for tag in range(len(chunks[-1]._contents)):
+                if isinstance(chunks[-1]._contents[tag], IndexedMaskedArray) and ismine(chunks[-1]._contents[tag]._content):
+                    nextindex_union = chunks[-1]._nextindex[tag]
+                    chunks[-1]._nextindex[tag] += 1
+
+                    nextindex_mask = chunks[-1]._contents[tag]._nextindex
+                    chunks[-1]._contents[tag]._nextindex += 1
+                    chunks[-1]._contents[tag]._index[nextindex_union] = nextindex_mask
+
+                    chunks[-1]._contents[tag]._content = promote(chunks[-1]._contents[tag]._content)
+                    fillobj(obj, chunks[-1]._contents[tag]._content, nextindex_mask)
+
+                    chunks[-1]._tags[offsets[-1] - offsets[-2]] = tag
+                    chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex_union
+
+                    offsets[-1] += 1
+                    break
+
         else:
             if not isinstance(chunks[-1], UnionArray):
                 chunks[-1] = UnionArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
@@ -91,7 +110,7 @@ def fromiter(iterable, chunksize=1024, references=False):
 
             if not any(ismine(content) for content in chunks[-1]._contents):
                 chunks[-1]._nextindex.append(0)
-                chunks[-1]._contents.append(newchunk())
+                chunks[-1]._contents.append(newchunk(obj))
 
             for tag in range(len(chunks[-1]._contents)):
                 if ismine(chunks[-1]._contents[tag]):
@@ -116,18 +135,33 @@ def fromiter(iterable, chunksize=1024, references=False):
                 chunks[-1]._nextindex = 0
                 offsets.append(offsets[-1])
 
-            if not isinstance(chunks[-1], IndexedMaskedArray):
-                chunks[-1] = IndexedMaskedArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), chunks[-1])
-                chunks[-1]._index[: offsets[-1] - offsets[-2]] = numpy.arange(offsets[-1] - offsets[-2], dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
-                chunks[-1]._nextindex = offsets[-1] - offsets[-2]
+            if isinstance(chunks[-1], UnionArray) and any(isinstance(content, IndexedMaskedArray) for content in chunks[-1]._contents):
+                for tag in range(len(chunks[-1]._contents)):
+                    if isinstance(chunks[-1]._contents[tag], IndexedMaskedArray):
+                        nextindex = chunks[-1]._nextindex[tag]
+                        chunks[-1]._nextindex[tag] += 1
 
-            chunks[-1]._index[offsets[-1] - offsets[-2]] = chunks[-1]._maskedwhen
-            offsets[-1] += 1
+                        chunks[-1]._contents[tag]._index[nextindex] = chunks[-1]._contents[tag]._maskedwhen
+
+                        chunks[-1]._tags[offsets[-1] - offsets[-2]] = tag
+                        chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
+
+                        offsets[-1] += 1
+                        break
+
+            else:
+                if not isinstance(chunks[-1], IndexedMaskedArray):
+                    chunks[-1] = IndexedMaskedArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), chunks[-1])
+                    chunks[-1]._index[: offsets[-1] - offsets[-2]] = numpy.arange(offsets[-1] - offsets[-2], dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
+                    chunks[-1]._nextindex = offsets[-1] - offsets[-2]
+
+                chunks[-1]._index[offsets[-1] - offsets[-2]] = chunks[-1]._maskedwhen
+                offsets[-1] += 1
 
         elif isinstance(obj, (bool, numpy.bool, numpy.bool_)):
             # bool -> Numpy bool_
 
-            def newchunk():
+            def newchunk(obj):
                 return numpy.empty(chunksize, dtype=numpy.bool_)
 
             def ismine(x):
@@ -144,7 +178,7 @@ def fromiter(iterable, chunksize=1024, references=False):
         elif isinstance(obj, (numbers.Integral, numpy.integer)):
             # int -> Numpy int64, float64, or complex128 (promotes to largest)
 
-            def newchunk():
+            def newchunk(obj):
                 return numpy.empty(chunksize, dtype=numpy.int64)
 
             def ismine(x):
@@ -161,7 +195,7 @@ def fromiter(iterable, chunksize=1024, references=False):
         elif isinstance(obj, (numbers.Real, numpy.floating)):
             # float -> Numpy int64, float64, or complex128 (promotes to largest)
 
-            def newchunk():
+            def newchunk(obj):
                 return numpy.empty(chunksize, dtype=numpy.int64)
 
             def ismine(x):
@@ -181,7 +215,7 @@ def fromiter(iterable, chunksize=1024, references=False):
         elif isinstance(obj, (numbers.Complex, numpy.complex, numpy.complexfloating)):
             # complex -> Numpy int64, float64, or complex128 (promotes to largest)
 
-            def newchunk():
+            def newchunk(obj):
                 return numpy.empty(chunksize, dtype=numpy.complex128)
 
             def ismine(x):
@@ -201,7 +235,7 @@ def fromiter(iterable, chunksize=1024, references=False):
         elif isinstance(obj, bytes):
             # bytes -> VirtualObjectArray of JaggedArray
 
-            def newchunk():
+            def newchunk(obj):
                 out = VirtualObjectArray(tobytes, JaggedArray.fromoffsets(
                     numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
                     AppendableArray.empty(lambda: numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.CHARTYPE))))
@@ -223,7 +257,7 @@ def fromiter(iterable, chunksize=1024, references=False):
         elif isinstance(obj, awkward.util.string):
             # str -> VirtualObjectArray of JaggedArray
 
-            def newchunk():
+            def newchunk(obj):
                 out = VirtualObjectArray(tostring, JaggedArray.fromoffsets(
                     numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
                     AppendableArray.empty(lambda: numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.CHARTYPE))))
@@ -262,7 +296,7 @@ def fromiter(iterable, chunksize=1024, references=False):
             else:
                 # iterable -> JaggedArray (and recurse)
 
-                def newchunk():
+                def newchunk(obj):
                     out = JaggedArray.fromoffsets(numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), PartitionedArray([0], []))
                     out._starts[0] = 0
                     out._content._offsets = [0]  # as an appendable list, not a Numpy array
