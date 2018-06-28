@@ -254,7 +254,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
     def __setitem__(self, where, what):
         if self._isstring(where):
-            JaggedArray(self._starts, self._stops, self._content[where], writeable=writeable)[:] = what
+            JaggedArray(self._starts, self._stops, self._content[where], writeable=self._writeable)[:] = what
             return
 
         if not self._writeable:
@@ -465,7 +465,7 @@ class ByteJaggedArray(JaggedArray):
 
     def __getitem__(self, where):
         if self._isstring(where):
-            return ByteJaggedArray(self._starts, self._stops, self._content[where], self._dtype, writeable=writeable)
+            return ByteJaggedArray(self._starts, self._stops, self._content[where], self._dtype, writeable=self._writeable)
 
         if not isinstance(where, tuple):
             where = (where,)
@@ -482,7 +482,7 @@ class ByteJaggedArray(JaggedArray):
 
     def __setitem__(self, where, what):
         if self._isstring(where):
-            ByteJaggedArray(self._starts, self._stops, self._content[where], self._dtype, writeable=writeable)[:] = what
+            ByteJaggedArray(self._starts, self._stops, self._content[where], self._dtype, writeable=self._writeable)[:] = what
             return
 
         if not self._writeable:
