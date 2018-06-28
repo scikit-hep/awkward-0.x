@@ -242,6 +242,12 @@ class VirtualObjectArray(awkward.array.base.AwkwardArray):
     def __len__(self):
         return len(self._content)
 
+    def __str__(self):
+        if len(self) <= 6:
+            return "[{0}]".format(" ".join(repr(x) for x in self))
+        else:
+            return "[{0} ... {1}]".format(" ".join(repr(x) for x in self[:3]), ", ".join(repr(x) for x in self[-3:]))
+
     def __getitem__(self, where):
         content = self._content[where]
         if isinstance(where, (numbers.Integral, numpy.integer)):

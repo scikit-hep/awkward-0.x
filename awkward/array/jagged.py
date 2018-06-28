@@ -424,7 +424,7 @@ class ByteJaggedArray(JaggedArray):
         offsets *= content.dtype.itemsize
         return cls(offsets[:-1], offsets[1:], content, content.dtype, writeable=writeable)
 
-    def __init__(self, starts, stops, content, dtype, writeable=True):
+    def __init__(self, starts, stops, content, dtype=awkward.array.base.AwkwardArray.CHARTYPE, writeable=True):
         self._writeable = writeable
         super(ByteJaggedArray, self).__init__(starts, stops, content, writeable=writeable)
         self.dtype = dtype

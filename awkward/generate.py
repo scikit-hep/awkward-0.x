@@ -46,12 +46,15 @@ def fromiter(iterable, chunksize=1024, references=False):
     if references:
         raise NotImplementedError    # keep all ids in a hashtable to create pointers
 
-    def add(chunks, offsets, newchunk, ismine, fillobj):
+    tobytes = lambda x: x.tobytes()
+
+    def add(chunks, offsets, newchunk, ismine, promote, fillobj):
         if len(chunks) == 0 or offsets[-1] - offsets[-2] == len(chunks[-1]):
             chunks.append(newchunk())
             offsets.append(offsets[-1])
 
         if ismine(chunks[-1]):
+            chunks[-1] = promote(chunks[-1])
             fillobj(chunks[-1], offsets[-1] - offsets[-2])
             offsets[-1] += 1
 
@@ -62,6 +65,7 @@ def fromiter(iterable, chunksize=1024, references=False):
             chunks[-1]._nextindex += 1
             chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
 
+            chunks[-1]._content = promote(chunks[-1]._content)
             fillobj(chunks[-1]._content, nextindex)
             offsets[-1] += 1
 
@@ -70,6 +74,7 @@ def fromiter(iterable, chunksize=1024, references=False):
             chunks[-1]._nextindex += 1
             chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
 
+            chunks[-1]._content = promote(chunks[-1]._content)
             fillobj(chunks[-1]._content, nextindex)
             offsets[-1] += 1
 
@@ -81,23 +86,30 @@ def fromiter(iterable, chunksize=1024, references=False):
                 chunks[-1]._nextindex = [offsets[-1] - offsets[-2]]
                 chunks[-1]._tags[: offsets[-1] - offsets[-2]] = 0
                 chunks[-1]._index[: offsets[-1] - offsets[-2]] = numpy.arange(offsets[-1] - offsets[-2], dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
+                chunks[-1]._contents = list(chunks[-1]._contents)
 
             if not any(ismine(content) for content in chunks[-1]._contents):
                 chunks[-1]._nextindex.append(0)
-                chunks[-1]._contents = chunks[-1]._contents + (newchunk(),)
+                chunks[-1]._contents.append(newchunk())
 
-            for tag, content in enumerate(chunks[-1]._contents):
-                if ismine(content):
+            for tag in range(len(chunks[-1]._contents)):
+                if ismine(chunks[-1]._contents[tag]):
                     nextindex = chunks[-1]._nextindex[tag]
                     chunks[-1]._nextindex[tag] += 1
-                    fillobj(content, nextindex)
+
+                    chunks[-1]._contents[tag] = promote(chunks[-1]._contents[tag])
+                    fillobj(chunks[-1]._contents[tag], nextindex)
+
                     chunks[-1]._tags[offsets[-1] - offsets[-2]] = tag
                     chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
+
                     offsets[-1] += 1
                     break
 
     def recurse(obj, chunks, offsets):
         if obj is None:
+            # anything with None -> IndexedMaskedArray
+
             if len(chunks) == 0 or offsets[-1] - offsets[-2] == len(chunks[-1]):
                 chunks.append(IndexedMaskedArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), []))
                 chunks[-1]._nextindex = 0
@@ -112,37 +124,100 @@ def fromiter(iterable, chunksize=1024, references=False):
             offsets[-1] += 1
 
         elif isinstance(obj, (bool, numpy.bool, numpy.bool_)):
+            # bool -> Numpy bool_
+
             def newchunk():
                 return numpy.empty(chunksize, dtype=numpy.bool_)
 
             def ismine(x):
                 return isinstance(x, numpy.ndarray) and x.dtype == numpy.dtype(numpy.bool_)
 
+            def promote(x):
+                return x
+
             def fillobj(array, where):
                 array[where] = obj
 
-            add(chunks, offsets, newchunk, ismine, fillobj)
+            add(chunks, offsets, newchunk, ismine, promote, fillobj)
 
         elif isinstance(obj, (numbers.Integral, numpy.integer)):
+            # int -> Numpy int64, float64, or complex128 (promotes to largest)
+
             def newchunk():
                 return numpy.empty(chunksize, dtype=numpy.int64)
 
             def ismine(x):
-                return isinstance(x, numpy.ndarray) and x.dtype == numpy.dtype(numpy.int64)
+                return isinstance(x, numpy.ndarray) and issubclass(x.dtype.type, numpy.number)
+
+            def promote(x):
+                return x
 
             def fillobj(array, where):
                 array[where] = obj
 
-            add(chunks, offsets, newchunk, ismine, fillobj)
+            add(chunks, offsets, newchunk, ismine, promote, fillobj)
 
         elif isinstance(obj, (numbers.Real, numpy.floating)):
-            HERE
+            # float -> Numpy int64, float64, or complex128 (promotes to largest)
+
+            def newchunk():
+                return numpy.empty(chunksize, dtype=numpy.int64)
+
+            def ismine(x):
+                return isinstance(x, numpy.ndarray) and issubclass(x.dtype.type, numpy.number)
+
+            def promote(x):
+                if issubclass(x.dtype.type, numpy.floating):
+                    return x
+                else:
+                    return x.astype(numpy.float64)
+
+            def fillobj(array, where):
+                array[where] = obj
+
+            add(chunks, offsets, newchunk, ismine, promote, fillobj)
 
         elif isinstance(obj, (numbers.Complex, numpy.complex, numpy.complexfloating)):
-            raise NotImplementedError
+            # complex -> Numpy int64, float64, or complex128 (promotes to largest)
+
+            def newchunk():
+                return numpy.empty(chunksize, dtype=numpy.complex128)
+
+            def ismine(x):
+                return isinstance(x, numpy.ndarray) and issubclass(x.dtype.type, numpy.number)
+
+            def promote(x):
+                if issubclass(x.dtype.type, numpy.complexfloating):
+                    return x
+                else:
+                    return x.astype(numpy.complex128)
+
+            def fillobj(array, where):
+                array[where] = obj
+
+            add(chunks, offsets, newchunk, ismine, promote, fillobj)
 
         elif isinstance(obj, bytes):
-            raise NotImplementedError
+            # bytes -> VirtualObjectArray of JaggedArray
+
+            def newchunk():
+                out = VirtualObjectArray(tobytes, JaggedArray.fromoffsets(
+                    numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
+                    AppendableArray.empty(lambda: numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.CHARTYPE))))
+                out._content._starts[0] = 0
+                return out
+
+            def ismine(x):
+                return isinstance(x, VirtualObjectArray) and x._generator is tobytes
+
+            def promote(x):
+                return x
+
+            def fillobj(array, where):
+                array._content._stops[where] = array._content._starts[where] + len(obj)
+                array._content._content.extend(numpy.fromstring(obj, dtype=awkward.array.base.AwkwardArray.CHARTYPE))
+                
+            add(chunks, offsets, newchunk, ismine, promote, fillobj)
 
         elif isinstance(obj, awkward.util.string):
             raise NotImplementedError
@@ -161,6 +236,8 @@ def fromiter(iterable, chunksize=1024, references=False):
                 HERE
 
             else:
+                # iterable -> JaggedArray (and recurse)
+
                 def newchunk():
                     out = JaggedArray.fromoffsets(numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), PartitionedArray([0], []))
                     out._starts[0] = 0
@@ -170,13 +247,16 @@ def fromiter(iterable, chunksize=1024, references=False):
                 def ismine(x):
                     return isinstance(x, JaggedArray)
 
+                def promote(x):
+                    return x
+
                 def fillobj(array, where):
                     array._stops[where] = array._starts[where]
                     for x in it:
                         recurse(x, array._content._chunks, array._content._offsets)
                         array._stops[where] += 1
 
-                add(chunks, offsets, newchunk, ismine, fillobj)
+                add(chunks, offsets, newchunk, ismine, promote, fillobj)
 
     chunks = []
     offsets = [0]
