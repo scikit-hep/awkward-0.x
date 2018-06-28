@@ -188,7 +188,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 else:
                     continue
 
-            slicedchunk = chunk[(slice(localstart, localstop, localstep),) + tail]
+            slicedchunk = chunk[self._singleton((slice(localstart, localstop, localstep),) + tail)]
             if len(slicedchunk) != 0:
                 slicedchunks.append(slicedchunk)
 
@@ -225,7 +225,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             sofar = None
             for sofar, chunk in self._chunkiterator(head):
                 if sofar <= head < sofar + len(chunk):
-                    return chunk[(head - sofar,) + tail]
+                    return chunk[self._singleton((head - sofar,) + tail)]
 
             raise IndexError("index {0} out of bounds for length {1}".format(head, 0 if sofar is None else sofar + len(chunk)))
 
@@ -272,7 +272,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     numpy.bitwise_and(mask, (indexes < len(chunk)), mask)
                     masked = indexes[mask]
                     if len(masked) != 0:
-                        out[(mask,) + tail] = chunk[(masked,) + tail]
+                        out[self._singleton((mask,) + tail)] = chunk[self._singleton((masked,) + tail)]
 
                     if sofar + len(chunk) > maxindex:
                         break
@@ -280,7 +280,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 if maxindex >= sofar + len(chunk):
                     raise IndexError("index {0} out of bounds for length {1}".format(maxindex, 0 if sofar is None else sofar + len(chunk)))
 
-                return out[(slice(None),) + tail]
+                return out[self._singleton((slice(None),) + tail)]
 
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (numpy.bool, numpy.bool_)):
                 out = None
@@ -294,13 +294,13 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     submask = head[sofar : sofar + len(chunk)]
 
                     next += numpy.count_nonzero(submask)
-                    out[(slice(this, next),) + tail] = chunk[(submask,) + tail]
+                    out[self._singleton((slice(this, next),) + tail)] = chunk[self._singleton((submask,) + tail)]
                     this = next
 
                 if len(head) != sofar + len(chunk):
                     raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(sofar + len(chunk), len(head)))
 
-                return out[(slice(None),) + tail]
+                return out[self._singleton((slice(None),) + tail)]
 
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
@@ -332,7 +332,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             sofar = None
             for sofar, chunk in self._chunkiterator(head):
                 if sofar <= head < sofar + len(chunk):
-                    chunk[(head - sofar,) + tail] = what
+                    chunk[self._singleton((head - sofar,) + tail)] = what
                     return
 
             raise IndexError("index {0} out of bounds for length {1}".format(head, 0 if sofar is None else sofar + len(chunk)))

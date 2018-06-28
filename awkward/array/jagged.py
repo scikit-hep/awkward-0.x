@@ -239,14 +239,18 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         if self._isstring(where):
             return JaggedArray(self._starts, self._stops, self._content[where], writeable=self._writeable)
 
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
         self._check_startsstops()
-        starts = self._starts[where]
-        stops = self._stops[where]
+        starts = self._starts[head]
+        stops = self._stops[head]
 
         if len(starts.shape) == len(stops.shape) == 0:
-            return self.content[starts:stops]
+            return self.content[self._singleton((slice(starts, stops),) + tail)]
         else:
-            return JaggedArray(starts, stops, self._content, writeable=self._writeable)
+            return JaggedArray(starts, stops, self._content[self._singleton((slice(None),) + tail)], writeable=self._writeable)
 
     def __setitem__(self, where, what):
         if self._isstring(where):
@@ -256,22 +260,26 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         if not self._writeable:
             raise ValueError("assignment destination is read-only")
 
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
         self._check_startsstops()
-        starts = self._starts[where]
-        stops = self._stops[where]
+        starts = self._starts[head]
+        stops = self._stops[head]
 
         if len(starts.shape) == len(stops.shape) == 0:
-            self._content[starts:stops] = what
+            self._content[self._singleton((slice(starts, stops),) + tail)] = what
 
         elif isinstance(what, JaggedArray):
             if len(what) != len(starts):
                 raise ValueError("cannot copy JaggedArray with length {0} to JaggedArray with dimension {1}".format(len(what), len(starts)))
             for which, start, stop in awkward.util.izip(what, starts, stops):
-                self._content[start:stop] = which
+                self._content[self._singleton((slice(start, stop),) + tail)] = which
 
         elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
             for start, stop in awkward.util.izip(starts, stops):
-                self._content[start:stop] = what[0]
+                self._content[self._singleton((slice(start, stop),) + tail)] = what[0]
 
         elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
             if len(what) != (stops - starts).sum():
@@ -279,12 +287,12 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             this = next = 0
             for start, stop in awkward.util.izip(starts, stops):
                 next += stop - start
-                self._content[start:stop] = what[this:next]
+                self._content[self._singleton((slice(start, stop),) + tail)] = what[this:next]
                 this = next
 
         else:
             for start, stop in awkward.util.izip(starts, stops):
-                self._content[start:stop] = what
+                self._content[self._singleton((slice(start, stop),) + tail)] = what
 
     def tojagged(self, starts=None, stops=None, copy=True, writeable=True):
         if starts is None and stops is None:
@@ -459,14 +467,18 @@ class ByteJaggedArray(JaggedArray):
         if self._isstring(where):
             return ByteJaggedArray(self._starts, self._stops, self._content[where], self._dtype, writeable=writeable)
 
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
         self._check_startsstops()
-        starts = self._starts[where]
-        stops = self._stops[where]
+        starts = self._starts[head]
+        stops = self._stops[head]
 
         if len(starts.shape) == len(stops.shape) == 0:
-            return self._content[starts:stops].view(self._dtype)
+            return self._content[self._singleton((slice(starts, stops),) + tail)].view(self._dtype)
         else:
-            return ByteJaggedArray(starts, stops, self._content, self._dtype, writeable=self._writeable)
+            return ByteJaggedArray(starts, stops, self._content[self._singleton((slice(None),) + tail)], self._dtype, writeable=self._writeable)
 
     def __setitem__(self, where, what):
         if self._isstring(where):
@@ -476,15 +488,19 @@ class ByteJaggedArray(JaggedArray):
         if not self._writeable:
             raise ValueError("assignment destination is read-only")
 
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
         self._check_startsstops()
-        starts = self._starts[where]
-        stops = self._stops[where]
+        starts = self._starts[head]
+        stops = self._stops[head]
 
         if len(starts.shape) == len(stops.shape) == 0:
             startpos, offset = divmod(starts, self._dtype.itemsize)
             stoppos = stops // self._dtype.itemsize
             buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
-            buf[startpos:stoppos] = what
+            buf[self._singleton((slice(startpos, stoppos),) + tail)] = what
 
         elif len(starts) != 0:
             if hasattr(numpy, "divmod"):
@@ -500,12 +516,12 @@ class ByteJaggedArray(JaggedArray):
                     raise ValueError("cannot copy JaggedArray with length {0} to ByteJaggedArray with dimension {1}".format(len(what), len(startposes)))
                 for which, startpos, stoppos, offset in awkward.util.izip(what, startposes, stopposes, offsets):
                     buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
-                    buf[startpos:stoppos] = which
+                    buf[self._singleton((slice(startpos, stoppos),) + tail)] = which
 
             elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
                 for startpos, stoppos, offset in awkward.util.izip(startposes, stopposes, offsets):
                     buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
-                    buf[startpos:stoppos] = what[0]
+                    buf[self._singleton((slice(startpos, stoppos),) + tail)] = what[0]
 
             elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
                 if len(what) != (stopposes - startposes).sum():
@@ -514,13 +530,13 @@ class ByteJaggedArray(JaggedArray):
                 for startpos, stoppos, offset in awkward.util.izip(startposes, stopposes, offsets):
                     next += stoppos - startpos
                     buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
-                    buf[startpos:stoppos] = what[this:next]
+                    buf[self._singleton((slice(startpos, stoppos),) + tail)] = what[this:next]
                     this = next
 
             else:
                 for startpos, stoppos, offset in awkward.util.izip(startposes, stopposes, offsets):
                     buf = numpy.frombuffer(self._content, dtype=self._dtype, count=stoppos, offset=offset)
-                    buf[startpos:stoppos] = what
+                    buf[self._singleton((slice(startpos, stoppos),) + tail)] = what
 
     def tojagged(self, starts=None, stops=None, copy=True, writeable=True):
         counts = self.counts

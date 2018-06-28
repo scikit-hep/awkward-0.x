@@ -189,7 +189,10 @@ class Table(awkward.array.base.AwkwardArray):
             else:
                 raise IndexError("only integers, slices (`:`), ellipsis (`...`), numpy.newaxis (`None`) and integer or boolean arrays are valid indices")
 
-        if isinstance(where, awkward.util.string):
+        if isinstance(where, tuple):
+            raise IndexError("only integers, slices (`:`), ellipsis (`...`), numpy.newaxis (`None`) and integer or boolean arrays are valid indices")
+
+        elif isinstance(where, awkward.util.string):
             return self._check_length(self._content[where])[self.start:self.stop:self.step]
 
         elif isinstance(where, (numbers.Integral, numpy.integer)):

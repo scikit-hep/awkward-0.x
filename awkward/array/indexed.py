@@ -220,13 +220,13 @@ class IndexedMaskedArray(IndexedArray):
             if self._index[head] == self._maskedwhen:
                 return numpy.ma.masked
             else:
-                return self._content[(self._index[head],) + tail]
+                return self._content[self._singleton((self._index[head],) + tail)]
         else:
-            return IndexedMaskedArray(self._index[head], self._content[(slice(None),) + tail], maskedwhen=self._maskedwhen, writeable=self._writeable)
+            return IndexedMaskedArray(self._index[head], self._content[self._singleton((slice(None),) + tail)], maskedwhen=self._maskedwhen, writeable=self._writeable)
         
     def __setitem__(self, where, what):
         if self._isstring(where):
-            IndexedMaskedArray(self._index[head], self._content[(slice(None),) + tail], maskedwhen=self._maskedwhen, writeable=self._writeable)[:] = what
+            IndexedMaskedArray(self._index[head], self._content[self._singleton((slice(None),) + tail)], maskedwhen=self._maskedwhen, writeable=self._writeable)[:] = what
             return
 
         import awkward.array.masked
@@ -245,40 +245,40 @@ class IndexedMaskedArray(IndexedArray):
             if isinstance(what[0], numpy.ma.core.MaskedConstant):
                 self._index[head] = self._maskedwhen
             else:
-                self._content[(self._index[head],) + tail] = what[0]
+                self._content[self._singleton((self._index[head],) + tail)] = what[0]
 
         elif isinstance(what, awkward.array.masked.MaskedArray):
             boolmask = what.boolmask
             notboolmask = numpy.logical_not(boolmask)
             if what._maskedwhen:
                 self._index[head][boolmask] = self._maskedwhen
-                self._content[(self._index[head][notboolmask],) + tail] = what._content[notboolmask]
+                self._content[self._singleton((self._index[head][notboolmask],) + tail)] = what._content[notboolmask]
             else:
                 self._index[head][notboolmask] = self._maskedwhen
-                self._content[(self._index[head][boolmask],) + tail] = what._content[boolmask]
+                self._content[self._singleton((self._index[head][boolmask],) + tail)] = what._content[boolmask]
 
         elif isinstance(what, IndexedMaskedArray):
             boolmask = (what._index == what._maskedwhen)
             notboolmask = numpy.logical_not(boolmask)
             self._index[head][boolmask] = self._maskedwhen
-            self._content[(self._index[head][notboolmask],) + tail] = what._content[notboolmask]
+            self._content[self._singleton((self._index[head][notboolmask],) + tail)] = what._content[notboolmask]
 
         elif isinstance(what, collections.Sequence):
             boolmask = numpy.array([isinstance(x, numpy.ma.core.MaskedConstant) for x in what])
             notboolmask = numpy.logical_not(boolmask)
             self._index[head][boolmask] = self._maskedwhen
-            self._content[(self._index[head][notboolmask],) + tail] = [x for x in what if not isinstance(x, numpy.ma.core.MaskedConstant)]
+            self._content[self._singleton((self._index[head][notboolmask],) + tail)] = [x for x in what if not isinstance(x, numpy.ma.core.MaskedConstant)]
 
         elif isinstance(what, (numpy.ndarray, awkward.array.base.AwkwardArray)):
             index = self._index[head]
             only = (index != self._maskedwhen)
-            self._content[(index[only],) + tail] = what[only]
+            self._content[self._singleton((index[only],) + tail)] = what[only]
 
         else:
             if isinstance(what, numpy.ma.core.MaskedConstant):
                 self._index[head] = self._maskedwhen
             else:
-                self._content[(self._index[head],) + tail] = what
+                self._content[self._singleton((self._index[head],) + tail)] = what
             
 class UnionArray(awkward.array.base.AwkwardArray):
     @classmethod
@@ -369,7 +369,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
         uniques = numpy.unique(tags)
         if len(uniques) == 1:
-            return self._contents[uniques[0]][(index,) + tail]
+            return self._contents[uniques[0]][self._singleton((index,) + tail)]
         else:
             return UnionArray(tags, index, self._contents, writeable=self._writeable)
 
@@ -396,7 +396,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
         if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
             for i, tag in enumerate(uniques):
                 selection = (i == inverse)
-                self._contents[tag][(index[selection],) + tail] = what[0]
+                self._contents[tag][self._singleton((index[selection],) + tail)] = what[0]
 
         elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
             if len(what) != len(tags):
@@ -405,9 +405,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 what = numpy.array(what)
             for i, tag in enumerate(uniques):
                 selection = (i == inverse)
-                self._contents[tag][(index[selection],) + tail] = what[selection]
+                self._contents[tag][self._singleton((index[selection],) + tail)] = what[selection]
 
         else:
             for i, tag in enumerate(uniques):
                 selection = (i == inverse)
-                self._contents[tag][(index[selection],) + tail] = what
+                self._contents[tag][self._singleton((index[selection],) + tail)] = what

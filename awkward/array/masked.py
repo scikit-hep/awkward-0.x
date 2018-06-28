@@ -114,9 +114,9 @@ class MaskedArray(awkward.array.base.AwkwardArray):
             if self._mask[head] == self._maskedwhen:
                 return numpy.ma.masked
             else:
-                return self._content[where]
+                return self._content[self._singleton(where)]
         else:
-            return MaskedArray(self._mask[head], self._content[where], maskedwhen=self._maskedwhen, writeable=self._writeable)
+            return MaskedArray(self._mask[head], self._content[self._singleton(where)], maskedwhen=self._maskedwhen, writeable=self._writeable)
 
     def __setitem__(self, where, what):
         if self._isstring(where):
@@ -140,7 +140,7 @@ class MaskedArray(awkward.array.base.AwkwardArray):
                 self._mask[head] = self._maskedwhen
             else:
                 self._mask[head] = not self._maskedwhen
-                self._content[where] = what[0]
+                self._content[self._singleton(where)] = what[0]
 
         elif isinstance(what, MaskedArray):
             self._content[where] = what._content
@@ -152,24 +152,24 @@ class MaskedArray(awkward.array.base.AwkwardArray):
         elif isinstance(what, awkward.array.indexed.IndexedMaskedArray):
             boolmask = (what._index == what._maskedwhen)
             notboolmask = numpy.logical_not(boolmask)
-            self._content[where][notboolmask] = what._content[notboolmask]
+            self._content[self._singleton(where)][notboolmask] = what._content[notboolmask]
             self._mask[head][boolmask] = self._maskedwhen
             self._mask[head][notboolmask] = not self._maskedwhen
 
         elif isinstance(what, collections.Sequence):
+            self._content[self._singleton(where)] = [x if not isinstance(x, numpy.ma.core.MaskedConstant) else 0 for x in what]
             if self._maskedwhen:
                 self._mask[head] = [isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
             else:
                 self._mask[head] = [not isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
-            self._content[where] = [x if not isinstance(x, numpy.ma.core.MaskedConstant) else 0 for x in what]
 
         elif isinstance(what, (numpy.ndarray, awkward.array.base.AwkwardArray)):
             self._mask[head] = not self._maskedwhen
-            self._content[where] = what
+            self._content[self._singleton(where)] = what
 
         else:
             self._mask[head] = not self._maskedwhen
-            self._content[where] = what
+            self._content[self._singleton(where)] = what
 
 class BitMaskedArray(MaskedArray):
     @staticmethod
@@ -330,10 +330,10 @@ class BitMaskedArray(MaskedArray):
             if self._maskwhere(head) == self._maskedwhen:
                 return numpy.ma.masked
             else:
-                return self._content[where]
+                return self._content[self._singleton(where)]
 
         else:
-            return MaskedArray(self._maskwhere(head), self._content[where], maskedwhen=self._maskedwhen, writeable=self._writeable)
+            return MaskedArray(self._maskwhere(head), self._content[self._singleton(where)], maskedwhen=self._maskedwhen, writeable=self._writeable)
 
     def __setitem__(self, where, what):
         if self._isstring(where):
@@ -356,10 +356,11 @@ class BitMaskedArray(MaskedArray):
             if isinstance(what[0], numpy.ma.core.MaskedConstant):
                 self._setmask(head, False)
             else:
+                self._content[self._singleton(where)] = what[0]
                 self._setmask(head, True)
-                self._content[where] = what[0]
 
         elif isinstance(what, MaskedArray):
+            self._content[self._singleton(where)] = what._content
             tmp = self.boolmask
             if self._maskedwhen == what._maskedwhen:
                 tmp[head] = what.boolmask
@@ -367,18 +368,17 @@ class BitMaskedArray(MaskedArray):
                 tmp[head] = numpy.logical_not(what.boolmask)
             self.boolmask = tmp
 
-            self._content[where] = what._content
-
         elif isinstance(what, awkward.array.indexed.IndexedMaskedArray):
             boolmask = (what._index == what._maskedwhen)
             notboolmask = numpy.logical_not(boolmask)
-            self._content[where][notboolmask] = what._content[notboolmask]
+            self._content[self._singleton(where)][notboolmask] = what._content[notboolmask]
             tmp = self.boolmask
             tmp[head][boolmask] = self._maskedwhen
             tmp[head][notboolmask] = not self._maskedwhen
             self.boolmask = tmp
 
         elif isinstance(what, collections.Sequence):
+            self._content[self._singleton(where)] = [x if not isinstance(x, numpy.ma.core.MaskedConstant) else 0 for x in what]
             tmp = self.boolmask
             if self._maskedwhen:
                 tmp[head] = [isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
@@ -386,12 +386,10 @@ class BitMaskedArray(MaskedArray):
                 tmp[head] = [not isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
             self.boolmask = tmp
 
-            self._content[where] = [x if not isinstance(x, numpy.ma.core.MaskedConstant) else 0 for x in what]
-
         elif isinstance(what, (numpy.ndarray, awkward.array.base.AwkwardArray)):
+            self._content[self._singleton(where)] = what
             self._setmask(head, True)
-            self._content[where] = what
 
         else:
+            self._content[self._singleton(where)] = what
             self._setmask(head, True)
-            self._content[where] = what
