@@ -322,7 +322,30 @@ def fromiter(iterable, chunksize=1024, maskmissing=True, references=False):
 
         elif isinstance(obj, tuple):
             # tuple items -> Table columns
-            raise NotImplementedError
+
+            def newchunk(obj):
+                return Table(chunksize, collections.OrderedDict(("_" + str(i), []) for i in range(len(obj))))
+
+            def ismine(obj, x):
+                return isinstance(x, Table) and list(x._content) == ["_" + str(i) for i in range(len(obj))]
+
+            def promote(obj, x):
+                return x
+
+            def fillobj(obj, array, where):
+                for i, x in enumerate(obj):
+                    n = "_" + str(i)
+                    if len(array._content[n]) == 0:
+                        subchunks = []
+                        suboffsets = [offsets[-2]]
+                    else:
+                        subchunks = [array._content[n]]
+                        suboffsets = [offsets[-2], offsets[-1]]
+
+                    fill(x, subchunks, suboffsets)
+                    array._content[n] = subchunks[-1]
+
+            insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
 
         else:
             try:
