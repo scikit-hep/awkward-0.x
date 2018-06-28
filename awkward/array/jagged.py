@@ -35,6 +35,7 @@ import numpy
 
 import awkward.array.base
 import awkward.util
+from awkward import Table
 
 class JaggedArray(awkward.array.base.AwkwardArray):
     @classmethod
@@ -406,6 +407,68 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return None
         else:
             return JaggedArray(starts, stops, result)
+        
+    def vectorized_parents(self, offsets, content):
+        if offsets[-1] != len(content):
+            raise ValueError("Given offsets isn't compatible with content length")
+        
+        index = numpy.arange(len(content), dtype=int)                     
+        below = numpy.zeros(len(content), dtype=int)                      
+        above = numpy.ones(len(content), dtype=int) * (len(offsets) - 1)  
+        while True:
+            middle = (below + above) // 2
+
+            change_below = offsets[middle + 1] <= index                   
+            change_above = offsets[middle] > index                        
+
+            if not numpy.bitwise_or(change_below, change_above).any():    
+                break
+            else:
+                below = numpy.where(change_below, middle + 1, below)     
+                above = numpy.where(change_above, middle - 1, above)      
+        return middle
+    
+    def combinations(self, Jagged_arr1, Jagged_arr2,return_indices=False, writeable=True):
+        if Jagged_arr1 is None:
+            raise ValueError("Only one array is provided, need two to proceed")
+        if Jagged_arr2 is None:
+            raise ValueError("Only one array is provided, need two to proceed")
+        if not (isinstance(Jagged_arr1, JaggedArray) or isinstance(Jagged_arr2, JaggedArray)):
+            raise ValueError("arrays given aren't instances of JaggedArray; need JaggedArrays to proceed")
+        
+        if (len(Jagged_arr1) != len(Jagged_arr2)):
+            raise ValueError("Number of events in each array must be equal")
+        
+        # Probably unnecessary. Can be generated on the fly
+        starts1 = Jagged_arr1.starts
+        stops1 = Jagged_arr1.stops
+        counts1 = stops1 - starts1
+
+        starts2 = Jagged_arr2.starts
+        stops2 = Jagged_arr2.stops
+        counts2 = stops2 - starts2
+
+        NUMEVENTS = len(Jagged_arr1)
+        pairs_counts = numpy.zeros(NUMEVENTS+1, dtype=numpy.int)
+        pairs_counts[1:] = numpy.cumsum(counts1*counts2)
+        pairs_counts = pairs_counts.astype(numpy.int)
+
+        pairs_indices = numpy.arange(pairs_counts[-1]).astype(numpy.int)
+        pairs_parents = self.vectorized_parents(pairs_counts, pairs_indices)
+        pairs_parents = pairs_parents.astype(numpy.int)
+
+        left = numpy.empty_like(pairs_indices)
+        right = numpy.empty_like(pairs_indices)
+
+        left[pairs_indices] = starts1[pairs_parents[pairs_indices]] + numpy.floor((pairs_indices-pairs_counts[pairs_parents[pairs_indices]])/counts2[pairs_parents[pairs_indices]]).astype(numpy.int)
+        right[pairs_indices] = starts2[pairs_parents[pairs_indices]]+(pairs_indices-pairs_counts[pairs_parents[pairs_indices]])-counts2[pairs_parents[pairs_indices]]*numpy.floor((pairs_indices-pairs_counts[pairs_parents[pairs_indices]])/counts2[pairs_parents[pairs_indices]])
+
+        if return_indices:
+            return JaggedArray(pairs_counts[:-1],pairs_counts[1:], Table(pairs_indices[-1], left, right))
+        else:
+            return JaggedArray(pairs_counts[:-1],pairs_counts[1:], Table(pairs_indices[-1],Jagged_arr1.content[left], Jagged_arr2.content[right]))
+
+
 
 class ByteJaggedArray(JaggedArray):
     @classmethod
