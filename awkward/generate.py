@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import codecs
+import collections
 import numbers
 
 import numpy
@@ -42,9 +43,9 @@ from awkward.array.masked import BitMaskedArray
 from awkward.array.table import Table
 from awkward.array.virtual import VirtualObjectArray
 
-def fromiter(iterable, chunksize=1024, references=False):
+def fromiter(iterable, chunksize=1024, maskmissing=True, references=False):
     if references:
-        raise NotImplementedError    # keep all ids in a hashtable to create pointers
+        raise NotImplementedError    # keep all ids in a hashtable to create pointers (IndexedArray)
 
     tobytes = lambda x: x.tobytes()
     tostring = lambda x: codecs.utf_8_decode(x.tobytes())[0]
@@ -54,8 +55,8 @@ def fromiter(iterable, chunksize=1024, references=False):
             chunks.append(newchunk(obj))
             offsets.append(offsets[-1])
 
-        if ismine(chunks[-1]):
-            chunks[-1] = promote(chunks[-1])
+        if ismine(obj, chunks[-1]):
+            chunks[-1] = promote(obj, chunks[-1])
             fillobj(obj, chunks[-1], offsets[-1] - offsets[-2])
             offsets[-1] += 1
 
@@ -66,22 +67,22 @@ def fromiter(iterable, chunksize=1024, references=False):
             chunks[-1]._nextindex += 1
             chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
 
-            chunks[-1]._content = promote(chunks[-1]._content)
+            chunks[-1]._content = promote(obj, chunks[-1]._content)
             fillobj(obj, chunks[-1]._content, nextindex)
             offsets[-1] += 1
 
-        elif isinstance(chunks[-1], IndexedMaskedArray) and ismine(chunks[-1]._content):
+        elif isinstance(chunks[-1], IndexedMaskedArray) and ismine(obj, chunks[-1]._content):
             nextindex = chunks[-1]._nextindex
             chunks[-1]._nextindex += 1
             chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
 
-            chunks[-1]._content = promote(chunks[-1]._content)
+            chunks[-1]._content = promote(obj, chunks[-1]._content)
             fillobj(obj, chunks[-1]._content, nextindex)
             offsets[-1] += 1
 
-        elif isinstance(chunks[-1], UnionArray) and any(isinstance(content, IndexedMaskedArray) and ismine(content._content) for content in chunks[-1]._contents):
+        elif isinstance(chunks[-1], UnionArray) and any(isinstance(content, IndexedMaskedArray) and ismine(obj, content._content) for content in chunks[-1]._contents):
             for tag in range(len(chunks[-1]._contents)):
-                if isinstance(chunks[-1]._contents[tag], IndexedMaskedArray) and ismine(chunks[-1]._contents[tag]._content):
+                if isinstance(chunks[-1]._contents[tag], IndexedMaskedArray) and ismine(obj, chunks[-1]._contents[tag]._content):
                     nextindex_union = chunks[-1]._nextindex[tag]
                     chunks[-1]._nextindex[tag] += 1
 
@@ -89,7 +90,7 @@ def fromiter(iterable, chunksize=1024, references=False):
                     chunks[-1]._contents[tag]._nextindex += 1
                     chunks[-1]._contents[tag]._index[nextindex_union] = nextindex_mask
 
-                    chunks[-1]._contents[tag]._content = promote(chunks[-1]._contents[tag]._content)
+                    chunks[-1]._contents[tag]._content = promote(obj, chunks[-1]._contents[tag]._content)
                     fillobj(obj, chunks[-1]._contents[tag]._content, nextindex_mask)
 
                     chunks[-1]._tags[offsets[-1] - offsets[-2]] = tag
@@ -108,16 +109,16 @@ def fromiter(iterable, chunksize=1024, references=False):
                 chunks[-1]._index[: offsets[-1] - offsets[-2]] = numpy.arange(offsets[-1] - offsets[-2], dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
                 chunks[-1]._contents = list(chunks[-1]._contents)
 
-            if not any(ismine(content) for content in chunks[-1]._contents):
+            if not any(ismine(obj, content) for content in chunks[-1]._contents):
                 chunks[-1]._nextindex.append(0)
                 chunks[-1]._contents.append(newchunk(obj))
 
             for tag in range(len(chunks[-1]._contents)):
-                if ismine(chunks[-1]._contents[tag]):
+                if ismine(obj, chunks[-1]._contents[tag]):
                     nextindex = chunks[-1]._nextindex[tag]
                     chunks[-1]._nextindex[tag] += 1
 
-                    chunks[-1]._contents[tag] = promote(chunks[-1]._contents[tag])
+                    chunks[-1]._contents[tag] = promote(obj, chunks[-1]._contents[tag])
                     fillobj(obj, chunks[-1]._contents[tag], nextindex)
 
                     chunks[-1]._tags[offsets[-1] - offsets[-2]] = tag
@@ -164,10 +165,10 @@ def fromiter(iterable, chunksize=1024, references=False):
             def newchunk(obj):
                 return numpy.empty(chunksize, dtype=numpy.bool_)
 
-            def ismine(x):
+            def ismine(obj, x):
                 return isinstance(x, numpy.ndarray) and x.dtype == numpy.dtype(numpy.bool_)
 
-            def promote(x):
+            def promote(obj, x):
                 return x
 
             def fillobj(obj, array, where):
@@ -181,10 +182,10 @@ def fromiter(iterable, chunksize=1024, references=False):
             def newchunk(obj):
                 return numpy.empty(chunksize, dtype=numpy.int64)
 
-            def ismine(x):
+            def ismine(obj, x):
                 return isinstance(x, numpy.ndarray) and issubclass(x.dtype.type, numpy.number)
 
-            def promote(x):
+            def promote(obj, x):
                 return x
 
             def fillobj(obj, array, where):
@@ -198,10 +199,10 @@ def fromiter(iterable, chunksize=1024, references=False):
             def newchunk(obj):
                 return numpy.empty(chunksize, dtype=numpy.int64)
 
-            def ismine(x):
+            def ismine(obj, x):
                 return isinstance(x, numpy.ndarray) and issubclass(x.dtype.type, numpy.number)
 
-            def promote(x):
+            def promote(obj, x):
                 if issubclass(x.dtype.type, numpy.floating):
                     return x
                 else:
@@ -218,10 +219,10 @@ def fromiter(iterable, chunksize=1024, references=False):
             def newchunk(obj):
                 return numpy.empty(chunksize, dtype=numpy.complex128)
 
-            def ismine(x):
+            def ismine(obj, x):
                 return isinstance(x, numpy.ndarray) and issubclass(x.dtype.type, numpy.number)
 
-            def promote(x):
+            def promote(obj, x):
                 if issubclass(x.dtype.type, numpy.complexfloating):
                     return x
                 else:
@@ -242,10 +243,10 @@ def fromiter(iterable, chunksize=1024, references=False):
                 out._content._starts[0] = 0
                 return out
 
-            def ismine(x):
+            def ismine(obj, x):
                 return isinstance(x, VirtualObjectArray) and (x._generator is tobytes or x._generator is tostring)
 
-            def promote(x):
+            def promote(obj, x):
                 return x
 
             def fillobj(obj, array, where):
@@ -264,10 +265,10 @@ def fromiter(iterable, chunksize=1024, references=False):
                 out._content._starts[0] = 0
                 return out
 
-            def ismine(x):
+            def ismine(obj, x):
                 return isinstance(x, VirtualObjectArray) and (x._generator is tobytes or x._generator is tostring)
 
-            def promote(x):
+            def promote(obj, x):
                 if x._generator is tostring:
                     return x
                 else:
@@ -281,9 +282,46 @@ def fromiter(iterable, chunksize=1024, references=False):
             insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
 
         elif isinstance(obj, dict):
-            HERE
+            # dict keys -> Table columns
+
+            def newchunk(obj):
+                return Table(chunksize, collections.OrderedDict((n, []) for n in obj))
+
+            if maskmissing:
+                def ismine(obj, x):
+                    return isinstance(x, Table)
+
+                def promote(obj, x):
+                    for n in obj:
+                        if not n in x._content:
+                            x._content[n] = IndexedMaskedArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), [])
+                            x._content[n]._index[: offsets[-1] - offsets[-2]] = x._content[n]._maskedwhen
+                            x._content[n]._nextindex = 0
+                    return x
+
+            else:
+                def ismine(obj, x):
+                    return isinstance(x, Table) and all(n in x._content for n in obj)
+
+                def promote(obj, x):
+                    return x
+
+            def fillobj(obj, array, where):
+                for n in obj:
+                    if len(array._content[n]) == 0:
+                        subchunks = []
+                        suboffsets = [offsets[-2]]
+                    else:
+                        subchunks = [array._content[n]]
+                        suboffsets = [offsets[-2], offsets[-1]]
+
+                    fill(obj[n], subchunks, suboffsets)
+                    array._content[n] = subchunks[-1]
+
+            insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
 
         elif isinstance(obj, tuple):
+            # tuple items -> Table columns
             raise NotImplementedError
 
         else:
@@ -291,6 +329,7 @@ def fromiter(iterable, chunksize=1024, references=False):
                 it = iter(obj)
 
             except TypeError:
+                # object attributes -> Table columns
                 HERE
 
             else:
@@ -302,10 +341,10 @@ def fromiter(iterable, chunksize=1024, references=False):
                     out._content._offsets = [0]  # as an appendable list, not a Numpy array
                     return out
 
-                def ismine(x):
+                def ismine(obj, x):
                     return isinstance(x, JaggedArray)
 
-                def promote(x):
+                def promote(obj, x):
                     return x
 
                 def fillobj(obj, array, where):
@@ -366,7 +405,7 @@ def fromiter(iterable, chunksize=1024, references=False):
             return JaggedArray.fromoffsets(offsets, trim(offsets[-1], array._content))
 
         elif isinstance(array, Table):
-            return array   # FIXME
+            return Table(length, collections.OrderedDict((n, trim(length, x)) for n, x in array._content.items()))
 
         elif isinstance(array, VirtualObjectArray):
             return VirtualObjectArray(array._generator, trim(length, array._content))
