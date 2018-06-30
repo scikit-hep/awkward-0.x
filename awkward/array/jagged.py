@@ -410,6 +410,17 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         
 
     def argproduct(self, other):
+        '''
+        Performs product (combinations) of current JaggedArray with JaggedArray `other`. Return the indices of the product.
+
+        Inputs: other; a JaggedArray instance.
+        Output: JaggedArray containing thw two indices as an awkward.array.table.Table()
+
+        Example usage:
+        >>> arr1 = JaggedArray([0,1,4,4],[1,4,4,8],content=[0,1,2,3,4,5,6,7])
+        >>> arr2 = JaggedArray([0,1,1,4],[1,1,4,5],content=['z', 'a','b','c','d'])
+        >>> result = arr1.argproduct(arr2)
+        '''
         import awkward.array.table 
         if not isinstance(other, JaggedArray):
             raise ValueError("array given isn't instance of JaggedArray; need JaggedArrays to proceed")
@@ -429,8 +440,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         pairs_counts = numpy.zeros(len(starts1)+1, dtype=self.INDEXTYPE)
         pairs_counts[1:] = numpy.cumsum(counts1*counts2, dtype=self.INDEXTYPE)
 
-        def parents_from_offsets(offsets, content):
-            out = numpy.full(len(content), -1, dtype=self.INDEXTYPE)
+        def parents_from_offsets(offsets):
+            out = numpy.full(offsets[-1], -1, dtype=self.INDEXTYPE)
             lenstarts = len(offsets)-1
             i = 0
             while i < lenstarts:
@@ -439,7 +450,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return out
         
         pairs_indices = numpy.arange(pairs_counts[-1], dtype=self.INDEXTYPE)
-        pairs_parents = parents_from_offsets(pairs_counts, pairs_indices)
+        pairs_parents = parents_from_offsets(pairs_counts)
         pairs_parents = pairs_parents.astype(self.INDEXTYPE)
 
         left = numpy.empty_like(pairs_indices)
@@ -451,6 +462,17 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return JaggedArray(pairs_counts[:-1], pairs_counts[1:], awkward.array.table.Table(pairs_indices[-1], left, right), writeable=self._writeable)
     
     def product(self, other):
+        '''
+        Performs product ( combinations) between two JaggedArrays and returns the resulting combined content as a JaggedArray()
+
+        Inputs: other; a JaggedArray instance
+        Output: JaggedArray containing thw two indices as an awkward.array.table.Table()
+
+        Example usage:
+        >>> arr1 = JaggedArray([0,1,4,4],[1,4,4,8],content=[0,1,2,3,4,5,6,7])
+        >>> arr2 = JaggedArray([0,1,1,4],[1,1,4,5],content=['z', 'a','b','c','d'])
+        >>> result = arr1.product(arr2)
+        '''
         import awkward.array.table
         product_indexes = self.argproduct(other)
         arr_list = list(product_indexes._content._content.values())
@@ -620,6 +642,17 @@ class ByteJaggedArray(JaggedArray):
         return JaggedArray(starts, stops, content, writeable=writeable)
 
     def argproduct(self, other):
+        '''
+        Performs product (combinations) of current JaggedArray with JaggedArray `other`. Return the indices of the product.
+
+        Inputs: other; a JaggedArray instance.
+        Output: JaggedArray containing thw two indices as an awkward.array.table.Table()
+
+        Example usage:
+        >>> arr1 = JaggedArray([0,1,4,4],[1,4,4,8],content=[0,1,2,3,4,5,6,7])
+        >>> arr2 = JaggedArray([0,1,1,4],[1,1,4,5],content=['z', 'a','b','c','d'])
+        >>> result = arr1.argproduct(arr2)
+        '''
         import awkward.array.table 
         if not isinstance(other, JaggedArray):
             raise ValueError("array given isn't instance of JaggedArray; need JaggedArrays to proceed")
@@ -639,8 +672,8 @@ class ByteJaggedArray(JaggedArray):
         pairs_counts = numpy.zeros(len(starts1)+1, dtype=self.INDEXTYPE)
         pairs_counts[1:] = numpy.cumsum(counts1*counts2, dtype=self.INDEXTYPE)
 
-        def parents_from_offsets(offsets, content):
-            out = numpy.full(len(content), -1, dtype=self.INDEXTYPE)
+        def parents_from_offsets(offsets):
+            out = numpy.full(offsets[-1], -1, dtype=self.INDEXTYPE)
             lenstarts = len(offsets)-1
             i = 0
             while i < lenstarts:
@@ -649,7 +682,7 @@ class ByteJaggedArray(JaggedArray):
             return out
         
         pairs_indices = numpy.arange(pairs_counts[-1], dtype=self.INDEXTYPE)
-        pairs_parents = parents_from_offsets(pairs_counts, pairs_indices)
+        pairs_parents = parents_from_offsets(pairs_counts)
         pairs_parents = pairs_parents.astype(self.INDEXTYPE)
 
         left = numpy.empty_like(pairs_indices)
@@ -661,6 +694,17 @@ class ByteJaggedArray(JaggedArray):
         return JaggedArray(pairs_counts[:-1], pairs_counts[1:], awkward.array.table.Table(pairs_indices[-1], left, right), writeable=self._writeable)
     
     def product(self, other):
+        '''
+        Performs product ( combinations) between two JaggedArrays and returns the resulting combined content as a JaggedArray()
+
+        Inputs: other; a JaggedArray instance
+        Output: JaggedArray containing thw two indices as an awkward.array.table.Table()
+
+        Example usage:
+        >>> arr1 = JaggedArray([0,1,4,4],[1,4,4,8],content=[0,1,2,3,4,5,6,7])
+        >>> arr2 = JaggedArray([0,1,1,4],[1,1,4,5],content=['z', 'a','b','c','d'])
+        >>> result = arr1.product(arr2)
+        '''
         import awkward.array.table
         product_indexes = self.argproduct(other)
         arr_list = list(product_indexes._content._content.values())
