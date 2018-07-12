@@ -92,9 +92,9 @@ class Table(awkward.array.base.AwkwardArray):
                     raise TypeError("only one positional argument when the first argument is a dict")
 
         elif isinstance(columns1, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
-            self["_0"] = columns1
+            self["0"] = columns1
             for i, x in enumerate(columns2):
-                self["_" + str(i + 1)] = x
+                self[str(i + 1)] = x
 
         else:
             raise TypeError("positional arguments may be a single dict or varargs of unnamed arrays")
