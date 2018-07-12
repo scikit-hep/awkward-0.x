@@ -198,17 +198,20 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     def counts(self):
         return self._stops - self._starts
 
-    @property
-    def parents(self):
-        out = numpy.full(len(self._content), -1, dtype=self.INDEXTYPE)
-        starts, stops = self._starts, self._stops
+    @staticmethod
+    def _parents(starts, stops):
+        out = numpy.full(stops.max(), -1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
         lenstarts = len(starts)
         i = 0
         while i < lenstarts:
             out[starts[i]:stops[i]] = i
             i += 1
         return out
-        
+
+    @property
+    def parents(self):
+        return self._parents(self._starts, self._stops)
+
     def __len__(self):                 # length is determined by starts
         return len(self._starts)       # data can grow by appending contents and stops before starts
 
@@ -414,6 +417,42 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return None
         else:
             return JaggedArray(starts, stops, result)
+
+    def argproduct(self, other):
+        import awkward.array.table 
+
+        if not isinstance(other, JaggedArray):
+            raise ValueError("other array must be a JaggedArray")
+        
+        if len(self._starts) != len(other):
+            raise ValueError("other array is not compatible")
+        
+        selfcounts = self._stops - self._starts
+        othercounts = other._stops - other._starts
+        
+        offsets = numpy.empty(len(self._starts) + 1, dtype=self.INDEXTYPE)
+        offsets[0] = 0
+        offsets[1:] = numpy.cumsum(selfcounts * othercounts, dtype=self.INDEXTYPE)
+
+        indexes = numpy.arange(offsets[-1], dtype=self.INDEXTYPE)
+        parents = self._parents(offsets[:-1], offsets[1:])
+        parents = parents.astype(self.INDEXTYPE)
+
+        left = numpy.empty_like(indexes)
+        right = numpy.empty_like(indexes)
+
+        left[indexes] = self._starts[parents[indexes]] + ((indexes - offsets[parents[indexes]]) // othercounts[parents[indexes]])
+        right[indexes] = other._starts[parents[indexes]] + (indexes - offsets[parents[indexes]]) - othercounts[parents[indexes]] * ((indexes - offsets[parents[indexes]]) // othercounts[parents[indexes]])
+
+        return JaggedArray(offsets[:-1], offsets[1:], awkward.array.table.Table(offsets[-1], left, right), writeable=self._writeable)
+
+    def product(self, other):
+        import awkward.array.table
+
+        argproduct = self.argproduct(other)
+        left, right = argproduct._content._content.values()
+
+        return JaggedArray(argproduct.starts, argproduct.stops, awkward.array.table.Table(len(left), self._content[left], other.content[right]))
 
 class ByteJaggedArray(JaggedArray):
     @classmethod
