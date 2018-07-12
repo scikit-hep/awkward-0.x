@@ -198,3 +198,22 @@ class TestJagged(unittest.TestCase):
         a[:] = JaggedArray.fromiter([[3, 2, 1], [], [5, 4]])
         self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x03\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00\xff\xff\x05\x00\x00\x00\x04\x00\x00\x00\xff")
         self.assertEqual([a[i].tolist() for i in range(len(a))], [[3, 2, 1], [], [5, 4]])
+
+    def test_jagged_argproduct(self):
+        starts1 = [0,1,4,4]
+        stops1 = [1,4,4,8]
+
+        starts2 = [0,1,1,4]
+        stops2 = [1,1,4,5]
+
+        arr1 = JaggedArray(starts1, stops1,content=[0,1,2,3,4,5,6,7])
+        arr2 = JaggedArray(starts2, stops2,content=['z', 'a','b','c','d'])
+
+        arr_product = arr1.product(arr2)
+        self.assertTrue((list(arr_product._content._content.values())[0]==list([0,4,5,6,7])).all())
+
+        arr_argproduct = arr1.argproduct(arr2)
+        self.assertTrue((list(arr_argproduct._content._content.values())[0]==list([0,4,5,6,7])).all())
+        self.assertTrue((list(arr_argproduct._content._content.values())[1]==list([0,4,4,4,4])).all())
+
+
