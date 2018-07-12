@@ -14,7 +14,7 @@ Manipulate jagged, chunky, and/or bitmasked arrays as easily as Numpy.
 Installation
 ============
 
-Install histbook like any other Python package:
+Install awkward-array like any other Python package:
 
 .. code-block:: bash
 
