@@ -68,9 +68,6 @@ class Table(awkward.array.base.AwkwardArray):
         def __getitem__(self, name):
             return self._table._content[name][self._index]
 
-        def __setitem__(self, name, what):
-            self._table._content[name][self._index] = what
-
         def __dir__(self):
             return list(self._table._content)
 
@@ -160,10 +157,6 @@ class Table(awkward.array.base.AwkwardArray):
             self._length = 0
 
     @property
-    def writeable(self):
-        return True
-
-    @property
     def dtype(self):
         return numpy.dtype([(n, x.dtype) for n, x in self._content.items()])
 
@@ -249,12 +242,6 @@ class Table(awkward.array.base.AwkwardArray):
                 return out
 
     def __setitem__(self, where, what):
-        if isinstance(where, tuple):
-            if len(where) == 1:
-                where = where[0]
-            else:
-                raise IndexError("only integers, slices (`:`), ellipsis (`...`), numpy.newaxis (`None`) and integer or boolean arrays are valid indices")
-
         if isinstance(where, awkward.util.string):
             try:
                 array = self._content[where]
@@ -268,27 +255,7 @@ class Table(awkward.array.base.AwkwardArray):
                 self._check_length(array)[self.start:self.stop:self.step] = what
 
         else:
-            try:
-                assert all(isinstance(x, awkward.util.string) for x in where)
-
-            except (TypeError, AssertionError):
-                for x in self._content.values():
-                    self._check_length(x)[self.start:self.stop:self.step][where] = what
-
-            else:
-                if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
-                    for n in where:
-                        self._check_length(self._content[n])[self.start:self.stop:self.step] = what[0]
-
-                elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
-                    if len(what) != len(where):
-                        raise ValueError("cannot copy seqence with size {0} to array axis with dimension {1}".format(len(what), len(where)))
-                    for wht, n in zip(what, where):
-                        self._check_length(self._content[n])[self.start:self.stop:self.step] = wht
-
-                else:
-                    for n in where:
-                        self._check_length(self._content[n])[self.start:self.stop:self.step] = what
+            raise TypeError("can only assign columns to Table")
 
     def __iter__(self):
         i = self._start

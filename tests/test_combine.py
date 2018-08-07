@@ -83,9 +83,6 @@ class TestCombine(unittest.TestCase):
     def test_ChunkedArray_VirtualObjectArray(self):
         pass
 
-    def test_ChunkedArray_PersistentArray(self):
-        pass
-
     def test_PartitionedArray_ChunkedArray(self):
         pass
 
@@ -129,9 +126,6 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_PartitionedArray_VirtualObjectArray(self):
-        pass
-
-    def test_PartitionedArray_PersistentArray(self):
         pass
     
     def test_AppendableArray_ChunkedArray(self):
@@ -178,9 +172,6 @@ class TestCombine(unittest.TestCase):
 
     def test_AppendableArray_VirtualObjectArray(self):
         pass
-
-    def test_AppendableArray_PersistentArray(self):
-        pass
     
     def test_IndexedArray_ChunkedArray(self):
         pass
@@ -226,9 +217,6 @@ class TestCombine(unittest.TestCase):
 
     def test_IndexedArray_VirtualObjectArray(self):
         pass
-
-    def test_IndexedArray_PersistentArray(self):
-        pass
     
     def test_ByteIndexedArray_ChunkedArray(self):
         pass
@@ -273,9 +261,6 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_ByteIndexedArray_VirtualObjectArray(self):
-        pass
-
-    def test_ByteIndexedArray_PersistentArray(self):
         pass
     
     def test_IndexedMaskedArray_ChunkedArray(self):
@@ -323,9 +308,6 @@ class TestCombine(unittest.TestCase):
     def test_IndexedMaskedArray_VirtualObjectArray(self):
         pass
 
-    def test_IndexedMaskedArray_PersistentArray(self):
-        pass
-
     def test_UnionArray_ChunkedArray(self):
         pass
 
@@ -369,9 +351,6 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_UnionArray_VirtualObjectArray(self):
-        pass
-
-    def test_UnionArray_PersistentArray(self):
         pass
     
     def test_JaggedArray_ChunkedArray(self):
@@ -432,9 +411,6 @@ class TestCombine(unittest.TestCase):
     def test_JaggedArray_VirtualObjectArray(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], VirtualObjectArray(str, [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
         self.assertEqual(a.tolist(), [["0.0", "1.1", "2.2"], [], ["3.3", "4.4"], ["5.5", "6.6", "7.7", "8.8", "9.9"]])
-
-    def test_JaggedArray_PersistentArray(self):
-        pass
     
     def test_ByteJaggedArray_ChunkedArray(self):
         pass
@@ -479,9 +455,6 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_ByteJaggedArray_VirtualObjectArray(self):
-        pass
-
-    def test_ByteJaggedArray_PersistentArray(self):
         pass
     
     def test_MaskedArray_ChunkedArray(self):
@@ -533,9 +506,6 @@ class TestCombine(unittest.TestCase):
 
     def test_MaskedArray_VirtualObjectArray(self):
         pass
-
-    def test_MaskedArray_PersistentArray(self):
-        pass
     
     def test_BitMaskedArray_ChunkedArray(self):
         pass
@@ -581,9 +551,6 @@ class TestCombine(unittest.TestCase):
 
     def test_BitMaskedArray_VirtualObjectArray(self):
         pass
-
-    def test_BitMaskedArray_PersistentArray(self):
-        pass
     
     def test_SparseArray_ChunkedArray(self):
         pass
@@ -628,9 +595,6 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_SparseArray_VirtualObjectArray(self):
-        pass
-
-    def test_SparseArray_PersistentArray(self):
         pass
     
     def test_Table_ChunkedArray(self):
@@ -682,9 +646,6 @@ class TestCombine(unittest.TestCase):
 
     def test_Table_VirtualObjectArray(self):
         pass
-
-    def test_Table_PersistentArray(self):
-        pass
     
     def test_VirtualArray_ChunkedArray(self):
         pass
@@ -730,9 +691,6 @@ class TestCombine(unittest.TestCase):
 
     def test_VirtualArray_VirtualObjectArray(self):
         pass
-
-    def test_VirtualArray_PersistentArray(self):
-        pass
     
     def test_VirtualObjectArray_ChunkedArray(self):
         pass
@@ -777,55 +735,4 @@ class TestCombine(unittest.TestCase):
         pass
 
     def test_VirtualObjectArray_VirtualObjectArray(self):
-        pass
-
-    def test_VirtualObjectArray_PersistentArray(self):
-        pass
-    
-    def test_PersistentArray_ChunkedArray(self):
-        pass
-
-    def test_PersistentArray_PartitionedArray(self):
-        pass
-
-    def test_PersistentArray_AppendableArray(self):
-        pass
-
-    def test_PersistentArray_IndexedArray(self):
-        pass
-
-    def test_PersistentArray_ByteIndexedArray(self):
-        pass
-
-    def test_PersistentArray_IndexedMaskedArray(self):
-        pass
-
-    def test_PersistentArray_UnionArray(self):
-        pass
-
-    def test_PersistentArray_JaggedArray(self):
-        pass
-
-    def test_PersistentArray_ByteJaggedArray(self):
-        pass
-
-    def test_PersistentArray_MaskedArray(self):
-        pass
-
-    def test_PersistentArray_BitMaskedArray(self):
-        pass
-
-    def test_PersistentArray_SparseArray(self):
-        pass
-
-    def test_PersistentArray_Table(self):
-        pass
-
-    def test_PersistentArray_VirtualArray(self):
-        pass
-
-    def test_PersistentArray_VirtualObjectArray(self):
-        pass
-
-    def test_PersistentArray_PersistentArray(self):
         pass

@@ -36,11 +36,10 @@ import numpy
 import awkward.array.base
 
 class MaskedArray(awkward.array.base.AwkwardArray):
-    def __init__(self, mask, content, maskedwhen=True, writeable=True):
+    def __init__(self, mask, content, maskedwhen=True):
         self.mask = mask
         self.content = content
         self.maskedwhen = maskedwhen
-        self.writeable = writeable
 
     @property
     def mask(self):
@@ -84,14 +83,6 @@ class MaskedArray(awkward.array.base.AwkwardArray):
         self._maskedwhen = bool(value)
 
     @property
-    def writeable(self):
-        return self._writeable
-
-    @writeable.setter
-    def writeable(self, value):
-        self._writeable = bool(value)
-
-    @property
     def dtype(self):
         return self._content.dtype
 
@@ -104,7 +95,7 @@ class MaskedArray(awkward.array.base.AwkwardArray):
 
     def __getitem__(self, where):
         if self._isstring(where):
-            return MaskedArray(self._mask, self._content[where], maskedwhen=self._maskedwhen, writeable=self._writeable)
+            return MaskedArray(self._mask, self._content[where], maskedwhen=self._maskedwhen)
 
         if not isinstance(where, tuple):
             where = (where,)
@@ -116,74 +107,20 @@ class MaskedArray(awkward.array.base.AwkwardArray):
             else:
                 return self._content[self._singleton(where)]
         else:
-            return MaskedArray(self._mask[head], self._content[self._singleton(where)], maskedwhen=self._maskedwhen, writeable=self._writeable)
-
-    def __setitem__(self, where, what):
-        if self._isstring(where):
-            MaskedArray(self._mask, self._content[where], maskedwhen=self._maskedwhen, writeable=self._writeable)[:] = what
-            return
-
-        import awkward.array.indexed
-
-        if not self._writeable:
-            raise ValueError("assignment destination is read-only")
-
-        if not isinstance(where, tuple):
-            where = (where,)
-        head, tail = where[0], where[1:]
-
-        if isinstance(what, numpy.ma.core.MaskedConstant) or (isinstance(what, collections.Sequence) and len(what) == 1 and isinstance(what[0], numpy.ma.core.MaskedConstant)):
-            self._mask[head] = self._maskedwhen
-            
-        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
-            if isinstance(what[0], numpy.ma.core.MaskedConstant):
-                self._mask[head] = self._maskedwhen
-            else:
-                self._mask[head] = not self._maskedwhen
-                self._content[self._singleton(where)] = what[0]
-
-        elif isinstance(what, MaskedArray):
-            self._content[where] = what._content
-            if self._maskedwhen == what._maskedwhen:
-                self._mask[head] = what.boolmask
-            else:
-                self._mask[head] = numpy.logical_not(what.boolmask)
-
-        elif isinstance(what, awkward.array.indexed.IndexedMaskedArray):
-            boolmask = (what._index == what._maskedwhen)
-            notboolmask = numpy.logical_not(boolmask)
-            self._content[self._singleton(where)][notboolmask] = what._content[notboolmask]
-            self._mask[head][boolmask] = self._maskedwhen
-            self._mask[head][notboolmask] = not self._maskedwhen
-
-        elif isinstance(what, collections.Sequence):
-            self._content[self._singleton(where)] = [x if not isinstance(x, numpy.ma.core.MaskedConstant) else 0 for x in what]
-            if self._maskedwhen:
-                self._mask[head] = [isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
-            else:
-                self._mask[head] = [not isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
-
-        elif isinstance(what, (numpy.ndarray, awkward.array.base.AwkwardArray)):
-            self._mask[head] = not self._maskedwhen
-            self._content[self._singleton(where)] = what
-
-        else:
-            self._mask[head] = not self._maskedwhen
-            self._content[self._singleton(where)] = what
+            return MaskedArray(self._mask[head], self._content[self._singleton(where)], maskedwhen=self._maskedwhen)
 
 class BitMaskedArray(MaskedArray):
     @staticmethod
-    def fromboolmask(mask, content, maskedwhen=True, lsb=True, writeable=True):
-        out = BitMaskedArray([], content, maskedwhen=maskedwhen, lsb=lsb, writeable=writeable)
+    def fromboolmask(mask, content, maskedwhen=True, lsb=True):
+        out = BitMaskedArray([], content, maskedwhen=maskedwhen, lsb=lsb)
         out.boolmask = mask
         return out
 
-    def __init__(self, mask, content, maskedwhen=True, lsb=True, writeable=True):
+    def __init__(self, mask, content, maskedwhen=True, lsb=True):
         self.mask = mask
         self.content = content
         self.maskedwhen = maskedwhen
         self.lsb = lsb
-        self.writeable = writeable
 
     @property
     def mask(self):
@@ -320,7 +257,7 @@ class BitMaskedArray(MaskedArray):
 
     def __getitem__(self, where):
         if self._isstring(where):
-            return MaskedArray(self._mask, self._content[where], maskedwhen=self._maskedwhen, writeable=self._writeable)
+            return MaskedArray(self._mask, self._content[where], maskedwhen=self._maskedwhen)
 
         if not isinstance(where, tuple):
             where = (where,)
@@ -333,63 +270,4 @@ class BitMaskedArray(MaskedArray):
                 return self._content[self._singleton(where)]
 
         else:
-            return MaskedArray(self._maskwhere(head), self._content[self._singleton(where)], maskedwhen=self._maskedwhen, writeable=self._writeable)
-
-    def __setitem__(self, where, what):
-        if self._isstring(where):
-            MaskedArray(self._mask, self._content[where], maskedwhen=self._maskedwhen, writeable=self._writeable)[:] = what
-            return
-
-        import awkward.array.indexed
-
-        if not self._writeable:
-            raise ValueError("assignment destination is read-only")
-
-        if not isinstance(where, tuple):
-            where = (where,)
-        head, tail = where[0], where[1:]
-
-        if isinstance(what, numpy.ma.core.MaskedConstant) or (isinstance(what, collections.Sequence) and len(what) == 1 and isinstance(what[0], numpy.ma.core.MaskedConstant)):
-            self._setmask(head, False)
-
-        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
-            if isinstance(what[0], numpy.ma.core.MaskedConstant):
-                self._setmask(head, False)
-            else:
-                self._content[self._singleton(where)] = what[0]
-                self._setmask(head, True)
-
-        elif isinstance(what, MaskedArray):
-            self._content[self._singleton(where)] = what._content
-            tmp = self.boolmask
-            if self._maskedwhen == what._maskedwhen:
-                tmp[head] = what.boolmask
-            else:
-                tmp[head] = numpy.logical_not(what.boolmask)
-            self.boolmask = tmp
-
-        elif isinstance(what, awkward.array.indexed.IndexedMaskedArray):
-            boolmask = (what._index == what._maskedwhen)
-            notboolmask = numpy.logical_not(boolmask)
-            self._content[self._singleton(where)][notboolmask] = what._content[notboolmask]
-            tmp = self.boolmask
-            tmp[head][boolmask] = self._maskedwhen
-            tmp[head][notboolmask] = not self._maskedwhen
-            self.boolmask = tmp
-
-        elif isinstance(what, collections.Sequence):
-            self._content[self._singleton(where)] = [x if not isinstance(x, numpy.ma.core.MaskedConstant) else 0 for x in what]
-            tmp = self.boolmask
-            if self._maskedwhen:
-                tmp[head] = [isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
-            else:
-                tmp[head] = [not isinstance(x, numpy.ma.core.MaskedConstant) for x in what]
-            self.boolmask = tmp
-
-        elif isinstance(what, (numpy.ndarray, awkward.array.base.AwkwardArray)):
-            self._content[self._singleton(where)] = what
-            self._setmask(head, True)
-
-        else:
-            self._content[self._singleton(where)] = what
-            self._setmask(head, True)
+            return MaskedArray(self._maskwhere(head), self._content[self._singleton(where)], maskedwhen=self._maskedwhen)

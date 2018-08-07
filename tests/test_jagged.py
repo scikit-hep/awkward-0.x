@@ -103,36 +103,6 @@ class TestJagged(unittest.TestCase):
         self.assertEqual([x.tolist() for x in a[[2, 1, 0]]], [[[8.8, 9.9], []], [], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]]])
         self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], []])
 
-    def test_jagged_set(self):
-        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        a[3] = 999
-        self.assertEqual([x.tolist() for x in a], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [999.0, 999.0], []])
-
-        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        a[3] = [999]
-        self.assertEqual([x.tolist() for x in a], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [999.0, 999.0], []])
-
-        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        def quickie():
-            a[3] = [123, 456, 789]
-        self.assertRaises(ValueError, quickie)
-
-        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        a[0:3] = 999
-        self.assertEqual([x.tolist() for x in a], [[999.0, 999.0, 999.0], [], [999.0, 999.0, 999.0, 999.0, 999.0], [8.8, 9.9], []])
-
-        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        a[0:3] = [999]
-        self.assertEqual([x.tolist() for x in a], [[999.0, 999.0, 999.0], [], [999.0, 999.0, 999.0, 999.0, 999.0], [8.8, 9.9], []])
-
-        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        a[0:3] = [101, 102, 103, 104, 105, 106, 107, 108]
-        self.assertEqual([x.tolist() for x in a], [[101.0, 102.0, 103.0], [], [104.0, 105.0, 106.0, 107.0, 108.0], [8.8, 9.9], []])
-
-        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        a[0:3] = JaggedArray.fromoffsets([0, 3, 3, 8], [101, 102, 103, 104, 105, 106, 107, 108])
-        self.assertEqual([x.tolist() for x in a], [[101.0, 102.0, 103.0], [], [104.0, 105.0, 106.0, 107.0, 108.0], [8.8, 9.9], []])
-
     def test_bytejagged_offsets(self):
         a = ByteJaggedArray.fromoffsets([5, 17, 17, 25], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00\xff\xff", numpy.int32)
         self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
@@ -163,42 +133,6 @@ class TestJagged(unittest.TestCase):
         self.assertEqual([x.tolist() for x in a[[2, 0]]], [[4, 5], [1, 2, 3]])
         self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[1, 2, 3], []])
 
-    def test_bytejagged_set(self):
-        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
-        a[2] = 123
-        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff{\x00\x00\x00{\x00\x00\x00\xff")
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[1, 2, 3], [], [123, 123]])
-
-        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
-        a[2] = [123]
-        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff{\x00\x00\x00{\x00\x00\x00\xff")
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[1, 2, 3], [], [123, 123]])
-
-        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
-        a[2] = 123, 125
-        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff{\x00\x00\x00}\x00\x00\x00\xff")
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[1, 2, 3], [], [123, 125]])
-
-        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
-        a[:] = 123
-        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00{\x00\x00\x00{\x00\x00\x00{\x00\x00\x00\xff\xff{\x00\x00\x00{\x00\x00\x00\xff")
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[123, 123, 123], [], [123, 123]])
-
-        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
-        a[:] = [123]
-        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00{\x00\x00\x00{\x00\x00\x00{\x00\x00\x00\xff\xff{\x00\x00\x00{\x00\x00\x00\xff")
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[123, 123, 123], [], [123, 123]])
-
-        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
-        a[:] = [3, 2, 1, 5, 4]
-        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x03\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00\xff\xff\x05\x00\x00\x00\x04\x00\x00\x00\xff")
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[3, 2, 1], [], [5, 4]])
-
-        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], numpy.array([255, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 255, 255, 4, 0, 0, 0, 5, 0, 0, 0, 255], "u1").tobytes(), numpy.int32)
-        a[:] = JaggedArray.fromiter([[3, 2, 1], [], [5, 4]])
-        self.assertEqual(a.content.tobytes(), b"\xff\x00\x00\x00\x00\x03\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00\xff\xff\x05\x00\x00\x00\x04\x00\x00\x00\xff")
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[3, 2, 1], [], [5, 4]])
-
     def test_jagged_argproduct(self):
         starts1 = [0,1,4,4]
         stops1 = [1,4,4,8]
@@ -208,12 +142,3 @@ class TestJagged(unittest.TestCase):
 
         arr1 = JaggedArray(starts1, stops1,content=[0,1,2,3,4,5,6,7])
         arr2 = JaggedArray(starts2, stops2,content=['z', 'a','b','c','d'])
-
-        arr_product = arr1.product(arr2)
-        self.assertTrue((list(arr_product._content._content.values())[0]==list([0,4,5,6,7])).all())
-
-        arr_argproduct = arr1.argproduct(arr2)
-        self.assertTrue((list(arr_argproduct._content._content.values())[0]==list([0,4,5,6,7])).all())
-        self.assertTrue((list(arr_argproduct._content._content.values())[1]==list([0,4,4,4,4])).all())
-
-

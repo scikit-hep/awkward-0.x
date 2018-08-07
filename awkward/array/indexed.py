@@ -36,10 +36,9 @@ import numpy
 import awkward.array.base
 
 class IndexedArray(awkward.array.base.AwkwardArray):
-    def __init__(self, index, content, writeable=True):
+    def __init__(self, index, content):
         self.index = index
         self.content = content
-        self.writeable = writeable
 
     @property
     def index(self):
@@ -67,14 +66,6 @@ class IndexedArray(awkward.array.base.AwkwardArray):
         self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
     @property
-    def writeable(self):
-        return self._writeable
-
-    @writeable.setter
-    def writeable(self, value):
-        self._writeable = bool(value)
-
-    @property
     def dtype(self):
         return self._content.dtype
 
@@ -87,23 +78,13 @@ class IndexedArray(awkward.array.base.AwkwardArray):
         
     def __getitem__(self, where):
         if self._isstring(where):
-            return IndexedArray(self._index, self._content[where], writeable=self._writeable)
+            return IndexedArray(self._index, self._content[where])
 
         return self._content[self._index[where]]
 
-    def __setitem__(self, where, what):
-        if self._isstring(where):
-            IndexedArray(self._index, self._content[where], writeable=self._writeable)[:] = what
-            return
-
-        if not self._writeable:
-            raise ValueError("assignment destination is read-only")
-        self._content[self._index[where]] = what
-
 class ByteIndexedArray(IndexedArray):
-    def __init__(self, index, content, dtype, writeable=True):
-        self._writeable = writeable
-        super(ByteIndexedArray, self).__init__(index, content, writeable=writeable)
+    def __init__(self, index, content, dtype):
+        super(ByteIndexedArray, self).__init__(index, content)
         self.dtype = dtype
 
     @property
@@ -113,16 +94,6 @@ class ByteIndexedArray(IndexedArray):
     @content.setter
     def content(self, value):
         self._content = self._toarray(value, self.CHARTYPE, numpy.ndarray).view(self.CHARTYPE).reshape(-1)
-        self._content.flags.writeable = self._writeable
-
-    @property
-    def writeable(self):
-        return self._writeable
-
-    @writeable.setter
-    def writeable(self, value):
-        self._writeable = bool(value)
-        self._content.flags.writeable = self._writeable
 
     @property
     def dtype(self):
@@ -134,7 +105,7 @@ class ByteIndexedArray(IndexedArray):
         
     def __getitem__(self, where):
         if self._isstring(where):
-            return ByteIndexedArray(self._index, self._content[where], self._dtype, writeable=self._writeable)
+            return ByteIndexedArray(self._index, self._content[where], self._dtype)
 
         starts = self._index[where]
 
@@ -162,40 +133,9 @@ class ByteIndexedArray(IndexedArray):
                 numpy.frombuffer(hold, dtype=self.CHARTYPE)[holdidx] = self._content[contidx]
                 return hold
 
-    def __setitem__(self, where, what):
-        if self._isstring(where):
-            ByteIndexedArray(self._index, self._content[where], self._dtype, writeable=self._writeable)[:] = what
-            return
-
-        if not self._writeable:
-            raise ValueError("assignment destination is read-only")
-
-        starts = self._index[where]
-
-        if len(starts.shape) == 0:
-            pos, offset = divmod(starts, self._dtype.itemsize)
-            buf = numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)
-            buf[pos] = what
-
-        elif len(starts) != 0:
-            hold = numpy.empty(len(starts), dtype=self._dtype)
-            hold[:] = what
-
-            contidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
-            contidx[::self._dtype.itemsize] = starts
-            for offset in range(1, self._dtype.itemsize):
-                contidx[offset::self._dtype.itemsize] = contidx[::self._dtype.itemsize] + offset
-
-            holdidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
-            holdidx[::self._dtype.itemsize] = numpy.arange(0, len(starts) * self._dtype.itemsize, self._dtype.itemsize)
-            for offset in range(1, self._dtype.itemsize):
-                holdidx[offset::self._dtype.itemsize] = holdidx[::self._dtype.itemsize] + offset
-
-            self._content[contidx] = numpy.frombuffer(hold, dtype=self.CHARTYPE)
-
 class IndexedMaskedArray(IndexedArray):
-    def __init__(self, index, content, maskedwhen=-1, writeable=True):
-        super(IndexedMaskedArray, self).__init__(index, content, writeable=writeable)
+    def __init__(self, index, content, maskedwhen=-1):
+        super(IndexedMaskedArray, self).__init__(index, content)
         self.maskedwhen = maskedwhen
 
     @property
@@ -210,7 +150,7 @@ class IndexedMaskedArray(IndexedArray):
 
     def __getitem__(self, where):
         if self._isstring(where):
-            return IndexedMaskedArray(self._index, self._content[where], maskedwhen=self._maskedwhen, writeable=self._writeable)
+            return IndexedMaskedArray(self._index, self._content[where], maskedwhen=self._maskedwhen)
 
         if not isinstance(where, tuple):
             where = (where,)
@@ -222,74 +162,17 @@ class IndexedMaskedArray(IndexedArray):
             else:
                 return self._content[self._singleton((self._index[head],) + tail)]
         else:
-            return IndexedMaskedArray(self._index[head], self._content[self._singleton((slice(None),) + tail)], maskedwhen=self._maskedwhen, writeable=self._writeable)
-        
-    def __setitem__(self, where, what):
-        if self._isstring(where):
-            IndexedMaskedArray(self._index[head], self._content[self._singleton((slice(None),) + tail)], maskedwhen=self._maskedwhen, writeable=self._writeable)[:] = what
-            return
-
-        import awkward.array.masked
-
-        if not self._writeable:
-            raise ValueError("assignment destination is read-only")
-
-        if not isinstance(where, tuple):
-            where = (where,)
-        head, tail = where[0], where[1:]
-
-        if isinstance(what, numpy.ma.core.MaskedConstant) or (isinstance(what, collections.Sequence) and len(what) == 1 and isinstance(what[0], numpy.ma.core.MaskedConstant)):
-            self._index[head] = self._maskedwhen
-
-        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
-            if isinstance(what[0], numpy.ma.core.MaskedConstant):
-                self._index[head] = self._maskedwhen
-            else:
-                self._content[self._singleton((self._index[head],) + tail)] = what[0]
-
-        elif isinstance(what, awkward.array.masked.MaskedArray):
-            boolmask = what.boolmask
-            notboolmask = numpy.logical_not(boolmask)
-            if what._maskedwhen:
-                self._index[head][boolmask] = self._maskedwhen
-                self._content[self._singleton((self._index[head][notboolmask],) + tail)] = what._content[notboolmask]
-            else:
-                self._index[head][notboolmask] = self._maskedwhen
-                self._content[self._singleton((self._index[head][boolmask],) + tail)] = what._content[boolmask]
-
-        elif isinstance(what, IndexedMaskedArray):
-            boolmask = (what._index == what._maskedwhen)
-            notboolmask = numpy.logical_not(boolmask)
-            self._index[head][boolmask] = self._maskedwhen
-            self._content[self._singleton((self._index[head][notboolmask],) + tail)] = what._content[notboolmask]
-
-        elif isinstance(what, collections.Sequence):
-            boolmask = numpy.array([isinstance(x, numpy.ma.core.MaskedConstant) for x in what])
-            notboolmask = numpy.logical_not(boolmask)
-            self._index[head][boolmask] = self._maskedwhen
-            self._content[self._singleton((self._index[head][notboolmask],) + tail)] = [x for x in what if not isinstance(x, numpy.ma.core.MaskedConstant)]
-
-        elif isinstance(what, (numpy.ndarray, awkward.array.base.AwkwardArray)):
-            index = self._index[head]
-            only = (index != self._maskedwhen)
-            self._content[self._singleton((index[only],) + tail)] = what[only]
-
-        else:
-            if isinstance(what, numpy.ma.core.MaskedConstant):
-                self._index[head] = self._maskedwhen
-            else:
-                self._content[self._singleton((self._index[head],) + tail)] = what
+            return IndexedMaskedArray(self._index[head], self._content[self._singleton((slice(None),) + tail)], maskedwhen=self._maskedwhen)
             
 class UnionArray(awkward.array.base.AwkwardArray):
     @classmethod
-    def fromtags(cls, tags, contents, writeable=True):
+    def fromtags(cls, tags, contents):
         raise NotImplementedError
 
-    def __init__(self, tags, index, contents, writeable=True):
+    def __init__(self, tags, index, contents):
         self.tags = tags
         self.index = index
         self.contents = contents
-        self.writeable = writeable
 
     @property
     def tags(self):
@@ -334,14 +217,6 @@ class UnionArray(awkward.array.base.AwkwardArray):
         self._contents = tuple(self._toarray(x, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray)) for x in value)
 
     @property
-    def writeable(self):
-        return self._writeable
-
-    @writeable.setter
-    def writeable(self, value):
-        self._writeable = bool(value)
-
-    @property
     def dtype(self):
         return numpy.dtype(object)
 
@@ -354,7 +229,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     def __getitem__(self, where):
         if self._isstring(where):
-            return UnionArray(self._tags, self._index, tuple(x[where] for x in self._contents), writeable=self._writeable)
+            return UnionArray(self._tags, self._index, tuple(x[where] for x in self._contents))
 
         if self._tags.shape != self._index.shape:
             raise ValueError("tags shape ({0}) does not match index shape ({1})".format(self._tags.shape, self._index.shape))
@@ -371,43 +246,4 @@ class UnionArray(awkward.array.base.AwkwardArray):
         if len(uniques) == 1:
             return self._contents[uniques[0]][self._singleton((index,) + tail)]
         else:
-            return UnionArray(tags, index, self._contents, writeable=self._writeable)
-
-    def __setitem__(self, where, what):
-        if self._isstring(where):
-            UnionArray(self._tags, self._index, tuple(x[where] for x in self._contents), writeable=self._writeable)[:] = what
-            return
-
-        if not self._writeable:
-            raise ValueError("assignment destination is read-only")
-
-        if self._tags.shape != self._index.shape:
-            raise ValueError("tags shape ({0}) does not match index shape ({1})".format(self._tags.shape, self._index.shape))
-
-        if not isinstance(where, tuple):
-            where = (where,)
-        head, tail = where[0], where[1:]
-
-        tags = self._tags[head]
-        index = self._index[head]
-        assert tags.shape == index.shape
-        uniques, inverse = numpy.unique(tags, return_inverse=True)
-
-        if isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)) and len(what) == 1:
-            for i, tag in enumerate(uniques):
-                selection = (i == inverse)
-                self._contents[tag][self._singleton((index[selection],) + tail)] = what[0]
-
-        elif isinstance(what, (collections.Sequence, numpy.ndarray, awkward.array.base.AwkwardArray)):
-            if len(what) != len(tags):
-                raise ValueError("cannot copy seqence with size {0} to array axis with dimension {1}".format(len(what), len(tags)))
-            if isinstance(what, collections.Sequence):
-                what = numpy.array(what)
-            for i, tag in enumerate(uniques):
-                selection = (i == inverse)
-                self._contents[tag][self._singleton((index[selection],) + tail)] = what[selection]
-
-        else:
-            for i, tag in enumerate(uniques):
-                selection = (i == inverse)
-                self._contents[tag][self._singleton((index[selection],) + tail)] = what
+            return UnionArray(tags, index, self._contents)
