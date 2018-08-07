@@ -49,6 +49,40 @@ class Type(object):
 
         return out
 
+    def __repr__(self):
+        memo = set()
+        labeled = []
+        def find(x):
+            if not isinstance(x, numpy.dtype):
+                if id(x) not in memo:
+                    memo.add(id(x))
+                    if isinstance(x, ArrayType):
+                        find(x.to)
+                    elif isinstance(x, TableType):
+                        for y in x._fields.values():
+                            find(y)
+                    elif isinstance(x, UnionType):
+                        for y in x._possibilities:
+                            find(y)
+                else:
+                    labeled.add(x)
+        find(self)
+        return self._repr(labeled, set())
+
+    def _repr(self, labeled, seen):
+        if id(self) in seen:
+            for i, x in enumerate(labeled):
+                if self is x:
+                    return "T{0}".format(i)
+        else:
+            for i, x in enumerate(labeled):
+                if self is x:
+                    out = "T{0} = ".format(i)
+                    break
+            else:
+                out = ""
+            return out + self._subrepr(labeled, seen)
+
 class ArrayType(Type):
     def __init__(self, *args):
         if len(args) == 0:
@@ -73,6 +107,9 @@ class ArrayType(Type):
             else:
                 self.to = ArrayType(*args[1:])
 
+    def _subrepr(self, labeled, seen):            
+        HERE
+        
     @property
     def takes(self):
         return self._takes
