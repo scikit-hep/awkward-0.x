@@ -30,6 +30,11 @@
 
 import itertools
 import sys
+try:
+    import collections
+    OrderedDict = collections.OrderedDict
+except ImportError:
+    raise NotImplementedError
 
 import numpy
 
