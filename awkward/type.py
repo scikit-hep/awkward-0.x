@@ -178,10 +178,9 @@ class Type(object):
                         break
                     newtable._fields[n] = y._to
                 else:
-                    if first != numpy.inf:
-                        x = ArrayType.__new__(ArrayType)
-                        x._takes = first
-                        x._to = newtable
+                    x = ArrayType.__new__(ArrayType)
+                    x._takes = first
+                    x._to = newtable
 
             # apply union(X, union(Y)) == union(X, Y)
             if isinstance(x, UnionType) and any(isinstance(y, UnionType) for y in x._possibilities):

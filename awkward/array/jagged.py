@@ -146,6 +146,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 return self._content[starts + head][tail]
                 
             else:
+                # the other cases are possible, but complicated; the first sets the form
                 raise NotImplementedError("jagged second dimension index type: {0}".format(original_head))
 
 # class JaggedArray(awkward.array.base.AwkwardArray):
