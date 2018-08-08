@@ -33,5 +33,5 @@ import numpy
 import awkward.array.base
 
 class SparseArray(awkward.array.base.AwkwardArray):
-    def __init__(self, index, content, shape, zero=0, writeable=True):
+    def __init__(self, index, content, shape, zero=0):
         raise NotImplementedError

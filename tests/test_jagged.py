@@ -38,107 +38,107 @@ class TestJagged(unittest.TestCase):
     def runTest(self):
         pass
 
-    def test_jagged_offsets(self):
-        offsets = numpy.array([0, 3, 3, 8, 10, 10])
-        a = JaggedArray.fromoffsets(offsets, [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        self.assertTrue(offsets is a.offsets)
+    # def test_jagged_offsets(self):
+    #     offsets = numpy.array([0, 3, 3, 8, 10, 10])
+    #     a = JaggedArray.fromoffsets(offsets, [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+    #     self.assertTrue(offsets is a.offsets)
 
-        a = JaggedArray([5, 2, 99, 1], [8, 7, 99, 3], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        self.assertRaises(ValueError, lambda: a.offsets)
+    #     a = JaggedArray([5, 2, 99, 1], [8, 7, 99, 3], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+    #     self.assertRaises(ValueError, lambda: a.offsets)
 
-    def test_jagged_iterable(self):
-        a = JaggedArray.fromiter([[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
-        self.assertEqual([x.tolist() for x in a], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
+    # def test_jagged_iterable(self):
+    #     a = JaggedArray.fromiter([[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
+    #     self.assertEqual([x.tolist() for x in a], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
 
-    def test_jagged_compatible(self):
-        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        b = JaggedArray([0, 3, 3, 8, 10], [3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        self.assertTrue(JaggedArray.compatible(a, b))
+    # def test_jagged_compatible(self):
+    #     a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+    #     b = JaggedArray([0, 3, 3, 8, 10], [3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+    #     self.assertTrue(JaggedArray.compatible(a, b))
 
-    def test_jagged_get(self):
-        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
-        self.assertEqual([x.tolist() for x in a], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
-        self.assertEqual([x.tolist() for x in a[:]], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
-        self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[0.0, 1.1, 2.2]], [[]], [[3.3, 4.4, 5.5, 6.6, 7.7]], [[8.8, 9.9]], [[]]])
-        self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[0.0, 1.1, 2.2], []], [[], [3.3, 4.4, 5.5, 6.6, 7.7]], [[3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9]], [[8.8, 9.9], []]])
-        self.assertEqual([x.tolist() for x in a[[2, 1, 0, -2]]], [[3.3, 4.4, 5.5, 6.6, 7.7], [], [0.0, 1.1, 2.2], [8.8, 9.9]])
-        self.assertEqual([x.tolist() for x in a[[True, False, True, False, True]]], [[0.0, 1.1, 2.2], [3.3, 4.4, 5.5, 6.6, 7.7], []])
+    # def test_jagged_get(self):
+    #     a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+    #     self.assertEqual([a[i].tolist() for i in range(len(a))], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
+    #     self.assertEqual([x.tolist() for x in a], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
+    #     self.assertEqual([x.tolist() for x in a[:]], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
+    #     self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[0.0, 1.1, 2.2]], [[]], [[3.3, 4.4, 5.5, 6.6, 7.7]], [[8.8, 9.9]], [[]]])
+    #     self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[0.0, 1.1, 2.2], []], [[], [3.3, 4.4, 5.5, 6.6, 7.7]], [[3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9]], [[8.8, 9.9], []]])
+    #     self.assertEqual([x.tolist() for x in a[[2, 1, 0, -2]]], [[3.3, 4.4, 5.5, 6.6, 7.7], [], [0.0, 1.1, 2.2], [8.8, 9.9]])
+    #     self.assertEqual([x.tolist() for x in a[[True, False, True, False, True]]], [[0.0, 1.1, 2.2], [3.3, 4.4, 5.5, 6.6, 7.7], []])
 
-    def test_jagged_get_startsstops(self):
-        a = JaggedArray([5, 2, 99, 1], [8, 7, 99, 3], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        self.assertEqual([x.tolist() for x in a], [[5.5, 6.6, 7.7], [2.2, 3.3, 4.4, 5.5, 6.6], [], [1.1, 2.2]])
-        self.assertEqual([x.tolist() for x in a[:]], [[5.5, 6.6, 7.7], [2.2, 3.3, 4.4, 5.5, 6.6], [], [1.1, 2.2]])
+    # def test_jagged_get_startsstops(self):
+    #     a = JaggedArray([5, 2, 99, 1], [8, 7, 99, 3], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+    #     self.assertEqual([x.tolist() for x in a], [[5.5, 6.6, 7.7], [2.2, 3.3, 4.4, 5.5, 6.6], [], [1.1, 2.2]])
+    #     self.assertEqual([x.tolist() for x in a[:]], [[5.5, 6.6, 7.7], [2.2, 3.3, 4.4, 5.5, 6.6], [], [1.1, 2.2]])
 
-    def test_jagged_get2d(self):
-        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2], [3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7], [8.8, 8.8], [9.9, 9.9]])
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], [], [[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], [[8.8, 8.8], [9.9, 9.9]], []])
-        self.assertEqual([x.tolist() for x in a], [[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], [], [[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], [[8.8, 8.8], [9.9, 9.9]], []])
-        self.assertEqual([x.tolist() for x in a[:]], [[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], [], [[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], [[8.8, 8.8], [9.9, 9.9]], []])
-        self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]]], [[]], [[[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]]], [[[8.8, 8.8], [9.9, 9.9]]], [[]]])
-        self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], []], [[], [[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]]], [[[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], [[8.8, 8.8], [9.9, 9.9]]], [[[8.8, 8.8], [9.9, 9.9]], []]])
-        self.assertEqual([x.tolist() for x in a[[2, 1, 0, -2]]], [[[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], [], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], [[8.8, 8.8], [9.9, 9.9]]])
-        self.assertEqual([x.tolist() for x in a[[True, False, True, False, True]]], [[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], [[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], []])
+    # def test_jagged_get2d(self):
+    #     a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2], [3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7], [8.8, 8.8], [9.9, 9.9]])
+    #     self.assertEqual([a[i].tolist() for i in range(len(a))], [[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], [], [[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], [[8.8, 8.8], [9.9, 9.9]], []])
+    #     self.assertEqual([x.tolist() for x in a], [[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], [], [[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], [[8.8, 8.8], [9.9, 9.9]], []])
+    #     self.assertEqual([x.tolist() for x in a[:]], [[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], [], [[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], [[8.8, 8.8], [9.9, 9.9]], []])
+    #     self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]]], [[]], [[[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]]], [[[8.8, 8.8], [9.9, 9.9]]], [[]]])
+    #     self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], []], [[], [[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]]], [[[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], [[8.8, 8.8], [9.9, 9.9]]], [[[8.8, 8.8], [9.9, 9.9]], []]])
+    #     self.assertEqual([x.tolist() for x in a[[2, 1, 0, -2]]], [[[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], [], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], [[8.8, 8.8], [9.9, 9.9]]])
+    #     self.assertEqual([x.tolist() for x in a[[True, False, True, False, True]]], [[[0.0, 0.0], [1.1, 1.1], [2.2, 2.2]], [[3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7]], []])
 
-    def test_jagged_getstruct(self):
-        a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], numpy.array([(0.0, 0.0), (1.1, 1.1), (2.2, 2.2), (3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7), (8.8, 8.8), (9.9, 9.9)], dtype=[("a", float), ("b", float)]))
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [(8.8, 8.8), (9.9, 9.9)], []])
-        self.assertEqual([x.tolist() for x in a], [[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [(8.8, 8.8), (9.9, 9.9)], []])
-        self.assertEqual([x.tolist() for x in a[:]], [[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [(8.8, 8.8), (9.9, 9.9)], []])
-        self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)]], [[]], [[(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)]], [[(8.8, 8.8), (9.9, 9.9)]], [[]]])
-        self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], []], [[], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)]], [[(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [(8.8, 8.8), (9.9, 9.9)]], [[(8.8, 8.8), (9.9, 9.9)], []]])
-        self.assertEqual([x.tolist() for x in a[[2, 1, 0, -2]]], [[(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [], [(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [(8.8, 8.8), (9.9, 9.9)]])
-        self.assertEqual([x.tolist() for x in a[[True, False, True, False, True]]], [[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], []])
+    # def test_jagged_getstruct(self):
+    #     a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], numpy.array([(0.0, 0.0), (1.1, 1.1), (2.2, 2.2), (3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7), (8.8, 8.8), (9.9, 9.9)], dtype=[("a", float), ("b", float)]))
+    #     self.assertEqual([a[i].tolist() for i in range(len(a))], [[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [(8.8, 8.8), (9.9, 9.9)], []])
+    #     self.assertEqual([x.tolist() for x in a], [[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [(8.8, 8.8), (9.9, 9.9)], []])
+    #     self.assertEqual([x.tolist() for x in a[:]], [[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [(8.8, 8.8), (9.9, 9.9)], []])
+    #     self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)]], [[]], [[(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)]], [[(8.8, 8.8), (9.9, 9.9)]], [[]]])
+    #     self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], []], [[], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)]], [[(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [(8.8, 8.8), (9.9, 9.9)]], [[(8.8, 8.8), (9.9, 9.9)], []]])
+    #     self.assertEqual([x.tolist() for x in a[[2, 1, 0, -2]]], [[(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [], [(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [(8.8, 8.8), (9.9, 9.9)]])
+    #     self.assertEqual([x.tolist() for x in a[[True, False, True, False, True]]], [[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], []])
 
-    def test_jagged_getempty(self):
-        a = JaggedArray([], [], [0.0, 1.1, 2.2, 3.3, 4.4])
-        self.assertEqual(a[:].tolist(), [])
+    # def test_jagged_getempty(self):
+    #     a = JaggedArray([], [], [0.0, 1.1, 2.2, 3.3, 4.4])
+    #     self.assertEqual(a[:].tolist(), [])
 
-    def test_jagged_jagged(self):
-        a = JaggedArray.fromoffsets([0, 3, 3, 5], JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], [], [[8.8, 9.9], []]])
-        self.assertEqual([x.tolist() for x in a], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], [], [[8.8, 9.9], []]])
-        self.assertEqual([x.tolist() for x in a[:]], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], [], [[8.8, 9.9], []]])
-        self.assertEqual([x.tolist() for x in a[:-1]], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], []])
-        self.assertEqual([x.tolist() for x in a[[2, 1, 0]]], [[[8.8, 9.9], []], [], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]]])
-        self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], []])
+    # def test_jagged_jagged(self):
+    #     a = JaggedArray.fromoffsets([0, 3, 3, 5], JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+    #     self.assertEqual([a[i].tolist() for i in range(len(a))], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], [], [[8.8, 9.9], []]])
+    #     self.assertEqual([x.tolist() for x in a], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], [], [[8.8, 9.9], []]])
+    #     self.assertEqual([x.tolist() for x in a[:]], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], [], [[8.8, 9.9], []]])
+    #     self.assertEqual([x.tolist() for x in a[:-1]], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], []])
+    #     self.assertEqual([x.tolist() for x in a[[2, 1, 0]]], [[[8.8, 9.9], []], [], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]]])
+    #     self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], []])
 
-    def test_bytejagged_offsets(self):
-        a = ByteJaggedArray.fromoffsets([5, 17, 17, 25], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00\xff\xff", numpy.int32)
-        self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
+    # def test_bytejagged_offsets(self):
+    #     a = ByteJaggedArray.fromoffsets([5, 17, 17, 25], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00\xff\xff", numpy.int32)
+    #     self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
 
-        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff\x04\x00\x00\x00\x05\x00\x00\x00\xff", numpy.int32)
-        self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
+    #     a = ByteJaggedArray([5, 17, 19], [17, 17, 27], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff\x04\x00\x00\x00\x05\x00\x00\x00\xff", numpy.int32)
+    #     self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
 
-    def test_bytejagged_iterable(self):
-        a = ByteJaggedArray.fromiter([[1, 2, 3], [], [4, 5]])
-        self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])        
-        if a.dtype.itemsize == 8:
-            self.assertEqual(a.offsets.tolist(), [0, 24, 24, 40])
-            self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00")
-        elif a.dtype.itemsize == 4:
-            self.assertEqual(a.offsets.tolist(), [0, 12, 12, 20])
-            self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00")
-        else:
-            raise AssertionError(a.dtype.itemsize)
+    # def test_bytejagged_iterable(self):
+    #     a = ByteJaggedArray.fromiter([[1, 2, 3], [], [4, 5]])
+    #     self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])        
+    #     if a.dtype.itemsize == 8:
+    #         self.assertEqual(a.offsets.tolist(), [0, 24, 24, 40])
+    #         self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00")
+    #     elif a.dtype.itemsize == 4:
+    #         self.assertEqual(a.offsets.tolist(), [0, 12, 12, 20])
+    #         self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00")
+    #     else:
+    #         raise AssertionError(a.dtype.itemsize)
 
-    def test_bytejagged_get(self):
-        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff\x04\x00\x00\x00\x05\x00\x00\x00\xff", numpy.int32)
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[1, 2, 3], [], [4, 5]])
-        self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
-        self.assertEqual([x.tolist() for x in a[:]], [[1, 2, 3], [], [4, 5]])
-        self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[1, 2, 3]], [[]], [[4, 5]]])
-        self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[1, 2, 3], []], [[], [4, 5]]])
-        self.assertEqual([x.tolist() for x in a[[2, 0, 1, 2]]], [[4, 5], [1, 2, 3], [], [4, 5]])
-        self.assertEqual([x.tolist() for x in a[[2, 0]]], [[4, 5], [1, 2, 3]])
-        self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[1, 2, 3], []])
+    # def test_bytejagged_get(self):
+    #     a = ByteJaggedArray([5, 17, 19], [17, 17, 27], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff\x04\x00\x00\x00\x05\x00\x00\x00\xff", numpy.int32)
+    #     self.assertEqual([a[i].tolist() for i in range(len(a))], [[1, 2, 3], [], [4, 5]])
+    #     self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
+    #     self.assertEqual([x.tolist() for x in a[:]], [[1, 2, 3], [], [4, 5]])
+    #     self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[1, 2, 3]], [[]], [[4, 5]]])
+    #     self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[1, 2, 3], []], [[], [4, 5]]])
+    #     self.assertEqual([x.tolist() for x in a[[2, 0, 1, 2]]], [[4, 5], [1, 2, 3], [], [4, 5]])
+    #     self.assertEqual([x.tolist() for x in a[[2, 0]]], [[4, 5], [1, 2, 3]])
+    #     self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[1, 2, 3], []])
 
-    def test_jagged_argproduct(self):
-        starts1 = [0,1,4,4]
-        stops1 = [1,4,4,8]
+    # def test_jagged_argproduct(self):
+    #     starts1 = [0,1,4,4]
+    #     stops1 = [1,4,4,8]
 
-        starts2 = [0,1,1,4]
-        stops2 = [1,1,4,5]
+    #     starts2 = [0,1,1,4]
+    #     stops2 = [1,1,4,5]
 
-        arr1 = JaggedArray(starts1, stops1,content=[0,1,2,3,4,5,6,7])
-        arr2 = JaggedArray(starts2, stops2,content=['z', 'a','b','c','d'])
+    #     arr1 = JaggedArray(starts1, stops1,content=[0,1,2,3,4,5,6,7])
+    #     arr2 = JaggedArray(starts2, stops2,content=['z', 'a','b','c','d'])

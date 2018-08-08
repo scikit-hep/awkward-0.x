@@ -37,213 +37,229 @@ import awkward.array.base
 
 class IndexedArray(awkward.array.base.AwkwardArray):
     def __init__(self, index, content):
-        self.index = index
-        self.content = content
+        raise NotImplementedError
 
-    @property
-    def index(self):
-        return self._index
+# class IndexedArray(awkward.array.base.AwkwardArray):
+#     def __init__(self, index, content):
+#         self.index = index
+#         self.content = content
 
-    @index.setter
-    def index(self, value):
-        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+#     @property
+#     def index(self):
+#         return self._index
 
-        if len(value.shape) != 1:
-            raise TypeError("index must have 1-dimensional shape")
-        if value.shape[0] == 0:
-            value = value.view(self.INDEXTYPE)
-        if not issubclass(value.dtype.type, numpy.integer):
-            raise TypeError("index must have integer dtype")
+#     @index.setter
+#     def index(self, value):
+#         value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
-        self._index = value
+#         if len(value.shape) != 1:
+#             raise TypeError("index must have 1-dimensional shape")
+#         if value.shape[0] == 0:
+#             value = value.view(self.INDEXTYPE)
+#         if not issubclass(value.dtype.type, numpy.integer):
+#             raise TypeError("index must have integer dtype")
 
-    @property
-    def content(self):
-        return self._content
+#         self._index = value
 
-    @content.setter
-    def content(self, value):
-        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+#     @property
+#     def content(self):
+#         return self._content
 
-    @property
-    def dtype(self):
-        return self._content.dtype
+#     @content.setter
+#     def content(self, value):
+#         self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
-    @property
-    def shape(self):
-        return (len(self._index),) + self._content.shape[1:]
+#     @property
+#     def dtype(self):
+#         return self._content.dtype
 
-    def __len__(self):
-        return len(self._index)
+#     @property
+#     def shape(self):
+#         return (len(self._index),) + self._content.shape[1:]
+
+#     def __len__(self):
+#         return len(self._index)
         
-    def __getitem__(self, where):
-        if self._isstring(where):
-            return IndexedArray(self._index, self._content[where])
+#     def __getitem__(self, where):
+#         if self._isstring(where):
+#             return IndexedArray(self._index, self._content[where])
 
-        return self._content[self._index[where]]
+#         return self._content[self._index[where]]
 
 class ByteIndexedArray(IndexedArray):
     def __init__(self, index, content, dtype):
-        super(ByteIndexedArray, self).__init__(index, content)
-        self.dtype = dtype
-
-    @property
-    def content(self):
-        return self._content
-
-    @content.setter
-    def content(self, value):
-        self._content = self._toarray(value, self.CHARTYPE, numpy.ndarray).view(self.CHARTYPE).reshape(-1)
-
-    @property
-    def dtype(self):
-        return self._dtype
-
-    @dtype.setter
-    def dtype(self, value):
-        self._dtype = numpy.dtype(value)
+        raise NotImplementedError
         
-    def __getitem__(self, where):
-        if self._isstring(where):
-            return ByteIndexedArray(self._index, self._content[where], self._dtype)
+# class ByteIndexedArray(IndexedArray):
+#     def __init__(self, index, content, dtype):
+#         super(ByteIndexedArray, self).__init__(index, content)
+#         self.dtype = dtype
 
-        starts = self._index[where]
+#     @property
+#     def content(self):
+#         return self._content
 
-        if len(starts.shape) == 0:
-            pos, offset = divmod(starts, self._dtype.itemsize)
-            return numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)[pos]
+#     @content.setter
+#     def content(self, value):
+#         self._content = self._toarray(value, self.CHARTYPE, numpy.ndarray).view(self.CHARTYPE).reshape(-1)
 
-        else:
-            if len(starts) == 0:
-                return numpy.empty(0, dtype=self._dtype)
+#     @property
+#     def dtype(self):
+#         return self._dtype
 
-            else:
-                hold = numpy.empty(len(starts), dtype=self._dtype)
+#     @dtype.setter
+#     def dtype(self, value):
+#         self._dtype = numpy.dtype(value)
+        
+#     def __getitem__(self, where):
+#         if self._isstring(where):
+#             return ByteIndexedArray(self._index, self._content[where], self._dtype)
 
-                contidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
-                contidx[::self._dtype.itemsize] = starts
-                for offset in range(1, self._dtype.itemsize):
-                    contidx[offset::self._dtype.itemsize] = contidx[::self._dtype.itemsize] + offset
+#         starts = self._index[where]
+
+#         if len(starts.shape) == 0:
+#             pos, offset = divmod(starts, self._dtype.itemsize)
+#             return numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)[pos]
+
+#         else:
+#             if len(starts) == 0:
+#                 return numpy.empty(0, dtype=self._dtype)
+
+#             else:
+#                 hold = numpy.empty(len(starts), dtype=self._dtype)
+
+#                 contidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
+#                 contidx[::self._dtype.itemsize] = starts
+#                 for offset in range(1, self._dtype.itemsize):
+#                     contidx[offset::self._dtype.itemsize] = contidx[::self._dtype.itemsize] + offset
                 
-                holdidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
-                holdidx[::self._dtype.itemsize] = numpy.arange(0, len(starts) * self._dtype.itemsize, self._dtype.itemsize)
-                for offset in range(1, self._dtype.itemsize):
-                    holdidx[offset::self._dtype.itemsize] = holdidx[::self._dtype.itemsize] + offset
+#                 holdidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
+#                 holdidx[::self._dtype.itemsize] = numpy.arange(0, len(starts) * self._dtype.itemsize, self._dtype.itemsize)
+#                 for offset in range(1, self._dtype.itemsize):
+#                     holdidx[offset::self._dtype.itemsize] = holdidx[::self._dtype.itemsize] + offset
 
-                numpy.frombuffer(hold, dtype=self.CHARTYPE)[holdidx] = self._content[contidx]
-                return hold
+#                 numpy.frombuffer(hold, dtype=self.CHARTYPE)[holdidx] = self._content[contidx]
+#                 return hold
 
 class IndexedMaskedArray(IndexedArray):
     def __init__(self, index, content, maskedwhen=-1):
-        super(IndexedMaskedArray, self).__init__(index, content)
-        self.maskedwhen = maskedwhen
-
-    @property
-    def maskedwhen(self):
-        return self._maskedwhen
-
-    @maskedwhen.setter
-    def maskedwhen(self, value):
-        if not isinstance(value, (numbers.Integral, numpy.integer)):
-            raise TypeError("maskedwhen must be an integer")
-        self._maskedwhen = value
-
-    def __getitem__(self, where):
-        if self._isstring(where):
-            return IndexedMaskedArray(self._index, self._content[where], maskedwhen=self._maskedwhen)
-
-        if not isinstance(where, tuple):
-            where = (where,)
-        head, tail = where[0], where[1:]
-
-        if isinstance(head, (numbers.Integral, numpy.integer)):
-            if self._index[head] == self._maskedwhen:
-                return numpy.ma.masked
-            else:
-                return self._content[self._singleton((self._index[head],) + tail)]
-        else:
-            return IndexedMaskedArray(self._index[head], self._content[self._singleton((slice(None),) + tail)], maskedwhen=self._maskedwhen)
-            
-class UnionArray(awkward.array.base.AwkwardArray):
-    @classmethod
-    def fromtags(cls, tags, contents):
         raise NotImplementedError
 
+# class IndexedMaskedArray(IndexedArray):
+#     def __init__(self, index, content, maskedwhen=-1):
+#         super(IndexedMaskedArray, self).__init__(index, content)
+#         self.maskedwhen = maskedwhen
+
+#     @property
+#     def maskedwhen(self):
+#         return self._maskedwhen
+
+#     @maskedwhen.setter
+#     def maskedwhen(self, value):
+#         if not isinstance(value, (numbers.Integral, numpy.integer)):
+#             raise TypeError("maskedwhen must be an integer")
+#         self._maskedwhen = value
+
+#     def __getitem__(self, where):
+#         if self._isstring(where):
+#             return IndexedMaskedArray(self._index, self._content[where], maskedwhen=self._maskedwhen)
+
+#         if not isinstance(where, tuple):
+#             where = (where,)
+#         head, tail = where[0], where[1:]
+
+#         if isinstance(head, (numbers.Integral, numpy.integer)):
+#             if self._index[head] == self._maskedwhen:
+#                 return numpy.ma.masked
+#             else:
+#                 return self._content[self._singleton((self._index[head],) + tail)]
+#         else:
+#             return IndexedMaskedArray(self._index[head], self._content[self._singleton((slice(None),) + tail)], maskedwhen=self._maskedwhen)
+
+class UnionArray(awkward.array.base.AwkwardArray):
     def __init__(self, tags, index, contents):
-        self.tags = tags
-        self.index = index
-        self.contents = contents
+        raise NotImplementedError
 
-    @property
-    def tags(self):
-        return self._tags
+# class UnionArray(awkward.array.base.AwkwardArray):
+#     @classmethod
+#     def fromtags(cls, tags, contents):
+#         raise NotImplementedError
 
-    @tags.setter
-    def tags(self, value):
-        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+#     def __init__(self, tags, index, contents):
+#         self.tags = tags
+#         self.index = index
+#         self.contents = contents
 
-        if len(value.shape) != 1:
-            raise TypeError("tags must have 1-dimensional shape")
-        if value.shape[0] == 0:
-            value = value.view(self.INDEXTYPE)
-        if not issubclass(value.dtype.type, numpy.integer):
-            raise TypeError("tags must have integer dtype")
+#     @property
+#     def tags(self):
+#         return self._tags
 
-        self._tags = value
+#     @tags.setter
+#     def tags(self, value):
+#         value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
-    @property
-    def index(self):
-        return self._index
+#         if len(value.shape) != 1:
+#             raise TypeError("tags must have 1-dimensional shape")
+#         if value.shape[0] == 0:
+#             value = value.view(self.INDEXTYPE)
+#         if not issubclass(value.dtype.type, numpy.integer):
+#             raise TypeError("tags must have integer dtype")
 
-    @index.setter
-    def index(self, value):
-        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+#         self._tags = value
 
-        if len(value.shape) != 1:
-            raise TypeError("index must have 1-dimensional shape")
-        if value.shape[0] == 0:
-            value = value.view(self.INDEXTYPE)
-        if not issubclass(value.dtype.type, numpy.integer):
-            raise TypeError("index must have integer dtype")
+#     @property
+#     def index(self):
+#         return self._index
 
-        self._index = value
+#     @index.setter
+#     def index(self, value):
+#         value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
-    @property
-    def contents(self):
-        return self._contents
+#         if len(value.shape) != 1:
+#             raise TypeError("index must have 1-dimensional shape")
+#         if value.shape[0] == 0:
+#             value = value.view(self.INDEXTYPE)
+#         if not issubclass(value.dtype.type, numpy.integer):
+#             raise TypeError("index must have integer dtype")
 
-    @contents.setter
-    def contents(self, value):
-        self._contents = tuple(self._toarray(x, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray)) for x in value)
+#         self._index = value
 
-    @property
-    def dtype(self):
-        return numpy.dtype(object)
+#     @property
+#     def contents(self):
+#         return self._contents
 
-    @property
-    def shape(self):
-        return (len(self._tags),)
+#     @contents.setter
+#     def contents(self, value):
+#         self._contents = tuple(self._toarray(x, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray)) for x in value)
 
-    def __len__(self):
-        return len(self._tags)
+#     @property
+#     def dtype(self):
+#         return numpy.dtype(object)
 
-    def __getitem__(self, where):
-        if self._isstring(where):
-            return UnionArray(self._tags, self._index, tuple(x[where] for x in self._contents))
+#     @property
+#     def shape(self):
+#         return (len(self._tags),)
 
-        if self._tags.shape != self._index.shape:
-            raise ValueError("tags shape ({0}) does not match index shape ({1})".format(self._tags.shape, self._index.shape))
+#     def __len__(self):
+#         return len(self._tags)
 
-        if not isinstance(where, tuple):
-            where = (where,)
-        head, tail = where[0], where[1:]
+#     def __getitem__(self, where):
+#         if self._isstring(where):
+#             return UnionArray(self._tags, self._index, tuple(x[where] for x in self._contents))
 
-        tags = self._tags[head]
-        index = self._index[head]
-        assert tags.shape == index.shape
+#         if self._tags.shape != self._index.shape:
+#             raise ValueError("tags shape ({0}) does not match index shape ({1})".format(self._tags.shape, self._index.shape))
 
-        uniques = numpy.unique(tags)
-        if len(uniques) == 1:
-            return self._contents[uniques[0]][self._singleton((index,) + tail)]
-        else:
-            return UnionArray(tags, index, self._contents)
+#         if not isinstance(where, tuple):
+#             where = (where,)
+#         head, tail = where[0], where[1:]
+
+#         tags = self._tags[head]
+#         index = self._index[head]
+#         assert tags.shape == index.shape
+
+#         uniques = numpy.unique(tags)
+#         if len(uniques) == 1:
+#             return self._contents[uniques[0]][self._singleton((index,) + tail)]
+#         else:
+#             return UnionArray(tags, index, self._contents)
