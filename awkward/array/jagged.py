@@ -141,7 +141,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 if head < 0:
                     head = counts + head
 
-                if not numpy.bitwise_and(0 < head, head < counts).any():
+                if not numpy.bitwise_and(0 <= head, head < counts).all():
                     raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
                 return self._content[starts + head][tail]
                 
