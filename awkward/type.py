@@ -34,17 +34,22 @@ import numpy
 
 import awkward.util
 
-def from_numpy(shape, dtype, masked=False):
-    if not isinstance(shape, tuple):
-        shape = (shape,)
-    out = ArrayType(*(shape + (dtype,)))
-    if masked:
-        out = OptionType(out)
-    return out
-
 def from_array(array):
     if isinstance(array, numpy.ndarray):
-        return from_numpy(array.shape, array.dtype, isinstance(array, numpy.ma.MaskedArray))
+        if array.dtype.names is None:
+            out = ArrayType(*(array.shape + (array.dtype,)))
+            if isinstance(array, numpy.ma.MaskedArray):
+                out = OptionType(out)
+            return out
+        else:
+            table = TableType.__new__(TableType)
+            table._fields = awkward.util.OrderedDict()
+            for n in array.dtype.names:
+                table[n] = array.dtype[n]
+            out = ArrayType(*(array.shape + (table,)))
+            if isinstance(array, numpy.ma.MaskedArray):
+                out = OptionType(out)
+            return out
     else:
         return array.type
 
@@ -71,13 +76,15 @@ class Type(object):
                 if id(x) not in memo:
                     memo.add(id(x))
                     if isinstance(x, ArrayType):
-                        find(x.to)
+                        find(x._to)
                     elif isinstance(x, TableType):
                         for y in x._fields.values():
                             find(y)
                     elif isinstance(x, UnionType):
                         for y in x._possibilities:
                             find(y)
+                    elif isinstance(x, OptionType):
+                        find(x._type)
                 else:
                     labeled.append(x)
         find(self)
@@ -109,6 +116,7 @@ class Type(object):
             for i, x in enumerate(labeled):
                 if self is x:
                     return indent + "T{0}".format(i)
+            raise AssertionError("{0} not in {1}".format(id(self), seen))
         else:
             for i, x in enumerate(labeled):
                 if self is x:
@@ -231,7 +239,7 @@ class UnionType(Type):
         return "UnionType({0})".format(", ".join(repr(x) if isinstance(x, numpy.dtype) else x._repr(labeled, seen) for x in self._possibilities))
 
     def _substr(self, labeled, seen, indent):
-        subs = [str(x) if isinstance(x, numpy.dtype) else x._substr(labeled, seen, indent + " ") for x in self._possibilities]
+        subs = [str(x) if isinstance(x, numpy.dtype) else x._str(labeled, seen, indent + " ") for x in self._possibilities]
         width = max(len(y) for x in subs for y in x.lstrip(" ").split("\n"))
         out = [x + " " * (width - len(x.lstrip(" ").split("\n")[-1])) for x in subs]
         return "(" + (" |\n" + indent + " ").join(out) + " )"
@@ -268,7 +276,7 @@ class OptionType(Type):
         if isinstance(self._type, numpy.dtype):
             return "?{0}".format(str(self._type))
         else:
-            return "?({0})".format(self._type._substr(labeled, seen, indent + "  ").lstrip(" "))
+            return "?({0})".format(self._type._str(labeled, seen, indent + "  ").lstrip(" "))
 
     @property
     def type(self):
