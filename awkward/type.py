@@ -69,12 +69,12 @@ class Type(object):
         return out
 
     def _labeled(self):
-        memo = set()
+        seen = set()
         labeled = []
         def find(x):
             if not isinstance(x, numpy.dtype):
-                if id(x) not in memo:
-                    memo.add(id(x))
+                if id(x) not in seen:
+                    seen.add(id(x))
                     if isinstance(x, ArrayType):
                         find(x._to)
                     elif isinstance(x, TableType):
@@ -127,6 +127,98 @@ class Type(object):
             seen.add(id(self))
             return out + self._substr(labeled, seen, indent + (" " * len(out)))
         
+    @staticmethod
+    def _copy(x, seen):
+        if id(x) in seen:
+            return seen[id(x)]
+
+        elif isinstance(x, ArrayType):
+            seen[id(x)] = ArrayType.__new__(ArrayType)
+            seen[id(x)]._takes = x.takes
+            seen[id(x)]._to = Type._copy(x.to, seen)
+            return seen[id(x)]
+
+        elif isinstance(x, TableType):
+            seen[id(x)] = TableType.__new__(TableType)
+            seen[id(x)]._fields = awkward.util.OrderedDict()
+            for n, y in x._fields.items():
+                seen[id(x)]._fields[n] = Type._copy(y, seen)
+            return seen[id(x)]
+
+        elif isinstance(x, UnionType):
+            seen[id(x)] = UnionType.__new__(UnionType)
+            seen[id(x)]._possibilities = []
+            for y in x._possibilities:
+                seen[id(x)]._possibilities.append(Type._copy(y, seen))
+            return seen[id(x)]
+
+        elif isinstance(x, OptionType):
+            seen[id(x)] = OptionType.__new__(OptionType)
+            seen[id(x)]._type = Type._copy(x._type, seen)
+            return seen[id(x)]
+
+        elif isinstance(x, numpy.dtype):
+            return x
+
+        else:
+            raise AssertionError(x)
+
+    @staticmethod
+    def _canonical(x, seen):
+        if id(x) not in seen:
+            # apply string-integer commutation so that TableTypes are nested as deeply as possible
+            if isinstance(x, TableType) and len(x._fields) > 0 and all(isinstance(y, ArrayType) for y in x._fields.values()):
+                newtable = TableType.__new__(TableType)
+                newtable._fields = awkward.util.OrderedDict()
+                first = None
+                for n, y in x._fields.items():
+                    if first is None:
+                        first = y._takes
+                    elif first != y._takes:
+                        break
+                    newtable._fields[n] = y._to
+                else:
+                    x = ArrayType.__new__(ArrayType)
+                    x._takes = first
+                    x._to = newtable
+
+            # apply union(X, union(Y)) == union(X, Y)
+            if isinstance(x, UnionType) and any(isinstance(y, UnionType) for y in x._possibilities):
+                possibilities = []
+                for y in x._possibilities:
+                    if isinstance(y, UnionType):
+                        possibilities.extend(y._possibilities)
+                    else:
+                        possibilities.append(y)
+                x = UnionType.__new__(UnionType)
+                x._possibilities = possibilities
+
+            # apply optional(optional(X)) == optional(X)
+            if isinstance(x, OptionType) and isinstance(x._type, OptionType):
+                x = x._type
+
+            seen.add(id(x))
+            if isinstance(x, ArrayType):
+                x._to = Type._canonical(x._to, seen)
+            elif isinstance(x, TableType):
+                for n in x._fields:
+                    x._fields[n] = Type._canonical(x._fields[n], seen)
+            elif isinstance(x, UnionType):
+                for i in range(len(x._possibilities)):
+                    x._possibilities[i] = Type._canonical(x._possibilities[i], seen)
+            elif isinstance(x, OptionType):
+                x._type = Type._canonical(x._type, seen)
+
+        return x
+
+    def __eq__(self, other):
+        one = Type._canonical(Type._copy(self, {}), set())
+        two = Type._canonical(Type._copy(other, {}), set())
+        return one._eq(two, set())
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 class ArrayType(Type):
     def __init__(self, *args):
         if len(args) == 0:
@@ -151,23 +243,6 @@ class ArrayType(Type):
             else:
                 self.to = ArrayType(*args[1:])
 
-    def _subrepr(self, labeled, seen):
-        if isinstance(self._to, numpy.dtype):
-            return "ArrayType({0}, {1})".format(repr(self._takes), repr(self._to))
-        else:
-            to = self._to._repr(labeled, seen)
-            if to.startswith("ArrayType(") and to.endswith(")"):
-                to = to[10:-1]
-            return "ArrayType({0}, {1})".format(repr(self._takes), to)
-
-    def _substr(self, labeled, seen, indent):
-        takes = "[0, {0}) -> ".format(self._takes)
-        if isinstance(self._to, numpy.dtype):
-            to = str(self._to)
-        else:
-            to = self._to._str(labeled, seen, indent + (" " * len(takes))).lstrip(" ")
-        return takes + to
-
     @property
     def takes(self):
         return self._takes
@@ -191,26 +266,37 @@ class ArrayType(Type):
         else:
             self._to = numpy.dtype(value)
 
+    def _subrepr(self, labeled, seen):
+        if isinstance(self._to, numpy.dtype):
+            return "ArrayType({0}, {1})".format(repr(self._takes), repr(self._to))
+        else:
+            to = self._to._repr(labeled, seen)
+            if to.startswith("ArrayType(") and to.endswith(")"):
+                to = to[10:-1]
+            return "ArrayType({0}, {1})".format(repr(self._takes), to)
+
+    def _substr(self, labeled, seen, indent):
+        takes = "[0, {0}) -> ".format(self._takes)
+        if isinstance(self._to, numpy.dtype):
+            to = str(self._to)
+        else:
+            to = self._to._str(labeled, seen, indent + (" " * len(takes))).lstrip(" ")
+        return takes + to
+
+    def _eq(self, other, seen):
+        if self is other:
+            return True
+        elif id(self) in seen:
+            return False
+        else:
+            seen.add(id(self))
+            return isinstance(other, ArrayType) and self._takes == other._takes and self._to == other._to
+
 class TableType(Type):
     def __init__(self, **fields):
         self._fields = awkward.util.OrderedDict()
         for n, x in fields.items():
             self._fields[n] = x
-
-    def _subrepr(self, labeled, seen):
-        return "TableType({0})".format(", ".join("{0}={1}".format(n, repr(x) if isinstance(x, numpy.dtype) else x._repr(labeled, seen)) for n, x in self._fields.items()))
-
-    def _substr(self, labeled, seen, indent):
-        width = max(len(repr(n)) for n in self._fields.keys())
-        subindent = indent + (" " * width) + "    "
-        out = []
-        for n, x in self._fields.items():
-            if isinstance(x, numpy.dtype):
-                to = str(x)
-            else:
-                to = x._str(labeled, seen, subindent).lstrip(" ")
-            out.append(("{0}{1:%ds} -> {2}" % width).format(indent, repr(n), to))
-        return "\n".join(out).lstrip(" ")
 
     def __getitem__(self, key):
         return self._fields[key]
@@ -229,20 +315,35 @@ class TableType(Type):
         out._fields = awkward.util.OrderedDict(list(self._fields.items()) + list(other._fields.items()))
         return out
 
+    def _subrepr(self, labeled, seen):
+        return "TableType({0})".format(", ".join("{0}={1}".format(n, repr(x) if isinstance(x, numpy.dtype) else x._repr(labeled, seen)) for n, x in self._fields.items()))
+
+    def _substr(self, labeled, seen, indent):
+        width = max(len(repr(n)) for n in self._fields.keys())
+        subindent = indent + (" " * width) + "    "
+        out = []
+        for n, x in self._fields.items():
+            if isinstance(x, numpy.dtype):
+                to = str(x)
+            else:
+                to = x._str(labeled, seen, subindent).lstrip(" ")
+            out.append(("{0}{1:%ds} -> {2}" % width).format(indent, repr(n), to))
+        return "\n".join(out).lstrip(" ")
+
+    def _eq(self, other, seen):
+        if self is other:
+            return True
+        elif id(self) in seen:
+            return False
+        else:
+            seen.add(id(self))
+            return isinstance(other, TableType) and self._fields == other._fields
+
 class UnionType(Type):
     def __init__(self, *possibilities):
         self._possibilities = []
         for x in possibilities:
             self.append(x)
-
-    def _subrepr(self, labeled, seen):
-        return "UnionType({0})".format(", ".join(repr(x) if isinstance(x, numpy.dtype) else x._repr(labeled, seen) for x in self._possibilities))
-
-    def _substr(self, labeled, seen, indent):
-        subs = [str(x) if isinstance(x, numpy.dtype) else x._str(labeled, seen, indent + " ") for x in self._possibilities]
-        width = max(len(y) for x in subs for y in x.lstrip(" ").split("\n"))
-        out = [x + " " * (width - len(x.lstrip(" ").split("\n")[-1])) for x in subs]
-        return "(" + (" |\n" + indent + " ").join(out) + " )"
 
     def __len__(self):
         return len(self._possibilities)
@@ -265,18 +366,27 @@ class UnionType(Type):
         else:
             self._possibilities.append(numpy.dtype(value))
 
+    def _subrepr(self, labeled, seen):
+        return "UnionType({0})".format(", ".join(repr(x) if isinstance(x, numpy.dtype) else x._repr(labeled, seen) for x in self._possibilities))
+
+    def _substr(self, labeled, seen, indent):
+        subs = [str(x) if isinstance(x, numpy.dtype) else x._str(labeled, seen, indent + " ") for x in self._possibilities]
+        width = max(len(y) for x in subs for y in x.lstrip(" ").split("\n"))
+        out = [x + " " * (width - len(x.lstrip(" ").split("\n")[-1])) for x in subs]
+        return "(" + (" |\n" + indent + " ").join(out) + " )"
+
+    def _eq(self, other, seen):
+        if self is other:
+            return True
+        elif id(self) in seen:
+            return False
+        else:
+            seen.add(id(self))
+            return isinstance(other, UnionType) and self._possibilities == other._possibilities
+
 class OptionType(Type):
     def __init__(self, type):
         self.type = type
-
-    def _subrepr(self, labeled, seen):
-        return "OptionType({0})".format(repr(self._type) if isinstance(self._type, numpy.dtype) else self._type._repr(labeled, seen))
-
-    def _substr(self, labeled, seen, indent):
-        if isinstance(self._type, numpy.dtype):
-            return "?{0}".format(str(self._type))
-        else:
-            return "?({0})".format(self._type._str(labeled, seen, indent + "  ").lstrip(" "))
 
     @property
     def type(self):
@@ -288,3 +398,21 @@ class OptionType(Type):
             self._type = value
         else:
             self._type = numpy.dtype(value)
+
+    def _subrepr(self, labeled, seen):
+        return "OptionType({0})".format(repr(self._type) if isinstance(self._type, numpy.dtype) else self._type._repr(labeled, seen))
+
+    def _substr(self, labeled, seen, indent):
+        if isinstance(self._type, numpy.dtype):
+            return "?{0}".format(str(self._type))
+        else:
+            return "?({0})".format(self._type._str(labeled, seen, indent + "  ").lstrip(" "))
+
+    def _eq(self, other, seen):
+        if self is other:
+            return True
+        elif id(self) in seen:
+            return False
+        else:
+            seen.add(id(self))
+            return isinstance(other, OptionType) and self._type == other._type
