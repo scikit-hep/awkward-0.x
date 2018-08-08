@@ -178,9 +178,10 @@ class Type(object):
                         break
                     newtable._fields[n] = y._to
                 else:
-                    x = ArrayType.__new__(ArrayType)
-                    x._takes = first
-                    x._to = newtable
+                    if first != numpy.inf:
+                        x = ArrayType.__new__(ArrayType)
+                        x._takes = first
+                        x._to = newtable
 
             # apply union(X, union(Y)) == union(X, Y)
             if isinstance(x, UnionType) and any(isinstance(y, UnionType) for y in x._possibilities):
@@ -292,6 +293,9 @@ class ArrayType(Type):
             seen.add(id(self))
             return isinstance(other, ArrayType) and self._takes == other._takes and self._to == other._to
 
+    def __hash__(self):
+        return hash((ArrayType, self._takes, self._to))
+
 class TableType(Type):
     def __init__(self, **fields):
         self._fields = awkward.util.OrderedDict()
@@ -337,7 +341,10 @@ class TableType(Type):
             return False
         else:
             seen.add(id(self))
-            return isinstance(other, TableType) and self._fields == other._fields
+            return isinstance(other, TableType) and [(n, self._fields[n]) for n in sorted(self._fields)] == [(n, other._fields[n]) for n in sorted(other._fields)]
+
+    def __hash__(self):
+        return hash((TableType, tuple((n, self._fields[n]) for n in sorted(self._fields))))
 
 class UnionType(Type):
     def __init__(self, *possibilities):
@@ -387,7 +394,10 @@ class UnionType(Type):
             return False
         else:
             seen.add(id(self))
-            return isinstance(other, UnionType) and self._possibilities == other._possibilities
+            return isinstance(other, UnionType) and set(self._possibilities) == set(other._possibilities)
+
+    def __hash__(self):
+        return hash((UnionType, tuple(self._possibilities)))
 
 class OptionType(Type):
     def __init__(self, type):
@@ -409,9 +419,10 @@ class OptionType(Type):
 
     def _substr(self, labeled, seen, indent):
         if isinstance(self._type, numpy.dtype):
-            return "?({0})".format(str(self._type))
+            type = str(self._type)
         else:
-            return "?({0})".format(self._type._str(labeled, seen, indent + "  ").lstrip(" "))
+            type = self._type._str(labeled, seen, indent + "  ").lstrip(" ")
+        return "?({0})".format(type)
 
     def _eq(self, other, seen):
         if self is other:
@@ -421,3 +432,6 @@ class OptionType(Type):
         else:
             seen.add(id(self))
             return isinstance(other, OptionType) and self._type == other._type
+
+    def __hash__(self):
+        return hash((OptionType, self._type))
