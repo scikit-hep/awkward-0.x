@@ -34,6 +34,7 @@ import numbers
 import numpy
 
 import awkward.array.base
+import awkward.type
 import awkward.util
 
 class JaggedArray(awkward.array.base.AwkwardArray):
@@ -72,6 +73,21 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     def content(self, value):
         self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
+    @property
+    def type(self):
+        return awkward.type.ArrayType(*(self._starts.shape + (numpy.inf,) + self._content.shape[1:] + (self._content.dtype,)))
+
+    def __len__(self):
+        return len(self._starts)
+
+    @property
+    def shape(self):
+        return self._starts.shape
+
+    @property
+    def dtype(self):
+        return numpy.dtype(numpy.object)
+
     def _valid(self, starts=None, stops=None):
         if starts is None:
             starts = self._starts
@@ -94,9 +110,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         if len(starts) > len(stops):
             raise ValueError("starts must not have more elements than stops")
-
-    def __len__(self):
-        return len(self._starts)
 
     def __getitem__(self, where):
         self._valid()
@@ -122,17 +135,16 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         else:
             head, tail = tail[0], tail[1:]
-            original_head = head
             if isinstance(head, (numbers.Integral, numpy.integer)):
+                original_head = head
                 counts = stops - starts
                 if head < 0:
                     head = counts + head
 
                 if not numpy.bitwise_and(0 < head, head < counts).any():
                     raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
-
                 return self._content[starts + head][tail]
-
+                
             else:
                 raise NotImplementedError("jagged second dimension index type: {0}".format(original_head))
 

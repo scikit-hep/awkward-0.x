@@ -33,6 +33,7 @@ import unittest
 import numpy
 
 from awkward import *
+from awkward.type import *
 
 class TestJagged(unittest.TestCase):
     def runTest(self):
@@ -49,7 +50,14 @@ class TestJagged(unittest.TestCase):
         self.assertEqual(a.tolist(), [[[0.0], [1.1], [2.2]], [], [[3.3], [4.4]], [[5.5], [6.6], [7.7], [8.8], [9.9]]])
 
     def test_jagged_type(self):
-        pass
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a.type, ArrayType(4, numpy.inf, float))
+
+        a = JaggedArray([[0, 3], [3, 5]], [[3, 3], [5, 10]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a.type, ArrayType(2, 2, numpy.inf, float))
+
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
+        self.assertEqual(a.type, ArrayType(4, numpy.inf, 1, float))
 
     def test_jagged_str(self):
         pass
