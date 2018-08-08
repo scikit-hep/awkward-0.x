@@ -76,6 +76,9 @@ class TestJagged(unittest.TestCase):
         self.assertEqual(a[1, 1, 1], 6.6)
         self.assertEqual(a[:, 1].tolist(), [[], [5.5, 6.6, 7.7, 8.8, 9.9]])
         self.assertEqual(a[:, 1][1].tolist(), [5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[:, 0].tolist(), [[0.0, 1.1, 2.2], [3.3, 4.4]])
+        self.assertEqual(a[:, 0, 1].tolist(), [1.1, 4.4])
+        self.assertEqual(a[:, 0, 1, 1].tolist(), 4.4)
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
         self.assertEqual(a[2][1].tolist(), [4.4])
