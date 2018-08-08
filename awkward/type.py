@@ -215,7 +215,10 @@ class UnionType(Type):
         return "UnionType({0})".format(", ".join(repr(x) if isinstance(x, numpy.dtype) else x._repr(labeled, seen) for x in self._possibilities))
 
     def _substr(self, labeled, seen, indent):
-        HERE
+        subs = [str(x) if isinstance(x, numpy.dtype) else x._substr(labeled, seen, indent + " ") for x in self._possibilities]
+        width = max(len(x.lstrip(" ")) for x in subs)
+        out = [x + " " * (width - len(x.lstrip(" "))) for x in subs]
+        return "(" + (" |\n" + indent + " ").join(out) + " )"
 
     def __len__(self):
         return len(self._possibilities)
