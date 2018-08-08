@@ -208,16 +208,18 @@ class TableType(Type):
         return out
 
 class UnionType(Type):
-    def __init__(self):
-        raise TypeError("UnionTypes cannot be constructed directly; combine Types with the | operator")
+    def __init__(self, *possibilities):
+        self._possibilities = []
+        for x in possibilities:
+            self.append(x)
 
     def _subrepr(self, labeled, seen):
         return "UnionType({0})".format(", ".join(repr(x) if isinstance(x, numpy.dtype) else x._repr(labeled, seen) for x in self._possibilities))
 
     def _substr(self, labeled, seen, indent):
         subs = [str(x) if isinstance(x, numpy.dtype) else x._substr(labeled, seen, indent + " ") for x in self._possibilities]
-        width = max(len(x.lstrip(" ")) for x in subs)
-        out = [x + " " * (width - len(x.lstrip(" "))) for x in subs]
+        width = max(len(y) for x in subs for y in x.lstrip(" ").split("\n"))
+        out = [x + " " * (width - len(x.lstrip(" ").split("\n")[-1])) for x in subs]
         return "(" + (" |\n" + indent + " ").join(out) + " )"
 
     def __len__(self):
@@ -240,3 +242,27 @@ class UnionType(Type):
             self._possibilities.append(value)
         else:
             self._possibilities.append(numpy.dtype(value))
+
+class OptionType(Type):
+    def __init__(self, type):
+        self.type = type
+
+    def _subrepr(self, labeled, seen):
+        return "OptionType({0})".format(repr(self._type) if isinstance(self._type, numpy.dtype) else self._type._repr(labeled, seen))
+
+    def _substr(self, labeled, seen, indent):
+        if isinstance(self._type, numpy.dtype):
+            return "?{0}".format(str(self._type))
+        else:
+            return "?({0})".format(self._type._substr(labeled, seen, indent + "  ").lstrip(" "))
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        if isinstance(value, Type):
+            self._type = value
+        else:
+            self._type = numpy.dtype(value)
