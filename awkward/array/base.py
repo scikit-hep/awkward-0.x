@@ -92,9 +92,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return True
 
-    @staticmethod
-    def _singleton(x):
-        if isinstance(x, tuple) and len(x) == 1:
-            return x[0]
+    def valid(self):
+        try:
+            self._valid()
+        except:
+            return False
         else:
-            return x
+            return True

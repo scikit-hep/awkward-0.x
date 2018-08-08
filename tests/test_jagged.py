@@ -38,6 +38,49 @@ class TestJagged(unittest.TestCase):
     def runTest(self):
         pass
 
+    def test_jagged_init(self):
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a.tolist(), [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
+
+        a = JaggedArray([[0, 3], [3, 5]], [[3, 3], [5, 10]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a.tolist(), [[[0.0, 1.1, 2.2], []], [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]])
+
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
+        self.assertEqual(a.tolist(), [[[0.0], [1.1], [2.2]], [], [[3.3], [4.4]], [[5.5], [6.6], [7.7], [8.8], [9.9]]])
+
+    def test_jagged_type(self):
+        pass
+
+    def test_jagged_str(self):
+        pass
+
+    def test_jagged_tuple(self):
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[2][1], 4.4)
+        self.assertEqual(a[2, 1], 4.4)
+        self.assertEqual(a[2:, 1].tolist(), [4.4, 6.6])
+        self.assertEqual(a[2:, -2].tolist(), [3.3, 8.8])
+
+        a = JaggedArray([[0, 3], [3, 5]], [[3, 3], [5, 10]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[1][1].tolist(), [5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[1][1][1], 6.6)
+        self.assertEqual(a[1, 1].tolist(), [5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[1, 1, 1], 6.6)
+
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
+        self.assertEqual(a[2][1].tolist(), [4.4])
+        self.assertEqual(a[2][1][0], 4.4)
+        self.assertEqual(a[2, 1].tolist(), [4.4])
+        self.assertEqual(a[2, 1, 0], 4.4)
+        self.assertEqual(a[2:, 1].tolist(), [[4.4], [6.6]])
+        self.assertEqual(a[2:, 1][1].tolist(), [6.6])
+        self.assertEqual(a[2:, 1, 1].tolist(), [6.6])
+        self.assertEqual(a[2:, 1, 1][0], 6.6)
+        self.assertEqual(a[2:, 1, 1, 0], 6.6)
+        self.assertEqual(a[2:, -2].tolist(), [[3.3], [8.8]])
+
+
+
     # def test_jagged_offsets(self):
     #     offsets = numpy.array([0, 3, 3, 8, 10, 10])
     #     a = JaggedArray.fromoffsets(offsets, [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])

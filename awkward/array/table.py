@@ -40,6 +40,10 @@ class Table(awkward.array.base.AwkwardArray):
     def __init__(self, length, columns1={}, *columns2, **columns3):
         raise NotImplementedError
 
+    class Row(object):
+        def __init__(self, table, index):
+            raise NotImplementedError
+
 # class Table(awkward.array.base.AwkwardArray):
 #     class Row(object):
 #         __slots__ = ["_table", "_index"]

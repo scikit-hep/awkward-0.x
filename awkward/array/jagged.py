@@ -38,7 +38,103 @@ import awkward.util
 
 class JaggedArray(awkward.array.base.AwkwardArray):
     def __init__(self, starts, stops, content):
-        raise NotImplementedError
+        self.starts = starts
+        self.stops = stops
+        self.content = content
+
+    @property
+    def starts(self):
+        return self._starts
+
+    @starts.setter
+    def starts(self, value):
+        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if (value < 0).any():
+            raise ValueError("starts must be a non-negative array")
+        self._starts = value
+
+    @property
+    def stops(self):
+        return self._stops
+
+    @stops.setter
+    def stops(self, value):
+        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if (value < 0).any():
+            raise ValueError("stops must be a non-negative array")
+        self._stops = value
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+
+    def _valid(self, starts=None, stops=None):
+        if starts is None:
+            starts = self._starts
+        if stops is None:
+            stops = self._stops
+
+        if len(starts.shape) == 0:
+            raise TypeError("starts must have at least one dimension")
+        if starts.shape[0] == 0:
+            starts = starts.view(self.INDEXTYPE)
+        if not issubclass(starts.dtype.type, numpy.integer):
+            raise TypeError("starts must have integer dtype")
+
+        if len(stops.shape) != len(starts.shape):
+            raise TypeError("stops must have the same shape as starts")
+        if stops.shape[0] == 0:
+            stops = stops.view(self.INDEXTYPE)
+        if not issubclass(stops.dtype.type, numpy.integer):
+            raise TypeError("stops must have integer dtype")
+
+        if len(starts) > len(stops):
+            raise ValueError("starts must not have more elements than stops")
+
+    def __len__(self):
+        return len(self._starts)
+
+    def __getitem__(self, where):
+        self._valid()
+
+        if self._isstring(where):
+            return JaggedArray(self._starts, self._stops, self._content[where])
+
+        if not isinstance(where, tuple):
+            where = (where,)
+        if len(self._starts.shape) == 1:
+            head, tail = where[0], where[1:]
+        else:
+            head, tail = where[:len(self._starts.shape)], where[len(self._starts.shape):]
+
+        starts = self._starts[head]
+        stops = self._stops[head]
+        
+        if len(starts.shape) == len(stops.shape) == 0:
+            return self.content[starts:stops][tail]
+
+        elif len(tail) == 0:
+            return JaggedArray(starts, stops, self._content)
+
+        else:
+            head, tail = tail[0], tail[1:]
+            original_head = head
+            if isinstance(head, (numbers.Integral, numpy.integer)):
+                counts = stops - starts
+                if head < 0:
+                    head = counts + head
+
+                if not numpy.bitwise_and(0 < head, head < counts).any():
+                    raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
+
+                return self._content[starts + head][tail]
+
+            else:
+                raise NotImplementedError("jagged second dimension index type: {0}".format(original_head))
 
 # class JaggedArray(awkward.array.base.AwkwardArray):
 #     @classmethod
@@ -129,41 +225,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
 #         return True
 
-#     def __init__(self, starts, stops, content):
-#         self.starts = starts
-#         self.stops = stops
-#         self.content = content
-
-#     @property
-#     def starts(self):
-#         return self._starts
-
-#     @starts.setter
-#     def starts(self, value):
-#         value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-#         if (value < 0).any():
-#             raise ValueError("starts must be a non-negative array")
-#         self._starts = value
-
-#     @property
-#     def stops(self):
-#         return self._stops
-
-#     @stops.setter
-#     def stops(self, value):
-#         value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-#         if (value < 0).any():
-#             raise ValueError("stops must be a non-negative array")
-#         self._stops = value
-
-#     @property
-#     def content(self):
-#         return self._content
-
-#     @content.setter
-#     def content(self, value):
-#         self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-
 #     @property
 #     def dtype(self):
 #         return numpy.dtype(object)   # specifically, subarrays
@@ -209,46 +270,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
 #     def __len__(self):                 # length is determined by starts
 #         return len(self._starts)       # data can grow by appending contents and stops before starts
-
-#     def _check_startsstops(self, starts=None, stops=None):
-#         if starts is None:
-#             starts = self._starts
-#         if stops is None:
-#             stops = self._stops
-
-#         if len(starts.shape) != 1:
-#             raise TypeError("starts must have 1-dimensional shape")
-#         if starts.shape[0] == 0:
-#             starts = starts.view(self.INDEXTYPE)
-#         if not issubclass(starts.dtype.type, numpy.integer):
-#             raise TypeError("starts must have integer dtype")
-
-#         if len(stops.shape) != 1:
-#             raise TypeError("stops must have 1-dimensional shape")
-#         if stops.shape[0] == 0:
-#             stops = stops.view(self.INDEXTYPE)
-#         if not issubclass(stops.dtype.type, numpy.integer):
-#             raise TypeError("stops must have integer dtype")
-
-#         if len(starts) > len(stops):
-#             raise ValueError("starts must be have as many or fewer elements as stops")
-
-#     def __getitem__(self, where):
-#         if self._isstring(where):
-#             return JaggedArray(self._starts, self._stops, self._content[where])
-
-#         if not isinstance(where, tuple):
-#             where = (where,)
-#         head, tail = where[0], where[1:]
-
-#         self._check_startsstops()
-#         starts = self._starts[head]
-#         stops = self._stops[head]
-
-#         if len(starts.shape) == len(stops.shape) == 0:
-#             return self.content[self._singleton((slice(starts, stops),) + tail)]
-#         else:
-#             return JaggedArray(starts, stops, self._content[self._singleton((slice(None),) + tail)])
 
 #     def tojagged(self, starts=None, stops=None, copy=True):
 #         if starts is None and stops is None:
