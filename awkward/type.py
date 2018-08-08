@@ -371,8 +371,13 @@ class UnionType(Type):
 
     def _substr(self, labeled, seen, indent):
         subs = [str(x) if isinstance(x, numpy.dtype) else x._str(labeled, seen, indent + " ") for x in self._possibilities]
-        width = max(len(y) for x in subs for y in x.lstrip(" ").split("\n"))
-        out = [x + " " * (width - len(x.lstrip(" ").split("\n")[-1])) for x in subs]
+        def lstrip(x):
+            if x.startswith(indent + " "):
+                return x[len(indent) + 1:]
+            else:
+                return x
+        width = max(len(lstrip(y)) for x in subs for y in x.split("\n"))
+        out = [x + " " * (width - len(lstrip(x.split("\n")[-1]))) for x in subs]
         return "(" + (" |\n" + indent + " ").join(out) + " )"
 
     def _eq(self, other, seen):
@@ -404,7 +409,7 @@ class OptionType(Type):
 
     def _substr(self, labeled, seen, indent):
         if isinstance(self._type, numpy.dtype):
-            return "?{0}".format(str(self._type))
+            return "?({0})".format(str(self._type))
         else:
             return "?({0})".format(self._type._str(labeled, seen, indent + "  ").lstrip(" "))
 
