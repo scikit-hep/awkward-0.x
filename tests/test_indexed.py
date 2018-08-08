@@ -38,6 +38,8 @@ class TestIndexed(unittest.TestCase):
     def runTest(self):
         pass
 
+    ################### old tests
+
     # def test_indexed_get(self):
     #     a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4])
     #     self.assertEqual([x for x in a], [3.3, 2.2, 4.4, 2.2, 2.2, 4.4, 0.0])

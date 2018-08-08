@@ -34,9 +34,11 @@ import numpy
 
 from awkward import *
 
-# class TestChunked(unittest.TestCase):
-#     def runTest(self):
-#         pass
+class TestChunked(unittest.TestCase):
+    def runTest(self):
+        pass
+
+    ################### old tests
 
 #     def test_chunked_iteration(self):
 #         a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []])

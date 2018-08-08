@@ -38,6 +38,8 @@ class TestMasked(unittest.TestCase):
     def runTest(self):
         pass
 
+    ################### old tests
+
     # def test_masked_get(self):
     #     a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True)
     #     self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9])

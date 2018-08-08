@@ -39,6 +39,8 @@ class TestVirtual(unittest.TestCase):
     def runTest(self):
         pass
 
+    ################### old tests
+
     # def test_virtual_nocache(self):
     #     a = VirtualArray(lambda: [1, 2, 3])
     #     self.assertFalse(a.ismaterialized)

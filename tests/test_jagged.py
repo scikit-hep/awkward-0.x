@@ -103,7 +103,29 @@ class TestJagged(unittest.TestCase):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
         self.assertEqual(a[1:-1].tolist(), [[], [[3.3], [4.4]]])
 
+    def test_jagged_mask(self):
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[[False, True, True, False]].tolist(), [[], [3.3, 4.4]])
 
+        a = JaggedArray([[0, 3], [3, 5]], [[3, 3], [5, 10]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[[True, True]].tolist(), [[[0.0, 1.1, 2.2], []], [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]])
+        self.assertEqual(a[[False, True]].tolist(), [[[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]])
+
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
+        self.assertEqual(a[[False, True, True, False]].tolist(), [[], [[3.3], [4.4]]])
+
+    def test_jagged_fancy(self):
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[[1, 2]].tolist(), [[], [3.3, 4.4]])
+
+        a = JaggedArray([[0, 3], [3, 5]], [[3, 3], [5, 10]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[[0, 1]].tolist(), [[[0.0, 1.1, 2.2], []], [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]])
+        self.assertEqual(a[[1]].tolist(), [[[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]])
+
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
+        self.assertEqual(a[[1, 2]].tolist(), [[], [[3.3], [4.4]]])
+
+    ################### old tests
 
     # def test_jagged_offsets(self):
     #     offsets = numpy.array([0, 3, 3, 8, 10, 10])
