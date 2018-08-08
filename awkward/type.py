@@ -49,7 +49,7 @@ class Type(object):
 
         return out
 
-    def __repr__(self):
+    def _labeled(self):
         memo = set()
         labeled = []
         def find(x):
@@ -65,9 +65,12 @@ class Type(object):
                         for y in x._possibilities:
                             find(y)
                 else:
-                    labeled.add(x)
+                    labeled.append(x)
         find(self)
-        return self._repr(labeled, set())
+        return labeled
+
+    def __repr__(self):
+        return self._repr(self._labeled(), set())
 
     def _repr(self, labeled, seen):
         if id(self) in seen:
@@ -77,12 +80,31 @@ class Type(object):
         else:
             for i, x in enumerate(labeled):
                 if self is x:
-                    out = "T{0} = ".format(i)
+                    out = "T{0} := ".format(i)
                     break
             else:
                 out = ""
+            seen.add(id(self))
             return out + self._subrepr(labeled, seen)
 
+    def __str__(self):
+        return self._str(self._labeled(), set(), "")
+
+    def _str(self, labeled, seen, indent):
+        if id(self) in seen:
+            for i, x in enumerate(labeled):
+                if self is x:
+                    return indent + "T{0}".format(i)
+        else:
+            for i, x in enumerate(labeled):
+                if self is x:
+                    out = indent + "T{0} := ".format(i)
+                    break
+            else:
+                out = ""
+            seen.add(id(self))
+            return out + self._substr(labeled, seen, indent + (" " * len(out)))
+        
 class ArrayType(Type):
     def __init__(self, *args):
         if len(args) == 0:
@@ -107,9 +129,23 @@ class ArrayType(Type):
             else:
                 self.to = ArrayType(*args[1:])
 
-    def _subrepr(self, labeled, seen):            
-        HERE
-        
+    def _subrepr(self, labeled, seen):
+        if isinstance(self._to, numpy.dtype):
+            return "ArrayType({0}, {1})".format(repr(self._takes), repr(self._to))
+        else:
+            to = self._to._repr(labeled, seen)
+            if to.startswith("ArrayType(") and to.endswith(")"):
+                to = to[10:-1]
+            return "ArrayType({0}, {1})".format(repr(self._takes), to)
+
+    def _substr(self, labeled, seen, indent):
+        takes = "[0, {0}) -> ".format(self._takes)
+        if isinstance(self._to, numpy.dtype):
+            to = str(self._to)
+        else:
+            to = self._to._str(labeled, seen, indent + (" " * len(takes))).lstrip(" ")
+        return takes + to
+
     @property
     def takes(self):
         return self._takes
@@ -134,8 +170,25 @@ class ArrayType(Type):
             self._to = numpy.dtype(value)
 
 class TableType(Type):
-    def __init__(self):
-        raise TypeError("TableTypes cannot be constructed directly; combine ArrayTypes that take strings with the & operator")
+    def __init__(self, **fields):
+        self._fields = awkward.util.OrderedDict()
+        for n, x in fields.items():
+            self._fields[n] = x
+
+    def _subrepr(self, labeled, seen):
+        return "TableType({0})".format(", ".join("{0}={1}".format(n, repr(x) if isinstance(x, numpy.dtype) else x._repr(labeled, seen)) for n, x in self._fields.items()))
+
+    def _substr(self, labeled, seen, indent):
+        width = max(len(repr(n)) for n in self._fields.keys())
+        subindent = indent + (" " * width) + "    "
+        out = []
+        for n, x in self._fields.items():
+            if isinstance(x, numpy.dtype):
+                to = str(x)
+            else:
+                to = x._str(labeled, seen, subindent).lstrip(" ")
+            out.append(("{0}{1:%ds} -> {2}" % width).format(indent, repr(n), to))
+        return "\n".join(out).lstrip(" ")
 
     def __getitem__(self, key):
         return self._fields[key]
@@ -157,6 +210,12 @@ class TableType(Type):
 class UnionType(Type):
     def __init__(self):
         raise TypeError("UnionTypes cannot be constructed directly; combine Types with the | operator")
+
+    def _subrepr(self, labeled, seen):
+        return "UnionType({0})".format(", ".join(repr(x) if isinstance(x, numpy.dtype) else x._repr(labeled, seen) for x in self._possibilities))
+
+    def _substr(self, labeled, seen, indent):
+        HERE
 
     def __len__(self):
         return len(self._possibilities)
