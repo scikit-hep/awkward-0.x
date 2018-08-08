@@ -34,6 +34,20 @@ import numpy
 
 import awkward.util
 
+def from_numpy(shape, dtype, masked=False):
+    if not isinstance(shape, tuple):
+        shape = (shape,)
+    out = ArrayType(*(shape + (dtype,)))
+    if masked:
+        out = OptionType(out)
+    return out
+
+def from_array(array):
+    if isinstance(array, numpy.ndarray):
+        return from_numpy(array.shape, array.dtype, isinstance(array, numpy.ma.MaskedArray))
+    else:
+        return array.type
+
 class Type(object):
     def __or__(self, other):
         out = UnionType.__new__(UnionType)
