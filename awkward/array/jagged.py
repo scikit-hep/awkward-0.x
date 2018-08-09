@@ -272,6 +272,17 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
             return node[tail]
 
+    def __iter__(self):
+        self._valid()
+        if len(self._starts.shape) != 1:
+            for x in super(JaggedArray, self).__iter__():
+                yield x
+        else:
+            stops = self._stops
+            content = self._content
+            for i, start in enumerate(self._starts):
+                yield content[start:stops[i]]
+
     # @staticmethod
     # def broadcastable(*jaggedarrays):
     #     if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
