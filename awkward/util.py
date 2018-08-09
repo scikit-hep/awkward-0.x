@@ -84,6 +84,7 @@ MASKTYPE = numpy.dtype(numpy.bool_)
 BITMASKTYPE = numpy.dtype(numpy.uint8)
 
 cumsum = numpy.cumsum
+cumprod = numpy.cumprod
 nonzero = numpy.nonzero
 
 def toarray(value, defaultdtype, passthrough):

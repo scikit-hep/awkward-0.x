@@ -34,7 +34,7 @@ import numpy
 
 import awkward.util
 
-def from_array(array):
+def fromarray(array):
     if isinstance(array, numpy.ndarray):
         if array.dtype.names is None:
             out = ArrayType(*(array.shape + (array.dtype,)))

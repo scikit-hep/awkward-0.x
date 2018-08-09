@@ -152,6 +152,21 @@ class TestJagged(unittest.TestCase):
         self.assertEqual((100 + a).tolist(), [[100.0, 101.1, 102.2], [], [103.3, 104.4], [105.5, 106.6, 107.7, 108.8, 109.9]])
         self.assertEqual((numpy.array([100, 200, 300, 400]) + a).tolist(), [[100.0, 101.1, 102.2], [], [303.3, 304.4], [405.5, 406.6, 407.7, 408.8, 409.9]])
 
+    def test_jagged_cross(self):
+        pass
+
+    def test_jagged_sum(self):
+        pass
+
+    def test_jagged_prod(self):
+        pass
+
+    def test_jagged_min(self):
+        pass
+
+    def test_jagged_max(self):
+        pass
+
     def test_jagged_get(self):
         a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         self.assertEqual([a[i].tolist() for i in range(len(a))], [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []])
