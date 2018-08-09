@@ -485,28 +485,28 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         # works because there's a group operation to undo the cumsum
         self._valid()
 
-        contentsum = numpy.empty(len(self._content) + 1, dtype=self._content.dtype)
+        contentsum = numpy.empty((len(self._content) + 1,) + self._content.shape[1:], dtype=self._content.dtype)
         contentsum[0] = 0
-        awkward.util.cumsum(self._content, out=contentsum[1:])
+        awkward.util.cumsum(self._content, axis=0, out=contentsum[1:])
 
         nonempty = (self._starts != self._stops)
 
-        out = numpy.zeros(self.shape, dtype=self._content.dtype)
+        out = numpy.zeros(self.shape + self._content.shape[1:], dtype=self._content.dtype)
         out[nonempty] = contentsum[self._stops[nonempty]] - contentsum[self._starts[nonempty]]
         return out
 
     def prod(self):
-        # works because there's a group operation to undo the cumprod
+        # multiplication is a group, but multiplying and dividing large numbers isn't numerically stable
         self._valid()
 
-        contentprod = numpy.empty(len(self._content) + 1, dtype=self._content.dtype)
-        contentprod[0] = 1
-        awkward.util.cumprod(self._content, out=contentprod[1:])
+        out = numpy.ones(self.shape + self._content.shape[1:], dtype=self._content.dtype)
 
-        nonempty = (self._starts != self._stops)
-
-        out = numpy.ones(self.shape, dtype=self._content.dtype)
-        out[nonempty] = contentprod[self._stops[nonempty]] / contentprod[self._starts[nonempty]]
+        content = self._content
+        stops = self._stops
+        for i, start in enumerate(self._starts):
+            stop = stops[i]
+            if start != stop:
+                out[i] *= content[start:stop].prod()
         return out
 
     def min(self):
