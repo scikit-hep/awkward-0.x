@@ -253,24 +253,24 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         if len(starts.shape) == len(stops.shape) == 0:
             return self.content[starts:stops][tail]
 
-        elif len(tail) == 0:
-            return JaggedArray(starts, stops, self._content)
-
         else:
-            head, tail = tail[0], tail[1:]
-            if isinstance(head, (numbers.Integral, numpy.integer)):
-                original_head = head
-                counts = stops - starts
-                if head < 0:
-                    head = counts + head
+            node = JaggedArray(starts, stops, self._content)
+            while isinstance(node, JaggedArray) and len(tail) > 0:
+                head, tail = tail[0], tail[1:]
 
-                if not numpy.bitwise_and(0 <= head, head < counts).all():
-                    raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
-                return self._content[starts + head][tail]
-                
-            else:
-                # the other cases are possible, but complicated; the first sets the form
-                raise NotImplementedError("jagged second dimension index type: {0}".format(original_head))
+                if isinstance(head, (numbers.Integral, numpy.integer)):
+                    original_head = head
+                    counts = node._stops - node._starts
+                    if head < 0:
+                        head = counts + head
+                    if not numpy.bitwise_and(0 <= head, head < counts).all():
+                        raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
+                    node = node._content[node._starts + head]
+                else:
+                    # the other cases are possible, but complicated; the first sets the form
+                    raise NotImplementedError("jagged second dimension index type: {0}".format(original_head))
+
+            return node[tail]
 
     # @staticmethod
     # def broadcastable(*jaggedarrays):

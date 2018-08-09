@@ -145,12 +145,12 @@ class TestJagged(unittest.TestCase):
         self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], []])
         self.assertEqual(a[::2, 0].tolist(), [[0.0, 1.1, 2.2], [8.8, 9.9]])
         self.assertEqual(a[::2, 1].tolist(), [[], []])
+        self.assertEqual(a[::2, 0, 1].tolist(), [1.1, 9.9])
 
     def test_jagged_ufunc(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         self.assertEqual((100 + a).tolist(), [[100.0, 101.1, 102.2], [], [103.3, 104.4], [105.5, 106.6, 107.7, 108.8, 109.9]])
         self.assertEqual((numpy.array([100, 200, 300, 400]) + a).tolist(), [[100.0, 101.1, 102.2], [], [303.3, 304.4], [405.5, 406.6, 407.7, 408.8, 409.9]])
-
 
     def test_jagged_get(self):
         a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
