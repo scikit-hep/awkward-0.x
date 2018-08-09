@@ -514,42 +514,42 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         # not a group; must iterate (in absence of modified Hillis-Steele)
         self._valid()
 
-        out = numpy.full(self.shape + self._content.shape[1:], numpy.inf, dtype=self._content.dtype)
+        if issubclass(self._content.dtype.type, numpy.floating):
+            out = numpy.full(self.shape + self._content.shape[1:], numpy.inf, dtype=self._content.dtype)
+        elif issubclass(self._content.dtype.type, numpy.integer):
+            out = numpy.full(self.shape + self._content.shape[1:], numpy.iinfo(self._content.dtype.type).max, dtype=self._content.dtype)
+        else:
+            raise TypeError("only floating point and integer types can be minimized")
+        flatout = out.reshape((-1,) + self._content.shape[1:])
 
         content = self._content
-        stops = self._stops
-        if len(content.shape) == 1:
-            for i, start in enumerate(self._starts):
-                stop = stops[i]
-                if (start != stop).any():
-                    out[i] = min(content[start:stop].min(), out[i])
-        else:
-            minimum = numpy.minimum
-            for i, start in enumerate(self._starts):
-                stop = stops[i]
-                if (start != stop).any():
-                    out[i] = minimum(content[start:stop].min(axis=0), out[i])
+        flatstops = self._stops.reshape(-1)
+        minimum = numpy.minimum
+        for i, flatstart in enumerate(self._starts.reshape(-1)):
+            flatstop = flatstops[i]
+            if flatstart != flatstop:
+                flatout[i] = minimum(flatout[i], content[flatstart:flatstop].min(axis=0))
         return out
 
     def max(self):
         # not a group; must iterate (in absence of modified Hillis-Steele)
         self._valid()
 
-        out = numpy.full(self.shape + self._content.shape[1:], -numpy.inf, dtype=self._content.dtype)
+        if issubclass(self._content.dtype.type, numpy.floating):
+            out = numpy.full(self.shape + self._content.shape[1:], -numpy.inf, dtype=self._content.dtype)
+        elif issubclass(self._content.dtype.type, numpy.integer):
+            out = numpy.full(self.shape + self._content.shape[1:], numpy.iinfo(self._content.dtype.type).min, dtype=self._content.dtype)
+        else:
+            raise TypeError("only floating point and integer types can be maximized")
+        flatout = out.reshape((-1,) + self._content.shape[1:])
 
         content = self._content
-        stops = self._stops
-        if len(content.shape) == 1:
-            for i, start in enumerate(self._starts):
-                stop = stops[i]
-                if (start != stop).any():
-                    out[i] = max(content[start:stop].max(), out[i])
-        else:
-            maximum = numpy.maximum
-            for i, start in enumerate(self._starts):
-                stop = stops[i]
-                if (start != stop).any():
-                    out[i] = maximum(content[start:stop].max(axis=0), out[i])
+        flatstops = self._stops.reshape(-1)
+        maximum = numpy.maximum
+        for i, flatstart in enumerate(self._starts.reshape(-1)):
+            flatstop = flatstops[i]
+            if flatstart != flatstop:
+                flatout[i] = maximum(flatout[i], content[flatstart:flatstop].max(axis=0))
         return out
 
 class ByteJaggedArray(JaggedArray):
