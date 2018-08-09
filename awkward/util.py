@@ -67,6 +67,8 @@ else:
 def isstringslice(where):
     if isinstance(where, string):
         return True
+    elif isinstance(where, tuple):
+        return False
     try:
         assert all(isinstance(x, string) for x in where)
     except (TypeError, AssertionError):

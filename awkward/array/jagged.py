@@ -247,6 +247,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         if awkward.util.isstringslice(where):
             return JaggedArray(self._starts, self._stops, self._content[where])
 
+        if where == ():
+            return self
         if not isinstance(where, tuple):
             where = (where,)
         if len(self._starts.shape) == 1:
