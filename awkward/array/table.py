@@ -113,6 +113,12 @@ class Table(awkward.array.base.AwkwardArray):
 
             self[n] = x
 
+    def copy(self):
+        raise NotImplementedError
+
+    def deepcopy(self):
+        raise NotImplementedError
+
     # the "basis" is step, start, and length; stop is computed from these
     # (and is approximate when length % abs(step) != 0)
 

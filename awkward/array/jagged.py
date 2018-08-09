@@ -245,7 +245,9 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         self._valid()
 
         if awkward.util.isstringslice(where):
-            return JaggedArray(self._starts, self._stops, self._content[where])
+            out = self.copy()
+            out._content = self._content[where]
+            return out
 
         if where == ():
             return self
