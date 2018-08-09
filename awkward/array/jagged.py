@@ -43,27 +43,97 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         self.stops = stops
         self.content = content
 
+    @classmethod
+    def fromiter(cls, iterable):
+        offsets = [0]
+        content = []
+        for x in iterable:
+            offsets.append(offsets[-1] + len(x))
+            content.extend(x)
+        return cls.fromoffsets(offsets, content)
+
+    @classmethod
+    def fromoffsets(cls, offsets, content):
+        offsets = awkward.util.toarray(offsets, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if (offsets < 0).any():
+            raise ValueError("offsets must be a non-negative array")
+        out = cls(offsets[:-1], offsets[1:], content)
+        out._offsets = offsets
+        return out
+
+    @classmethod
+    def fromcounts(cls, counts, content):
+        counts = awkward.util.toarray(counts, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if (counts < 0).any():
+            raise ValueError("counts must be a non-negative array")
+        offsets = awkward.util.counts2offsets(counts)
+        out = cls.fromoffsets(offsets, content)
+        out._counts = counts
+        return out
+
+    @classmethod
+    def fromparents(cls, parents, content):
+        parents = awkward.util.toarray(parents, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if len(parents) != len(content):
+            raise ValueError("parents array must have the same length as content")
+        starts, stops = awkward.util.parents2startsstops(parents)
+        out = cls(starts, stops, content)
+        out._parents = parents
+        return out
+
+    @classmethod
+    def fromuniques(cls, uniques, content):
+        uniques = awkward.util.toarray(uniques, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if len(uniques) != len(content):
+            raise ValueError("uniques array must have the same length as content")
+        offsets, parents = awkward.util.uniques2offsetsparents(uniques)
+        out = cls.fromoffsets(offsets, content)        
+        out._parents = parents
+        return out
+
+    def copy(self):
+        out = self.__class__.__new__(self.__class__)
+        out._starts  = self._starts
+        out._stops   = self._stops
+        out._content = self._content
+        out._offsets = self._offsets
+        out._counts  = self._counts
+        out._parents = self._parents
+        return out
+
+    def deepcopy(self):
+        out = self.__class__.__new__(self.__class__)
+        out._starts  = awkward.util.deepcopy(self._starts)
+        out._stops   = awkward.util.deepcopy(self._stops)
+        out._content = awkward.util.deepcopy(self._content)
+        out._offsets = awkward.util.deepcopy(self._offsets)
+        out._counts  = awkward.util.deepcopy(self._counts)
+        out._parents = awkward.util.deepcopy(self._parents)
+        return out
+
     @property
     def starts(self):
         return self._starts
 
     @starts.setter
     def starts(self, value):
-        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
         if (value < 0).any():
             raise ValueError("starts must be a non-negative array")
         self._starts = value
-
+        self._offsets, self._counts, self._parents = None, None, None
+        
     @property
     def stops(self):
         return self._stops
 
     @stops.setter
     def stops(self, value):
-        value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
         if (value < 0).any():
             raise ValueError("stops must be a non-negative array")
         self._stops = value
+        self._offsets, self._counts, self._parents = None, None, None
 
     @property
     def content(self):
@@ -71,7 +141,60 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+
+    @property
+    def offsets(self):
+        if self._offsets is None:
+            if awkward.util.offsetsaliased(self._starts, self._stops):
+                self._offsets = self._starts.base
+            elif numpy.array_equal(self._starts[1:], self.stops[:-1]):
+                self._offsets = numpy.append(self._starts, self.stops[-1])
+            else:
+                raise ValueError("starts and stops are not compatible with a single offsets array")
+        return self._offsets
+
+    @offsets.setter
+    def offsets(self, value):
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if (value < 0).any():
+            raise ValueError("offsets must be a non-negative array")
+        self._starts = value[:-1]
+        self._stops = value[1:]
+        self._offsets = value
+        self._counts, self._parents = None, None
+
+    @property
+    def counts(self):
+        if self._counts is None:
+            self._counts = self._stops - self._starts
+        return self._counts
+
+    @counts.setter
+    def counts(self, value):
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if (value < 0).any():
+            raise ValueError("counts must be a non-negative array")
+        self._offsets = awkward.util.counts2offsets(value)
+        self._starts = self._offsets[:-1]
+        self._stops = self._offsets[1:]
+        self._counts = value
+        self._parents = None
+
+    @property
+    def parents(self):
+        if self._parents is None:
+            self._parents = awkward.util.startsstops2parents(self._starts, self._stops)
+        return self._parents
+
+    @parents.setter
+    def parents(self, value):
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        if len(value) != len(content):
+            raise ValueError("parents array must have the same length as content")
+        self._starts, self._stops = awkward.util.parents2startsstops(value)
+        self._offsets, self._counts = None, None
+        self._parents = value
 
     @property
     def type(self):
@@ -86,7 +209,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
     @property
     def dtype(self):
-        return numpy.dtype(numpy.object)
+        return numpy.dtype(numpy.object)      # specifically, Numpy arrays
 
     def _valid(self, starts=None, stops=None):
         if starts is None:
@@ -97,14 +220,14 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         if len(starts.shape) == 0:
             raise TypeError("starts must have at least one dimension")
         if starts.shape[0] == 0:
-            starts = starts.view(self.INDEXTYPE)
+            starts = starts.view(awkward.util.INDEXTYPE)
         if not issubclass(starts.dtype.type, numpy.integer):
             raise TypeError("starts must have integer dtype")
 
         if len(stops.shape) != len(starts.shape):
             raise TypeError("stops must have the same shape as starts")
         if stops.shape[0] == 0:
-            stops = stops.view(self.INDEXTYPE)
+            stops = stops.view(awkward.util.INDEXTYPE)
         if not issubclass(stops.dtype.type, numpy.integer):
             raise TypeError("stops must have integer dtype")
 
@@ -114,7 +237,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     def __getitem__(self, where):
         self._valid()
 
-        if self._isstring(where):
+        if awkward.util.isstringslice(where):
             return JaggedArray(self._starts, self._stops, self._content[where])
 
         if not isinstance(where, tuple):
@@ -149,261 +272,158 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 # the other cases are possible, but complicated; the first sets the form
                 raise NotImplementedError("jagged second dimension index type: {0}".format(original_head))
 
-# class JaggedArray(awkward.array.base.AwkwardArray):
-#     @classmethod
-#     def fromoffsets(cls, offsets, content):
-#         return cls(offsets[:-1], offsets[1:], content)
+    # @staticmethod
+    # def broadcastable(*jaggedarrays):
+    #     if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
+    #         raise TypeError("all objects passed to JaggedArray.broadcastable must be JaggedArrays")
 
-#     @classmethod
-#     def fromcounts(cls, counts, content):
-#         offsets = numpy.empty(len(counts) + 1, JaggedArray.INDEXTYPE)
-#         offsets[0] = 0
-#         numpy.cumsum(counts, offsets[1:])
-#         return cls(offsets[:-1], offsets[1:], content)
+    #     if len(jaggedarrays) == 0:
+    #         return True
 
-#     @classmethod
-#     def fromuniques(cls, uniques, content):
-#         uniques = JaggedArray._toarray(uniques, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-#         if len(uniques) != len(content):
-#             raise ValueError("uniques array must have the same length as content")
-#         changes = numpy.nonzero(uniques[1:] != uniques[:-1])[0] + 1
-#         offsets = numpy.empty(len(changes) + 2, dtype=JaggedArray.INDEXTYPE)
-#         offsets[0] = 0
-#         offsets[-1] = len(content)
-#         offsets[1:-1] = changes
-#         starts, stops = offsets[:-1], offsets[1:]
-#         return JaggedArray(starts, stops, content)
+    #     # empty subarrays can be represented by any start,stop as long as start == stop
+    #     relevant, relevantstarts, relevantstops = None, None, None
 
-#     @classmethod
-#     def fromparents(cls, parents, content):
-#         if len(parents) != len(content):
-#             raise ValueError("parents array must have the same length as content")
+    #     first = jaggedarrays[0]
+    #     for next in jaggedarrays[1:]:
+    #         if first._starts is not next._starts:
+    #             if relevant is None:
+    #                 relevant = (first.counts != 0)
+    #             if relevantstarts is None:
+    #                 relevantstarts = first._starts[relevant]
+    #             if not numpy.array_equal(relevantstarts, next._starts[relevant]):
+    #                 return False
 
-#         tmp = numpy.nonzero(parents[1:] != parents[:-1])[0] + 1
+    #         if first._stops is not next._stops:
+    #             if relevant is None:
+    #                 relevant = (first.counts != 0)
+    #             if relevantstops is None:
+    #                 relevantstops = first._stops[relevant]
+    #             if not numpy.array_equal(relevantstops, next._stops[relevant]):
+    #                 return False
 
-#         changes = numpy.empty(len(tmp) + 2, dtype=JaggedArray.INDEXTYPE)
-#         changes[0] = 0
-#         changes[-1] = len(parents)
-#         changes[1:-1] = tmp
+    #     return True
 
-#         length = parents.max() + 1
-#         starts = numpy.zeros(length, dtype=JaggedArray.INDEXTYPE)
-#         counts = numpy.zeros(length, dtype=JaggedArray.INDEXTYPE)
+    # def tobroadcast(self, data):
+    #     data = awkward.util.toarray(data, self._content.dtype, (numpy.ndarray, awkward.array.base.AwkwardArray))
+    #     good = (self.parents >= 0)
+    #     content = numpy.empty(len(self.parents), dtype=data.dtype)
+    #     if len(data.shape) == 0:
+    #         content[good] = data
+    #     else:
+    #         content[good] = data[self.parents[good]]
+    #     out = JaggedArray(self._starts, self._stops, content)
+    #     out._parents = self.parents
+    #     return out
 
-#         where = parents[changes[:-1]]
-#         real = (where >= 0)
+    def tojagged(self, starts=None, stops=None, copy=True):
+        if starts is None and stops is None:
+            if copy:
+                starts, stops = self._starts.copy(), self._stops.copy()
+            else:
+                starts, stops = self._starts, self._stops
 
-#         starts[where[real]] = (changes[:-1])[real]
-#         counts[where[real]] = (changes[1:] - changes[:-1])[real]
+        elif stops is None:
+            starts = awkward.util.toarray(starts, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+            if len(self) != len(starts):
+                raise IndexError("cannot fit JaggedArray of length {0} into starts of length {1}".format(len(self), len(starts)))
 
-#         return JaggedArray(starts, starts + counts, content)
+            stops = starts + self.counts
 
-#     @classmethod
-#     def fromiter(cls, iterable):
-#         offsets = [0]
-#         content = []
-#         for x in iterable:
-#             offsets.append(offsets[-1] + len(x))
-#             content.extend(x)
-#         return cls(offsets[:-1], offsets[1:], content)
+            if (stops[:-1] > starts[1:]).any():
+                raise IndexError("cannot fit contents of JaggedArray into the given starts array")
 
-#     @staticmethod
-#     def compatible(*jaggedarrays):
-#         if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
-#             raise TypeError("not all objects passed to JaggedArray.compatible are JaggedArrays")
+        elif starts is None:
+            stops = awkward.util.toarray(stops, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+            if len(self) != len(stops):
+                raise IndexError("cannot fit JaggedArray of length {0} into stops of length {1}".format(len(self), len(stops)))
 
-#         if len(jaggedarrays) == 0:
-#             return True
+            starts = stops - self.counts
 
-#         # empty subarrays can be represented by any start,stop as long as start == stop
-#         relevant, relevantstarts, relevantstops = None, None, None
+            if (stops[:-1] > starts[1:]).any():
+                raise IndexError("cannot fit contents of JaggedArray into the given stops array")
 
-#         first = jaggedarrays[0]
-#         for next in jaggedarrays[1:]:
-#             if first._starts is not next._starts:
-#                 if relevant is None:
-#                     relevant = (first.counts != 0)
-#                 if relevantstarts is None:
-#                     relevantstarts = first._starts[relevant]
-#                 if not numpy.array_equal(relevantstarts, next._starts[relevant]):
-#                     return False
+        else:
+            if not numpy.array_equal(stops - starts, self.counts):
+                raise IndexError("cannot fit contents of JaggedArray into the given starts and stops arrays")
 
-#             if first._stops is not next._stops:
-#                 if relevant is None:
-#                     relevant = (first.counts != 0)
-#                 if relevantstops is None:
-#                     relevantstops = first._stops[relevant]
-#                 if not numpy.array_equal(relevantstops, next._stops[relevant]):
-#                     return False
+        if not copy and starts is self._starts and stops is self._stops:
+            return self
 
-#         return True
+        elif (starts is self._starts or numpy.array_equal(starts, self._starts)) and (stops is self._stops or numpy.array_equal(stops, self._stops)):
+            if copy:
+                return JaggedArray(starts, stops, self._content.copy())
+            else:
+                return JaggedArray(starts, stops, self._content)
 
-#     @property
-#     def dtype(self):
-#         return numpy.dtype(object)   # specifically, subarrays
-
-#     @property
-#     def shape(self):
-#         return (len(self._starts),)
-
-#     def _offsets_is_aliased(self):
-#         return (isinstance(self._starts, numpy.ndarray) and isinstance(self._stops, numpy.ndarray) and
-#                 self._starts.base is not None and self._stops.base is not None and self._starts.base is self._stops.base and
-#                 self._starts.ctypes.data == self._starts.base.ctypes.data and
-#                 self._stops.ctypes.data == self._stops.base.ctypes.data + self._stops.dtype.itemsize and
-#                 len(self._starts) == len(self._starts.base) - 1 and
-#                 len(self._stops) == len(self._stops.base) - 1)
-
-#     @property
-#     def offsets(self):
-#         if self._offsets_is_aliased():
-#             return self._starts.base
-#         elif numpy.array_equal(self._starts[1:], self.stops[:-1]):
-#             return numpy.append(self._starts, self.stops[-1])
-#         else:
-#             raise ValueError("starts and stops are not compatible with a single offsets array")
-
-#     @property
-#     def counts(self):
-#         return self._stops - self._starts
-
-#     @staticmethod
-#     def _parents(starts, stops):
-#         out = numpy.full(stops.max(), -1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
-#         lenstarts = len(starts)
-#         i = 0
-#         while i < lenstarts:
-#             out[starts[i]:stops[i]] = i
-#             i += 1
-#         return out
-
-#     @property
-#     def parents(self):
-#         return self._parents(self._starts, self._stops)
-
-#     def __len__(self):                 # length is determined by starts
-#         return len(self._starts)       # data can grow by appending contents and stops before starts
-
-#     def tojagged(self, starts=None, stops=None, copy=True):
-#         if starts is None and stops is None:
-#             if copy:
-#                 starts, stops = self._starts.copy(), self._stops.copy()
-#             else:
-#                 starts, stops = self._starts, self._stops
-
-#         elif stops is None:
-#             starts = self._toarray(starts, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-#             if len(self) != len(starts):
-#                 raise IndexError("cannot fit JaggedArray of length {0} into starts of length {1}".format(len(self), len(starts)))
-
-#             stops = starts + self.counts
-
-#             if (stops[:-1] > starts[1:]).any():
-#                 raise IndexError("cannot fit contents of JaggedArray into the given starts array")
-
-#         elif starts is None:
-#             stops = self._toarray(stops, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-#             if len(self) != len(stops):
-#                 raise IndexError("cannot fit JaggedArray of length {0} into stops of length {1}".format(len(self), len(stops)))
-
-#             starts = stops - self.counts
-
-#             if (stops[:-1] > starts[1:]).any():
-#                 raise IndexError("cannot fit contents of JaggedArray into the given stops array")
-
-#         else:
-#             if not numpy.array_equal(stops - starts, self.counts):
-#                 raise IndexError("cannot fit contents of JaggedArray into the given starts and stops arrays")
-
-#         if not copy and starts is self._starts and stops is self._stops:
-#             return self
-
-#         elif (starts is self._starts or numpy.array_equal(starts, self._starts)) and (stops is self._stops or numpy.array_equal(stops, self._stops)):
-#             if copy:
-#                 return JaggedArray(starts, stops, self._content.copy())
-#             else:
-#                 return JaggedArray(starts, stops, self._content)
-
-#         else:
-#             selfstarts, selfstops, selfcontent = self._starts, self._stops, self._content
-#             content = numpy.empty(stops.max(), dtype=selfcontent.dtype)
+        else:
+            selfstarts, selfstops, selfcontent = self._starts, self._stops, self._content
+            content = numpy.empty(stops.max(), dtype=selfcontent.dtype)
             
-#             lenstarts = len(starts)
-#             i = 0
-#             while i < lenstarts:
-#                 content[starts[i]:stops[i]] = selfcontent[selfstarts[i]:selfstops[i]]
-#                 i += 1
+            lenstarts = len(starts)
+            i = 0
+            while i < lenstarts:
+                content[starts[i]:stops[i]] = selfcontent[selfstarts[i]:selfstops[i]]
+                i += 1
             
-#             return JaggedArray(starts, stops, content)
+            return JaggedArray(starts, stops, content)
 
-#     def makecompatible(self, data):
-#         data = self._toarray(data, self._content.dtype, (numpy.ndarray, awkward.array.base.AwkwardArray))
-#         parents = self.parents
-#         good = (parents >= 0)
-#         content = numpy.empty(len(parents), dtype=data.dtype)
-#         if len(data.shape) == 0:
-#             content[good] = data
-#         else:
-#             content[good] = data[parents[good]]
-#         return JaggedArray(self._starts, self._stops, content)
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if method != "__call__":
+            return NotImplemented
 
-#     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-#         if method != "__call__":
-#             return NotImplemented
+        inputs = list(inputs)
+        starts, stops = None, None
 
-#         inputs = list(inputs)
-#         starts, stops = None, None
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], (numbers.Number, numpy.number)):
+                pass
 
-#         for i in range(len(inputs)):
-#             if isinstance(inputs[i], (numbers.Number, numpy.number)):
-#                 pass
+            elif isinstance(inputs[i], JaggedArray):
+                if starts is stops is None:
+                    inputs[i] = inputs[i].tojagged(copy=False)
+                    starts, stops = inputs[i].starts, inputs[i].stops
+                else:
+                    inputs[i] = inputs[i].tojagged(starts, stops)
 
-#             elif isinstance(inputs[i], JaggedArray):
-#                 if starts is stops is None:
-#                     inputs[i] = inputs[i].tojagged(copy=False)
-#                     starts, stops = inputs[i].starts, inputs[i].stops
-#                 else:
-#                     inputs[i] = inputs[i].tojagged(starts, stops)
+            else:
+                inputs[i] = numpy.array(inputs[i], copy=False)
 
-#             else:
-#                 inputs[i] = numpy.array(inputs[i], copy=False)
+        for jaggedarray in inputs:
+            if isinstance(jaggedarray, JaggedArray):
+                starts, stops, parents, good = jaggedarray._starts, jaggedarray._stops, None, None
+                break
+        else:
+            assert False
 
-#         for jaggedarray in inputs:
-#             if isinstance(jaggedarray, JaggedArray):
-#                 starts, stops, parents, good = jaggedarray._starts, jaggedarray._stops, None, None
-#                 break
-#         else:
-#             assert False
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], numpy.ndarray):
+                data = awkward.util.toarray(inputs[i], inputs[i].dtype, (numpy.ndarray, awkward.array.base.AwkwardArray))
+                if parents is None:
+                    parents = jaggedarray.parents
+                    good = (parents >= 0)
 
-#         for i in range(len(inputs)):
-#             if isinstance(inputs[i], numpy.ndarray):
-#                 data = self._toarray(inputs[i], inputs[i].dtype, (numpy.ndarray, awkward.array.base.AwkwardArray))
-#                 if parents is None:
-#                     parents = jaggedarray.parents
-#                     good = (parents >= 0)
+                content = numpy.empty(len(parents), dtype=data.dtype)
+                if len(data.shape) == 0:
+                    content[good] = data
+                else:
+                    content[good] = data[parents[good]]
+                inputs[i] = JaggedArray(starts, stops, content)
 
-#                 content = numpy.empty(len(parents), dtype=data.dtype)
-#                 if len(data.shape) == 0:
-#                     content[good] = data
-#                 else:
-#                     content[good] = data[parents[good]]
-#                 inputs[i] = JaggedArray(starts, stops, content)
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], JaggedArray):
+                if good is None:
+                    inputs[i] = inputs[i].content
+                else:
+                    inputs[i] = inputs[i].content[good]
 
-#         for i in range(len(inputs)):
-#             if isinstance(inputs[i], JaggedArray):
-#                 if good is None:
-#                     inputs[i] = inputs[i].content
-#                 else:
-#                     inputs[i] = inputs[i].content[good]
+        result = getattr(ufunc, method)(*inputs, **kwargs)
 
-#         result = getattr(ufunc, method)(*inputs, **kwargs)
-
-#         if isinstance(result, tuple):
-#             return tuple(JaggedArray(starts, stops, x) for x in result)
-#         elif method == "at":
-#             return None
-#         else:
-#             return JaggedArray(starts, stops, result)
+        if isinstance(result, tuple):
+            return tuple(JaggedArray(starts, stops, x) for x in result)
+        elif method == "at":
+            return None
+        else:
+            return JaggedArray(starts, stops, result)
 
 #     def argproduct(self, other):
 #         import awkward.array.table 
@@ -417,13 +437,13 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 #         selfcounts = self._stops - self._starts
 #         othercounts = other._stops - other._starts
         
-#         offsets = numpy.empty(len(self._starts) + 1, dtype=self.INDEXTYPE)
+#         offsets = numpy.empty(len(self._starts) + 1, dtype=awkward.util.INDEXTYPE)
 #         offsets[0] = 0
-#         offsets[1:] = numpy.cumsum(selfcounts * othercounts, dtype=self.INDEXTYPE)
+#         offsets[1:] = numpy.cumsum(selfcounts * othercounts, dtype=awkward.util.INDEXTYPE)
 
-#         indexes = numpy.arange(offsets[-1], dtype=self.INDEXTYPE)
+#         indexes = numpy.arange(offsets[-1], dtype=awkward.util.INDEXTYPE)
 #         parents = self._parents(offsets[:-1], offsets[1:])
-#         parents = parents.astype(self.INDEXTYPE)
+#         parents = parents.astype(awkward.util.INDEXTYPE)
 
 #         left = numpy.empty_like(indexes)
 #         right = numpy.empty_like(indexes)
@@ -442,7 +462,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 #         return JaggedArray(argproduct.starts, argproduct.stops, awkward.array.table.Table(len(left), self._content[left], other.content[right]))
 
 class ByteJaggedArray(JaggedArray):
-    def __init__(self, starts, stops, content, dtype=awkward.array.base.AwkwardArray.CHARTYPE):
+    def __init__(self, starts, stops, content, dtype=awkward.util.CHARTYPE):
         raise NotImplementedError
 
 # class ByteJaggedArray(JaggedArray):
@@ -457,12 +477,12 @@ class ByteJaggedArray(JaggedArray):
 #         for x in iterable:
 #             offsets.append(offsets[-1] + len(x))
 #             content.extend(x)
-#         offsets = numpy.array(offsets, dtype=ByteJaggedArray.INDEXTYPE)
+#         offsets = numpy.array(offsets, dtype=awkward.util.INDEXTYPE)
 #         content = numpy.array(content)
 #         offsets *= content.dtype.itemsize
 #         return cls(offsets[:-1], offsets[1:], content, content.dtype)
 
-#     def __init__(self, starts, stops, content, dtype=awkward.array.base.AwkwardArray.CHARTYPE):
+#     def __init__(self, starts, stops, content, dtype=awkward.util.CHARTYPE):
 #         super(ByteJaggedArray, self).__init__(starts, stops, content)
 #         self.dtype = dtype
 
@@ -472,7 +492,7 @@ class ByteJaggedArray(JaggedArray):
 
 #     @content.setter
 #     def content(self, value):
-#         self._content = self._toarray(value, self.CHARTYPE, numpy.ndarray).view(self.CHARTYPE).reshape(-1)
+#         self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, numpy.ndarray).view(awkward.util.CHARTYPE).reshape(-1)
 
 #     @property
 #     def dtype(self):
@@ -483,7 +503,7 @@ class ByteJaggedArray(JaggedArray):
 #         self._dtype = numpy.dtype(value)
 
 #     def __getitem__(self, where):
-#         if self._isstring(where):
+#         if awkward.util.isstringslice(where):
 #             return ByteJaggedArray(self._starts, self._stops, self._content[where], self._dtype)
 
 #         if not isinstance(where, tuple):
@@ -503,13 +523,13 @@ class ByteJaggedArray(JaggedArray):
 #         counts = self.counts
 
 #         if starts is None and stops is None:
-#             offsets = numpy.empty(len(self) + 1, dtype=self.INDEXTYPE)
+#             offsets = numpy.empty(len(self) + 1, dtype=awkward.util.INDEXTYPE)
 #             offsets[0] = 0
 #             numpy.cumsum(counts // self.dtype.itemsize, out=offsets[1:])
 #             starts, stops = offsets[:-1], offsets[1:]
             
 #         elif stops is None:
-#             starts = self._toarray(starts, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+#             starts = awkward.util.toarray(starts, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 #             if len(self) != len(starts):
 #                 raise IndexError("cannot fit ByteJaggedArray of length {0} into starts of length {1}".format(len(self), len(starts)))
 
@@ -519,7 +539,7 @@ class ByteJaggedArray(JaggedArray):
 #                 raise IndexError("cannot fit contents of ByteJaggedArray into the given starts array")
 
 #         elif starts is None:
-#             stops = self._toarray(stops, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+#             stops = awkward.util.toarray(stops, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 #             if len(self) != len(stops):
 #                 raise IndexError("cannot fit ByteJaggedArray of length {0} into stops of length {1}".format(len(self), len(stops)))
 

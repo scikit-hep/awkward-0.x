@@ -33,22 +33,17 @@ import numpy
 import awkward.util
 
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
-    CHARTYPE = numpy.dtype(numpy.uint8)
-    INDEXTYPE = numpy.dtype(numpy.int64)
-    MASKTYPE = numpy.dtype(numpy.bool_)
-    BITMASKTYPE = numpy.dtype(numpy.uint8)
-
     def __iter__(self):
         for i in range(len(self)):
             yield self[i]
 
     def __str__(self):
         if len(self) <= 6:
-            return "[{0}]".format(" ".join(str(x) if isinstance(x, (numpy.ndarray, awkward.array.base.AwkwardArray)) else repr(x) for x in self))
+            return "[{0}]".format(" ".join(str(x) if isinstance(x, (numpy.ndarray, AwkwardArray)) else repr(x) for x in self))
         else:
             return "[{0} ... {1}]".format(
-                " ".join(str(x) if isinstance(x, (numpy.ndarray, awkward.array.base.AwkwardArray)) else repr(x) for x in self[:3]),
-                ", ".join(str(x) if isinstance(x, (numpy.ndarray, awkward.array.base.AwkwardArray)) else repr(x) for x in self[-3:]))
+                " ".join(str(x) if isinstance(x, (numpy.ndarray, AwkwardArray)) else repr(x) for x in self[:3]),
+                ", ".join(str(x) if isinstance(x, (numpy.ndarray, AwkwardArray)) else repr(x) for x in self[-3:]))
 
     def __repr__(self):
         return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
@@ -70,27 +65,6 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             else:
                 out.append(self._try_tolist(x))
         return out
-
-    @staticmethod
-    def _toarray(value, defaultdtype, passthrough):
-        if isinstance(value, passthrough):
-            return value
-        else:
-            try:
-                return numpy.frombuffer(value, dtype=getattr(value, "dtype", defaultdtype)).reshape(getattr(value, "shape", -1))
-            except AttributeError:
-                return numpy.array(value, copy=False)
-
-    @staticmethod
-    def _isstring(where):
-        if isinstance(where, awkward.util.string):
-            return True
-        try:
-            assert all(isinstance(x, awkward.util.string) for x in where)
-        except (TypeError, AssertionError):
-            return False
-        else:
-            return True
 
     def valid(self):
         try:
