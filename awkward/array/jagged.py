@@ -455,14 +455,18 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         right[indexes] = other._starts[parents[indexes]] + (indexes - offsets[parents[indexes]]) - othercounts[parents[indexes]] * ((indexes - offsets[parents[indexes]]) // othercounts[parents[indexes]])
 
         import awkward.array.table 
-        return JaggedArray.fromoffsets(offsets, awkward.array.table.Table(offsets[-1], left, right))
+        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table(offsets[-1], left, right))
+        out._parents = parents
+        return out
 
     def cross(self, other):
         argcross = self.argcross(other)
         left, right = argcross._content._content.values()
 
         import awkward.array.table
-        return JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table(len(argcross._content), self._content[left], other._content[right]))
+        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table(len(argcross._content), self._content[left], other._content[right]))
+        out._parents = argcross._parents
+        return out
 
 class ByteJaggedArray(JaggedArray):
     def __init__(self, starts, stops, content, dtype=awkward.util.CHARTYPE):
