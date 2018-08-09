@@ -500,13 +500,14 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         self._valid()
 
         out = numpy.ones(self.shape + self._content.shape[1:], dtype=self._content.dtype)
+        flatout = out.reshape((-1,) + self._content.shape[1:])
 
         content = self._content
-        stops = self._stops
-        for i, start in enumerate(self._starts):
-            stop = stops[i]
-            if start != stop:
-                out[i] *= content[start:stop].prod()
+        flatstops = self._stops.reshape(-1)
+        for i, flatstart in enumerate(self._starts.reshape(-1)):
+            flatstop = flatstops[i]
+            if flatstart != flatstop:
+                flatout[i] *= content[flatstart:flatstop].prod(axis=0)
         return out
 
     def min(self):
@@ -520,13 +521,13 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         if len(content.shape) == 1:
             for i, start in enumerate(self._starts):
                 stop = stops[i]
-                if start != stop:
+                if (start != stop).any():
                     out[i] = min(content[start:stop].min(), out[i])
         else:
             minimum = numpy.minimum
             for i, start in enumerate(self._starts):
                 stop = stops[i]
-                if start != stop:
+                if (start != stop).any():
                     out[i] = minimum(content[start:stop].min(axis=0), out[i])
         return out
 
@@ -541,13 +542,13 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         if len(content.shape) == 1:
             for i, start in enumerate(self._starts):
                 stop = stops[i]
-                if start != stop:
+                if (start != stop).any():
                     out[i] = max(content[start:stop].max(), out[i])
         else:
             maximum = numpy.maximum
             for i, start in enumerate(self._starts):
                 stop = stops[i]
-                if start != stop:
+                if (start != stop).any():
                     out[i] = maximum(content[start:stop].max(axis=0), out[i])
         return out
 
