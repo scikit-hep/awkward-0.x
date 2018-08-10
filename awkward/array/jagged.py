@@ -286,14 +286,27 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             head, tail = where[:len(self._starts.shape)], where[len(self._starts.shape):]
 
         if isinstance(head, JaggedArray):
-            head = head._tojagged(self._starts, self._stops, copy=False)
+            if issubclass(head._content.dtype.type, numpy.integer):
+                if head._starts.shape != self._starts.shape:
+                    raise ValueError("jagged array used as index has a different shape {0} from the jagged array it is selecting from {1}".format(head._starts.shape, self._starts.shape))
 
-            if issubclass(head._content.dtype.type, (numpy.bool, numpy.bool_)):
-                HERE
+                counts = head._broadcast(self.counts)._content
+                indexes = numpy.array(head._content, copy=True)
+                negatives = (indexes < 0)
+                indexes[negatives] += counts[negatives]
+
+                if not numpy.bitwise_and(0 <= indexes, indexes < counts).all():
+                    raise IndexError("jagged array used as index contains out-of-bounds values")
+
+                indexes += head._broadcast(self._starts)._content
+
+                return head.copy(content=self._content[indexes])
+
+            elif issubclass(head._content.dtype.type, (numpy.bool, numpy.bool_)):
+                head = head._tojagged(self._starts, self._stops, copy=False)
 
 
-
-                node
+                raise Exception("FIXME")
                 
             else:
                 # the other cases are possible, but complicated; the first sets the form
