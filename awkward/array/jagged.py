@@ -368,37 +368,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         newtable = awkward.array.table.Table(len(first._content), awkward.util.OrderedDict(zip(table._content, [x._content for x in inputs])))
         return cls(first._starts, first._stops, newtable)
 
-    # @staticmethod
-    # def _broadcastable(*jaggedarrays):
-    #     if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
-    #         raise TypeError("all objects passed to JaggedArray.broadcastable must be JaggedArrays")
-
-    #     if len(jaggedarrays) == 0:
-    #         return True
-
-    #     # empty subarrays can be represented by any start,stop as long as start == stop
-    #     relevant, relevantstarts, relevantstops = None, None, None
-
-    #     first = jaggedarrays[0]
-    #     for next in jaggedarrays[1:]:
-    #         if first._starts is not next._starts:
-    #             if relevant is None:
-    #                 relevant = (first.counts != 0)
-    #             if relevantstarts is None:
-    #                 relevantstarts = first._starts[relevant]
-    #             if not numpy.array_equal(relevantstarts, next._starts[relevant]):
-    #                 return False
-
-    #         if first._stops is not next._stops:
-    #             if relevant is None:
-    #                 relevant = (first.counts != 0)
-    #             if relevantstops is None:
-    #                 relevantstops = first._stops[relevant]
-    #             if not numpy.array_equal(relevantstops, next._stops[relevant]):
-    #                 return False
-
-    #     return True
-
     def _broadcast(self, data):
         data = awkward.util.toarray(data, self._content.dtype, (numpy.ndarray, awkward.array.base.AwkwardArray))
         good = (self.parents >= 0)
@@ -412,8 +381,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return out
 
     def _tojagged(self, starts=None, stops=None, copy=True):
-        self._valid()
-
         if starts is None and stops is None:
             if copy:
                 starts, stops = awkward.util.deepcopy(self._starts), awkward.util.deepcopy(self._stops)
@@ -520,6 +487,37 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return None
         else:
             return self.copy(starts=starts, stops=stops, content=result)
+
+    @staticmethod
+    def aligned(*jaggedarrays):
+        if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
+            raise TypeError("all objects passed to JaggedArray.aligned must be JaggedArrays")
+
+        if len(jaggedarrays) == 0:
+            return True
+
+        # empty subarrays can be represented by any start,stop as long as start == stop
+        relevant, relevantstarts, relevantstops = None, None, None
+
+        first = jaggedarrays[0]
+        for next in jaggedarrays[1:]:
+            if first._starts is not next._starts:
+                if relevant is None:
+                    relevant = (first.counts != 0)
+                if relevantstarts is None:
+                    relevantstarts = first._starts[relevant]
+                if not numpy.array_equal(relevantstarts, next._starts[relevant]):
+                    return False
+
+            if first._stops is not next._stops:
+                if relevant is None:
+                    relevant = (first.counts != 0)
+                if relevantstops is None:
+                    relevantstops = first._stops[relevant]
+                if not numpy.array_equal(relevantstops, next._stops[relevant]):
+                    return False
+
+        return True
 
     def argcross(self, other):
         import awkward.array.table
@@ -634,6 +632,14 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
     def max(self):
         return self._minmax(False, False)
+
+    def flatten(self):
+        self._valid()
+        if awkward.util.offsetsaliased(self._starts, self._stops) or len(self._starts.shape) == 1 and numpy.array_equal(self._starts[1:], self._stops[:-1]):
+            return self._content[self._starts[0]:self._stops[-1]]
+        else:
+            offsets = awkward.util.counts2offsets(self.counts)
+            return self._tojagged(offsets[:-1], offsets[1:], copy=False)._content
 
     def pandas(self):
         import pandas
