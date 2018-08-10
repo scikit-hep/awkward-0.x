@@ -276,7 +276,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         if awkward.util.isstringslice(where):
             return self.copy(content=self._content[where])
 
-        if where == ():
+        if isinstance(where, tuple) and len(where) == 0:
             return self
         if not isinstance(where, tuple):
             where = (where,)
@@ -587,39 +587,50 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         # not a group; must iterate (in absence of modified Hillis-Steele)
         self._valid()
 
-        if ismin:
-            if isarg:
+        if isarg:
+            if ismin:
                 optimum = numpy.argmin
             else:
-                optimum = numpy.amin
-        else:
-            if isarg:
                 optimum = numpy.argmax
+
+            out = numpy.empty(self._starts.shape + self._content.shape[1:], dtype=awkward.util.INDEXTYPE)
+
+        else:
+            if ismin:
+                optimum = numpy.amin
             else:
                 optimum = numpy.amax
 
-        if isarg:
-            out = numpy.full(self.shape + self._content.shape[1:], -1, dtype=awkward.util.INDEXTYPE)
-        else:
             if issubclass(self._content.dtype.type, numpy.floating):
                 if ismin:
-                    out = numpy.full(self.shape + self._content.shape[1:], numpy.inf, dtype=self._content.dtype)
+                    out = numpy.full(self._starts.shape + self._content.shape[1:], numpy.inf, dtype=self._content.dtype)
                 else:
-                    out = numpy.full(self.shape + self._content.shape[1:], -numpy.inf, dtype=self._content.dtype)
+                    out = numpy.full(self._starts.shape + self._content.shape[1:], -numpy.inf, dtype=self._content.dtype)
+
             elif issubclass(self._content.dtype.type, numpy.integer):
-                out = numpy.full(self.shape + self._content.shape[1:], numpy.iinfo(self._content.dtype.type).max, dtype=self._content.dtype)
+                out = numpy.full(self._starts.shape + self._content.shape[1:], numpy.iinfo(self._content.dtype.type).max, dtype=self._content.dtype)
+
             else:
                 raise TypeError("only floating point and integer types can be minimized")
 
         flatout = out.reshape((-1,) + self._content.shape[1:])
+        flatstarts = self._starts.reshape(-1)
+        flatstops = self._stops.reshape(-1)
 
         content = self._content
-        flatstops = self._stops.reshape(-1)
-        for i, flatstart in enumerate(self._starts.reshape(-1)):
+        for i, flatstart in enumerate(flatstarts):
             flatstop = flatstops[i]
             if flatstart != flatstop:
                 flatout[i] = optimum(content[flatstart:flatstop], axis=0)
-        return out
+
+        if isarg:
+            newstarts = numpy.arange(len(flatstarts), dtype=awkward.util.INDEXTYPE).reshape(self._starts.shape)
+            newstops = numpy.array(newstarts)
+            newstops.reshape(-1)[flatstarts != flatstops] += 1
+            return self.copy(starts=newstarts, stops=newstops, content=flatout)
+
+        else:
+            return out
 
     def argmin(self):
         return self._minmax(True, True)
