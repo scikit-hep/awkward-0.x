@@ -300,13 +300,25 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
                 indexes += head._broadcast(self._starts)._content
 
-                return head.copy(content=self._content[indexes])
+                return self.copy(starts=head._starts, stops=head._stops, content=self._content[indexes])
 
             elif issubclass(head._content.dtype.type, (numpy.bool, numpy.bool_)):
-                head = head._tojagged(self._starts, self._stops, copy=False)
+                try:
+                    offsets = self.offsets
+                    thyself = self
 
+                except ValueError:
+                    offsets = awkward.util.counts2offsets(self.counts.reshape(-1))
+                    thyself = self._tojagged(offsets[:-1], offsets[1:], copy=False)
+                    thyself._starts.shape = self._starts.shape
+                    thyself._stops.shape = self._stops.shape
 
-                raise Exception("FIXME")
+                head = head._tojagged(thyself._starts, thyself._stops, copy=False)
+                inthead = head.copy(content=head._content.view(numpy.uint8))
+
+                offsets = awkward.util.counts2offsets(inthead.sum())
+                
+                return self.copy(starts=offsets[:-1], stops=offsets[1:], content=self._content[head._content])
                 
             else:
                 # the other cases are possible, but complicated; the first sets the form
