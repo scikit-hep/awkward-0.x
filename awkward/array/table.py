@@ -98,9 +98,9 @@ class Table(awkward.array.base.AwkwardArray):
                     raise TypeError("only one positional argument when the first argument is a dict")
 
         else:
-            self["0"] = columns1
+            self["_0"] = columns1
             for i, x in enumerate(columns2):
-                self[str(i + 1)] = x
+                self["_" + str(i + 1)] = x
 
         seen.update(self._content)
 

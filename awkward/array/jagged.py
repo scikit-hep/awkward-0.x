@@ -501,7 +501,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return out
 
     def prod(self):
-        # multiplication is a group, but multiplying and dividing large numbers isn't numerically stable
+        # can't use the above trick because you might encounter a zero
         self._valid()
 
         out = numpy.ones(self.shape + self._content.shape[1:], dtype=self._content.dtype)
@@ -515,47 +515,55 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 flatout[i] *= content[flatstart:flatstop].prod(axis=0)
         return out
 
-    def min(self):
+    def _minmax(self, isarg, ismin):
         # not a group; must iterate (in absence of modified Hillis-Steele)
         self._valid()
 
-        if issubclass(self._content.dtype.type, numpy.floating):
-            out = numpy.full(self.shape + self._content.shape[1:], numpy.inf, dtype=self._content.dtype)
-        elif issubclass(self._content.dtype.type, numpy.integer):
-            out = numpy.full(self.shape + self._content.shape[1:], numpy.iinfo(self._content.dtype.type).max, dtype=self._content.dtype)
+        if ismin:
+            if isarg:
+                optimum = numpy.argmin
+            else:
+                optimum = numpy.amin
         else:
-            raise TypeError("only floating point and integer types can be minimized")
+            if isarg:
+                optimum = numpy.argmax
+            else:
+                optimum = numpy.amax
+
+        if isarg:
+            out = numpy.full(self.shape + self._content.shape[1:], -1, dtype=awkward.util.INDEXTYPE)
+        else:
+            if issubclass(self._content.dtype.type, numpy.floating):
+                if ismin:
+                    out = numpy.full(self.shape + self._content.shape[1:], numpy.inf, dtype=self._content.dtype)
+                else:
+                    out = numpy.full(self.shape + self._content.shape[1:], -numpy.inf, dtype=self._content.dtype)
+            elif issubclass(self._content.dtype.type, numpy.integer):
+                out = numpy.full(self.shape + self._content.shape[1:], numpy.iinfo(self._content.dtype.type).max, dtype=self._content.dtype)
+            else:
+                raise TypeError("only floating point and integer types can be minimized")
+
         flatout = out.reshape((-1,) + self._content.shape[1:])
 
         content = self._content
         flatstops = self._stops.reshape(-1)
-        minimum = numpy.minimum
         for i, flatstart in enumerate(self._starts.reshape(-1)):
             flatstop = flatstops[i]
             if flatstart != flatstop:
-                flatout[i] = minimum(flatout[i], content[flatstart:flatstop].min(axis=0))
+                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
         return out
+
+    def argmin(self):
+        return self._minmax(True, True)
+
+    def argmax(self):
+        return self._minmax(True, False)
+
+    def min(self):
+        return self._minmax(False, True)
 
     def max(self):
-        # not a group; must iterate (in absence of modified Hillis-Steele)
-        self._valid()
-
-        if issubclass(self._content.dtype.type, numpy.floating):
-            out = numpy.full(self.shape + self._content.shape[1:], -numpy.inf, dtype=self._content.dtype)
-        elif issubclass(self._content.dtype.type, numpy.integer):
-            out = numpy.full(self.shape + self._content.shape[1:], numpy.iinfo(self._content.dtype.type).min, dtype=self._content.dtype)
-        else:
-            raise TypeError("only floating point and integer types can be maximized")
-        flatout = out.reshape((-1,) + self._content.shape[1:])
-
-        content = self._content
-        flatstops = self._stops.reshape(-1)
-        maximum = numpy.maximum
-        for i, flatstart in enumerate(self._starts.reshape(-1)):
-            flatstop = flatstops[i]
-            if flatstart != flatstop:
-                flatout[i] = maximum(flatout[i], content[flatstart:flatstop].max(axis=0))
-        return out
+        return self._minmax(False, False)
 
 class ByteJaggedArray(JaggedArray):
     def __init__(self, starts, stops, content, dtype=awkward.util.CHARTYPE):
