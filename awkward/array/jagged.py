@@ -92,31 +92,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._parents = parents
         return out
 
-    @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
-        import awkward.array.table
-        table = awkward.array.table.Table(0, columns1, *columns2, **columns3)
-        inputs = list(table._content.values())
-        table._length = min(len(x) for x in inputs)
-
-        first = None
-        for i in range(len(inputs)):
-            if isinstance(inputs[i], JaggedArray):
-                if first is None:
-                    first = inputs[i] = inputs[i]._tojagged(copy=False)
-                else:
-                    inputs[i] = inputs[i]._tojagged(first._starts, first._stops, copy=False)
-
-        if first is None:
-            return table
-
-        for i in range(len(inputs)):
-            if not isinstance(inputs[i], JaggedArray):
-                inputs[i] = first._broadcast(inputs[i])
-
-        newtable = awkward.array.table.Table(len(first._content), awkward.util.OrderedDict(zip(table._content, [x._content for x in inputs])))
-        return cls(first._starts, first._stops, newtable)
-
     def copy(self, starts=None, stops=None, content=None):
         out = self.__class__.__new__(self.__class__)
         out._starts  = self._starts
@@ -284,6 +259,17 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         if len(starts) > len(stops):
             raise ValueError("starts must not have more elements than stops")
 
+    def __iter__(self):
+        self._valid()
+        if len(self._starts.shape) != 1:
+            for x in super(JaggedArray, self).__iter__():
+                yield x
+        else:
+            stops = self._stops
+            content = self._content
+            for i, start in enumerate(self._starts):
+                yield content[start:stops[i]]
+
     def __getitem__(self, where):
         self._valid()
 
@@ -338,16 +324,49 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         return node[tail]
 
-    def __iter__(self):
-        self._valid()
-        if len(self._starts.shape) != 1:
-            for x in super(JaggedArray, self).__iter__():
-                yield x
+    def __setitem__(self, where, what):
+        if isinstance(where, awkward.util.string):
+            if isinstance(what, JaggedArray):
+                self._content[where] = what._tojagged(self._starts, self._stops, copy=False)._content
+            else:
+                self._content[where] = self._broadcast(what)._content
+
+        elif awkward.util.isstringslice(where):
+            if len(where) != len(what):
+                raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
+            for x, y in zip(where, what):
+                if isinstance(y, JaggedArray):
+                    self._content[x] = y._tojagged(self._starts, self._stops, copy=False)._content
+                else:
+                    self._content[x] = self._broadcast(y)._content
+                
         else:
-            stops = self._stops
-            content = self._content
-            for i, start in enumerate(self._starts):
-                yield content[start:stops[i]]
+            raise TypeError("invalid index for assigning to Table: {0}".format(where))
+
+    @classmethod
+    def zip(cls, columns1={}, *columns2, **columns3):
+        import awkward.array.table
+        table = awkward.array.table.Table(0, columns1, *columns2, **columns3)
+        inputs = list(table._content.values())
+        table._length = min(len(x) for x in inputs)
+
+        first = None
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], JaggedArray):
+                if first is None:
+                    first = inputs[i] = inputs[i]._tojagged(copy=False)
+                else:
+                    inputs[i] = inputs[i]._tojagged(first._starts, first._stops, copy=False)
+
+        if first is None:
+            return table
+
+        for i in range(len(inputs)):
+            if not isinstance(inputs[i], JaggedArray):
+                inputs[i] = first._broadcast(inputs[i])
+
+        newtable = awkward.array.table.Table(len(first._content), awkward.util.OrderedDict(zip(table._content, [x._content for x in inputs])))
+        return cls(first._starts, first._stops, newtable)
 
     # @staticmethod
     # def _broadcastable(*jaggedarrays):
