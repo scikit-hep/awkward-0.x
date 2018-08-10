@@ -117,6 +117,9 @@ class Table(awkward.array.base.AwkwardArray):
 
             self[n] = x
 
+    def __repr__(self):
+        return "<Table {0} x {1} at {2:012x}>".format(self._length, len(self._content), id(self))
+
     @classmethod
     def fromrec(cls, recarray):
         if not isinstance(recarray, numpy.ndarray) or recarray.dtype.names is None:
@@ -201,6 +204,10 @@ class Table(awkward.array.base.AwkwardArray):
             self._length = 0
 
     @property
+    def columns(self):
+        return list(self._content)
+
+    @property
     def dtype(self):
         return numpy.dtype([(n, x.dtype) for n, x in self._content.items()])
 
@@ -227,6 +234,18 @@ class Table(awkward.array.base.AwkwardArray):
     def _valid(self):
         for x in self._content.values():
             self._checklength(x)
+
+    def __iter__(self):
+        i = self._start
+        stop = self._start + self._step*self._length
+        if self._step > 0:
+            while i < stop:
+                yield self.Row(self, i)
+                i += self._step
+        else:
+            while i > stop:
+                yield self.Row(self, i)
+                i += self._step
 
     def __getitem__(self, where):
         if awkward.util.isstringslice(where):
@@ -313,21 +332,32 @@ class Table(awkward.array.base.AwkwardArray):
         else:
             raise TypeError("invalid index for assigning to Table: {0}".format(where))
 
-    def __iter__(self):
-        i = self._start
-        stop = self._start + self._step*self._length
-        if self._step > 0:
-            while i < stop:
-                yield self.Row(self, i)
-                i += self._step
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        self._valid()
+
+        if method != "__call__":
+            return NotImplemented
+
+        tables = [x for x in inputs if isinstance(x, Table)]
+        assert len(tables) > 0
+
+        if len(tables) == 1:
+            table = tables[0].copy()
+            table._start, table._step = 0, 1
+
+            inputs = list(inputs)
+            i = inputs.index(tables[0])
+
+            slc = slice(tables[0].start, tables[0].stop, tables[0].step)
+            for n, x in tables[0]._content.items():
+                inputs[i] = x[slc]
+                table[n] = getattr(ufunc, method)(*inputs, **kwargs)
+
+            return table
+
         else:
-            while i > stop:
-                yield self.Row(self, i)
-                i += self._step
-
-    def __repr__(self):
-        return "<Table {0} x {1} at {2:012x}>".format(self._length, len(self._content), id(self))
-
+            raise NotImplementedError("ufunc applied to multiple tables")
+        
     def _try_tolist(self, x):
         if isinstance(x, self.Row):
             return dict((n, x[n]) for n in x._table._content)
@@ -345,6 +375,9 @@ class NamedTable(Table):
     def __init__(self, length, name, columns1={}, *columns2, **columns3):
         super(NamedTable, self).__init__(length, columns1, *columns2, **columns3)
         self.name = name
+
+    def __repr__(self):
+        return "<{0} {1} x {2} at {3:012x}>".format(self._name, self._length, len(self._content), id(self))
 
     @classmethod
     def fromrec(cls, recarray, name):
@@ -380,6 +413,3 @@ class NamedTable(Table):
         if not isinstance(value, awkward.util.string):
             raise TypeError("name must be a string")
         self._name = value
-
-    def __repr__(self):
-        return "<{0} {1} x {2} at {3:012x}>".format(self._name, self._length, len(self._content), id(self))
