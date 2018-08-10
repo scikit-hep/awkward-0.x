@@ -88,6 +88,7 @@ BITMASKTYPE = numpy.dtype(numpy.uint8)
 cumsum = numpy.cumsum
 cumprod = numpy.cumprod
 nonzero = numpy.nonzero
+arange = numpy.arange
 
 def toarray(value, defaultdtype, passthrough):
     if isinstance(value, passthrough):
@@ -119,6 +120,12 @@ def counts2offsets(counts):
     offsets[0] = 0
     cumsum(counts, out=offsets[1:])
     return offsets
+
+def offsets2parents(offsets):
+    out = numpy.zeros(offsets[-1], dtype=INDEXTYPE)
+    numpy.add.at(out, offsets[1:-1], 1)
+    cumsum(out, out=out)
+    return out
 
 def startsstops2parents(starts, stops):
     out = numpy.full(stops.max(), -1, dtype=INDEXTYPE)

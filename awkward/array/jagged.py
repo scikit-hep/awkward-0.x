@@ -156,8 +156,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             self._valid()
             if awkward.util.offsetsaliased(self._starts, self._stops):
                 self._offsets = self._starts.base
-            elif len(self._starts.shape) == 1 and numpy.array_equal(self._starts[1:], self.stops[:-1]):
-                self._offsets = numpy.append(self._starts, self.stops[-1])
+            elif len(self._starts.shape) == 1 and numpy.array_equal(self._starts[1:], self._stops[:-1]):
+                self._offsets = numpy.append(self._starts, self._stops[-1])
             else:
                 raise ValueError("starts and stops are not compatible with a single offsets array")
         return self._offsets
@@ -195,7 +195,10 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     def parents(self):
         if self._parents is None:
             self._valid()
-            self._parents = awkward.util.startsstops2parents(self._starts, self._stops)
+            try:
+                self._parents = awkward.util.offsets2parents(self.offsets)
+            except ValueError:
+                self._parents = awkward.util.startsstops2parents(self._starts, self._stops)
         return self._parents
 
     @parents.setter
@@ -206,6 +209,15 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         self._starts, self._stops = awkward.util.parents2startsstops(value)
         self._offsets, self._counts = None, None
         self._parents = value
+
+    @property
+    def index(self):
+        out = awkward.util.arange(len(self._content), dtype=awkward.util.INDEXTYPE)
+        baseline = numpy.zeros(len(self._content), dtype=awkward.util.INDEXTYPE)
+        nonempty = (self._starts != self._stops)
+        baseline[self._starts[nonempty][1:]] = self.counts[nonempty][:-1]
+        awkward.util.cumsum(baseline, out=baseline)
+        return self.copy(content=out - baseline)
 
     @property
     def type(self):
@@ -464,7 +476,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         offsets = awkward.util.counts2offsets(self.counts * other.counts)
 
         indexes = numpy.arange(offsets[-1], dtype=awkward.util.INDEXTYPE)
-        parents = awkward.util.startsstops2parents(offsets[:-1], offsets[1:])
+        parents = awkward.util.offsets2parents(offsets)
 
         left = numpy.empty_like(indexes)
         right = numpy.empty_like(indexes)
