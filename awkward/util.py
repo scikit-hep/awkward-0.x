@@ -99,7 +99,9 @@ def toarray(value, defaultdtype, passthrough):
             return numpy.array(value, copy=False)
 
 def deepcopy(array):
-    if isinstance(array, numpy.ndarray):
+    if array is None:
+        return None
+    elif isinstance(array, numpy.ndarray):
         return array.copy()
     else:
         return array.deepcopy()

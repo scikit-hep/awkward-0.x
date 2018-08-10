@@ -92,7 +92,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._parents = parents
         return out
 
-    def copy(self):
+    def copy(self, starts=None, stops=None, content=None):
         out = self.__class__.__new__(self.__class__)
         out._starts  = self._starts
         out._stops   = self._stops
@@ -100,16 +100,22 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._offsets = self._offsets
         out._counts  = self._counts
         out._parents = self._parents
+        if starts is not None:
+            out.starts = starts
+        if stops is not None:
+            out.stops = stops
+        if content is not None:
+            out.content = content
         return out
 
-    def deepcopy(self):
-        out = self.__class__.__new__(self.__class__)
-        out._starts  = awkward.util.deepcopy(self._starts)
-        out._stops   = awkward.util.deepcopy(self._stops)
-        out._content = awkward.util.deepcopy(self._content)
-        out._offsets = awkward.util.deepcopy(self._offsets)
-        out._counts  = awkward.util.deepcopy(self._counts)
-        out._parents = awkward.util.deepcopy(self._parents)
+    def deepcopy(self, starts=None, stops=None, content=None):
+        out = self.copy(starts=starts, stops=stops, content=content)
+        out._starts  = awkward.util.deepcopy(out._starts)
+        out._stops   = awkward.util.deepcopy(out._stops)
+        out._content = awkward.util.deepcopy(out._content)
+        out._offsets = awkward.util.deepcopy(out._offsets)
+        out._counts  = awkward.util.deepcopy(out._counts)
+        out._parents = awkward.util.deepcopy(out._parents)
         return out
 
     @property
@@ -245,9 +251,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         self._valid()
 
         if awkward.util.isstringslice(where):
-            out = self.copy()
-            out._content = self._content[where]
-            return out
+            return self.copy(content=self._content[where])
 
         if where == ():
             return self
@@ -265,7 +269,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return self.content[starts:stops][tail]
 
         else:
-            node = JaggedArray(starts, stops, self._content)
+            node = self.copy(starts=starts, stops=stops)
             while isinstance(node, JaggedArray) and len(tail) > 0:
                 head, tail = tail[0], tail[1:]
 
@@ -342,7 +346,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         if starts is None and stops is None:
             if copy:
-                starts, stops = self._starts.copy(), self._stops.copy()
+                starts, stops = awkward.util.deepcopy(self._starts), awkward.util.deepcopy(self._stops)
             else:
                 starts, stops = self._starts, self._stops
 
@@ -374,10 +378,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return self
 
         elif (starts is self._starts or numpy.array_equal(starts, self._starts)) and (stops is self._stops or numpy.array_equal(stops, self._stops)):
-            if copy:
-                return JaggedArray(starts, stops, self._content.copy())
-            else:
-                return JaggedArray(starts, stops, self._content)
+            return self.copy(starts=starts, stops=stops, content=(awkward.util.deepcopy(self._content) if copy else self._content))
 
         else:
             selfstarts, selfstops, selfcontent = self._starts, self._stops, self._content
@@ -389,7 +390,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 content[starts[i]:stops[i]] = selfcontent[selfstarts[i]:selfstops[i]]
                 i += 1
             
-            return JaggedArray(starts, stops, content)
+            return self.copy(starts=starts, stops=stops, content=content)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         self._valid()
@@ -433,7 +434,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                     content[good] = data
                 else:
                     content[good] = data[parents[good]]
-                inputs[i] = JaggedArray(starts, stops, content)
+                inputs[i] = self.copy(starts=starts, stops=stops, content=content)
 
         for i in range(len(inputs)):
             if isinstance(inputs[i], JaggedArray):
@@ -445,11 +446,11 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         result = getattr(ufunc, method)(*inputs, **kwargs)
 
         if isinstance(result, tuple):
-            return tuple(JaggedArray(starts, stops, x) for x in result)
+            return tuple(self.copy(starts=starts, stops=stops, content=x) for x in result)
         elif method == "at":
             return None
         else:
-            return JaggedArray(starts, stops, result)
+            return self.copy(starts=starts, stops=stops, content=result)
 
     def argcross(self, other):
         self._valid()
@@ -472,7 +473,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         right[indexes] = other._starts[parents[indexes]] + (indexes - offsets[parents[indexes]]) - othercounts[parents[indexes]] * ((indexes - offsets[parents[indexes]]) // othercounts[parents[indexes]])
 
         import awkward.array.table 
-        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table(offsets[-1], left, right))
+        out = self.fromoffsets(offsets, awkward.array.table.Table(offsets[-1], left, right))
         out._parents = parents
         return out
 
@@ -481,7 +482,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         left, right = argcross._content._content.values()
 
         import awkward.array.table
-        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table(len(argcross._content), self._content[left], other._content[right]))
+        out = self.fromoffsets(argcross._offsets, awkward.array.table.Table(len(argcross._content), self._content[left], other._content[right]))
         out._parents = argcross._parents
         return out
 
