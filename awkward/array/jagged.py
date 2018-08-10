@@ -522,6 +522,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return self.copy(starts=starts, stops=stops, content=result)
 
     def argcross(self, other):
+        import awkward.array.table
         self._valid()
 
         if not isinstance(other, JaggedArray):
@@ -538,19 +539,19 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         left = numpy.empty_like(indexes)
         right = numpy.empty_like(indexes)
 
-        left[indexes] = self._starts[parents[indexes]] + ((indexes - offsets[parents[indexes]]) // othercounts[parents[indexes]])
-        right[indexes] = other._starts[parents[indexes]] + (indexes - offsets[parents[indexes]]) - othercounts[parents[indexes]] * ((indexes - offsets[parents[indexes]]) // othercounts[parents[indexes]])
+        left[indexes] = self._starts[parents[indexes]] + ((indexes - offsets[parents[indexes]]) // other.counts[parents[indexes]])
+        right[indexes] = other._starts[parents[indexes]] + (indexes - offsets[parents[indexes]]) - other.counts[parents[indexes]] * ((indexes - offsets[parents[indexes]]) // other.counts[parents[indexes]])
 
-        import awkward.array.table
         out = self.fromoffsets(offsets, awkward.array.table.Table(offsets[-1], left, right))
         out._parents = parents
         return out
 
     def cross(self, other):
+        import awkward.array.table
+
         argcross = self.argcross(other)
         left, right = argcross._content._content.values()
 
-        import awkward.array.table
         out = self.fromoffsets(argcross._offsets, awkward.array.table.Table(len(argcross._content), self._content[left], other._content[right]))
         out._parents = argcross._parents
         return out
