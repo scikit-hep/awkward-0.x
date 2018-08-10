@@ -92,6 +92,31 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._parents = parents
         return out
 
+    @classmethod
+    def zip(cls, columns1={}, *columns2, **columns3):
+        import awkward.array.table
+        table = awkward.array.table.Table(0, columns1, *columns2, **columns3)
+        inputs = list(table._content.values())
+        table._length = min(len(x) for x in inputs)
+
+        first = None
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], JaggedArray):
+                if first is None:
+                    first = inputs[i] = inputs[i]._tojagged(copy=False)
+                else:
+                    inputs[i] = inputs[i]._tojagged(first._starts, first._stops, copy=False)
+
+        if first is None:
+            return table
+
+        for i in range(len(inputs)):
+            if not isinstance(inputs[i], JaggedArray):
+                inputs[i] = first._broadcast(inputs[i])
+
+        newtable = awkward.array.table.Table(len(first._content), awkward.util.OrderedDict(zip(table._content, [x._content for x in inputs])))
+        return cls(first._starts, first._stops, newtable)
+
     def copy(self, starts=None, stops=None, content=None):
         out = self.__class__.__new__(self.__class__)
         out._starts  = self._starts
@@ -274,30 +299,44 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         else:
             head, tail = where[:len(self._starts.shape)], where[len(self._starts.shape):]
 
-        starts = self._starts[head]
-        stops = self._stops[head]
-        
-        if len(starts.shape) == len(stops.shape) == 0:
-            return self.content[starts:stops][tail]
+        if isinstance(head, JaggedArray):
+            head = head._tojagged(self._starts, self._stops, copy=False)
+
+            if issubclass(head._content.dtype.type, (numpy.bool, numpy.bool_)):
+                HERE
+
+
+
+                node
+                
+            else:
+                # the other cases are possible, but complicated; the first sets the form
+                raise NotImplementedError("jagged index content type: {0}".format(head._content.dtype))
 
         else:
-            node = self.copy(starts=starts, stops=stops)
-            while isinstance(node, JaggedArray) and len(tail) > 0:
-                head, tail = tail[0], tail[1:]
+            starts = self._starts[head]
+            stops = self._stops[head]
+            if len(starts.shape) == len(stops.shape) == 0:
+                return self.content[starts:stops][tail]
+            else:
+                node = self.copy(starts=starts, stops=stops)
 
-                if isinstance(head, (numbers.Integral, numpy.integer)):
-                    original_head = head
-                    counts = node._stops - node._starts
-                    if head < 0:
-                        head = counts + head
-                    if not numpy.bitwise_and(0 <= head, head < counts).all():
-                        raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
-                    node = node._content[node._starts + head]
-                else:
-                    # the other cases are possible, but complicated; the first sets the form
-                    raise NotImplementedError("jagged second dimension index type: {0}".format(original_head))
+        while isinstance(node, JaggedArray) and len(tail) > 0:
+            head, tail = tail[0], tail[1:]
 
-            return node[tail]
+            if isinstance(head, (numbers.Integral, numpy.integer)):
+                original_head = head
+                counts = node._stops - node._starts
+                if head < 0:
+                    head = counts + head
+                if not numpy.bitwise_and(0 <= head, head < counts).all():
+                    raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
+                node = node._content[node._starts + head]
+            else:
+                # the other cases are possible, but complicated; the first sets the form
+                raise NotImplementedError("jagged second dimension index type: {0}".format(original_head))
+
+        return node[tail]
 
     def __iter__(self):
         self._valid()
@@ -311,7 +350,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 yield content[start:stops[i]]
 
     # @staticmethod
-    # def broadcastable(*jaggedarrays):
+    # def _broadcastable(*jaggedarrays):
     #     if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
     #         raise TypeError("all objects passed to JaggedArray.broadcastable must be JaggedArrays")
 
@@ -341,19 +380,19 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
     #     return True
 
-    # def tobroadcast(self, data):
-    #     data = awkward.util.toarray(data, self._content.dtype, (numpy.ndarray, awkward.array.base.AwkwardArray))
-    #     good = (self.parents >= 0)
-    #     content = numpy.empty(len(self.parents), dtype=data.dtype)
-    #     if len(data.shape) == 0:
-    #         content[good] = data
-    #     else:
-    #         content[good] = data[self.parents[good]]
-    #     out = JaggedArray(self._starts, self._stops, content)
-    #     out._parents = self.parents
-    #     return out
+    def _broadcast(self, data):
+        data = awkward.util.toarray(data, self._content.dtype, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        good = (self.parents >= 0)
+        content = numpy.empty(len(self.parents), dtype=data.dtype)
+        if len(data.shape) == 0:
+            content[good] = data
+        else:
+            content[good] = data[self.parents[good]]
+        out = self.copy(content=content)
+        out._parents = self.parents
+        return out
 
-    def tojagged(self, starts=None, stops=None, copy=True):
+    def _tojagged(self, starts=None, stops=None, copy=True):
         self._valid()
 
         if starts is None and stops is None:
@@ -412,17 +451,16 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         inputs = list(inputs)
         starts, stops = None, None
-
         for i in range(len(inputs)):
             if isinstance(inputs[i], (numbers.Number, numpy.number)):
                 pass
 
             elif isinstance(inputs[i], JaggedArray):
                 if starts is stops is None:
-                    inputs[i] = inputs[i].tojagged(copy=False)
-                    starts, stops = inputs[i].starts, inputs[i].stops
+                    inputs[i] = inputs[i]._tojagged(copy=False)
+                    starts, stops = inputs[i]._starts, inputs[i]._stops
                 else:
-                    inputs[i] = inputs[i].tojagged(starts, stops)
+                    inputs[i] = inputs[i]._tojagged(starts, stops, copy=False)
 
             else:
                 inputs[i] = numpy.array(inputs[i], copy=False)
@@ -484,7 +522,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         left[indexes] = self._starts[parents[indexes]] + ((indexes - offsets[parents[indexes]]) // othercounts[parents[indexes]])
         right[indexes] = other._starts[parents[indexes]] + (indexes - offsets[parents[indexes]]) - othercounts[parents[indexes]] * ((indexes - offsets[parents[indexes]]) // othercounts[parents[indexes]])
 
-        import awkward.array.table 
+        import awkward.array.table
         out = self.fromoffsets(offsets, awkward.array.table.Table(offsets[-1], left, right))
         out._parents = parents
         return out
@@ -635,7 +673,7 @@ class ByteJaggedArray(JaggedArray):
 #         else:
 #             return ByteJaggedArray(starts, stops, self._content[self._singleton((slice(None),) + tail)], self._dtype)
 
-#     def tojagged(self, starts=None, stops=None, copy=True):
+#     def _tojagged(self, starts=None, stops=None, copy=True):
 #         counts = self.counts
 
 #         if starts is None and stops is None:
