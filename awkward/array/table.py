@@ -59,6 +59,8 @@ class Table(awkward.array.base.AwkwardArray):
             try:
                 return self._table._content[name][self._index]
             except KeyError as err:
+                if name == "tolist":
+                    return lambda: self._table._try_tolist(self)
                 m = re.match("_([0-9]+)", name)
                 if m is not None and m.group(1) in self._table._content:
                     return self._table._content[m.group(1)][self._index]
@@ -127,6 +129,12 @@ class Table(awkward.array.base.AwkwardArray):
         out = cls(len(recarray))
         for n in recarray.dtype.names:
             out[n] = recarray[n]
+        return out
+
+    @classmethod
+    def zip(cls, columns1={}, *columns2, **columns3):
+        out = cls(0, columns1, *columns2, **columns3)
+        out._length = min(len(x) for x in out._content.values())
         return out
 
     def copy(self, length=None, start=None, step=None, content=None):
@@ -386,6 +394,12 @@ class NamedTable(Table):
         out = cls(len(recarray), name)
         for n in recarray.dtype.names:
             out[n] = recarray[n]
+        return out
+
+    @classmethod
+    def zip(cls, name, columns1={}, *columns2, **columns3):
+        out = cls(0, name, columns1, *columns2, **columns3)
+        out._length = min(len(x) for x in out._content.values())
         return out
 
     def copy(self, length=None, start=None, step=None, content=None, name=None):
