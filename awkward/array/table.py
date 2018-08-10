@@ -29,11 +29,13 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import numbers
+import functools
 import re
 
 import numpy
 
 import awkward.array.base
+import awkward.type
 import awkward.util
 
 class Table(awkward.array.base.AwkwardArray):
@@ -206,6 +208,10 @@ class Table(awkward.array.base.AwkwardArray):
     def shape(self):
         return (self._length,)
         
+    @property
+    def type(self):
+        return awkward.type.ArrayType(self._length, functools.reduce(lambda a, b: a & b, [awkward.type.ArrayType(n, awkward.type.fromarray(x).to) for n, x in self._content.items()]))
+
     def __len__(self):
         return self._length            # data can grow by appending fields before increasing _length
 
