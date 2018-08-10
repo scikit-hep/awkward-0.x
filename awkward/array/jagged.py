@@ -493,6 +493,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 content = numpy.empty(len(parents), dtype=data.dtype)
                 if len(data.shape) == 0:
                     content[good] = data
+                elif starts.shape != data.shape:
+                    raise ValueError("cannot broadcast JaggedArray of shape {0} with Numpy array of shape {1}".format(starts.shape, data.shape))
                 else:
                     content[good] = data[parents[good]]
                 inputs[i] = self.copy(starts=starts, stops=stops, content=content)
