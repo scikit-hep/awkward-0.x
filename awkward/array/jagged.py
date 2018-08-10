@@ -287,11 +287,16 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         if isinstance(head, JaggedArray):
             if issubclass(head._content.dtype.type, numpy.integer):
-                if head._starts.shape != self._starts.shape:
+                if len(head.shape) == 1 and head._starts.shape != self._starts.shape:
                     raise ValueError("jagged array used as index has a different shape {0} from the jagged array it is selecting from {1}".format(head._starts.shape, self._starts.shape))
 
+                headoffsets = awkward.util.counts2offsets(head.counts)
+                head = head._tojagged(headoffsets[:-1], headoffsets[1:], copy=False)
+
                 counts = head._broadcast(self.counts)._content
+
                 indexes = numpy.array(head._content, copy=True)
+
                 negatives = (indexes < 0)
                 indexes[negatives] += counts[negatives]
 
@@ -302,7 +307,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
                 return self.copy(starts=head._starts, stops=head._stops, content=self._content[indexes])
 
-            elif issubclass(head._content.dtype.type, (numpy.bool, numpy.bool_)):
+            elif len(head.shape) == 1 and issubclass(head._content.dtype.type, (numpy.bool, numpy.bool_)):
                 try:
                     offsets = self.offsets
                     thyself = self
