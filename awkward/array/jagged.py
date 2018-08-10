@@ -635,6 +635,23 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     def max(self):
         return self._minmax(False, False)
 
+    def pandas(self):
+        import pandas
+
+        if isinstance(self._content, numpy.ndarray):
+            out = pandas.DataFrame(self._content)
+        else:
+            out = self._content.pandas()
+
+        if isinstance(self._content, JaggedArray):
+            parents = self._content._broadcast(self.parents)._content
+            index = self._content._broadcast(self.index._content)._content
+            out.index = pandas.MultiIndex.from_arrays([parents, index] + out.index.labels[1:])
+        else:
+            out.index = pandas.MultiIndex.from_arrays([self.parents, self.index._content])
+
+        return out
+
 class ByteJaggedArray(JaggedArray):
     def __init__(self, starts, stops, content, dtype=awkward.util.CHARTYPE):
         raise NotImplementedError

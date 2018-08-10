@@ -123,7 +123,7 @@ def counts2offsets(counts):
 
 def offsets2parents(offsets):
     out = numpy.zeros(offsets[-1], dtype=INDEXTYPE)
-    numpy.add.at(out, offsets[1:-1], 1)
+    numpy.add.at(out, offsets[offsets != offsets[-1]][1:], 1)
     cumsum(out, out=out)
     return out
 

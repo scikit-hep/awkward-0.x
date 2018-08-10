@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import numbers
+import re
 
 import numpy
 
@@ -56,6 +57,9 @@ class Table(awkward.array.base.AwkwardArray):
             try:
                 return self._table._content[name][self._index]
             except KeyError as err:
+                m = re.match("_([0-9]+)", name)
+                if m is not None and m.group(1) in self._table._content:
+                    return self._table._content[m.group(1)][self._index]
                 raise AttributeError(str(err))
 
         def __contains__(self, name):
@@ -326,6 +330,10 @@ class Table(awkward.array.base.AwkwardArray):
 
     def tolist(self):
         return [dict((n, self._try_tolist(self._checklength(x)[self.start:self.stop:self.step][i])) for n, x in self._content.items()) for i in range(self._length)]
+
+    def pandas(self):
+        import pandas
+        return pandas.DataFrame(self._content)
 
 class NamedTable(Table):
     def __init__(self, length, name, columns1={}, *columns2, **columns3):
