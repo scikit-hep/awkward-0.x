@@ -615,11 +615,56 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 flatout[i] *= content[flatstart:flatstop].prod(axis=0)
         return out
 
-    def _minmax(self, isarg, ismin):
-        # not a group; must iterate (in absence of modified Hillis-Steele)
-        self._valid()
+    def _argminmax(self, ismin):
+        if len(self._content.shape) != 1:
+            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
 
+        self._valid()
+        flatstarts = self._starts.reshape(-1)
+        flatstops = self._stops.reshape(-1)
+
+        shift = numpy.zeros(self._content.shape, dtype=awkward.util.INDEXTYPE)
+        shift[flatstarts] = numpy.ceil(self._content.max()) + 1
+        awkward.util.cumsum(shift, out=shift)
+
+        sortedindex = (self._content + shift).argsort()
+
+        if ismin:
+            flatout = sortedindex[flatstarts] - flatstarts
+        else:
+            flatout = sortedindex[flatstops - 1] - flatstarts
+
+        newstarts = numpy.arange(len(flatstarts), dtype=awkward.util.INDEXTYPE).reshape(self._starts.shape)
+        newstops = numpy.array(newstarts)
+        newstops.reshape(-1)[flatstarts != flatstops] += 1
+        return self.copy(starts=newstarts, stops=newstops, content=flatout)
+
+    def _minmax_canuseoffset(self):
+        self._valid()
+        return awkward.util.offsetsaliased(self._starts, self._stops) or len(self._starts.shape) == 1 and numpy.array_equal(self._starts[1:], self._stops[:-1])
+
+    def _minmax_offset(self, ismin):
+        if ismin:
+            out = numpy.minimum.reduceat(self._content[self._starts[0]:self._stops[-1]], self.offsets[:-1])
+            if issubclass(self._content.dtype.type, numpy.floating):
+                out[self.offsets[1:] == self.offsets[:-1]] = numpy.inf
+            else:
+                out[self.offsets[1:] == self.offsets[:-1]] = numpy.iinfo(self._content.dtype.type).max
+        else:
+            out = numpy.maximum.reduceat(self._content[self._starts[0]:self._stops[-1]], self.offsets[:-1])
+            if issubclass(self._content.dtype.type, numpy.floating):
+                out[self.offsets[1:] == self.offsets[:-1]] = -numpy.inf
+            else:
+                out[self.offsets[1:] == self.offsets[:-1]] = numpy.iinfo(self._content.dtype.type).min
+
+        return out
+
+    def _minmax_general(self, isarg, ismin):
+        # not a group; must iterate (in absence of modified Hillis-Steele)
         if isarg:
+            if len(self._content.shape) != 1:
+                raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
+
             if ismin:
                 optimum = numpy.argmin
             else:
@@ -640,7 +685,10 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                     out = numpy.full(self._starts.shape + self._content.shape[1:], -numpy.inf, dtype=self._content.dtype)
 
             elif issubclass(self._content.dtype.type, numpy.integer):
-                out = numpy.full(self._starts.shape + self._content.shape[1:], numpy.iinfo(self._content.dtype.type).max, dtype=self._content.dtype)
+                if ismin:
+                    out = numpy.full(self._starts.shape + self._content.shape[1:], numpy.iinfo(self._content.dtype.type).max, dtype=self._content.dtype)
+                else:
+                    out = numpy.full(self._starts.shape + self._content.shape[1:], numpy.iinfo(self._content.dtype.type).min, dtype=self._content.dtype)
 
             else:
                 raise TypeError("only floating point and integer types can be minimized")
@@ -665,16 +713,22 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return out
 
     def argmin(self):
-        return self._minmax(True, True)
+        return self._argminmax(True)
 
     def argmax(self):
-        return self._minmax(True, False)
+        return self._argminmax(False)
 
     def min(self):
-        return self._minmax(False, True)
+        if self._minmax_canuseoffset():
+            return self._minmax_offset(True)
+        else:
+            return self._minmax_general(False, True)
 
     def max(self):
-        return self._minmax(False, False)
+        if self._minmax_canuseoffset():
+            return self._minmax_offset(False)
+        else:
+            return self._minmax_general(False, False)
 
     def flatten(self):
         self._valid()
