@@ -4,7 +4,6 @@ os:
   - linux
 
 python:
-  - 2.6
   - 2.7
   - 3.4
   - 3.5
@@ -13,17 +12,20 @@ python:
   - pypy3.5
 
 env:
-  - NUMPY===1.8.2
-  - NUMPY=
+  - NUMPY="numpy==1.13.1"
+  - NUMPY="numpy==1.14.5"
+  - NUMPY="numpy>=1.15"
 
 matrix:
   exclude:
-    - python: 3.4
-      env: NUMPY===1.8.2
     - python: pypy2.7-5.10.0
-      env: NUMPY===1.8.2
+      env: NUMPY="numpy==1.14.5"
     - python: pypy3.5
-      env: NUMPY===1.8.2
+      env: NUMPY="numpy==1.14.5"
+    - python: pypy2.7-5.10.0
+      env: NUMPY="numpy==1.13.1"
+    - python: pypy3.5
+      env: NUMPY="numpy==1.13.1"
 
 addons:
   apt:
@@ -35,7 +37,7 @@ script:
 
 install:
   - pip install --upgrade setuptools_scm
-  - pip install numpy$NUMPY
+  - pip install $NUMPY
   - python -c 'import numpy; print(numpy.__version__)'
 
 notifications:

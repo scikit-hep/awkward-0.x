@@ -86,7 +86,7 @@ setup(name = "awkward",
       download_url = "https://github.com/scikit-hep/awkward-array/releases",
       license = "BSD 3-clause",
       test_suite = "tests",
-      install_requires = ["numpy"],
+      install_requires = ["numpy>=1.13.1"],
       tests_require = [],
       classifiers = [
           # "Development Status :: 1 - Planning",
