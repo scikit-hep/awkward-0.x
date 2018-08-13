@@ -32,7 +32,6 @@ import itertools
 import sys
 try:
     import collections
-    OrderedDict = collections.OrderedDict
 except ImportError:
     # simple OrderedDict implementation for Python 2.6
     class OrderedDict(dict):
@@ -56,7 +55,9 @@ except ImportError:
             super(OrderedDict, self).__delitem__(name)
         def __repr__(self):
             return "OrderedDict([{0}])".format(", ".join("({0}, {1})".format(repr(k), repr(v)) for k, v in self.items()))
-
+else:
+    OrderedDict = collections.OrderedDict
+    
 if sys.version_info[0] <= 2:
     izip = itertools.izip
     string = basestring
