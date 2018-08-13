@@ -13,17 +13,17 @@ python:
   - pypy3.5
 
 env:
-  - NUMPY=1.8.2
+  - NUMPY===1.8.2
   - NUMPY=
 
 matrix:
   exclude:
     - python: 3.4
-      env: NUMPY=1.8.2
+      env: NUMPY===1.8.2
     - python: pypy2.7-5.10.0
-      env: NUMPY=1.8.2
+      env: NUMPY===1.8.2
     - python: pypy3.5
-      env: NUMPY=1.8.2
+      env: NUMPY===1.8.2
 
 addons:
   apt:
@@ -35,7 +35,7 @@ script:
 
 install:
   - pip install --upgrade setuptools_scm
-  - pip install numpy=$NUMPY
+  - pip install numpy$NUMPY
   - python -c 'import numpy; print(numpy.__version__)'
 
 notifications:
