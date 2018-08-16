@@ -586,34 +586,51 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._parents = argcross._parents
         return out
 
-    def sum(self):
-        # works because there's a group operation to undo the cumsum
+    def _canuseoffset(self):
         self._valid()
+        return awkward.util.offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and numpy.array_equal(self._starts[1:], self._stops[:-1]))
 
-        contentsum = numpy.empty((len(self._content) + 1,) + self._content.shape[1:], dtype=self._content.dtype)
-        contentsum[0] = 0
-        awkward.util.cumsum(self._content, axis=0, out=contentsum[1:])
+    def flatten(self):
+        if self._canuseoffset():
+            return self._content[self._starts[0]:self._stops[-1]]
+        else:
+            offsets = awkward.util.counts2offsets(self.counts.reshape(-1))
+            return self._tojagged(offsets[:-1], offsets[1:], copy=False)._content
 
-        nonempty = (self._starts != self._stops)
+    def sum(self):
+        if self._canuseoffset():
+            out = numpy.add.reduceat(self._content[self._starts[0]:self._stops[-1]], self.offsets[:-1])
+            out[self.offsets[1:] == self.offsets[:-1]] = 0
+            return out
 
-        out = numpy.zeros(self.shape + self._content.shape[1:], dtype=self._content.dtype)
-        out[nonempty] = contentsum[self._stops[nonempty]] - contentsum[self._starts[nonempty]]
-        return out
+        else:
+            contentsum = numpy.empty((len(self._content) + 1,) + self._content.shape[1:], dtype=self._content.dtype)
+            contentsum[0] = 0
+            awkward.util.cumsum(self._content, axis=0, out=contentsum[1:])
+
+            nonempty = (self._starts != self._stops)
+
+            out = numpy.zeros(self.shape + self._content.shape[1:], dtype=self._content.dtype)
+            out[nonempty] = contentsum[self._stops[nonempty]] - contentsum[self._starts[nonempty]]
+            return out
 
     def prod(self):
-        # can't use the above trick because you might encounter a zero
-        self._valid()
+        if self._canuseoffset():
+            out = numpy.multiply.reduceat(self._content[self._starts[0]:self._stops[-1]], self.offsets[:-1])
+            out[self.offsets[1:] == self.offsets[:-1]] = 1
+            return out
 
-        out = numpy.ones(self.shape + self._content.shape[1:], dtype=self._content.dtype)
-        flatout = out.reshape((-1,) + self._content.shape[1:])
+        else:
+            out = numpy.ones(self.shape + self._content.shape[1:], dtype=self._content.dtype)
+            flatout = out.reshape((-1,) + self._content.shape[1:])
 
-        content = self._content
-        flatstops = self._stops.reshape(-1)
-        for i, flatstart in enumerate(self._starts.reshape(-1)):
-            flatstop = flatstops[i]
-            if flatstart != flatstop:
-                flatout[i] *= content[flatstart:flatstop].prod(axis=0)
-        return out
+            content = self._content
+            flatstops = self._stops.reshape(-1)
+            for i, flatstart in enumerate(self._starts.reshape(-1)):
+                flatstop = flatstops[i]
+                if flatstart != flatstop:
+                    flatout[i] *= content[flatstart:flatstop].prod(axis=0)
+            return out
 
     def _argminmax(self, ismin):
         if len(self._content.shape) != 1:
@@ -639,9 +656,11 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         newstops.reshape(-1)[flatstarts != flatstops] += 1
         return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
-    def _minmax_canuseoffset(self):
-        self._valid()
-        return awkward.util.offsetsaliased(self._starts, self._stops) or len(self._starts.shape) == 1 and numpy.array_equal(self._starts[1:], self._stops[:-1])
+    def argmin(self):
+        return self._argminmax(True)
+
+    def argmax(self):
+        return self._argminmax(False)
 
     def _minmax_offset(self, ismin):
         if ismin:
@@ -712,31 +731,17 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         else:
             return out
 
-    def argmin(self):
-        return self._argminmax(True)
-
-    def argmax(self):
-        return self._argminmax(False)
-
     def min(self):
-        if self._minmax_canuseoffset():
+        if self._canuseoffset():
             return self._minmax_offset(True)
         else:
             return self._minmax_general(False, True)
 
     def max(self):
-        if self._minmax_canuseoffset():
+        if self._canuseoffset():
             return self._minmax_offset(False)
         else:
             return self._minmax_general(False, False)
-
-    def flatten(self):
-        self._valid()
-        if awkward.util.offsetsaliased(self._starts, self._stops) or len(self._starts.shape) == 1 and numpy.array_equal(self._starts[1:], self._stops[:-1]):
-            return self._content[self._starts[0]:self._stops[-1]]
-        else:
-            offsets = awkward.util.counts2offsets(self.counts)
-            return self._tojagged(offsets[:-1], offsets[1:], copy=False)._content
 
     def pandas(self):
         import pandas
