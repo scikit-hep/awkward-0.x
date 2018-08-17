@@ -919,8 +919,15 @@ class ByteJaggedArray(JaggedArray):
         return awkward.type.ArrayType(*(self._starts.shape + (awkward.type.ArrayType(awkward.util.numpy.inf, self._subdtype),)))
 
     def __iter__(self):
-        for i in range(len(self)):
-            yield self[i]
+        self._valid()
+        if len(self._starts.shape) != 1:
+            for x in super(JaggedArray, self).__iter__():
+                yield x.view(self._subdtype)
+        else:
+            stops = self._stops
+            content = self._content
+            for i, start in enumerate(self._starts):
+                yield content[start:stops[i]].view(self._subdtype)
 
     def _divitemsize(self, x):
         if self._subdtype.itemsize == 1:
