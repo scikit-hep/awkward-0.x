@@ -41,7 +41,7 @@ from awkward.array.indexed import IndexedMaskedArray, UnionArray
 from awkward.array.jagged import JaggedArray
 from awkward.array.masked import BitMaskedArray
 from awkward.array.table import Table, NamedTable
-from awkward.array.virtual import VirtualObjectArray
+from awkward.array.virtual import ObjectArray
 
 def fromiter(iterable, chunksize=1024, maskmissing=True, references=False):
     if references:
