@@ -35,9 +35,11 @@ from collections import OrderedDict
 if sys.version_info[0] <= 2:
     izip = itertools.izip
     string = basestring
+    unicode = unicode
 else:
     izip = zip
     string = str
+    unicode = str
 
 ################################################################ array helpers
 

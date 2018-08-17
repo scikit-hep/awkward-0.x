@@ -72,7 +72,7 @@ class Type(object):
         seen = set()
         labeled = []
         def find(x):
-            if not isinstance(x, numpy.dtype):
+            if isinstance(x, Type):
                 if id(x) not in seen:
                     seen.add(id(x))
                     if isinstance(x, ArrayType):
@@ -157,11 +157,8 @@ class Type(object):
             seen[id(x)]._type = Type._copy(x._type, seen)
             return seen[id(x)]
 
-        elif isinstance(x, numpy.dtype):
-            return x
-
         else:
-            raise AssertionError(x)
+            return x
 
     @staticmethod
     def _canonical(x, seen):
@@ -219,6 +216,15 @@ class Type(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @staticmethod
+    def _finaltype(x):
+        if isinstance(x, type) and issubclass(x, (numbers.Number, numpy.generic)):
+            return numpy.dtype(x)
+        elif isinstance(x, (awkward.util.unicode, bytes)):
+            return numpy.dtype(x)
+        else:
+            return x
+
 class ArrayType(Type):
     def __init__(self, *args):
         if len(args) == 0:
@@ -226,7 +232,7 @@ class ArrayType(Type):
 
         elif len(args) == 1:
             self.takes = None
-            self.to = numpy.dtype(args[0])
+            self.to = args[0]
 
         elif isinstance(args[0], awkward.util.string):
             self.__class__ = TableType
@@ -264,23 +270,23 @@ class ArrayType(Type):
         if isinstance(value, Type):
             self._to = value
         else:
-            self._to = numpy.dtype(value)
+            self._to = self._finaltype(value)
 
     def _subrepr(self, labeled, seen):
-        if isinstance(self._to, numpy.dtype):
-            return "ArrayType({0}, {1})".format(repr(self._takes), repr(self._to))
-        else:
+        if isinstance(self._to, Type):
             to = self._to._repr(labeled, seen)
             if to.startswith("ArrayType(") and to.endswith(")"):
                 to = to[10:-1]
             return "ArrayType({0}, {1})".format(repr(self._takes), to)
+        else:
+            return "ArrayType({0}, {1})".format(repr(self._takes), repr(self._to))
 
     def _substr(self, labeled, seen, indent):
         takes = "[0, {0}) -> ".format(self._takes)
-        if isinstance(self._to, numpy.dtype):
-            to = str(self._to)
-        else:
+        if isinstance(self._to, Type):
             to = self._to._str(labeled, seen, indent + (" " * len(takes))).lstrip(" ")
+        else:
+            to = str(self._to)
         return takes + to
 
     def _eq(self, other, seen):
@@ -308,7 +314,7 @@ class TableType(Type):
         if isinstance(value, Type):
             self._fields[key] = value
         else:
-            self._fields[key] = numpy.dtype(value)
+            self._fields[key] = self._finaltype(value)
 
     def __delitem__(self, key):
         del self._fields[key]
@@ -319,17 +325,17 @@ class TableType(Type):
         return out
 
     def _subrepr(self, labeled, seen):
-        return "TableType({0})".format(", ".join("{0}={1}".format(n, repr(x) if isinstance(x, numpy.dtype) else x._repr(labeled, seen)) for n, x in self._fields.items()))
+        return "TableType({0})".format(", ".join("{0}={1}".format(n, x._repr(labeled, seen) if isinstance(x, Type) else repr(x)) for n, x in self._fields.items()))
 
     def _substr(self, labeled, seen, indent):
         width = max(len(repr(n)) for n in self._fields.keys())
         subindent = indent + (" " * width) + "    "
         out = []
         for n, x in self._fields.items():
-            if isinstance(x, numpy.dtype):
-                to = str(x)
-            else:
+            if isinstance(x, Type):
                 to = x._str(labeled, seen, subindent).lstrip(" ")
+            else:
+                to = str(x)
             out.append(("{0}{1:%ds} -> {2}" % width).format(indent, repr(n), to))
         return "\n".join(out).lstrip(" ")
 
@@ -361,7 +367,7 @@ class UnionType(Type):
         if isinstance(value, Type):
             self._possibilities[index] = value
         else:
-            self._possibilities[index] = numpy.dtype(value)
+            self._possibilities[index] = self._finaltype(value)
 
     def __delitem__(self, index):
         del self._possibilities[index]
@@ -370,13 +376,13 @@ class UnionType(Type):
         if isinstance(value, Type):
             self._possibilities.append(value)
         else:
-            self._possibilities.append(numpy.dtype(value))
+            self._possibilities.append(self._finaltype(value))
 
     def _subrepr(self, labeled, seen):
-        return "UnionType({0})".format(", ".join(repr(x) if isinstance(x, numpy.dtype) else x._repr(labeled, seen) for x in self._possibilities))
+        return "UnionType({0})".format(", ".join(x._repr(labeled, seen) if isinstance(x, Type) else repr(x) for x in self._possibilities))
 
     def _substr(self, labeled, seen, indent):
-        subs = [str(x) if isinstance(x, numpy.dtype) else x._str(labeled, seen, indent + " ") for x in self._possibilities]
+        subs = [x._str(labeled, seen, indent + " ") if isinstance(x, Type) else str(x) for x in self._possibilities]
         def lstrip(x):
             if x.startswith(indent + " "):
                 return x[len(indent) + 1:]
@@ -411,16 +417,16 @@ class OptionType(Type):
         if isinstance(value, Type):
             self._type = value
         else:
-            self._type = numpy.dtype(value)
+            self._type = self._finaltype(self._type)
 
     def _subrepr(self, labeled, seen):
-        return "OptionType({0})".format(repr(self._type) if isinstance(self._type, numpy.dtype) else self._type._repr(labeled, seen))
+        return "OptionType({0})".format(self._type._repr(labeled, seen) if isinstance(self._type, Type) else repr(self._type))
 
     def _substr(self, labeled, seen, indent):
-        if isinstance(self._type, numpy.dtype):
-            type = str(self._type)
-        else:
+        if isinstance(self._type, Type):
             type = self._type._str(labeled, seen, indent + "  ").lstrip(" ")
+        else:
+            type = str(self._type)
         return "?({0})".format(type)
 
     def _eq(self, other, seen):

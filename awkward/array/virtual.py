@@ -203,45 +203,41 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
 class VirtualObjectArray(awkward.array.base.AwkwardArray):
     def __init__(self, generator, content):
-        raise NotImplementedError
+        self.generator = generator
+        self.content = content
 
-# class VirtualObjectArray(awkward.array.base.AwkwardArray):
-#     def __init__(self, generator, content):
-#         self.generator = generator
-#         self.content = content
+    @property
+    def generator(self):
+        return self._generator
 
-#     @property
-#     def generator(self):
-#         return self._generator
+    @generator.setter
+    def generator(self, value):
+        if not callable(value):
+            raise TypeError("generator must be a callable (of one argument: the array slice)")
+        self._generator = value
 
-#     @generator.setter
-#     def generator(self, value):
-#         if not callable(value):
-#             raise TypeError("generator must be a callable (of one argument: the array slice)")
-#         self._generator = value
+    @property
+    def content(self):
+        return self._content
 
-#     @property
-#     def content(self):
-#         return self._content
+    @content.setter
+    def content(self, value):
+        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
 
-#     @content.setter
-#     def content(self, value):
-#         self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+    @property
+    def dtype(self):
+        return numpy.dtype(object)
 
-#     @property
-#     def dtype(self):
-#         return numpy.dtype(object)
+    @property
+    def shape(self):
+        return self._content.shape
 
-#     @property
-#     def shape(self):
-#         return self._content.shape
+    def __len__(self):
+        return len(self._content)
 
-#     def __len__(self):
-#         return len(self._content)
-
-#     def __getitem__(self, where):
-#         content = self._content[where]
-#         if isinstance(where, (numbers.Integral, numpy.integer)):
-#             return self.generator(content)
-#         else:
-#             return [self.generator(x) for x in content]
+    def __getitem__(self, where):
+        content = self._content[where]
+        if isinstance(where, (numbers.Integral, numpy.integer)):
+            return self.generator(content)
+        else:
+            return [self.generator(x) for x in content]
