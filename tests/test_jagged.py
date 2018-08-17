@@ -35,7 +35,7 @@ import numpy
 from awkward import *
 from awkward.type import *
 
-class TestJagged(unittest.TestCase):
+class Test(unittest.TestCase):
     def runTest(self):
         pass
 

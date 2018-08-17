@@ -34,7 +34,7 @@ import numpy
 
 from awkward import *
 
-class TestTable(unittest.TestCase):
+class Test(unittest.TestCase):
     def runTest(self):
         pass
 

@@ -34,7 +34,7 @@ import numpy
 
 from awkward import *
 
-class TestMasked(unittest.TestCase):
+class Test(unittest.TestCase):
     def runTest(self):
         pass
 

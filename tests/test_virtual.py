@@ -35,7 +35,7 @@ import numpy
 
 from awkward import *
 
-class TestVirtual(unittest.TestCase):
+class Test(unittest.TestCase):
     def runTest(self):
         pass
 
@@ -166,4 +166,3 @@ class TestVirtual(unittest.TestCase):
     #     self.assertEqual(a[::2], [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])])
     #     self.assertEqual(a[[True, False, True]], [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])])
     #     self.assertEqual(a[[2, 0]], [Point([7.7, 8.8, 9.9]), Point([1.1, 2.2, 3.3])])
-
