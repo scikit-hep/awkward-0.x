@@ -200,32 +200,40 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 #         return self.array[where]
 
 class VirtualObjectArray(awkward.array.base.AwkwardArray):
-    def __init__(self, generator, content, *args, **kwargs):
-        self.generator = generator
+    def __init__(self, content, generator, *args, **kwargs):
         self.content = content
+        self.generator = generator
         self.args = args
         self.kwargs = kwargs
 
-    def copy(self, generator=None, content=None, args=None, kwargs=None):
+    def copy(self, content=None, generator=None, args=None, kwargs=None):
         out = self.__class__.__new__(self.__class__)
-        out._generator = self._generator
         out._content = self._content
+        out._generator = self._generator
         out._args = self._args
         out._kwargs = self._kwargs
-        if generator is not None:
-            out.generator = generator
         if content is not None:
             out.content = content
+        if generator is not None:
+            out.generator = generator
         if args is not None:
             out.args = args
         if kwargs is not None:
             out.kwargs = kwargs
         return out
 
-    def deepcopy(self, generator=None, content=None, args=None, kwargs=None):
-        out = self.copy(generator=generator, content=content, args=args, kwargs=kwargs)
+    def deepcopy(self, content=None, generator=None, args=None, kwargs=None):
+        out = self.copy(content=content, generator=generator, args=args, kwargs=kwargs)
         out._content = awkward.util.deepcopy(out._content)
         return out
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
 
     @property
     def generator(self):
@@ -236,14 +244,6 @@ class VirtualObjectArray(awkward.array.base.AwkwardArray):
         if not callable(value):
             raise TypeError("generator must be a callable (of one argument: the array slice)")
         self._generator = value
-
-    @property
-    def content(self):
-        return self._content
-
-    @content.setter
-    def content(self, value):
-        self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
 
     @property
     def args(self):
