@@ -200,22 +200,30 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 #         return self.array[where]
 
 class VirtualObjectArray(awkward.array.base.AwkwardArray):
-    def __init__(self, generator, content):
+    def __init__(self, generator, content, *args, **kwargs):
         self.generator = generator
         self.content = content
+        self.args = args
+        self.kwargs = kwargs
 
-    def copy(self, generator=None, content=None):
+    def copy(self, generator=None, content=None, args=None, kwargs=None):
         out = self.__class__.__new__(self.__class__)
         out._generator = self._generator
         out._content = self._content
+        out._args = self._args
+        out._kwargs = self._kwargs
         if generator is not None:
             out.generator = generator
         if content is not None:
             out.content = content
+        if args is not None:
+            out.args = args
+        if kwargs is not None:
+            out.kwargs = kwargs
         return out
 
-    def deepcopy(self, generator=None, content=None):
-        out = self.copy(generator=generator, content=content)
+    def deepcopy(self, generator=None, content=None, args=None, kwargs=None):
+        out = self.copy(generator=generator, content=content, args=args, kwargs=kwargs)
         out._content = awkward.util.deepcopy(out._content)
         return out
 
@@ -238,6 +246,26 @@ class VirtualObjectArray(awkward.array.base.AwkwardArray):
         self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
 
     @property
+    def args(self):
+        return self._args
+
+    @args.setter
+    def args(self, value):
+        if not isinstance(value, tuple):
+            value = (value,)
+        self._args = value
+
+    @property
+    def kwargs(self):
+        return self._kwargs
+
+    @kwargs.setter
+    def kwargs(self, value):
+        if not isinstance(value, dict):
+            raise TypeError("kwargs must be a dict")
+        self._kwargs = value
+
+    @property
     def type(self):
         out = awkward.type.fromarray(self._content)
         out.to = self._generator
@@ -256,11 +284,11 @@ class VirtualObjectArray(awkward.array.base.AwkwardArray):
 
     def __iter__(self):
         for x in self._content:
-            yield self.generator(x)
+            yield self.generator(x, *self._args, **self._kwargs)
 
     def __getitem__(self, where):
         content = self._content[where]
         if isinstance(where, (numbers.Integral, awkward.util.numpy.integer)):
-            return self.generator(content)
+            return self.generator(content, *self._args, **self._kwargs)
         else:
-            return [self.generator(x) for x in content]
+            return [self.generator(x, *self._args, **self._kwargs) for x in content]
