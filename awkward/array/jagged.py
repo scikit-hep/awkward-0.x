@@ -155,6 +155,10 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._parents = parents
         return out
 
+    @classmethod
+    def fromjagged(cls, jagged):
+        return jagged._tojagged(copy=False)
+
     def copy(self, starts=None, stops=None, content=None):
         out = self.__class__.__new__(self.__class__)
         out._starts  = self._starts
