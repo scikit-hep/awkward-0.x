@@ -30,8 +30,6 @@
 
 import numbers
 
-import numpy
-
 import awkward.array.base
 import awkward.util
 
@@ -206,6 +204,21 @@ class VirtualObjectArray(awkward.array.base.AwkwardArray):
         self.generator = generator
         self.content = content
 
+    def copy(self, generator=None, content=None):
+        out = self.__class__.__new__(self.__class__)
+        out._generator = self._generator
+        out._content = self._content
+        if generator is not None:
+            out.generator = generator
+        if content is not None:
+            out.content = content
+        return out
+
+    def deepcopy(self, generator=None, content=None):
+        out = self.copy(generator=generator, content=content)
+        out._content = awkward.util.deepcopy(out._content)
+        return out
+
     @property
     def generator(self):
         return self._generator
@@ -222,22 +235,32 @@ class VirtualObjectArray(awkward.array.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+        self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
 
     @property
-    def dtype(self):
-        return numpy.dtype(object)
+    def type(self):
+        out = awkward.type.fromarray(self._content)
+        out.to = self._generator
+        return out
+
+    def __len__(self):
+        return len(self._content)
 
     @property
     def shape(self):
         return self._content.shape
 
-    def __len__(self):
-        return len(self._content)
+    @property
+    def dtype(self):
+        return awkward.util.numpy.dtype(object)
+
+    def __iter__(self):
+        for x in self._content:
+            yield self.generator(x)
 
     def __getitem__(self, where):
         content = self._content[where]
-        if isinstance(where, (numbers.Integral, numpy.integer)):
+        if isinstance(where, (numbers.Integral, awkward.util.numpy.integer)):
             return self.generator(content)
         else:
             return [self.generator(x) for x in content]
