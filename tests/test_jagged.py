@@ -258,42 +258,32 @@ class TestJagged(unittest.TestCase):
 
     ################### old tests
 
-    # def test_bytejagged_offsets(self):
-    #     a = ByteJaggedArray.fromoffsets([5, 17, 17, 25], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00\xff\xff", numpy.int32)
-    #     self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
+    def test_bytejagged_offsets(self):
+        a = ByteJaggedArray.fromoffsets([5, 17, 17, 25], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00\xff\xff", numpy.int32)
+        self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
 
-    #     a = ByteJaggedArray([5, 17, 19], [17, 17, 27], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff\x04\x00\x00\x00\x05\x00\x00\x00\xff", numpy.int32)
-    #     self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
+        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff\x04\x00\x00\x00\x05\x00\x00\x00\xff", numpy.int32)
+        self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
 
-    # def test_bytejagged_iterable(self):
-    #     a = ByteJaggedArray.fromiter([[1, 2, 3], [], [4, 5]])
-    #     self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])        
-    #     if a.dtype.itemsize == 8:
-    #         self.assertEqual(a.offsets.tolist(), [0, 24, 24, 40])
-    #         self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00")
-    #     elif a.dtype.itemsize == 4:
-    #         self.assertEqual(a.offsets.tolist(), [0, 12, 12, 20])
-    #         self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00")
-    #     else:
-    #         raise AssertionError(a.dtype.itemsize)
+    def test_bytejagged_iterable(self):
+        a = ByteJaggedArray.fromiter([[1, 2, 3], [], [4, 5]])
+        self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])        
+        if a.dtype.itemsize == 8:
+            self.assertEqual(a.offsets.tolist(), [0, 24, 24, 40])
+            self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00")
+        elif a.dtype.itemsize == 4:
+            self.assertEqual(a.offsets.tolist(), [0, 12, 12, 20])
+            self.assertEqual(a.content.tobytes(), b"\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00")
+        else:
+            raise AssertionError(a.dtype.itemsize)
 
-    # def test_bytejagged_get(self):
-    #     a = ByteJaggedArray([5, 17, 19], [17, 17, 27], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff\x04\x00\x00\x00\x05\x00\x00\x00\xff", numpy.int32)
-    #     self.assertEqual([a[i].tolist() for i in range(len(a))], [[1, 2, 3], [], [4, 5]])
-    #     self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
-    #     self.assertEqual([x.tolist() for x in a[:]], [[1, 2, 3], [], [4, 5]])
-    #     self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[1, 2, 3]], [[]], [[4, 5]]])
-    #     self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[1, 2, 3], []], [[], [4, 5]]])
-    #     self.assertEqual([x.tolist() for x in a[[2, 0, 1, 2]]], [[4, 5], [1, 2, 3], [], [4, 5]])
-    #     self.assertEqual([x.tolist() for x in a[[2, 0]]], [[4, 5], [1, 2, 3]])
-    #     self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[1, 2, 3], []])
-
-    # def test_jagged_argproduct(self):
-    #     starts1 = [0,1,4,4]
-    #     stops1 = [1,4,4,8]
-
-    #     starts2 = [0,1,1,4]
-    #     stops2 = [1,1,4,5]
-
-    #     arr1 = JaggedArray(starts1, stops1,content=[0,1,2,3,4,5,6,7])
-    #     arr2 = JaggedArray(starts2, stops2,content=['z', 'a','b','c','d'])
+    def test_bytejagged_get(self):
+        a = ByteJaggedArray([5, 17, 19], [17, 17, 27], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\xff\xff\x04\x00\x00\x00\x05\x00\x00\x00\xff", numpy.int32)
+        self.assertEqual([a[i].tolist() for i in range(len(a))], [[1, 2, 3], [], [4, 5]])
+        self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
+        self.assertEqual([x.tolist() for x in a[:]], [[1, 2, 3], [], [4, 5]])
+        self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[1, 2, 3]], [[]], [[4, 5]]])
+        self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[1, 2, 3], []], [[], [4, 5]]])
+        self.assertEqual([x.tolist() for x in a[[2, 0, 1, 2]]], [[4, 5], [1, 2, 3], [], [4, 5]])
+        self.assertEqual([x.tolist() for x in a[[2, 0]]], [[4, 5], [1, 2, 3]])
+        self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[1, 2, 3], []])
