@@ -63,21 +63,9 @@ else:
     izip = zip
     string = str
 
-def isstringslice(where):
-    if isinstance(where, string):
-        return True
-    elif isinstance(where, tuple):
-        return False
-    try:
-        assert all(isinstance(x, string) for x in where)
-    except (TypeError, AssertionError):
-        return False
-    else:
-        return True
+################################################################ array helpers
 
-################################################################ array operations
-
-import numpy
+import numpy   # all access to Numpy passes through here
 
 CHARTYPE = numpy.dtype(numpy.uint8)
 INDEXTYPE = numpy.dtype(numpy.int64)
@@ -100,6 +88,18 @@ def deepcopy(array):
         return array.copy()
     else:
         return array.deepcopy()
+
+def isstringslice(where):
+    if isinstance(where, string):
+        return True
+    elif isinstance(where, tuple):
+        return False
+    try:
+        assert all(isinstance(x, string) for x in where)
+    except (TypeError, AssertionError):
+        return False
+    else:
+        return True
 
 ################################################################ ufunc-to-Python operations
 
