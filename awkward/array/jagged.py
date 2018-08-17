@@ -464,16 +464,18 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             if awkward.util.offsetsaliased(self._starts, self._stops) or numpy.array_equal(self._starts[1:], self._stops[:-1]):
                 content = self._content[self._starts[0]:self._stops[-1]]
             elif (self._starts[:-1] < self._starts[1:]).all():
-                content = self._content[self.parents[self.parents >= 0]]
+                content = self._content[numpy.arange(len(self.parents), dtype=awkward.util.INDEXTYPE)[self.parents >= 0]]
             else:
-                content = self._content[numpy.argsort(self.parents, kind="mergesort")[self.parents >= 0]]
+                order = numpy.argsort(self.parents, kind="mergesort")
+                content = self._content[order[self.parents[order] >= 0]]
 
             if awkward.util.offsetsaliased(starts, stops) or numpy.array_equal(starts[1:], stops[:-1]):
                 out._content[starts[0]:stops[-1]] = content
             elif (starts[:-1] < starts[1:]).all():
-                out._content[out.parents[out.parents >= 0]] = content
+                out._content[numpy.arange(len(out.parents), dtype=awkward.util.INDEXTYPE)[out.parents >= 0]] = content
             else:
-                out._content[numpy.argsort(out.parents, kind="mergesort")[out.parents >= 0]] = content
+                order = numpy.argsort(out.parents, kind="mergesort")
+                out._content[order[out.parents[order] >= 0]] = content
 
             return out
 
@@ -779,7 +781,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return out
 
 class ByteJaggedArray(JaggedArray):
-    def __init__(self, starts, stops, content, subdtype=awkward.util.CHARTYPE):
+    def __init__(self, starts, stops, content, subdtype):
         super(ByteJaggedArray, self).__init__(starts, stops, content)
         self.subdtype = subdtype
 
@@ -796,22 +798,22 @@ class ByteJaggedArray(JaggedArray):
         return cls(offsets[:-1], offsets[1:], content, subdtype=content.dtype)
 
     @classmethod
-    def fromoffsets(cls, offsets, content, subdtype=awkward.util.CHARTYPE):
+    def fromoffsets(cls, offsets, content, subdtype):
         tmp = ByteJaggedArray.__bases__[0].fromoffsets(offsets, numpy.array([]))
         return cls(tmp._starts, tmp._stops, content, subdtype=subdtype)
 
     @classmethod
-    def fromcounts(cls, counts, content, subdtype=awkward.util.CHARTYPE):
+    def fromcounts(cls, counts, content, subdtype):
         tmp = ByteJaggedArray.__bases__[0].fromcounts(counts, numpy.array([]))
         return cls(tmp._starts, tmp._stops, content, subdtype=subdtype)
 
     @classmethod
-    def fromparents(cls, parents, content, subdtype=awkward.util.CHARTYPE):
+    def fromparents(cls, parents, content, subdtype):
         tmp = ByteJaggedArray.__bases__[0].fromparents(parents, numpy.array([]))
         return cls(tmp._starts, tmp._stops, content, subdtype=subdtype)
 
     @classmethod
-    def fromuniques(cls, uniques, content, subdtype=awkward.util.CHARTYPE):
+    def fromuniques(cls, uniques, content, subdtype):
         tmp = ByteJaggedArray.__bases__[0].fromuniques(uniques, numpy.array([]))
         return cls(tmp._starts, tmp._stops, content, subdtype=subdtype)
 
@@ -924,9 +926,9 @@ class ByteJaggedArray(JaggedArray):
     def _tojagged(self, starts=None, stops=None, copy=True):
         if starts is None and stops is None:
             byteoffsets = awkward.util.counts2offsets(self.counts.reshape(-1))
-            bytestarts, bytestops = byteoffsets[:-1].reshape(self._starts), byteoffsets[1:].reshape(self._starts)
+            bytestarts, bytestops = byteoffsets[:-1].reshape(self._starts.shape), byteoffsets[1:].reshape(self._starts.shape)
             offsets = self._divitemsize(byteoffsets)
-            starts, stops = offsets[:-1].reshape(self._starts), offsets[1:].reshape(self._starts)
+            starts, stops = offsets[:-1].reshape(self._starts.shape), offsets[1:].reshape(self._starts.shape)
 
         elif stops is None:
             starts = awkward.util.toarray(starts, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
@@ -974,36 +976,17 @@ class ByteJaggedArray(JaggedArray):
             if awkward.util.offsetsaliased(self._starts, self._stops) or numpy.array_equal(self._starts[1:], self._stops[:-1]):
                 content = self._content[self._starts[0]:self._stops[-1]]
             elif (self._starts[:-1] < self._starts[1:]).all():
-                content = self._content[self.parents[self.parents >= 0]]
+                content = self._content[numpy.arange(len(self.parents))[self.parents >= 0]]
             else:
-                content = self._content[numpy.argsort(self.parents, kind="mergesort")[self.parents >= 0]]
+                order = numpy.argsort(self.parents, kind="mergesort")
+                content = self._content[order[self.parents[order] >= 0]]
 
             if awkward.util.offsetsaliased(bytestarts, bytestops) or numpy.array_equal(bytestarts[1:], bytestops[:-1]):
                 bytesout._content[bytestarts[0]:bytestops[-1]] = content
             elif (bytestarts[:-1] < bytestarts[1:]).all():
-                bytesout._content[bytesout.parents[bytesout.parents >= 0]] = content
+                bytesout._content[numpy.arange(len(bytesout.parents), dtype=awkward.util.INDEXTYPE)[bytesout.parents >= 0]] = content
             else:
-                bytesout._content[numpy.argsort(bytesout.parents, kind="mergesort")[bytesout.parents >= 0]] = content
+                order = numpy.argsort(bytesout.parents, kind="mergesort")
+                bytesout._content[order[bytesout.parents[order] >= 0]] = content
 
             return JaggedArray(starts, stops, bytesout._content.view(self._subdtype))
-
-
-
-
-
-
-        # content = numpy.empty(stops.reshape(-1).max() + 1, dtype=self._subdtype)
-        
-        # out = JaggedArray(starts, stops, numpy.empty(stops.reshape(-1).max(), dtype=self._subdtype))
-
-        # selfstarts, selfstops, selfcontent, selfsubdtype = self._starts, self._stops, self._content, self._subdtype
-        # content = numpy.empty(self._divitemsize(self.counts.sum()), subdtype=selfsubdtype)
-        # bytescontent = content.view(awkward.util.CHARTYPE)
-
-        # lenstarts = len(starts)
-        # i = 0
-        # while i < lenstarts:
-        #     bytescontent[bytesstarts[i]:bytesstops[i]] = selfcontent[selfstarts[i]:selfstops[i]]
-        #     i += 1
-
-        # return JaggedArray(starts, stops, content)

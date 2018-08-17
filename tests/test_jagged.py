@@ -256,8 +256,6 @@ class TestJagged(unittest.TestCase):
         self.assertEqual([x.tolist() for x in a[[2, 1, 0, -2]]], [[(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [], [(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [(8.8, 8.8), (9.9, 9.9)]])
         self.assertEqual([x.tolist() for x in a[[True, False, True, False, True]]], [[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], []])
 
-    ################### old tests
-
     def test_bytejagged_offsets(self):
         a = ByteJaggedArray.fromoffsets([5, 17, 17, 25], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00\xff\xff", numpy.int32)
         self.assertEqual([x.tolist() for x in a], [[1, 2, 3], [], [4, 5]])
@@ -287,3 +285,22 @@ class TestJagged(unittest.TestCase):
         self.assertEqual([x.tolist() for x in a[[2, 0, 1, 2]]], [[4, 5], [1, 2, 3], [], [4, 5]])
         self.assertEqual([x.tolist() for x in a[[2, 0]]], [[4, 5], [1, 2, 3]])
         self.assertEqual([x.tolist() for x in a[[True, True, False]]], [[1, 2, 3], []])
+
+    def test_bytejagged_tojagged(self):
+        a = awkward.ByteJaggedArray([0*4, 2*4, 3*4], [2*4, 3*4, 4*4], numpy.array([3, 0, 0, 0, 4, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 99, 99, 99, 99], "u1"), "u4")
+        self.assertEqual(a.tolist(), [[3, 4], [2], [0]])
+        self.assertEqual(a._tojagged(numpy.array([10, 30, 20]), numpy.array([12, 31, 21])).tolist(), [[3, 4], [2], [0]])
+        self.assertEqual(a._tojagged(numpy.array([10, 30, 20]), numpy.array([12, 31, 21]))._tojagged().tolist(), [[3, 4], [2], [0]])
+        self.assertEqual(a._tojagged(numpy.array([10, 30, 20]), numpy.array([12, 31, 21]))._tojagged(numpy.array([0, 2, 3]), numpy.array([2, 3, 4])).tolist(), [[3, 4], [2], [0]])
+
+        a = awkward.ByteJaggedArray([0*4, 2*4, 4*4], [2*4, 3*4, 5*4], numpy.array([3, 0, 0, 0, 4, 0, 0, 0, 2, 0, 0, 0, 99, 99, 99, 99, 0, 0, 0, 0], "u1"), "u4")
+        self.assertEqual(a.tolist(), [[3, 4], [2], [0]])
+        self.assertEqual(a._tojagged(numpy.array([10, 30, 20]), numpy.array([12, 31, 21])).tolist(), [[3, 4], [2], [0]])
+        self.assertEqual(a._tojagged(numpy.array([10, 30, 20]), numpy.array([12, 31, 21]))._tojagged().tolist(), [[3, 4], [2], [0]])
+        self.assertEqual(a._tojagged(numpy.array([10, 30, 20]), numpy.array([12, 31, 21]))._tojagged(numpy.array([0, 2, 3]), numpy.array([2, 3, 4])).tolist(), [[3, 4], [2], [0]])
+
+        a = awkward.ByteJaggedArray([3*4, 2*4, 0*4], [5*4, 3*4, 1*4], numpy.array([0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0], "u1"), "u4")
+        self.assertEqual(a.tolist(), [[3, 4], [2], [0]])
+        self.assertEqual(a._tojagged(numpy.array([10, 30, 20]), numpy.array([12, 31, 21])).tolist(), [[3, 4], [2], [0]])
+        self.assertEqual(a._tojagged(numpy.array([10, 30, 20]), numpy.array([12, 31, 21]))._tojagged().tolist(), [[3, 4], [2], [0]])
+        self.assertEqual(a._tojagged(numpy.array([10, 30, 20]), numpy.array([12, 31, 21]))._tojagged(numpy.array([0, 2, 3]), numpy.array([2, 3, 4])).tolist(), [[3, 4], [2], [0]])
