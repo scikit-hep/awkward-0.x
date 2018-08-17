@@ -84,11 +84,6 @@ INDEXTYPE = numpy.dtype(numpy.int64)
 MASKTYPE = numpy.dtype(numpy.bool_)
 BITMASKTYPE = numpy.dtype(numpy.uint8)
 
-cumsum = numpy.cumsum
-cumprod = numpy.cumprod
-nonzero = numpy.nonzero
-arange = numpy.arange
-
 def toarray(value, defaultdtype, passthrough):
     if isinstance(value, passthrough):
         return value
@@ -105,71 +100,6 @@ def deepcopy(array):
         return array.copy()
     else:
         return array.deepcopy()
-
-def offsetsaliased(starts, stops):
-    return (isinstance(starts, numpy.ndarray) and isinstance(stops, numpy.ndarray) and
-            starts.base is not None and stops.base is not None and starts.base is stops.base and
-            starts.ctypes.data == starts.base.ctypes.data and
-            stops.ctypes.data == stops.base.ctypes.data + stops.dtype.itemsize and
-            len(starts) == len(starts.base) - 1 and
-            len(stops) == len(stops.base) - 1)
-
-def counts2offsets(counts):
-    offsets = numpy.empty(len(counts) + 1, dtype=INDEXTYPE)
-    offsets[0] = 0
-    cumsum(counts, out=offsets[1:])
-    return offsets
-
-def offsets2parents(offsets):
-    out = numpy.zeros(offsets[-1], dtype=INDEXTYPE)
-    numpy.add.at(out, offsets[offsets != offsets[-1]][1:], 1)
-    cumsum(out, out=out)
-    return out
-
-def startsstops2parents(starts, stops):
-    out = numpy.full(stops.max(), -1, dtype=INDEXTYPE)
-    lenstarts = len(starts)
-    i = 0
-    while i < lenstarts:
-        out[starts[i]:stops[i]] = i
-        i += 1
-    return out
-
-def parents2startsstops(parents):
-    # assumes that children are contiguous, but not necessarily in order or fully covering (allows empty lists)
-    tmp = nonzero(parents[1:] != parents[:-1])[0] + 1
-    changes = numpy.empty(len(tmp) + 2, dtype=INDEXTYPE)
-    changes[0] = 0
-    changes[-1] = len(parents)
-    changes[1:-1] = tmp
-
-    length = parents.max() + 1
-    starts = numpy.zeros(length, dtype=INDEXTYPE)
-    counts = numpy.zeros(length, dtype=INDEXTYPE)
-
-    where = parents[changes[:-1]]
-    real = (where >= 0)
-
-    starts[where[real]] = (changes[:-1])[real]
-    counts[where[real]] = (changes[1:] - changes[:-1])[real]
-
-    return starts, starts + counts
-
-def uniques2offsetsparents(uniques):
-    # assumes that children are contiguous, in order, and fully covering (can't have empty lists)
-    # values are ignored, apart from uniqueness
-    changes = nonzero(uniques[1:] != uniques[:-1])[0] + 1
-
-    offsets = numpy.empty(len(changes) + 2, dtype=INDEXTYPE)
-    offsets[0] = 0
-    offsets[-1] = len(uniques)
-    offsets[1:-1] = changes
-
-    parents = numpy.zeros(len(uniques), dtype=INDEXTYPE)
-    parents[changes] = 1
-    cumsum(parents, out=parents)
-
-    return offsets, parents
 
 ################################################################ ufunc-to-Python operations
 

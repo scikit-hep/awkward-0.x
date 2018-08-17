@@ -32,8 +32,6 @@ import numbers
 import functools
 import re
 
-import numpy
-
 import awkward.array.base
 import awkward.type
 import awkward.util
@@ -124,7 +122,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     @classmethod
     def fromrec(cls, recarray):
-        if not isinstance(recarray, numpy.ndarray) or recarray.dtype.names is None:
+        if not isinstance(recarray, awkward.util.numpy.ndarray) or recarray.dtype.names is None:
             raise TypeError("recarray must be a Numpy structured array")
         out = cls(len(recarray))
         for n in recarray.dtype.names:
@@ -167,7 +165,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     @step.setter
     def step(self, value):
-        if not isinstance(value, (numbers.Integral, numpy.integer)) or value == 0:
+        if not isinstance(value, (numbers.Integral, awkward.util.numpy.integer)) or value == 0:
             raise TypeError("step must be a non-zero integer")
         self._step = value
 
@@ -177,7 +175,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     @start.setter
     def start(self, value):
-        if not isinstance(value, (numbers.Integral, numpy.integer)) or value < 0:
+        if not isinstance(value, (numbers.Integral, awkward.util.numpy.integer)) or value < 0:
             raise TypeError("start must be a non-negative integer")
         self._start = value
 
@@ -187,7 +185,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     @length.setter
     def length(self, value):
-        if not isinstance(value, (numbers.Integral, numpy.integer)) or value < 0:
+        if not isinstance(value, (numbers.Integral, awkward.util.numpy.integer)) or value < 0:
             raise TypeError("length must be a non-negative integer")
         self._length = value
 
@@ -201,7 +199,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     @stop.setter
     def stop(self, value):
-        if not isinstance(value, (numbers.Integral, numpy.integer)) or value < 0:
+        if not isinstance(value, (numbers.Integral, awkward.util.numpy.integer)) or value < 0:
             raise TypeError("stop must be a non-negative integer")
 
         if (self._step > 0 and value - self._start > 0) or (self._step < 0 and value - self._start < 0):
@@ -217,7 +215,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     @property
     def dtype(self):
-        return numpy.dtype([(n, x.dtype) for n, x in self._content.items()])
+        return awkward.util.numpy.dtype([(n, x.dtype) for n, x in self._content.items()])
 
     @property
     def shape(self):
@@ -268,7 +266,7 @@ class Table(awkward.array.base.AwkwardArray):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, (numbers.Integral, numpy.integer)):
+        if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
             original_head = head
             if head < 0:
                 head += self._length
@@ -303,23 +301,23 @@ class Table(awkward.array.base.AwkwardArray):
             return table
 
         else:
-            head = awkward.util.toarray(head, awkward.util.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-            if issubclass(head.dtype.type, numpy.integer):
+            head = awkward.util.toarray(head, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+            if issubclass(head.dtype.type, awkward.util.numpy.integer):
                 negative = (head < 0)
                 head[negative] += self._length
 
-                if not numpy.bitwise_and(0 <= head, head < self._length).all():
+                if not awkward.util.numpy.bitwise_and(0 <= head, head < self._length).all():
                     raise IndexError("some indexes out of bounds for length {0}".format(self._length))
 
                 indexes = self._start + self._step*head
 
                 return self.copy(length=len(head), start=0, step=1, content=awkward.util.OrderedDict([(n, x[(indexes,) + tail]) for n, x in self._content.items()]))
 
-            elif issubclass(head.dtype.type, (numpy.bool, numpy.bool_)):
+            elif issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
                 if len(head) != self._length:
                     raise IndexError("boolean index of length {0} does not fit array of length {1}".format(len(head), self._length))
 
-                return self.copy(length=numpy.count_nonzero(head), start=0, step=1, content=[(n, x[self.start:self.stop:self.step][(head,) + tail]) for n, x in self._content.items()])
+                return self.copy(length=awkward.util.numpy.count_nonzero(head), start=0, step=1, content=[(n, x[self.start:self.stop:self.step][(head,) + tail]) for n, x in self._content.items()])
 
             else:
                 raise TypeError("cannot interpret dtype {0} as a fancy index or mask".format(head.dtype))
@@ -329,13 +327,13 @@ class Table(awkward.array.base.AwkwardArray):
             raise ValueError("new columns can only be attached to the original table, not a slice")
 
         if isinstance(where, awkward.util.string):
-            self._content[where] = awkward.util.toarray(what, awkward.util.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+            self._content[where] = awkward.util.toarray(what, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
 
         elif awkward.util.isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
-                self._content[x] = awkward.util.toarray(y, awkward.util.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
+                self._content[x] = awkward.util.toarray(y, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
 
         else:
             raise TypeError("invalid index for assigning to Table: {0}".format(where))
@@ -389,7 +387,7 @@ class NamedTable(Table):
 
     @classmethod
     def fromrec(cls, recarray, name):
-        if not isinstance(recarray, numpy.ndarray) or recarray.dtype.names is None:
+        if not isinstance(recarray, awkward.util.numpy.ndarray) or recarray.dtype.names is None:
             raise TypeError("recarray must be a Numpy structured array")
         out = cls(len(recarray), name)
         for n in recarray.dtype.names:
