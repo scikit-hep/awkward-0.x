@@ -199,7 +199,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 #     def __getitem__(self, where):
 #         return self.array[where]
 
-class VirtualObjectArray(awkward.array.base.AwkwardArray):
+class ObjectArray(awkward.array.base.AwkwardArray):
     def __init__(self, content, generator, *args, **kwargs):
         self.content = content
         self.generator = generator

@@ -34,7 +34,7 @@ from awkward.array.jagged import JaggedArray, ByteJaggedArray
 from awkward.array.masked import MaskedArray, BitMaskedArray
 from awkward.array.sparse import SparseArray
 from awkward.array.table import Table, NamedTable
-from awkward.array.virtual import VirtualArray, VirtualObjectArray
+from awkward.array.virtual import VirtualArray, ObjectArray
 
 from awkward.generate import fromiter
 
