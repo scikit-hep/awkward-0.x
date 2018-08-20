@@ -287,8 +287,24 @@ class ObjectArray(awkward.array.base.AwkwardArray):
             yield self.generator(x, *self._args, **self._kwargs)
 
     def __getitem__(self, where):
-        content = self._content[where]
-        if isinstance(where, (numbers.Integral, awkward.util.numpy.integer)):
-            return self.generator(content, *self._args, **self._kwargs)
+        if awkward.util.isstringslice(where):
+            return self._content[where]
+
+        if where == ():
+            return self
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
+        content = self._content[head]
+        if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
+            if tail == ():
+                return self.generator(content, *self._args, **self._kwargs)
+            else:
+                return self.generator(content, *self._args, **self._kwargs)[tail]
+
+        elif tail == ():
+            return self.copy(content=content)
+
         else:
-            return [self.generator(x, *self._args, **self._kwargs) for x in content]
+            return [x[tail] for x in content]

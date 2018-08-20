@@ -416,9 +416,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         while isinstance(node, JaggedArray) and len(tail) > 0:
             head, tail = tail[0], tail[1:]
-
+            original_head = head
             if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
-                original_head = head
                 counts = node._stops - node._starts
                 if head < 0:
                     head = counts + head
