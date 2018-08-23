@@ -336,14 +336,14 @@ class Table(awkward.array.base.AwkwardArray):
 
         if isinstance(where, awkward.util.string):
             self._content[where] = awkward.util.toarray(what, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
-            self._length = min(self._length, len(self._content[where]))
+            self._length = max(self._length, len(self._content[where]))
 
         elif awkward.util.isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
                 self._content[x] = awkward.util.toarray(y, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
-                self._length = min(self._length, len(self._content[x]))
+                self._length = max(self._length, len(self._content[x]))
 
         else:
             raise TypeError("invalid index for assigning to Table: {0}".format(where))
