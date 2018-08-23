@@ -332,3 +332,6 @@ class ObjectArray(awkward.array.base.AwkwardArray):
 
         else:
             return [x[tail] for x in content]
+
+    def __setitem__(self, where, what):
+        self._content[where] = what
