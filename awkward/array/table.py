@@ -163,7 +163,8 @@ class Table(awkward.array.base.AwkwardArray):
         out = self.__class__.__new__(self.__class__)
         out._length = 0
         out._start = 0
-        out._step = 0
+        out._step = 1
+        out._content = awkward.util.OrderedDict()
         return out
 
     @property
@@ -429,7 +430,8 @@ class NamedTable(Table):
         out = self.__class__.__new__(self.__class__)
         out._length = 0
         out._start = 0
-        out._step = 0
+        out._step = 1
+        out._content = awkward.util.OrderedDict()
         out._name = self._name
         return out
 
