@@ -227,6 +227,30 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         out._content = awkward.util.deepcopy(out._content)
         return out
 
+    def like(self, array):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=array)
+        else:
+            return self.copy(content=self._content.like(array))
+
+    def empty_like(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.empty_like(self._content))
+        else:
+            return self.copy(content=self._content.empty_like())
+
+    def zeros_like(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.zeros_like(self._content))
+        else:
+            return self.copy(content=self._content.zeros_like())
+
+    def ones_like(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.ones_like(self._content))
+        else:
+            return self.copy(content=self._content.ones_like())
+
     @property
     def content(self):
         return self._content

@@ -159,6 +159,11 @@ class Table(awkward.array.base.AwkwardArray):
         out._content = awkward.util.OrderedDict([(n, awkward.util.deepcopy(x)) for n, x in out._content.items()])
         return out
 
+    def empty_like(self):
+        out = self.__class__.__new__(self.__class__)
+        out._length = 0
+        return out
+
     @property
     def step(self):
         return self._step
@@ -414,6 +419,12 @@ class NamedTable(Table):
             out.name = name
         else:
             out._name = self._name
+        return out
+
+    def empty_like(self):
+        out = self.__class__.__new__(self.__class__)
+        out._length = 0
+        out._name = self._name
         return out
 
     @property
