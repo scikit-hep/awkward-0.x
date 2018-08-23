@@ -162,6 +162,8 @@ class Table(awkward.array.base.AwkwardArray):
     def empty_like(self):
         out = self.__class__.__new__(self.__class__)
         out._length = 0
+        out._start = 0
+        out._step = 0
         return out
 
     @property
@@ -426,6 +428,8 @@ class NamedTable(Table):
     def empty_like(self):
         out = self.__class__.__new__(self.__class__)
         out._length = 0
+        out._start = 0
+        out._step = 0
         out._name = self._name
         return out
 
