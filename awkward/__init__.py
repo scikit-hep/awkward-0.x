@@ -41,3 +41,5 @@ from awkward.generate import fromiter
 
 # convenient access to the version number
 from awkward.version import __version__
+
+__all__ = ["ChunkedArray", "PartitionedArray", "AppendableArray", "IndexedArray", "ByteIndexedArray", "IndexedMaskedArray", "UnionArray", "JaggedArray", "ByteJaggedArray", "MaskedArray", "BitMaskedArray", "ObjectArray", "SparseArray", "Table", "VirtualArray", "fromiter", "__version__"]
