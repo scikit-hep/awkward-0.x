@@ -61,6 +61,40 @@ class Test(unittest.TestCase):
         self.assertEqual(a["0"][[True, False, True, False, True, False, True, False, True, False]].tolist(), [0, 2, 4, 6, 8])
         self.assertEqual(a[[True, False, True, False, True, False, True, False, True, False]]["0"].tolist(), [0, 2, 4, 6, 8])
 
+    def test_table_slice_slice(self):
+        a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[::2][2:4].tolist(), [{"0": 4, "1": 4.4}, {"0": 6, "1": 6.6}])
+        self.assertEqual(a[1::2][2:100].tolist(), [{"0": 5, "1": 5.5}, {"0": 7, "1": 7.7}, {"0": 9, "1": 9.9}])
+        self.assertEqual(a[5:][2:4].tolist(), [{"0": 7, "1": 7.7}, {"0": 8, "1": 8.8}])
+        self.assertEqual(a[-5:][2:4].tolist(), [{"0": 7, "1": 7.7}, {"0": 8, "1": 8.8}])
+        self.assertEqual(a[::2][-4:-2].tolist(), [{"0": 2, "1": 2.2}, {"0": 4, "1": 4.4}])
+        self.assertEqual(a[::-2][2:4].tolist(), [{"0": 5, "1": 5.5}, {"0": 3, "1": 3.3}])
+        self.assertEqual(a[::-2][2:100].tolist(), [{"0": 5, "1": 5.5}, {"0": 3, "1": 3.3}, {"0": 1, "1": 1.1}])
+
+    def test_table_slice_fancy(self):
+        a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+
+    def test_table_slice_mask(self):
+        a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+
+    def test_table_fancy_slice(self):
+        a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+
+    def test_table_fancy_fancy(self):
+        a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+
+    def test_table_fancy_mask(self):
+        a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+
+    def test_table_mask_slice(self):
+        a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+
+    def test_table_mask_fancy(self):
+        a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+
+    def test_table_mask_mask(self):
+        a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+
     # def test_indexed_table(self):
     #     a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
     #     self.assertEqual(IndexedArray([5, 3, 7, 5], a)["1"].tolist(), [5.5, 3.3, 7.7, 5.5])

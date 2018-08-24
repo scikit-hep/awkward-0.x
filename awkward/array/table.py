@@ -269,7 +269,7 @@ class Table(awkward.array.base.AwkwardArray):
                     skip = start
                 else:
                     skip = mylength - stop
-                return mystart + mystep*start, mystep*step, min(mylength // abs(mystep) - skip, length)
+                return mystart + mystep*start, mystep*step, min(mylength - skip, length)
 
             else:
                 return self._view[head]
