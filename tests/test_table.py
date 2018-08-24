@@ -83,21 +83,27 @@ class Test(unittest.TestCase):
 
     def test_table_fancy_slice(self):
         a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[[7, 3, 3, 4, 4][2:]].tolist(), [{"0": 3, "1": 3.3}, {"0": 4, "1": 4.4}, {"0": 4, "1": 4.4}])
 
     def test_table_fancy_fancy(self):
         a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[[7, 3, 3, 4, 4]][[-2, 2, 0]].tolist(), [{"0": 4, "1": 4.4}, {"0": 3, "1": 3.3}, {"0": 7, "1": 7.7}])
 
     def test_table_fancy_mask(self):
         a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[[7, 3, 3, 4, 4]][[True, False, True, False, True]].tolist(), [{"0": 7, "1": 7.7}, {"0": 3, "1": 3.3}, {"0": 4, "1": 4.4}])
 
     def test_table_mask_slice(self):
         a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[[True, True, False, False, False, False, False, True, True, True]][1:4].tolist(), [{"0": 1, "1": 1.1}, {"0": 7, "1": 7.7}, {"0": 8, "1": 8.8}])
 
     def test_table_mask_fancy(self):
         a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[[True, True, False, False, False, False, False, True, True, True]][[1, 2, 3]].tolist(), [{"0": 1, "1": 1.1}, {"0": 7, "1": 7.7}, {"0": 8, "1": 8.8}])
 
     def test_table_mask_mask(self):
         a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a[[True, True, False, False, False, False, False, True, True, True]][[False, True, True, True, False]].tolist(), [{"0": 1, "1": 1.1}, {"0": 7, "1": 7.7}, {"0": 8, "1": 8.8}])
 
     # def test_indexed_table(self):
     #     a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
