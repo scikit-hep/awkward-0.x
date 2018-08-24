@@ -97,6 +97,17 @@ class Table(awkward.array.base.AwkwardArray):
                 i += 1
             return i
 
+        def __eq__(self, other):
+            if not isinstance(other, Table.Row):
+                return False
+            elif self._table is other._table and self._index == other._index:
+                return True
+            else:
+                return set(self._table._content) == set(other._table._content) and all(self._table._content[n][self._index] == other._table._content[n][other._index] for n in self._table._content)
+
+        def __ne__(self, other):
+            return not self.__eq__(other)
+
     ##################### class Table starts here
 
     def __init__(self, columns1={}, *columns2, **columns3):
@@ -130,6 +141,12 @@ class Table(awkward.array.base.AwkwardArray):
             seen.add(n)
 
             self[n] = x
+
+    @classmethod
+    def named(cls, rowname, columns1={}, *columns2, **columns3):
+        out = cls(columns1, *columns2, **columns3)
+        out.rowname = rowname
+        return out
 
     @property
     def rowname(self):
