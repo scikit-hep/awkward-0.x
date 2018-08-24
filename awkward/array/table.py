@@ -39,70 +39,70 @@ class Table(awkward.array.base.AwkwardArray):
     class Row(object):
         __slots__ = ["_table", "_index"]
 
-    def __init__(self, table, index):
-        self._table = table
-        self._index = index
+        def __init__(self, table, index):
+            self._table = table
+            self._index = index
 
-    def __repr__(self):
-        return "<{0} {1}>".format(self._table.rowname, self._index)
+        def __repr__(self):
+            return "<{0} {1}>".format(self._table.rowname, self._index)
 
-    def __hasattr__(self, name):
-        return name in self._table._content or "_" + name in self._table._content
+        def __hasattr__(self, name):
+            return name in self._table._content or "_" + name in self._table._content
 
-    def __contains__(self, name):
-        return name in self._table._content
+        def __contains__(self, name):
+            return name in self._table._content
 
-    def __getattr__(self, name):
-        if name == "tolist":
-            return lambda: dict((n, x[self._index]) for n, x in self._table._content.items())
+        def __getattr__(self, name):
+            if name == "tolist":
+                return lambda: dict((n, x[self._index]) for n, x in self._table._content.items())
 
-        content = self._table._content.get(name, None)
-        if content is not None:
-            return content
+            content = self._table._content.get(name, None)
+            if content is not None:
+                return content
 
-        content = self._table._content.get("_" + name, None)
-        if content is not None:
-            return content
+            content = self._table._content.get("_" + name, None)
+            if content is not None:
+                return content
 
-        raise AttributeError("neither {0} nor _{1} are columns in this {2}".format(name, name, self._table.rowname))
+            raise AttributeError("neither {0} nor _{1} are columns in this {2}".format(name, name, self._table.rowname))
 
-    def __getitem__(self):
-        if isinstance(where, awkward.util.string):
-            return self._table._content[where][self._index]
+        def __getitem__(self, where):
+            if isinstance(where, awkward.util.string):
+                return self._table._content[where][self._index]
 
-        elif awkward.util.isstringslice(where):
-            table = self._table.copy(content=awkward.util.OrderedDict([(n, self._table._content[n]) for n in where]))
-            return table.Row(table, self._index)
+            elif awkward.util.isstringslice(where):
+                table = self._table.copy(content=awkward.util.OrderedDict([(n, self._table._content[n]) for n in where]))
+                return table.Row(table, self._index)
 
-        else:
-            index = self._index
-            if not isinstance(index, tuple):
-                index = (index,)
-            if not isinstance(where, tuple):
-                where = (where,)
-            return self._table.Row(table, index + where)
+            else:
+                index = self._index
+                if not isinstance(index, tuple):
+                    index = (index,)
+                if not isinstance(where, tuple):
+                    where = (where,)
+                return self._table.Row(table, index + where)
 
-    def __dir__(self):
-        return ["_" + x if len(x) == 0 or not x[0].isalpha() else x for x in self._table._content]
+        def __dir__(self):
+            return ["_" + x if len(x) == 0 or not x[0].isalpha() else x for x in self._table._content]
 
-    def __iter__(self):
-        i = 0
-        while str(i) in self._table._content:
-            yield self._table._content[str(i)]
-            i += 1
+        def __iter__(self):
+            i = 0
+            while str(i) in self._table._content:
+                yield self._table._content[str(i)]
+                i += 1
 
-    def __len__(self):
-        i = 0
-        while str(i) in self._table._content:
-            i += 1
-        return i
+        def __len__(self):
+            i = 0
+            while str(i) in self._table._content:
+                i += 1
+            return i
 
     ##################### class Table starts here
 
     def __init__(self, columns1={}, *columns2, **columns3):
         self._view = None
         self._base = None
-        self._rowname = "Row"
+        self.rowname = "Row"
         self._content = awkward.util.OrderedDict()
 
         seen = set()
@@ -130,6 +130,16 @@ class Table(awkward.array.base.AwkwardArray):
             seen.add(n)
 
             self[n] = x
+
+    @property
+    def rowname(self):
+        return self._rowname
+
+    @rowname.setter
+    def rowname(self, value):
+        if not isinstance(value, awkward.util.string):
+            raise TypeError("rowname must be a string")
+        self._rowname = value
 
     @classmethod
     def fromrec(cls, recarray):
@@ -202,8 +212,11 @@ class Table(awkward.array.base.AwkwardArray):
             return None
 
         elif isinstance(self._view, tuple):
-            mystart, mystep, mylength = self._view
-            return slice(mystart, mystart + mystep*mylength, mystep)
+            start, step, length = self._view
+            stop = start + step*length
+            if stop < 0:
+                stop = None
+            return slice(start, stop, step)
 
         else:
             return self._view
@@ -330,18 +343,14 @@ class Table(awkward.array.base.AwkwardArray):
             for i in self._view:
                 yield self.Row(self, i)
 
-    def __getitem__(self):
+    def __getitem__(self, where):
         if awkward.util.isstringslice(where):
             if isinstance(where, awkward.util.string):
-                if self._index is None:
-                    index = ()
-                elif isinstance(self._index, tuple):
-                    start, step, length = self._index
-                    index = slice(start, start + step*length, step)
+                index = self._index()
+                if index is None:
+                    return self._content[where]
                 else:
-                    index = self._index
-                return self._content[where][index]
-
+                    return self._content[where][index]
             else:
                 return self.copy(content=[(n, self._content[n]) for n in where])
 
@@ -362,20 +371,18 @@ class Table(awkward.array.base.AwkwardArray):
             out._base = self._base
             return out
 
-        def __setitem__(self, where, what):
-            if self._view is not None:
+    def __setitem__(self, where, what):
+        if self._view is not None:
                 raise ValueError("new columns can only be attached to the original table, not a view (try table.base['col'] = array)")
 
         if isinstance(where, awkward.util.string):
             self._content[where] = awkward.util.toarray(what, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
-            self._length = max(self._length, len(self._content[where]))
 
         elif awkward.util.isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
                 self._content[x] = awkward.util.toarray(y, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
-                self._length = max(self._length, len(self._content[x]))
 
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
