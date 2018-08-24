@@ -471,7 +471,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                     self._content[x] = self._broadcast(y)._content
                 
         else:
-            raise TypeError("invalid index for assigning to Table: {0}".format(where))
+            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     @classmethod
     def zip(cls, columns1={}, *columns2, **columns3):

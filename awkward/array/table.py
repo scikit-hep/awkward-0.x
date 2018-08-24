@@ -57,7 +57,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     def __getattr__(self, name):
         if name == "tolist":
-            return lambda: self._table._try_tolist(self)
+            return lambda: dict((n, x[self._index]) for n, x in self._table._content.items())
 
         content = self._table._content.get(name, None)
         if content is not None:
@@ -103,7 +103,8 @@ class Table(awkward.array.base.AwkwardArray):
     ##################### class Table starts here
 
     def __init__(self, columns1={}, *columns2, **columns3):
-        self._slice = None
+        self._view = None
+        self._base = None
         self._content = awkward.util.OrderedDict()
 
         seen = set()
@@ -143,7 +144,8 @@ class Table(awkward.array.base.AwkwardArray):
 
     def copy(self, content=None):
         out = self.__class__.__new__(self.__class__)
-        out._slice = self._slice
+        out._view = self._view
+        out._base = self._base
         out._content = self._content
         if content is not None and isinstance(content, dict):
             out._content = awkward.util.OrderedDict(content.items())
@@ -153,12 +155,19 @@ class Table(awkward.array.base.AwkwardArray):
 
     def deepcopy(self, content=None):
         out = self.copy(content=content)
-        out._content = awkward.util.OrderedDict([(n, awkward.util.deepcopy(x)) for n, x in out._content.items()])
+        index = out._index()
+        if index is None:
+            out._content = awkward.util.OrderedDict([(n, awkward.util.deepcopy(x)) for n, x in out._content.items()])
+        else:
+            out._content = awkward.util.OrderedDict([(n, awkward.util.deepcopy(x[index])) for n, x in out._content.items()])
+            out._view = None
+            out._base = None
         return out
 
     def empty_like(self):
         out = self.__class__.__new__(self.__class__)
-        out._slice = self._slice
+        out._view = None
+        out._base = None
         out._content = awkward.util.OrderedDict()
         return out
 
@@ -167,28 +176,43 @@ class Table(awkward.array.base.AwkwardArray):
         return list(self._content)
 
     @property
+    def base(self):
+        return self._base
+
+    @property
     def dtype(self):
         return awkward.util.numpy.dtype([(n, x.dtype) for n, x in self._content.items()])
 
     def _length(self):
-        if self._slice is None:
+        if self._view is None:
             if len(self._content) == 0:
                 return 0
             else:
                 return min([len(x) for x in self._content.values()])
 
-        elif isinstance(self._slice, tuple):
-            start, step, length = self._slice
+        elif isinstance(self._view, tuple):
+            start, step, length = self._view
             return length
 
         else:
-            return len(self._slice)
+            return len(self._view)
+
+    def _index(self):
+        if self._view is None:
+            return None
+
+        elif isinstance(self._view, tuple):
+            mystart, mystep, mylength = self._view
+            return slice(mystart, mystart + mystep*mylength, mystep)
+
+        else:
+            return self._view
 
     def _newslice(self, head):
         if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
             original_head = head
 
-            if self._slice is None:
+            if self._view is None:
                 length = self._length()
                 if head < 0:
                     head += length
@@ -196,8 +220,8 @@ class Table(awkward.array.base.AwkwardArray):
                     IndexError("index {0} out of bounds for length {1}".format(original_head, length))
                 return head
 
-            elif isinstance(self._slice, tuple):
-                mystart, mystep, mylength = self._slice
+            elif isinstance(self._view, tuple):
+                mystart, mystep, mylength = self._view
                 if head < 0:
                     head += mylength
                 if not 0 <= head < mylength:
@@ -205,15 +229,15 @@ class Table(awkward.array.base.AwkwardArray):
                 return mystart + mystep*head
 
             else:
-                length = len(self._slice)
+                length = len(self._view)
                 if head < 0:
                     head += length
                 if not 0 <= head < length:
                     IndexError("index {0} out of bounds for length {1}".format(original_head, length))
-                return self._slice[length]
+                return self._view[length]
 
         elif isinstance(head, slice):
-            if self._slice is None or isinstance(self._slice, tuple):
+            if self._view is None or isinstance(self._view, tuple):
                 start, stop, step = head.indices(self._length())
                 if step == 0:
                     raise ValueError("slice step cannot be zero")
@@ -223,11 +247,11 @@ class Table(awkward.array.base.AwkwardArray):
                 else:
                     length = 0
 
-            if self._slice is None:
+            if self._view is None:
                 return start, step, length
 
-            elif isinstance(self._slice, tuple):
-                mystart, mystep, mylength = self._slice
+            elif isinstance(self._view, tuple):
+                mystart, mystep, mylength = self._view
                 if step > 0:
                     skip = start
                 else:
@@ -235,7 +259,7 @@ class Table(awkward.array.base.AwkwardArray):
                 return mystart + mystep*start, mystep*step, min(mylength // abs(mystep) - skip, length)
 
             else:
-                return self._slice[head]
+                return self._view[head]
 
         else:
             head = awkward.util.toarray(head, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
@@ -246,30 +270,30 @@ class Table(awkward.array.base.AwkwardArray):
                 if not awkward.util.numpy.bitwise_and(0 <= head, head < length).all():
                     raise IndexError("some indexes out of bounds for length {0}".format(length))
 
-                if self._slice is None:
+                if self._view is None:
                     return head
 
-                elif isinstance(self._slice, tuple):
-                    mystart, mystep, mylength = self._slice
+                elif isinstance(self._view, tuple):
+                    mystart, mystep, mylength = self._view
                     return awkward.util.numpy.arange(mystart, mystart + mystep*mylength, mystep)[head]
 
                 else:
-                    return self._slice[head]
+                    return self._view[head]
 
             elif issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
                 length = self._length()
                 if len(head) != length:
                     raise IndexError("boolean index of length {0} does not fit array of length {1}".format(len(head), length))
 
-                if self._slice is None:
+                if self._view is None:
                     return awkward.util.numpy.arange(length)[head]
 
-                elif isinstance(self._slice, tuple):
-                    mystart, mystep, mylength = self._slice
+                elif isinstance(self._view, tuple):
+                    mystart, mystep, mylength = self._view
                     return awkward.util.numpy.arange(mystart, mystart + mystep*mylength, mystep)[head]
 
                 else:
-                    return self._slice[head]
+                    return self._view[head]
 
             else:
                 raise TypeError("cannot interpret dtype {0} as a fancy index or mask".format(head.dtype))
@@ -289,21 +313,21 @@ class Table(awkward.array.base.AwkwardArray):
         return True
 
     def __iter__(self):
-        if self._slice is None:
+        if self._view is None:
             length = self._length()
             i = 0
             while i < length:
                 yield self.Row(self, i)
                 i += 1
 
-        elif isinstance(self._slice, tuple):
-            mystart, mystep, mylength = self._slice
+        elif isinstance(self._view, tuple):
+            mystart, mystep, mylength = self._view
             i = 0
             while i < mylength:
                 yield self.Row(self, mystart + i*mystep)
                 i += 1
         else:
-            for i in self._slice:
+            for i in self._view:
                 yield self.Row(self, i)
 
     def __getitem__(self):
@@ -334,66 +358,94 @@ class Table(awkward.array.base.AwkwardArray):
 
         else:
             out = self.copy(content=self._content)
-            out._slice = newslice
+            out._view = newslice
+            out._base = self._base
             return out
 
+        def __setitem__(self, where, what):
+            if self._view is not None:
+                raise ValueError("new columns can only be attached to the original table, not a view (try table.base['col'] = array)")
 
-#     def __setitem__(self, where, what):
-#         if self._start != 0 or self._step != 1:
-#             raise ValueError("new columns can only be attached to the original table, not a slice")
+        if isinstance(where, awkward.util.string):
+            self._content[where] = awkward.util.toarray(what, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+            self._length = max(self._length, len(self._content[where]))
 
-#         if isinstance(where, awkward.util.string):
-#             self._content[where] = awkward.util.toarray(what, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
-#             self._length = max(self._length, len(self._content[where]))
+        elif awkward.util.isstringslice(where):
+            if len(where) != len(what):
+                raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
+            for x, y in zip(where, what):
+                self._content[x] = awkward.util.toarray(y, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+                self._length = max(self._length, len(self._content[x]))
 
-#         elif awkward.util.isstringslice(where):
-#             if len(where) != len(what):
-#                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
-#             for x, y in zip(where, what):
-#                 self._content[x] = awkward.util.toarray(y, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
-#                 self._length = max(self._length, len(self._content[x]))
+        else:
+            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
-#         else:
-#             raise TypeError("invalid index for assigning to Table: {0}".format(where))
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if method != "__call__":
+            return NotImplemented
 
-#     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-#         self._valid()
+        inputsdict = None
+        for x in inputs:
+            if isinstance(x, Table):
+                if inputsdict is None:
+                    inputsdict = awkward.util.OrderedDict([(n, []) for n in x._content])
+                    table = x
+                elif set(inputsdict) != set(x._content):
+                    raise ValueError("Tables have different sets of columns")
 
-#         if method != "__call__":
-#             return NotImplemented
+        assert inputsdict is not None
 
-#         tables = [x for x in inputs if isinstance(x, Table)]
-#         assert len(tables) > 0
+        for x in inputs:
+            if isinstance(x, Table):
+                index = x._index()
+                for n, y in x._content.items():
+                    if index is None:
+                        inputsdict[n].append(y)
+                    else:
+                        inputsdict[n].append(y[index])
+            else:
+                for n in inputsdict:
+                    inputsdict[n].append(x)
 
-#         if len(tables) == 1:
-#             table = tables[0].copy()
-#             table._start, table._step = 0, 1
+        newcolumns = {}
+        tuplelen = None
+        for n, x in inputsdict.items():
+            newcolumns[n] = getattr(ufunc, method)(*x, **kwargs)
 
-#             inputs = list(inputs)
-#             i = inputs.index(tables[0])
+            if tuplelen is None:
+                if isinstance(x, tuple):
+                    tuplelen = len(x)
+                else:
+                    tuplelen = False
+            elif isinstance(x, tuple) != tuplelen:
+                raise AssertionError("ufuncs return tuples of different lengths or some tuples and some non-tuples")
 
-#             slc = slice(tables[0].start, tables[0].stop, tables[0].step)
-#             for n, x in tables[0]._content.items():
-#                 inputs[i] = x[slc]
-#                 table[n] = getattr(ufunc, method)(*inputs, **kwargs)
+        assert tuplelen is not None
 
-#             return table
+        if method == "at":
+            return None
 
-#         else:
-#             raise NotImplementedError("ufunc applied to multiple tables")
-        
-#     def _try_tolist(self, x):
-#         if isinstance(x, self.Row):
-#             return dict((n, x[n]) for n in x._table._content)
-#         else:
-#             return super(Table, self)._try_tolist(x)
+        if tuplelen is False:
+            out = table.empty_like()
+            for n in inputsdict:
+                out[n] = newcolumns[n]
+            return out
 
-#     def tolist(self):
-#         return [dict((n, self._try_tolist(self._checklength(x)[self.start:self.stop:self.step][i])) for n, x in self._content.items()) for i in range(self._length)]
+        else:
+            out = [table.empty_like() for i in range(tuplelen)]
+            for n in inputsdict:
+                for i in range(tuplelen):
+                    out[i][n] = newcolumns[n]
+            return tuple(out)
 
-#     def pandas(self):
-#         import pandas
-#         return pandas.DataFrame(self._content)
+    def tolist(self):
+        return list(x.tolist() for x in self)
+    
+    def pandas(self):
+        import pandas
+        return pandas.DataFrame(self._content)
+
+
 
 # class NamedTable(Table):
 #     def __init__(self, length, name, columns1={}, *columns2, **columns3):
