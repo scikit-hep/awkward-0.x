@@ -153,12 +153,25 @@ class Test(unittest.TestCase):
         self.assertEqual((numpy.array([100, 200, 300, 400]) + a).tolist(), [[100.0, 101.1, 102.2], [], [303.3, 304.4], [405.5, 406.6, 407.7, 408.8, 409.9]])
 
     def test_jagged_ufunc_object(self):
-        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        self.assertEqual((awkward.ObjectArray([100, 200, 300, 400], str) + a).tolist(), ["[100.  101.1 102.2]", "[]", "[303.3 304.4]", "[405.5 406.6 407.7 408.8 409.9]"])
+        class Z(object):
+            def __init__(self, z):
+                try:
+                    self.z = list(z)
+                except TypeError:
+                    self.z = z
+            def __eq__(self, other):
+                return isinstance(other, Z) and self.z == other.z
+            def __ne__(self, other):
+                return not self.__eq__(other)
+            def __repr__(self):
+                return "Z({0})".format(self.z)
 
-        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], awkward.ObjectArray([0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], str))
-        self.assertEqual(a, [["0.0", "1.1", "2.2"], [], ["3.3", "4.4"], ["5.5", "6.6", "7.7", "8.8", "9.9"]])
-        self.assertEqual(a + awkward.ObjectArray([100, 200, 300, 400], str), [["100.0", "101.1", "102.2"], [], ["303.3", "304.4"], ["405.5", "406.6", "407.7", "408.8", "409.9"]])
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual((awkward.ObjectArray([100, 200, 300, 400], Z) + a).tolist(), [Z([100., 101.1, 102.2]), Z([]), Z([303.3, 304.4]), Z([405.5, 406.6, 407.7, 408.8, 409.9])])
+
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], awkward.ObjectArray([0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], Z))
+        self.assertEqual(a, [[Z(0.0), Z(1.1), Z(2.2)], [], [Z(3.3), Z(4.4)], [Z(5.5), Z(6.6), Z(7.7), Z(8.8), Z(9.9)]])
+        self.assertEqual(a + awkward.ObjectArray([100, 200, 300, 400], Z), [[Z(100.0), Z(101.1), Z(102.2)], [], [Z(303.3), Z(304.4)], [Z(405.5), Z(406.6), Z(407.7), Z(408.8), Z(409.9)]])
 
     def test_jagged_ufunc_table(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
