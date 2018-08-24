@@ -137,6 +137,10 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         return self._content.shape
 
     @property
+    def base(self):
+        return self._content.base
+
+    @property
     def dtype(self):
         return awkward.util.numpy.dtype(object)
 

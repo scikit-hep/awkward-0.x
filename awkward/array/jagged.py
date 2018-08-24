@@ -327,6 +327,10 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return self._starts.shape
 
     @property
+    def base(self):
+        return self._content.base
+
+    @property
     def dtype(self):
         return awkward.util.numpy.dtype(awkward.util.numpy.object)      # specifically, Numpy arrays
 
