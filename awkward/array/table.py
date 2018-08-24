@@ -247,7 +247,7 @@ class Table(awkward.array.base.AwkwardArray):
                     head += length
                 if not 0 <= head < length:
                     IndexError("index {0} out of bounds for length {1}".format(original_head, length))
-                return self._view[length]
+                return self._view[head]
 
         elif isinstance(head, slice):
             if self._view is None or isinstance(self._view, tuple):
