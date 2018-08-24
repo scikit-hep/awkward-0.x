@@ -79,6 +79,14 @@ def isstringslice(where):
     else:
         return True
 
+def iscomparison(ufunc):
+    return (ufunc is numpy.less or
+            ufunc is numpy.less_equal or
+            ufunc is numpy.equal or
+            ufunc is numpy.not_equal or
+            ufunc is numpy.greater or
+            ufunc is numpy.greater_equal)
+
 try:
     NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin
 

@@ -173,3 +173,21 @@ class ObjectArray(awkward.array.base.AwkwardArray):
 
     def __setitem__(self, where, what):
         self._content[where] = what
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if method != "__call__":
+            return NotImplemented
+
+        contents = []
+        for x in inputs:
+            if isinstance(x, ObjectArray):
+                contents.append(x._content)
+            else:
+                contents.append(x)
+
+        result = getattr(ufunc, method)(*contents, **kwargs)
+
+        if awkward.util.iscomparison(ufunc):
+            return result
+        else:
+            return self.copy(content=result)

@@ -446,7 +446,20 @@ class Table(awkward.array.base.AwkwardArray):
             elif isinstance(x, tuple) != tuplelen:
                 raise AssertionError("ufuncs return tuples of different lengths or some tuples and some non-tuples")
 
+        assert len(newcolumns) != 0
         assert tuplelen is not None
+
+        if awkward.util.iscomparison(ufunc):
+            out = None
+            for x in newcolumns.values():
+                assert isinstance(x, awkward.util.numpy.ndarray)
+                assert issubclass(x.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool))
+                if out is None:
+                    out = x
+                else:
+                    out = awkward.util.numpy.bitwise_and(out, x, out=out)
+            assert out is not None
+            return out
 
         if method == "at":
             return None

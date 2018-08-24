@@ -33,6 +33,9 @@ import numpy
 import awkward.util
 
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
+    def __array__(self, *args, **kwargs):
+        raise Exception("{0} {1}".format(args, kwargs))
+
     def __iter__(self):
         for i in range(len(self)):
             yield self[i]
