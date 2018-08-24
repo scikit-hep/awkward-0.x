@@ -611,13 +611,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         else:
             assert False
 
-        # print()
-        # print("**************************************")
-        # for i in range(len(inputs)):
-        #     print(inputs[i])
-        #     print(type(inputs[i]), isinstance(inputs[i], awkward.util.numpy.ndarray), isinstance(inputs[i], awkward.array.base.AwkwardArray))
-        # print("**************************************")
-
         for i in range(len(inputs)):
             if isinstance(inputs[i], (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)) and not isinstance(inputs[i], JaggedArray):
                 data = awkward.util.toarray(inputs[i], inputs[i].dtype, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
@@ -648,32 +641,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
                 content = recurse(data)
 
-                # if isinstance(data, awkward.array.objects.ObjectArray):
-                #     content = awkward.util.numpy.empty(len(parents), dtype=data.content.dtype)
-                #     content[good] = data.content[parents[good]]
-                #     content = data.copy(content=content)
-
-                # elif isinstance(data, awkward.array.table.Table):
-                #     content = data.empty_like()
-                #     for n in data.columns:
-                #         x = data[n]
-                #         content[n] = awkward.util.numpy.empty(len(parents), dtype=x.dtype)
-                #         content[n][good] = x[parents[good]]
-
-                # else:
-                #     content = awkward.util.numpy.empty(len(parents), dtype=data.dtype)
-                #     if len(data.shape) == 0:
-                #         content[good] = data
-                #     else:
-                #         content[good] = data[parents[good]]
-
                 inputs[i] = self.copy(starts=starts, stops=stops, content=content)
-
-        # print()
-        # print("**************************************")
-        # for i in range(len(inputs)):
-        #     print(type(inputs[i]), inputs[i])
-        # print("**************************************")
 
         for i in range(len(inputs)):
             if isinstance(inputs[i], JaggedArray):
@@ -683,10 +651,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                     inputs[i] = inputs[i].content[good]
 
         result = getattr(ufunc, method)(*inputs, **kwargs)
-
-        # print(result)
-        # print("**************************************")
-        # print()
 
         if isinstance(result, tuple):
             return tuple(self.copy(starts=starts, stops=stops, content=x) for x in result)
