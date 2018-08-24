@@ -152,7 +152,7 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         if awkward.util.isstringslice(where):
             return self._content[where]
 
-        if where == ():
+        if isinstance(where, tuple) and where == ():
             return self
         if not isinstance(where, tuple):
             where = (where,)
@@ -160,12 +160,12 @@ class ObjectArray(awkward.array.base.AwkwardArray):
 
         content = self._content[head]
         if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
-            if tail == ():
+            if isinstance(tail, tuple) and tail == ():
                 return self.generator(content, *self._args, **self._kwargs)
             else:
                 return self.generator(content, *self._args, **self._kwargs)[tail]
 
-        elif tail == ():
+        elif isinstance(tail, tuple) and tail == ():
             return self.copy(content=content)
 
         else:

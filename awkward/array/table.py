@@ -373,7 +373,7 @@ class Table(awkward.array.base.AwkwardArray):
             else:
                 return self.copy(content=[(n, self._content[n]) for n in where])
 
-        if where == ():
+        if isinstance(where, tuple) and where == ():
             return self
         if not isinstance(where, tuple):
             where = (where,)
