@@ -54,7 +54,7 @@ class Table(awkward.array.base.AwkwardArray):
 
         def __getattr__(self, name):
             if name == "tolist":
-                return lambda: dict((n, x[self._index]) for n, x in self._table._content.items())
+                return lambda: dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._content.items())
 
             content = self._table._content.get(name, None)
             if content is not None:
