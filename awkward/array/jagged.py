@@ -600,7 +600,9 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 pass
 
             else:
-                inputs[i] = awkward.util.numpy.array(inputs[i], copy=False)
+                tmp = awkward.util.numpy.array(inputs[i], copy=False)
+                if len(tmp.shape) != 0:
+                    inputs[i] = tmp
 
         for jaggedarray in inputs:
             if isinstance(jaggedarray, JaggedArray):
@@ -609,36 +611,69 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         else:
             assert False
 
+        # print()
+        # print("**************************************")
+        # for i in range(len(inputs)):
+        #     print(inputs[i])
+        #     print(type(inputs[i]), isinstance(inputs[i], awkward.util.numpy.ndarray), isinstance(inputs[i], awkward.array.base.AwkwardArray))
+        # print("**************************************")
+
         for i in range(len(inputs)):
             if isinstance(inputs[i], (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)) and not isinstance(inputs[i], JaggedArray):
                 data = awkward.util.toarray(inputs[i], inputs[i].dtype, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
                 if starts.shape != data.shape:
-                    raise ValueError("cannot broadcast JaggedArray of shape {0} with Numpy array of shape {1}".format(starts.shape, data.shape))
+                    raise ValueError("cannot broadcast JaggedArray of shape {0} with array of shape {1}".format(starts.shape, data.shape))
 
                 if parents is None:
                     parents = jaggedarray.parents
                     good = (parents >= 0)
 
-                if isinstance(data, awkward.array.objects.ObjectArray):
-                    content = awkward.util.numpy.empty(len(parents), dtype=data.content.dtype)
-                    content[good] = data.content[parents[good]]
-                    content = data.copy(content=content)
+                def recurse(x):
+                    if isinstance(x, awkward.array.objects.ObjectArray):
+                        return x.copy(content=recurse(x.content))
 
-                elif isinstance(data, awkward.array.table.Table):
-                    content = data.empty_like()
-                    for n in data.columns:
-                        x = data[n]
-                        content[n] = awkward.util.numpy.empty(len(parents), dtype=x.dtype)
-                        content[n][good] = x[parents[good]]
+                    elif isinstance(x, awkward.array.table.Table):
+                        content = x.empty_like()
+                        for n in x.columns:
+                            content[n] = recurse(x[n])
+                        return content
 
-                else:
-                    content = awkward.util.numpy.empty(len(parents), dtype=data.dtype)
-                    if len(data.shape) == 0:
-                        content[good] = data
                     else:
-                        content[good] = data[parents[good]]
+                        content = awkward.util.numpy.empty(len(parents), dtype=x.dtype)
+                        if len(x.shape) == 0:
+                            content[good] = x
+                        else:
+                            content[good] = x[parents[good]]
+                        return content
+
+                content = recurse(data)
+
+                # if isinstance(data, awkward.array.objects.ObjectArray):
+                #     content = awkward.util.numpy.empty(len(parents), dtype=data.content.dtype)
+                #     content[good] = data.content[parents[good]]
+                #     content = data.copy(content=content)
+
+                # elif isinstance(data, awkward.array.table.Table):
+                #     content = data.empty_like()
+                #     for n in data.columns:
+                #         x = data[n]
+                #         content[n] = awkward.util.numpy.empty(len(parents), dtype=x.dtype)
+                #         content[n][good] = x[parents[good]]
+
+                # else:
+                #     content = awkward.util.numpy.empty(len(parents), dtype=data.dtype)
+                #     if len(data.shape) == 0:
+                #         content[good] = data
+                #     else:
+                #         content[good] = data[parents[good]]
 
                 inputs[i] = self.copy(starts=starts, stops=stops, content=content)
+
+        # print()
+        # print("**************************************")
+        # for i in range(len(inputs)):
+        #     print(type(inputs[i]), inputs[i])
+        # print("**************************************")
 
         for i in range(len(inputs)):
             if isinstance(inputs[i], JaggedArray):
