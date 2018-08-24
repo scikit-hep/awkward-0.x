@@ -44,10 +44,7 @@ class Table(awkward.array.base.AwkwardArray):
         self._index = index
 
     def __repr__(self):
-        if isinstance(self._table, NamedTable):
-            return "<{0} {1}>".format(self._table._name, self._index)
-        else:
-            return "<Row {0}>".format(self._index)
+        return "<{0} {1}>".format(self._table.rowname, self._index)
 
     def __hasattr__(self, name):
         return name in self._table._content or "_" + name in self._table._content
@@ -67,7 +64,7 @@ class Table(awkward.array.base.AwkwardArray):
         if content is not None:
             return content
 
-        raise AttributeError("neither {0} nor _{1} are columns in this {2}".format(name, name, self._table._name if isinstance(self._table, NamedTable) else "Row"))
+        raise AttributeError("neither {0} nor _{1} are columns in this {2}".format(name, name, self._table.rowname))
 
     def __getitem__(self):
         if isinstance(where, awkward.util.string):
@@ -105,6 +102,7 @@ class Table(awkward.array.base.AwkwardArray):
     def __init__(self, columns1={}, *columns2, **columns3):
         self._view = None
         self._base = None
+        self._rowname = "Row"
         self._content = awkward.util.OrderedDict()
 
         seen = set()
@@ -137,7 +135,7 @@ class Table(awkward.array.base.AwkwardArray):
     def fromrec(cls, recarray):
         if not isinstance(recarray, awkward.util.numpy.ndarray) or recarray.dtype.names is None:
             raise TypeError("recarray must be a Numpy structured array")
-        out = cls(len(recarray))
+        out = cls()
         for n in recarray.dtype.names:
             out[n] = recarray[n]
         return out
@@ -146,6 +144,7 @@ class Table(awkward.array.base.AwkwardArray):
         out = self.__class__.__new__(self.__class__)
         out._view = self._view
         out._base = self._base
+        out._rowname = self._rowname
         out._content = self._content
         if content is not None and isinstance(content, dict):
             out._content = awkward.util.OrderedDict(content.items())
@@ -168,6 +167,7 @@ class Table(awkward.array.base.AwkwardArray):
         out = self.__class__.__new__(self.__class__)
         out._view = None
         out._base = None
+        out._rowname = self._rowname
         out._content = awkward.util.OrderedDict()
         return out
 
@@ -444,63 +444,3 @@ class Table(awkward.array.base.AwkwardArray):
     def pandas(self):
         import pandas
         return pandas.DataFrame(self._content)
-
-
-
-# class NamedTable(Table):
-#     def __init__(self, length, name, columns1={}, *columns2, **columns3):
-#         super(NamedTable, self).__init__(length, columns1, *columns2, **columns3)
-#         self.name = name
-
-#     def __repr__(self):
-#         return "<{0} {1} x {2} at {3:012x}>".format(self._name, self._length, len(self._content), id(self))
-
-#     @classmethod
-#     def fromrec(cls, recarray, name):
-#         if not isinstance(recarray, awkward.util.numpy.ndarray) or recarray.dtype.names is None:
-#             raise TypeError("recarray must be a Numpy structured array")
-#         out = cls(len(recarray), name)
-#         for n in recarray.dtype.names:
-#             out[n] = recarray[n]
-#         return out
-
-#     @classmethod
-#     def zip(cls, name, columns1={}, *columns2, **columns3):
-#         out = cls(0, name, columns1, *columns2, **columns3)
-#         out._length = min(len(x) for x in out._content.values())
-#         return out
-
-#     def copy(self, length=None, start=None, step=None, content=None, name=None):
-#         out = super(NamedTable, self).copy(length=length, start=start, step=step, content=content)
-#         if name is not None:
-#             out.name = name
-#         else:
-#             out._name = self._name
-#         return out
-
-#     def deepcopy(self, length=None, start=None, step=None, content=None, name=None):
-#         out = super(NamedTable, self).deepcopy(length=length, start=start, step=step, content=content)
-#         if name is not None:
-#             out.name = name
-#         else:
-#             out._name = self._name
-#         return out
-
-#     def empty_like(self):
-#         out = self.__class__.__new__(self.__class__)
-#         out._length = 0
-#         out._start = 0
-#         out._step = 1
-#         out._content = awkward.util.OrderedDict()
-#         out._name = self._name
-#         return out
-
-#     @property
-#     def name(self):
-#         return self._name
-
-#     @name.setter
-#     def name(self, value):
-#         if not isinstance(value, awkward.util.string):
-#             raise TypeError("name must be a string")
-#         self._name = value
