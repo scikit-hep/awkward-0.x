@@ -158,6 +158,8 @@ class Table(awkward.array.base.AwkwardArray):
         out._content = self._content
         if content is not None and isinstance(content, dict):
             out._content = awkward.util.OrderedDict(content.items())
+        elif content is not None:
+            out._content = awkward.util.OrderedDict(content)
         else:
             out._content = awkward.util.OrderedDict(self._content.items())
         return out
@@ -268,7 +270,7 @@ class Table(awkward.array.base.AwkwardArray):
                 if step > 0:
                     skip = start
                 else:
-                    skip = mylength - stop
+                    skip = mylength - 1 - start
                 return mystart + mystep*start, mystep*step, min(mylength - skip, length)
 
             else:
