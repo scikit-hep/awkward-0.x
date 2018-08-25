@@ -61,29 +61,45 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         out._content = awkward.util.deepcopy(out._content)
         return out
 
-    def like(self, array):
+    def like(self, array, **overrides):
+        mine = {}
+        mine["generator"] = overrides.pop("generator", self._generator)
+        mine["args"] = overrides.pop("args", self._args)
+        mine["kwargs"] = overrides.pop("kwargs", self._kwargs)
         if isinstance(self._content, awkward.util.numpy.ndarray):
             return self.copy(content=array)
         else:
-            return self.copy(content=self._content.like(array))
+            return self.copy(content=self._content.like(array, **overrides))
 
-    def empty_like(self):
+    def empty_like(self, **overrides):
+        mine = {}
+        mine["generator"] = overrides.pop("generator", self._generator)
+        mine["args"] = overrides.pop("args", self._args)
+        mine["kwargs"] = overrides.pop("kwargs", self._kwargs)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.empty_like(self._content))
+            return self.copy(content=awkward.util.numpy.empty_like(self._content), **mine)
         else:
-            return self.copy(content=self._content.empty_like())
+            return self.copy(content=self._content.empty_like(**overrides), **mine)
 
-    def zeros_like(self):
+    def zeros_like(self, **overrides):
+        mine = {}
+        mine["generator"] = overrides.pop("generator", self._generator)
+        mine["args"] = overrides.pop("args", self._args)
+        mine["kwargs"] = overrides.pop("kwargs", self._kwargs)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.zeros_like(self._content))
+            return self.copy(content=awkward.util.numpy.zeros_like(self._content), **mine)
         else:
-            return self.copy(content=self._content.zeros_like())
+            return self.copy(content=self._content.zeros_like(**overrides), **mine)
 
-    def ones_like(self):
+    def ones_like(self, **overrides):
+        mine = {}
+        mine["generator"] = overrides.pop("generator", self._generator)
+        mine["args"] = overrides.pop("args", self._args)
+        mine["kwargs"] = overrides.pop("kwargs", self._kwargs)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.ones_like(self._content))
+            return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
         else:
-            return self.copy(content=self._content.ones_like())
+            return self.copy(content=self._content.ones_like(**overrides), **mine)
 
     @property
     def content(self):

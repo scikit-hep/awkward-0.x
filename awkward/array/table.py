@@ -192,7 +192,7 @@ class Table(awkward.array.base.AwkwardArray):
             out._base = None
         return out
 
-    def empty_like(self):
+    def empty_like(self, **overrides):
         out = self.__class__.__new__(self.__class__)
         out._view = None
         out._base = None

@@ -187,29 +187,29 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._parents = awkward.util.deepcopy(out._parents)
         return out
 
-    def like(self, array):
+    def like(self, array, **overrides):
         if isinstance(self._content, awkward.util.numpy.ndarray):
             return self.copy(content=array)
         else:
-            return self.copy(content=self._content.like(array))
+            return self.copy(content=self._content.like(array, **overrides))
 
-    def empty_like(self):
+    def empty_like(self, **overrides):
         if isinstance(self._content, awkward.util.numpy.ndarray):
             return self.copy(content=awkward.util.numpy.empty_like(self._content))
         else:
-            return self.copy(content=self._content.empty_like())
+            return self.copy(content=self._content.empty_like(**overrides))
 
-    def zeros_like(self):
+    def zeros_like(self, **overrides):
         if isinstance(self._content, awkward.util.numpy.ndarray):
             return self.copy(content=awkward.util.numpy.zeros_like(self._content))
         else:
-            return self.copy(content=self._content.zeros_like())
+            return self.copy(content=self._content.zeros_like(**overrides))
 
-    def ones_like(self):
+    def ones_like(self, **overrides):
         if isinstance(self._content, awkward.util.numpy.ndarray):
             return self.copy(content=awkward.util.numpy.ones_like(self._content))
         else:
-            return self.copy(content=self._content.ones_like())
+            return self.copy(content=self._content.ones_like(**overrides))
 
     @property
     def starts(self):
