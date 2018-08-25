@@ -51,4 +51,5 @@ deploy:
   on:
     tags: true
     branch: master
-    condition: "$TRAVIS_PYTHON_VERSION = 2.7"
+    condition: '$TRAVIS_PYTHON_VERSION = "3.6" && $NUMPY = "numpy>=1.15"'   # maybe with [[ ... ]]
+#    condition: "$TRAVIS_PYTHON_VERSION = 3.6 AND $NUMPY = 'numpy>=1.15'"
