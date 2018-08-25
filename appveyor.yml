@@ -44,7 +44,5 @@ install:
   - "python --version"
 
 build_script:
-  - "pip install numpy --user"
+  - "pip install %NUMPY%"
   - "python setup.py test"
-  - "pip install $NUMPY"
-  - "python -c 'import numpy; print(numpy.__version__)'"
