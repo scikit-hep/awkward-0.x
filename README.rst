@@ -18,9 +18,9 @@ Install awkward-array like any other Python package:
 
 .. code-block:: bash
 
-    pip install awkward --user
+    pip install awkward
 
-or similar (use ``sudo``, ``virtualenv``, or ``conda`` if you wish).
+or similar (use ``sudo``, ``--user``, ``virtualenv``, or ``conda`` if you wish).
 
 Strict dependencies:
 ====================
