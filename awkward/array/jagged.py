@@ -160,7 +160,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         jagged = jagged._tojagged(copy=False)
         return cls(jagged._starts, jagged._stops, jagged._content)
 
-    def copy(self, starts=None, stops=None, content=None):
+    def copy(self, starts=None, stops=None, content=None, generator=None, args=None, kwargs=None):
         out = self.__class__.__new__(self.__class__)
         out._starts  = self._starts
         out._stops   = self._stops
@@ -175,9 +175,15 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             out.stops = stops
         if content is not None:
             out.content = content
+        if generator is not None:
+            out.generator = generator
+        if args is not None:
+            out.args = args
+        if kwargs is not None:
+            out.kwargs = kwargs
         return out
 
-    def deepcopy(self, starts=None, stops=None, content=None):
+    def deepcopy(self, starts=None, stops=None, content=None, generator=None, args=None, kwargs=None):
         out = self.copy(starts=starts, stops=stops, content=content)
         out._starts  = awkward.util.deepcopy(out._starts)
         out._stops   = awkward.util.deepcopy(out._stops)
@@ -187,29 +193,50 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._parents = awkward.util.deepcopy(out._parents)
         return out
 
+    def _mine(self, overrides):
+        import awkward.array.objects
+        mine = {}
+        if isinstance(self, awkward.array.objects.ObjectArray):
+            mine["generator"] = overrides.get("generator", self._generator)
+            mine["args"] = overrides.get("args", self._args)
+            mine["kwargs"] = overrides.get("kwargs", self._kwargs)
+        return mine
+
     def like(self, array, **overrides):
+        mine = self._mine(overrides)
+        mine["starts"] = overrides.pop("starts", self._starts)
+        mine["stops"] = overrides.pop("stops", self._stops)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=array)
+            return self.copy(content=array, **mine)
         else:
-            return self.copy(content=self._content.like(array, **overrides))
+            return self.copy(content=self._content.like(array, **overrides), **mine)
 
     def empty_like(self, **overrides):
+        mine = self._mine(overrides)
+        mine["starts"] = overrides.pop("starts", self._starts)
+        mine["stops"] = overrides.pop("stops", self._stops)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.empty_like(self._content))
+            return self.copy(content=awkward.util.numpy.empty_like(self._content), **mine)
         else:
-            return self.copy(content=self._content.empty_like(**overrides))
+            return self.copy(content=self._content.empty_like(**overrides), **mine)
 
     def zeros_like(self, **overrides):
+        mine = self._mine(overrides)
+        mine["starts"] = overrides.pop("starts", self._starts)
+        mine["stops"] = overrides.pop("stops", self._stops)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.zeros_like(self._content))
+            return self.copy(content=awkward.util.numpy.zeros_like(self._content), **mine)
         else:
-            return self.copy(content=self._content.zeros_like(**overrides))
+            return self.copy(content=self._content.zeros_like(**overrides), **mine)
 
     def ones_like(self, **overrides):
+        mine = self._mine(overrides)
+        mine["starts"] = overrides.pop("starts", self._starts)
+        mine["stops"] = overrides.pop("stops", self._stops)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.ones_like(self._content))
+            return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
         else:
-            return self.copy(content=self._content.ones_like(**overrides))
+            return self.copy(content=self._content.ones_like(**overrides), **mine)
 
     @property
     def starts(self):
