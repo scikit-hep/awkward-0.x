@@ -57,6 +57,12 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         except AttributeError:
             return x
 
+    def __getattr__(self, where):
+        if awkward.util.is_intstring(where):
+            return self[where[1:]]
+        else:
+            return super(AwkwardArray, self).__getattr__(where)
+
     def tolist(self):
         import awkward.array.table
         out = []

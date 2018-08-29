@@ -60,8 +60,11 @@ def isidentifier(x):
 
 def isintstring(x):
     return isinstance(x, string) and isintstring._pattern.match(x) is not None
-
 isintstring._pattern = re.compile("^(0|[1-9]+[0-9]*)$")
+
+def is_intstring(x):
+    return isinstance(x, string) and is_intstring._pattern.match(x) is not None
+is_intstring._pattern = re.compile("^_(0|[1-9]+[0-9]*)$")
 
 ################################################################ array helpers
 
