@@ -730,22 +730,22 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         import awkward.array.table
         self._valid()
 
-        counts = self.counts * (self.counts + 1)    # N * (N + 1) // 2
-        awkward.util.numpy.right_shift(counts, 1, out=counts)
+        counts = self.counts * (self.counts + 1) >> 1    # N * (N + 1) // 2
 
         offsets = counts2offsets(counts)
         indexes = awkward.util.numpy.arange(offsets[-1])
         parents = offsets2parents(offsets)
 
-        left = awkward.util.numpy.full(offsets[-1], -1, dtype=awkward.util.INDEXTYPE)
-        right = awkward.util.numpy.empty(offsets[-1], dtype=awkward.util.INDEXTYPE)
+        n = self.counts[parents]
+        k = indexes - offsets[parents]
+        two_n_1 = (2*n + 1)
+        i = awkward.util.numpy.floor((two_n_1 - awkward.util.numpy.sqrt(two_n_1*two_n_1 - 8*k)) / 2).astype(awkward.util.INDEXTYPE)
+        i_i_1_2 = i*(i + 1) >> 1
 
-        n = self.counts[parents[indexes]]
-        k = indexes - offsets[parents[indexes]]
-        i = awkward.util.numpy.floor((2*n + 1 - awkward.util.numpy.sqrt((2*n+1)*(2*n+1) - 8*k)) / 2)
+        starts_parents = self._starts[parents]
 
-        left[indexes] = self._starts[parents[indexes]] + i
-        right[indexes] = self._starts[parents[indexes]] + k - n*i + i*(i + 1) / 2
+        left = starts_parents + i
+        right = starts_parents + k - n*i + i_i_1_2
 
         out = self.fromoffsets(offsets, awkward.array.table.Table(left, right))
         out._parents = parents
