@@ -36,6 +36,8 @@ import awkward.type
 import awkward.util
 
 class Table(awkward.array.base.AwkwardArray):
+    ##################### class Row
+
     class Row(object):
         __slots__ = ["_table", "_index"]
 
@@ -108,7 +110,7 @@ class Table(awkward.array.base.AwkwardArray):
         def __ne__(self, other):
             return not self.__eq__(other)
 
-    ##################### class Table starts here
+    ##################### class Table
 
     def __init__(self, columns1={}, *columns2, **columns3):
         self._view = None

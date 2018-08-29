@@ -737,17 +737,18 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             raise ValueError("both JaggedArrays must have the same length")
         
         offsets = counts2offsets(self.counts * other.counts)
-
         indexes = awkward.util.numpy.arange(offsets[-1], dtype=awkward.util.INDEXTYPE)
         parents = offsets2parents(offsets)
 
-        left = awkward.util.numpy.empty_like(indexes)
-        right = awkward.util.numpy.empty_like(indexes)
+        pi = parents[indexes]
+        ocpi = other.counts[pi]
+        iopi = indexes - offsets[pi]
+        iopi_ocpi = iopi // ocpi
 
-        left[indexes] = self._starts[parents[indexes]] + ((indexes - offsets[parents[indexes]]) // other.counts[parents[indexes]])
-        right[indexes] = other._starts[parents[indexes]] + (indexes - offsets[parents[indexes]]) - other.counts[parents[indexes]] * ((indexes - offsets[parents[indexes]]) // other.counts[parents[indexes]])
+        left = self._starts[pi] + iopi_ocpi
+        right = other._starts[pi] + iopi - ocpi * iopi_ocpi
 
-        out = self.fromoffsets(offsets, awkward.array.table.Table(offsets[-1], left, right))
+        out = self.fromoffsets(offsets, awkward.array.table.Table(left, right))
         out._parents = parents
         return out
 
@@ -757,8 +758,15 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         argcross = self.argcross(other)
         left, right = argcross._content._content.values()
 
-        out = self.fromoffsets(argcross._offsets, awkward.array.table.Table(len(argcross._content), self._content[left], other._content[right]))
+        fields = [other._content[right]]
+        if getattr(self, "_iscross", False):
+            fields = [x[left] for x in self._content._content.values()] + fields
+        else:
+            fields = [self._content[left]] + fields
+
+        out = self.fromoffsets(argcross._offsets, awkward.array.table.Table(*fields))
         out._parents = argcross._parents
+        out._iscross = True
         return out
 
     def _canuseoffset(self):
