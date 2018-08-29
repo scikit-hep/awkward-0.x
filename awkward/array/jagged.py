@@ -764,13 +764,12 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         indexes = awkward.util.numpy.arange(offsets[-1], dtype=awkward.util.INDEXTYPE)
         parents = offsets2parents(offsets)
 
-        pi = parents[indexes]
-        ocpi = other.counts[pi]
-        iopi = indexes - offsets[pi]
-        iopi_ocpi = iopi // ocpi
+        ocp = other.counts[parents]
+        iop = indexes - offsets[parents]
+        iop_ocp = iop // ocp
 
-        left = self._starts[pi] + iopi_ocpi
-        right = other._starts[pi] + iopi - ocpi * iopi_ocpi
+        left = self._starts[parents] + iop_ocp
+        right = other._starts[parents] + iop - ocp * iop_ocp
 
         out = self.fromoffsets(offsets, awkward.array.table.Table(left, right))
         out._parents = parents
