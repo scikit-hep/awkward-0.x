@@ -161,6 +161,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return cls(jagged._starts, jagged._stops, jagged._content)
 
     def copy(self, starts=None, stops=None, content=None, generator=None, args=None, kwargs=None):
+        import awkward.array.objects
         out = self.__class__.__new__(self.__class__)
         out._starts  = self._starts
         out._stops   = self._stops
@@ -169,6 +170,10 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._counts  = self._counts
         out._parents = self._parents
         out._isvalid = self._isvalid
+        if isinstance(self, awkward.array.objects.ObjectArray):
+            out._generator = self._generator
+            out._args = self._args
+            out._kwargs = self._kwargs
         if starts is not None:
             out.starts = starts
         if stops is not None:
