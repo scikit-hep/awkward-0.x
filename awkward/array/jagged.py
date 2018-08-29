@@ -726,6 +726,39 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         return True
 
+    def argpairs(self):
+        import awkward.array.table
+        self._valid()
+
+        # "pairs_indices" -> counts
+        # "pairs_contents" -> indexes
+        # "pairs_parents" -> parents
+        # "first" -> left
+        # "second" -> right
+
+        counts = self.counts * (self.counts + 1)    # N * (N + 1) // 2
+        awkward.util.numpy.right_shift(counts, 1, out=counts)
+
+        pairs_indices = counts2offsets(counts)
+
+        pairs_contents = awkward.util.numpy.arange(pairs_indices[-1])
+
+        pairs_parents = offsets2parents(pairs_indices)
+
+        first = awkward.util.numpy.full(len(pairs_contents), -1, dtype=awkward.util.INDEXTYPE)
+        second = awkward.util.numpy.empty(len(pairs_contents), dtype=awkward.util.INDEXTYPE)
+
+        n = self.counts[pairs_parents[pairs_contents]]
+        k = pairs_contents - pairs_indices[pairs_parents[pairs_contents]]
+        i = awkward.util.numpy.floor((2*n + 1 - awkward.util.numpy.sqrt((2*n+1)*(2*n+1) - 8*k)) / 2)
+
+        first[pairs_contents] = self._starts[pairs_parents[pairs_contents]] + i
+        second[pairs_contents] = self._starts[pairs_parents[pairs_contents]] + k - n*i + i*(i + 1) / 2
+
+        out = self.fromoffsets(pairs_indices, awkward.array.table.Table(first, second))
+        out._parents = pairs_parents
+        return out
+
     def argcross(self, other):
         import awkward.array.table
         self._valid()
