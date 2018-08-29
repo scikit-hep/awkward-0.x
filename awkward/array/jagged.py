@@ -746,7 +746,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         left = starts_parents + i
         right = starts_parents + k - n*i + (i*(i + 1) >> 1)
 
-        out = self.fromoffsets(offsets, awkward.array.table.Table(left, right))
+        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table(left, right))
         out._parents = parents
         return out
 
@@ -754,7 +754,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         argpairs = self.argpairs()
         left, right = argpairs._content._content.values()
 
-        out = self.fromoffsets(argpairs._offsets, awkward.array.table.Table(self._content[left], self._content[right]))
+        out = JaggedArray.fromoffsets(argpairs._offsets, awkward.array.table.Table(self._content[left], self._content[right]))
         out._parents = argpairs._parents
         return out
 
@@ -779,7 +779,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         left = self._starts[parents] + iop_ocp
         right = other._starts[parents] + iop - ocp * iop_ocp
 
-        out = self.fromoffsets(offsets, awkward.array.table.Table(left, right))
+        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table(left, right))
         out._parents = parents
         return out
 
@@ -795,7 +795,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         else:
             fields = [self._content[left]] + fields
 
-        out = self.fromoffsets(argcross._offsets, awkward.array.table.Table(*fields))
+        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table(*fields))
         out._parents = argcross._parents
         out._iscross = True
         return out

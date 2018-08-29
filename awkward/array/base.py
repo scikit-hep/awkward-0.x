@@ -61,7 +61,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         if awkward.util.is_intstring(where):
             return self[where[1:]]
         else:
-            return super(AwkwardArray, self).__getattr__(where)
+            raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
 
     def tolist(self):
         import awkward.array.table
