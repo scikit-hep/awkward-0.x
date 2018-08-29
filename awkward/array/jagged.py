@@ -750,6 +750,14 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._parents = parents
         return out
 
+    def pairs(self):
+        argpairs = self.argpairs()
+        left, right = argpairs._content._content.values()
+
+        out = self.fromoffsets(argpairs._offsets, awkward.array.table.Table(self._content[left], self._content[right]))
+        out._parents = argpairs._parents
+        return out
+
     def argcross(self, other):
         import awkward.array.table
         self._valid()
