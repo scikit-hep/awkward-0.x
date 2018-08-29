@@ -327,6 +327,14 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return self._starts.shape
 
     @property
+    def columns(self):
+        return self._content.columns
+
+    @property
+    def allcolumns(self):
+        return self._content.allcolumns
+
+    @property
     def base(self):
         return self._content.base
 

@@ -202,6 +202,10 @@ class Table(awkward.array.base.AwkwardArray):
 
     @property
     def columns(self):
+        return [x for x in self._content if awkward.util.isintstring(x)] + [x for x in self._content if awkward.util.isidentifier(x)]
+
+    @property
+    def allcolumns(self):
         return list(self._content)
 
     @property

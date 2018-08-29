@@ -28,7 +28,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import ast
 import itertools
+import re
 import sys
 from collections import OrderedDict
     
@@ -40,6 +42,26 @@ else:
     izip = zip
     string = str
     unicode = str
+
+def isidentifier(x):
+    if not isinstance(x, string):
+        return False
+
+    if sys.version_info[0] <= 2:
+        try:
+            node = ast.parse(x)
+        except SyntaxError:
+            return False
+        else:
+            return isinstance(node, ast.Module) and len(node.body) == 1 and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Name) and node.body[0].value.id == x
+
+    else:
+        return x.isidentifier()
+
+def isintstring(x):
+    return isinstance(x, string) and isintstring._pattern.match(x) is not None
+
+isintstring._pattern = re.compile("^(0|[1-9]+[0-9]*)$")
 
 ################################################################ array helpers
 
