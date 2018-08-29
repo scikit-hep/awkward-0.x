@@ -404,7 +404,12 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         self._valid()
 
         if awkward.util.isstringslice(where):
-            return self.copy(content=self._content[where])
+            out = JaggedArray(self._starts, self._stops, self._content[where])
+            out._offsets = self._offsets
+            out._counts = self._counts
+            out._parents = self._parents
+            out._isvalid = False
+            return out
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
