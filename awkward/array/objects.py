@@ -61,16 +61,6 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         out._content = awkward.util.deepcopy(out._content)
         return out
 
-    def like(self, array, **overrides):
-        mine = {}
-        mine["generator"] = overrides.pop("generator", self._generator)
-        mine["args"] = overrides.pop("args", self._args)
-        mine["kwargs"] = overrides.pop("kwargs", self._kwargs)
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=array)
-        else:
-            return self.copy(content=self._content.like(array, **overrides))
-
     def empty_like(self, **overrides):
         mine = {}
         mine["generator"] = overrides.pop("generator", self._generator)

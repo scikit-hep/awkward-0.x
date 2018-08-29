@@ -200,6 +200,24 @@ class Table(awkward.array.base.AwkwardArray):
         out._content = awkward.util.OrderedDict()
         return out
 
+    def zeros_like(self, **overrides):
+        out = self.empty_like(**overrides)
+        for n, x in self._content.items():
+            if isinstance(x, awkward.util.numpy.ndarray):
+                out[n] = awkward.util.numpy.zeros_like(x)
+            else:
+                out[n] = x.zeros_like(**overrides)
+        return out
+
+    def ones_like(self, **overrides):
+        out = self.empty_like(**overrides)
+        for n, x in self._content.items():
+            if isinstance(x, awkward.util.numpy.ndarray):
+                out[n] = awkward.util.numpy.ones_like(x)
+            else:
+                out[n] = x.ones_like(**overrides)
+        return out
+
     @property
     def columns(self):
         return [x for x in self._content if awkward.util.isintstring(x)] + [x for x in self._content if awkward.util.isidentifier(x)]

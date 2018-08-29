@@ -202,15 +202,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             mine["kwargs"] = overrides.get("kwargs", self._kwargs)
         return mine
 
-    def like(self, array, **overrides):
-        mine = self._mine(overrides)
-        mine["starts"] = overrides.pop("starts", self._starts)
-        mine["stops"] = overrides.pop("stops", self._stops)
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=array, **mine)
-        else:
-            return self.copy(content=self._content.like(array, **overrides), **mine)
-
     def empty_like(self, **overrides):
         mine = self._mine(overrides)
         mine["starts"] = overrides.pop("starts", self._starts)
