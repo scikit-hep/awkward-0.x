@@ -244,13 +244,15 @@ class Table(awkward.array.base.AwkwardArray):
         args = []
         kwargs = {}
 
+        order = self.columns
+
         for i, n in enumerate(required):
             if n in self._content:
                 args.append(n)
             elif str(i) in self._content:
                 args.append(str(i))
             else:
-                raise TypeError("no Table field corresponding to function parameter {0} at position {1}".format(repr(n), i))
+                args.append(order[i])
 
         if has_varargs:
             while str(i) in self._content:

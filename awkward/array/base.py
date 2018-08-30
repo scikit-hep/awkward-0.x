@@ -100,3 +100,21 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             args = tuple(self[n] for n in args)
             kwargs = dict((n, self[n]) for n in kwargs)
             return self[function(*args, **kwargs)]
+
+    def maxby(self, function):
+        args, kwargs = self._argfields(function)
+        if args is None and kwargs is None:
+            return self[function(self).argmax()]
+        else:
+            args = tuple(self[n] for n in args)
+            kwargs = dict((n, self[n]) for n in kwargs)
+            return self[function(*args, **kwargs).argmax()]
+
+    def minby(self, function):
+        args, kwargs = self._argfields(function)
+        if args is None and kwargs is None:
+            return self[function(self).argmin()]
+        else:
+            args = tuple(self[n] for n in args)
+            kwargs = dict((n, self[n]) for n in kwargs)
+            return self[function(*args, **kwargs).argmin()]
