@@ -31,6 +31,7 @@
 import collections
 import math
 import numbers
+import types
 
 import awkward.array.base
 import awkward.type
@@ -343,7 +344,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return self._content.base
 
     def _argfields(self, function):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
+        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
             return awkward.util._argfields(function)
         else:
             return self._content._argfields(function)
@@ -452,7 +453,10 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 offsets = counts2offsets(intheadsum)
 
                 return self.copy(starts=offsets[:-1].reshape(intheadsum.shape), stops=offsets[1:].reshape(intheadsum.shape), content=thyself._content[head._content])
-                
+
+            elif len(head.shape) == 1:
+                raise TypeError("jagged index must be boolean (mask) or integer (fancy indexing)")
+
             else:
                 # the other cases are possible, but complicated; the first sets the form
                 raise NotImplementedError("jagged index content type: {0}".format(head._content.dtype))

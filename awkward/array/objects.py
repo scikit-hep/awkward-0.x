@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import numbers
+import types
 
 import awkward.array.base
 import awkward.util
@@ -174,7 +175,7 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         return self._content.base
 
     def _argfields(self, function):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
+        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
             return awkward.util._argfields(function)
         else:
             return self._content._argfields(function)
