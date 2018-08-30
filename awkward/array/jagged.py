@@ -804,7 +804,9 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
     def sum(self):
         if self._canuseoffset():
-            out = awkward.util.numpy.add.reduceat(self._content[self._starts[0]:self._stops[-1]], self.offsets[:-1])
+            out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self._content.dtype)
+            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+            out[:len(nonterminal)] = awkward.util.numpy.add.reduceat(self._content[self._starts[0]:self._stops[-1]], nonterminal)
             out[self.offsets[1:] == self.offsets[:-1]] = 0
             return out
 
@@ -821,7 +823,9 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
     def prod(self):
         if self._canuseoffset():
-            out = awkward.util.numpy.multiply.reduceat(self._content[self._starts[0]:self._stops[-1]], self.offsets[:-1])
+            out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self._content.dtype)
+            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+            out[:len(nonterminal)] = awkward.util.numpy.multiply.reduceat(self._content[self._starts[0]:self._stops[-1]], nonterminal)
             out[self.offsets[1:] == self.offsets[:-1]] = 1
             return out
 
@@ -868,14 +872,18 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return self._argminmax(False)
 
     def _minmax_offset(self, ismin):
+        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self._content.dtype)
+        nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+
         if ismin:
-            out = awkward.util.numpy.minimum.reduceat(self._content[self._starts[0]:self._stops[-1]], self.offsets[:-1])
+            out[:len(nonterminal)] = awkward.util.numpy.minimum.reduceat(self._content[self._starts[0]:self._stops[-1]], nonterminal)
             if issubclass(self._content.dtype.type, awkward.util.numpy.floating):
                 out[self.offsets[1:] == self.offsets[:-1]] = awkward.util.numpy.inf
             else:
                 out[self.offsets[1:] == self.offsets[:-1]] = awkward.util.numpy.iinfo(self._content.dtype.type).max
+
         else:
-            out = awkward.util.numpy.maximum.reduceat(self._content[self._starts[0]:self._stops[-1]], self.offsets[:-1])
+            out[:len(nonterminal)] = awkward.util.numpy.maximum.reduceat(self._content[self._starts[0]:self._stops[-1]], nonterminal)
             if issubclass(self._content.dtype.type, awkward.util.numpy.floating):
                 out[self.offsets[1:] == self.offsets[:-1]] = -awkward.util.numpy.inf
             else:
