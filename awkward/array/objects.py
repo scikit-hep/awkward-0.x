@@ -173,6 +173,12 @@ class ObjectArray(awkward.array.base.AwkwardArray):
     def base(self):
         return self._content.base
 
+    def apply(self, function):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return awkward.util.applyarray(function, self._content)
+        else:
+            return self._content.apply(function)
+
     @property
     def dtype(self):
         return awkward.util.numpy.dtype(object)

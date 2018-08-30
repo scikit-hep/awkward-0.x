@@ -32,6 +32,7 @@ import ast
 import itertools
 import re
 import sys
+import types
 from collections import OrderedDict
     
 if sys.version_info[0] <= 2:
@@ -111,6 +112,15 @@ def iscomparison(ufunc):
             ufunc is numpy.not_equal or
             ufunc is numpy.greater or
             ufunc is numpy.greater_equal)
+
+def applyarray(function, array):
+    if not isinstance(function, types.FunctionType):
+        raise TypeError("apply method requires a function (or lambda)")
+
+    if function.__code__.co_argcount != 1:
+        raise TypeError("apply method requires a one-argument function (or lambda) when applied to non-Tables")
+
+    return function(array)
 
 try:
     NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin

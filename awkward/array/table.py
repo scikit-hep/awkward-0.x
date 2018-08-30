@@ -28,8 +28,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import numbers
 import functools
+import numbers
+import types
 
 import awkward.array.base
 import awkward.type
@@ -231,6 +232,35 @@ class Table(awkward.array.base.AwkwardArray):
     @property
     def base(self):
         return self._base
+
+    def apply(self, function):
+        if not isinstance(function, types.FunctionType):
+            raise TypeError("apply method requires a function (or lambda)")
+
+        required = function.__code__.co_varnames[:function.__code__.co_argcount]
+        has_varargs = (function.__code__.co_flags & 0x04) != 0
+        has_kwargs = (function.__code__.co_flags & 0x08) != 0
+
+        args = []
+        kwargs = {}
+
+        for i, n in enumerate(required):
+            if n in self._content:
+                args.append(self._content[n])
+            elif str(i) in self._content:
+                args.append(self._content[str(i)])
+            else:
+                raise TypeError("no Table field corresponding to function parameter {0} at position {1}".format(repr(n), i))
+
+        if has_varargs:
+            while str(i) in self._content:
+                args.append(self._content[str(i)])
+                i += 1
+
+        if has_kwargs:
+            kwargs = dict((n, x) for n, x in self._content.items() if n not in required)
+
+        return function(*args, **kwargs)
 
     @property
     def dtype(self):
