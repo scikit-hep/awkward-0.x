@@ -62,7 +62,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return self[where[1:]]
         else:
             raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
-
+    
     def tolist(self):
         import awkward.array.table
         out = []
@@ -82,3 +82,21 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return False
         else:
             return True
+
+    def apply(self, function):
+        args, kwargs = self._argfields(function)
+        if args is None and kwargs is None:
+            return function(self)
+        else:
+            args = tuple(self[n] for n in args)
+            kwargs = dict((n, self[n]) for n in kwargs)
+            return function(*args, **kwargs)
+
+    def filter(self, function):
+        args, kwargs = self._argfields(function)
+        if args is None and kwargs is None:
+            return self[function(self)]
+        else:
+            args = tuple(self[n] for n in args)
+            kwargs = dict((n, self[n]) for n in kwargs)
+            return self[function(*args, **kwargs)]

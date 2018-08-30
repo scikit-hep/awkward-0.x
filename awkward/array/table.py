@@ -233,9 +233,9 @@ class Table(awkward.array.base.AwkwardArray):
     def base(self):
         return self._base
 
-    def apply(self, function):
+    def _argfields(self, function):
         if not isinstance(function, types.FunctionType):
-            raise TypeError("apply method requires a function (or lambda)")
+            raise TypeError("function (or lambda) required")
 
         required = function.__code__.co_varnames[:function.__code__.co_argcount]
         has_varargs = (function.__code__.co_flags & 0x04) != 0
@@ -246,21 +246,21 @@ class Table(awkward.array.base.AwkwardArray):
 
         for i, n in enumerate(required):
             if n in self._content:
-                args.append(self._content[n])
+                args.append(n)
             elif str(i) in self._content:
-                args.append(self._content[str(i)])
+                args.append(str(i))
             else:
                 raise TypeError("no Table field corresponding to function parameter {0} at position {1}".format(repr(n), i))
 
         if has_varargs:
             while str(i) in self._content:
-                args.append(self._content[str(i)])
+                args.append(str(i))
                 i += 1
 
         if has_kwargs:
-            kwargs = dict((n, x) for n, x in self._content.items() if n not in required)
+            kwargs = [n for n in self._content if n not in required]
 
-        return function(*args, **kwargs)
+        return args, kwargs
 
     @property
     def dtype(self):

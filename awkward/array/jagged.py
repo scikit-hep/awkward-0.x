@@ -341,15 +341,11 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     def base(self):
         return self._content.base
 
-    def apply(self, function):
-        import awkward.array.objects
-
+    def _argfields(self, function):
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            content = awkward.util.applyarray(function, self._content)
+            return awkward.util._argfields(function)
         else:
-            content = self._content.apply(function)
-
-        return awkward.array.objects.Methods.maybemixin(type(content), JaggedArray)(self._starts, self._stops, content)
+            return self._content._argfields(function)
 
     @property
     def dtype(self):
