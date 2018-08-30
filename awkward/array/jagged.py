@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import collections
+import math
 import numbers
 
 import awkward.array.base
@@ -846,11 +847,21 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
 
         self._valid()
+        contentmax = self._content.max()
+        shiftval = awkward.util.numpy.ceil(contentmax) + 1
+        if math.isnan(shiftval) or math.isinf(shiftval) or shiftval != contentmax:
+            return self._minmax_general(True, ismin)
+
         flatstarts = self._starts.reshape(-1)
         flatstops = self._stops.reshape(-1)
 
+        nonempty = (flatstarts != flatstops)
+        nonterminal = (flatstarts < len(self._content))
+        flatstarts = flatstarts[nonterminal]
+        flatstops = flatstops[nonterminal]
+
         shift = awkward.util.numpy.zeros(self._content.shape, dtype=awkward.util.INDEXTYPE)
-        shift[flatstarts] = awkward.util.numpy.ceil(self._content.max()) + 1
+        shift[flatstarts] = shiftval
         awkward.util.numpy.cumsum(shift, out=shift)
 
         sortedindex = (self._content + shift).argsort()
@@ -860,9 +871,9 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         else:
             flatout = sortedindex[flatstops - 1] - flatstarts
 
-        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=awkward.util.INDEXTYPE).reshape(self._starts.shape)
+        newstarts = awkward.util.numpy.arange(len(nonempty), dtype=awkward.util.INDEXTYPE).reshape(self._starts.shape)
         newstops = awkward.util.numpy.array(newstarts)
-        newstops.reshape(-1)[flatstarts != flatstops] += 1
+        newstops.reshape(-1)[nonempty] += 1
         return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
     def argmin(self):
