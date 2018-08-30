@@ -32,7 +32,7 @@ from awkward.array.chunked import ChunkedArray, PartitionedArray, AppendableArra
 from awkward.array.indexed import IndexedArray, ByteIndexedArray, IndexedMaskedArray, UnionArray
 from awkward.array.jagged import JaggedArray, ByteJaggedArray
 from awkward.array.masked import MaskedArray, BitMaskedArray
-from awkward.array.objects import ObjectArray
+from awkward.array.objects import Methods, ObjectArray
 from awkward.array.sparse import SparseArray
 from awkward.array.table import Table
 from awkward.array.virtual import VirtualArray

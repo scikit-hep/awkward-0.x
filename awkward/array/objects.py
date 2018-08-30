@@ -33,6 +33,23 @@ import numbers
 import awkward.array.base
 import awkward.util
 
+class Methods(object):
+    @staticmethod
+    def mixin(methods, awkwardtype):
+        assert issubclass(methods, Methods)
+        assert not issubclass(methods, awkward.array.base.AwkwardArray)
+        assert issubclass(awkwardtype, awkward.array.base.AwkwardArray)
+        assert not issubclass(awkwardtype, Methods)
+        return type(awkwardtype.__name__ + "Methods", (methods, awkwardtype), {})
+
+    @staticmethod
+    def reuse(methods, awkwardtype):
+        assert issubclass(methods, Methods)
+        assert issubclass(methods, awkward.array.base.AwkwardArray)
+        assert issubclass(awkwardtype, awkward.array.base.AwkwardArray)
+        allbases = tuple(x for x in methods.__bases__ if not issubclass(x, awkward.array.base.AwkwardArray)) + (awkwardtype,)
+        return type(awkwardtype.__name__ + "Methods", allbases, {})
+
 class ObjectArray(awkward.array.base.AwkwardArray):
     def __init__(self, content, generator, *args, **kwargs):
         self.content = content

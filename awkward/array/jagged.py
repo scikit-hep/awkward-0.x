@@ -160,8 +160,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         jagged = jagged._tojagged(copy=False)
         return cls(jagged._starts, jagged._stops, jagged._content)
 
-    def copy(self, starts=None, stops=None, content=None, generator=None, args=None, kwargs=None):
-        import awkward.array.objects
+    def copy(self, starts=None, stops=None, content=None):
         out = self.__class__.__new__(self.__class__)
         out._starts  = self._starts
         out._stops   = self._stops
@@ -170,25 +169,15 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._counts  = self._counts
         out._parents = self._parents
         out._isvalid = self._isvalid
-        if isinstance(self, awkward.array.objects.ObjectArray):
-            out._generator = self._generator
-            out._args = self._args
-            out._kwargs = self._kwargs
         if starts is not None:
             out.starts = starts
         if stops is not None:
             out.stops = stops
         if content is not None:
             out.content = content
-        if generator is not None:
-            out.generator = generator
-        if args is not None:
-            out.args = args
-        if kwargs is not None:
-            out.kwargs = kwargs
         return out
 
-    def deepcopy(self, starts=None, stops=None, content=None, generator=None, args=None, kwargs=None):
+    def deepcopy(self, starts=None, stops=None, content=None):
         out = self.copy(starts=starts, stops=stops, content=content)
         out._starts  = awkward.util.deepcopy(out._starts)
         out._stops   = awkward.util.deepcopy(out._stops)
@@ -198,17 +187,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         out._parents = awkward.util.deepcopy(out._parents)
         return out
 
-    def _mine(self, overrides):
-        import awkward.array.objects
-        mine = {}
-        if isinstance(self, awkward.array.objects.ObjectArray):
-            mine["generator"] = overrides.get("generator", self._generator)
-            mine["args"] = overrides.get("args", self._args)
-            mine["kwargs"] = overrides.get("kwargs", self._kwargs)
-        return mine
-
     def empty_like(self, **overrides):
-        mine = self._mine(overrides)
+        mine = {}
         mine["starts"] = overrides.pop("starts", self._starts)
         mine["stops"] = overrides.pop("stops", self._stops)
         if isinstance(self._content, awkward.util.numpy.ndarray):
@@ -217,7 +197,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return self.copy(content=self._content.empty_like(**overrides), **mine)
 
     def zeros_like(self, **overrides):
-        mine = self._mine(overrides)
+        mine = {}
         mine["starts"] = overrides.pop("starts", self._starts)
         mine["stops"] = overrides.pop("stops", self._stops)
         if isinstance(self._content, awkward.util.numpy.ndarray):
@@ -226,7 +206,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return self.copy(content=self._content.zeros_like(**overrides), **mine)
 
     def ones_like(self, **overrides):
-        mine = self._mine(overrides)
+        mine = {}
         mine["starts"] = overrides.pop("starts", self._starts)
         mine["stops"] = overrides.pop("stops", self._stops)
         if isinstance(self._content, awkward.util.numpy.ndarray):
