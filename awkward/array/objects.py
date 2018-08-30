@@ -43,12 +43,14 @@ class Methods(object):
         return type(awkwardtype.__name__ + "Methods", (methods, awkwardtype), {})
 
     @staticmethod
-    def reuse(methods, awkwardtype):
-        assert issubclass(methods, Methods)
-        assert issubclass(methods, awkward.array.base.AwkwardArray)
-        assert issubclass(awkwardtype, awkward.array.base.AwkwardArray)
-        allbases = tuple(x for x in methods.__bases__ if not issubclass(x, awkward.array.base.AwkwardArray)) + (awkwardtype,)
-        return type(awkwardtype.__name__ + "Methods", allbases, {})
+    def maybemixin(sample, awkwardtype):
+        if issubclass(sample, Methods):
+            assert issubclass(sample, awkward.array.base.AwkwardArray)
+            assert issubclass(awkwardtype, awkward.array.base.AwkwardArray)
+            allbases = tuple(x for x in sample.__bases__ if not issubclass(x, awkward.array.base.AwkwardArray)) + (awkwardtype,)
+            return type(awkwardtype.__name__ + "Methods", allbases, {})
+        else:
+            return awkwardtype
 
 class ObjectArray(awkward.array.base.AwkwardArray):
     def __init__(self, content, generator, *args, **kwargs):

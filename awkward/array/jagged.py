@@ -657,7 +657,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
                 content = recurse(data)
 
-                inputs[i] = self.copy(starts=starts, stops=stops, content=content)
+                inputs[i] = JaggedArray(starts, stops, content)
 
         for i in range(len(inputs)):
             if isinstance(inputs[i], JaggedArray):
@@ -669,11 +669,11 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         result = getattr(ufunc, method)(*inputs, **kwargs)
 
         if isinstance(result, tuple):
-            return tuple(self.copy(starts=starts, stops=stops, content=x) for x in result)
+            return tuple(awkward.array.objects.Methods.maybemixin(type(x), JaggedArray)(starts, stops, x) for x in result)
         elif method == "at":
             return None
         else:
-            return self.copy(starts=starts, stops=stops, content=result)
+            return awkward.array.objects.Methods.maybemixin(type(result), JaggedArray)(starts, stops, result)
 
     @staticmethod
     def aligned(*jaggedarrays):
