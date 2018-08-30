@@ -712,10 +712,10 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         return True
 
-    def argpairs(self):
+    def argpairs(self, same=True):
         import awkward.array.table
         self._valid()
-
+        
         counts = self.counts * (self.counts + 1) >> 1    # N * (N + 1) // 2
 
         offsets = counts2offsets(counts)
@@ -734,13 +734,18 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table(left, right))
         out._parents = parents
+
+        if not same:
+            out = out[out["0"] != out["1"]]
+
         return out
 
-    def pairs(self):
-        argpairs = self.argpairs()
-        left, right = argpairs._content._content.values()
+    def pairs(self, same=True):
+        argpairs = self.argpairs(same=same)
+        left = argpairs._content["0"]
+        right = argpairs._content["1"]
 
-        out = JaggedArray.fromoffsets(argpairs._offsets, awkward.array.table.Table(self._content[left], self._content[right]))
+        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table(self._content[left], self._content[right]))
         out._parents = argpairs._parents
         return out
 
