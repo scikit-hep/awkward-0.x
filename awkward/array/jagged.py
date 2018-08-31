@@ -807,38 +807,86 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             offsets = counts2offsets(self.counts.reshape(-1))
             return self._tojagged(offsets[:-1], offsets[1:], copy=False)._content
 
-    def sum(self):
+    def any(self):
         if self._canuseoffset():
-            out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self._content.dtype)
+            if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+                content = self._content
+            else:
+                content = self._content != 0
+
+            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
             nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-            out[:len(nonterminal)] = awkward.util.numpy.add.reduceat(self._content[self._starts[0]:self._stops[-1]], nonterminal)
+            out[:len(nonterminal)] = awkward.util.numpy.logical_or.reduceat(content[self._starts[0]:self._stops[-1]], nonterminal)
+            out[self.offsets[1:] == self.offsets[:-1]] = False
+            return out
+            
+        else:
+            return self.count_nonzero() != 0
+
+    def all(self):
+        if self._canuseoffset():
+            if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+                content = self._content
+            else:
+                content = self._content != 0
+
+            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
+            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+            out[:len(nonterminal)] = awkward.util.numpy.logical_and.reduceat(content[self._starts[0]:self._stops[-1]], nonterminal)
+            out[self.offsets[1:] == self.offsets[:-1]] = True
+            return out
+            
+        else:
+            return self.count_nonzero() == self.count
+
+    def count_nonzero(self):
+        if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+            return self.sum()
+        else:
+            return (self != 0).sum()
+
+    def sum(self):
+        if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+            content = self._content.astype(awkward.util.numpy.int64)
+        else:
+            content = self._content
+
+        if self._canuseoffset():
+            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
+            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+            out[:len(nonterminal)] = awkward.util.numpy.add.reduceat(content[self._starts[0]:self._stops[-1]], nonterminal)
             out[self.offsets[1:] == self.offsets[:-1]] = 0
             return out
 
         else:
-            contentsum = awkward.util.numpy.empty((len(self._content) + 1,) + self._content.shape[1:], dtype=self._content.dtype)
+            contentsum = awkward.util.numpy.empty((len(content) + 1,) + content.shape[1:], dtype=content.dtype)
             contentsum[0] = 0
-            awkward.util.numpy.cumsum(self._content, axis=0, out=contentsum[1:])
+            awkward.util.numpy.cumsum(content, axis=0, out=contentsum[1:])
 
             nonempty = (self._starts != self._stops)
 
-            out = awkward.util.numpy.zeros(self.shape + self._content.shape[1:], dtype=self._content.dtype)
+            out = awkward.util.numpy.zeros(self.shape + content.shape[1:], dtype=content.dtype)
             out[nonempty] = contentsum[self._stops[nonempty]] - contentsum[self._starts[nonempty]]
             return out
 
     def prod(self):
+        if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+            content = self._content.astype(numpy.int64)
+        else:
+            content = self._content
+
         if self._canuseoffset():
-            out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self._content.dtype)
+            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
             nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-            out[:len(nonterminal)] = awkward.util.numpy.multiply.reduceat(self._content[self._starts[0]:self._stops[-1]], nonterminal)
+            out[:len(nonterminal)] = awkward.util.numpy.multiply.reduceat(content[self._starts[0]:self._stops[-1]], nonterminal)
             out[self.offsets[1:] == self.offsets[:-1]] = 1
             return out
 
         else:
-            out = awkward.util.numpy.ones(self.shape + self._content.shape[1:], dtype=self._content.dtype)
-            flatout = out.reshape((-1,) + self._content.shape[1:])
+            out = awkward.util.numpy.ones(self.shape + content.shape[1:], dtype=content.dtype)
+            flatout = out.reshape((-1,) + content.shape[1:])
 
-            content = self._content
+            content = content
             flatstops = self._stops.reshape(-1)
             for i, flatstart in enumerate(self._starts.reshape(-1)):
                 flatstop = flatstops[i]

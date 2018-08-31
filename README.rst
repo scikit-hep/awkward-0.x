@@ -20,7 +20,7 @@ Install awkward-array like any other Python package:
 
     pip install awkward
 
-or similar (use ``sudo``, ``--user``, ``virtualenv``, or ``conda`` if you wish).
+or similar (use ``sudo``, ``--user``, or ``virtualenv`` if you wish).
 
 Strict dependencies:
 ====================
