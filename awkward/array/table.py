@@ -61,11 +61,11 @@ class Table(awkward.array.base.AwkwardArray):
 
             content = self._table._content.get(name, None)
             if content is not None:
-                return content
+                return content[self._index]
 
             content = self._table._content.get("_" + name, None)
             if content is not None:
-                return content
+                return content[self._index]
 
             raise AttributeError("neither {0} nor _{1} are columns in this {2}".format(name, name, self._table.rowname))
 
