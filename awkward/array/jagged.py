@@ -332,12 +332,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return self._starts.shape
 
     @property
-    def columns(self):
-        return self._content.columns
-
-    @property
-    def allcolumns(self):
-        return self._content.allcolumns
+    def dtype(self):
+        return awkward.util.numpy.dtype(awkward.util.numpy.object)      # specifically, Numpy arrays
 
     @property
     def base(self):
@@ -348,10 +344,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return awkward.util._argfields(function)
         else:
             return self._content._argfields(function)
-
-    @property
-    def dtype(self):
-        return awkward.util.numpy.dtype(awkward.util.numpy.object)      # specifically, Numpy arrays
 
     @staticmethod
     def _validstartsstops(starts, stops):
@@ -503,31 +495,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
-
-    @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
-        import awkward.array.table
-        table = awkward.array.table.Table(0, columns1, *columns2, **columns3)
-        inputs = list(table._content.values())
-        table._length = min(len(x) for x in inputs)
-
-        first = None
-        for i in range(len(inputs)):
-            if isinstance(inputs[i], JaggedArray):
-                if first is None:
-                    first = inputs[i] = inputs[i]._tojagged(copy=False)
-                else:
-                    inputs[i] = inputs[i]._tojagged(first._starts, first._stops, copy=False)
-
-        if first is None:
-            return table
-
-        for i in range(len(inputs)):
-            if not isinstance(inputs[i], JaggedArray):
-                inputs[i] = first._broadcast(inputs[i])
-
-        newtable = awkward.array.table.Table(len(first._content), awkward.util.OrderedDict(zip(table._content, [x._content for x in inputs])))
-        return cls(first._starts, first._stops, newtable)
 
     def _broadcast(self, data):
         data = awkward.util.toarray(data, self._content.dtype, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
@@ -1055,6 +1022,39 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     @classmethod
     def allconcat(cls, first, *rest):    # each item in first followed by second, etc.
         raise NotImplementedError
+
+    @classmethod
+    def zip(cls, columns1={}, *columns2, **columns3):
+        import awkward.array.table
+        table = awkward.array.table.Table(0, columns1, *columns2, **columns3)
+        inputs = list(table._content.values())
+        table._length = min(len(x) for x in inputs)
+
+        first = None
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], JaggedArray):
+                if first is None:
+                    first = inputs[i] = inputs[i]._tojagged(copy=False)
+                else:
+                    inputs[i] = inputs[i]._tojagged(first._starts, first._stops, copy=False)
+
+        if first is None:
+            return table
+
+        for i in range(len(inputs)):
+            if not isinstance(inputs[i], JaggedArray):
+                inputs[i] = first._broadcast(inputs[i])
+
+        newtable = awkward.array.table.Table(len(first._content), awkward.util.OrderedDict(zip(table._content, [x._content for x in inputs])))
+        return cls(first._starts, first._stops, newtable)
+
+    @property
+    def columns(self):
+        return self._content.columns
+
+    @property
+    def allcolumns(self):
+        return self._content.allcolumns
 
     def pandas(self):
         import pandas
