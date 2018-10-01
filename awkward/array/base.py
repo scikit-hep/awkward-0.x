@@ -28,8 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import numpy
-
 import awkward.util
 
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
@@ -42,11 +40,11 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     def __str__(self):
         if len(self) <= 6:
-            return "[{0}]".format(" ".join(str(x) if isinstance(x, (numpy.ndarray, AwkwardArray)) else repr(x) for x in self))
+            return "[{0}]".format(" ".join(str(x) if isinstance(x, (awkward.util.numpy.ndarray, AwkwardArray)) else repr(x) for x in self))
         else:
             return "[{0} ... {1}]".format(
-                " ".join(str(x) if isinstance(x, (numpy.ndarray, AwkwardArray)) else repr(x) for x in self[:3]),
-                ", ".join(str(x) if isinstance(x, (numpy.ndarray, AwkwardArray)) else repr(x) for x in self[-3:]))
+                " ".join(str(x) if isinstance(x, (awkward.util.numpy.ndarray, AwkwardArray)) else repr(x) for x in self[:3]),
+                ", ".join(str(x) if isinstance(x, (awkward.util.numpy.ndarray, AwkwardArray)) else repr(x) for x in self[-3:]))
 
     def __repr__(self):
         return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
@@ -69,7 +67,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         for x in self:
             if isinstance(x, awkward.array.table.Table.Row):
                 out.append(dict((n, self._try_tolist(x[n])) for n in x._table._content))
-            elif isinstance(x, numpy.ma.core.MaskedConstant):
+            elif isinstance(x, awkward.util.numpy.ma.core.MaskedConstant):
                 out.append(None)
             else:
                 out.append(self._try_tolist(x))

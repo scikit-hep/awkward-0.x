@@ -1019,6 +1019,40 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         else:
             return self._minmax_general(False, False)
 
+    @classmethod
+    def singletons(cls, content):
+        offsets = awkward.numpy.arange(len(content) + 1, dtype=awkward.util.INDEXTYPE)
+        return cls.fromoffsets(offsets, content)
+
+    @classmethod
+    def concat(cls, first, *rest):    # all elements of first followed by all elements of second
+        arrays = (first,) + rest
+        for x in arrays:
+            x._valid()
+
+        if not all(isinstance(x, JaggedArray) for x in arrays):
+            raise ValueError("cannot hconcat JaggedArrays with non-JaggedArrays")
+
+        starts = awkward.util.numpy.concatenate([x._starts for x in arrays])
+        stops = awkward.util.numpy.concatenate([x._stops for x in arrays])
+        content = awkward.util.concatenate([x._content for x in arrays])
+
+        startsi = 0
+        contenti = 0
+        for i, array in enumerate(arrays):
+            if i != 0:
+                startsstart, startsstop = startsi, startsi + len(array._starts)
+                starts[startsstart:startsstop] += contenti
+                stops[startsstart:startsstop] += contenti
+            startsi += len(array._starts)
+            contenti += len(array._content)
+
+        return cls(starts, stops, content)
+
+    @classmethod
+    def allconcat(cls, first, *rest):    # each item in first followed by second, etc.
+        raise NotImplementedError
+
     def pandas(self):
         import pandas
 

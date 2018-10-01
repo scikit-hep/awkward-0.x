@@ -93,6 +93,12 @@ def deepcopy(array):
     else:
         return array.deepcopy()
 
+def concatenate(arrays):
+    if all(isinstance(x, numpy.ndarray) for x in arrays):
+        return numpy.concatenate(arrays)
+    else:
+        return arrays[0].concat(*arrays[1:])
+
 def isstringslice(where):
     if isinstance(where, string):
         return True
