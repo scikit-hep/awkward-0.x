@@ -163,12 +163,8 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         return self._content.shape
 
     @property
-    def columns(self):
-        return self._content.columns
-
-    @property
-    def allcolumns(self):
-        return self._content.allcolumns
+    def dtype(self):
+        return awkward.util.numpy.dtype(object)
 
     @property
     def base(self):
@@ -179,10 +175,6 @@ class ObjectArray(awkward.array.base.AwkwardArray):
             return awkward.util._argfields(function)
         else:
             return self._content._argfields(function)
-
-    @property
-    def dtype(self):
-        return awkward.util.numpy.dtype(object)
 
     def __iter__(self):
         for x in self._content:
@@ -231,3 +223,22 @@ class ObjectArray(awkward.array.base.AwkwardArray):
             return result
         else:
             return self.copy(content=result)
+
+    @classmethod
+    def concat(cls, first, *rest):
+        raise NotImplementedError
+
+    @classmethod
+    def zip(cls, columns1={}, *columns2, **columns3):
+        raise NotImplementedError
+
+    @property
+    def columns(self):
+        return self._content.columns
+
+    @property
+    def allcolumns(self):
+        return self._content.allcolumns
+
+    def pandas(self):
+        raise NotImplementedError
