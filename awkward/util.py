@@ -69,7 +69,10 @@ is_intstring._pattern = re.compile("^_(0|[1-9]+[0-9]*)$")
 
 ################################################################ array helpers
 
+import distutils.version
 import numpy   # all access to Numpy passes through here
+if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVersion("1.13.1"):
+    raise ImportError("Numpy 1.13.1 or later required")
 
 CHARTYPE = numpy.dtype(numpy.uint8)
 INDEXTYPE = numpy.dtype(numpy.int64)
@@ -84,6 +87,15 @@ def toarray(value, defaultdtype, passthrough):
             return numpy.frombuffer(value, dtype=getattr(value, "dtype", defaultdtype)).reshape(getattr(value, "shape", -1))
         except AttributeError:
             return numpy.array(value, copy=False)
+
+def array_str(array):
+    import awkward.array.base
+    if isinstance(array, numpy.ndarray):
+        return numpy.array_str(array, numpy.inf)
+    elif isinstance(array, awkward.array.base.AwkwardArray):
+        return str(array).replace("\n", "")
+    else:
+        return repr(array)
 
 def deepcopy(array):
     if array is None:
