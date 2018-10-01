@@ -1020,8 +1020,11 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             return self._minmax_general(False, False)
 
     @classmethod
-    def singletons(cls, content):
-        offsets = awkward.numpy.arange(len(content) + 1, dtype=awkward.util.INDEXTYPE)
+    def regular(cls, content, size=1):
+        quotient = -(-len(content) // size)
+        offsets = awkward.util.numpy.arange(0, quotient * size + 1, size, dtype=awkward.util.INDEXTYPE)
+        if len(offsets) > 0:
+            offsets[-1] = len(content)
         return cls.fromoffsets(offsets, content)
 
     @classmethod
