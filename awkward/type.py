@@ -348,7 +348,7 @@ class TableType(Type):
                 out.append((n, x))
             else:
                 out.append((n, x.dtype))
-        return out
+        return numpy.dtype(out)
 
     @property
     def jshape(self):

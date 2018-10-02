@@ -59,6 +59,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
 
+    @property
+    def jshape(self):
+        return self.type.jshape
+
     def tolist(self):
         import awkward.array.table
         out = []
