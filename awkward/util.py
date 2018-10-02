@@ -78,6 +78,7 @@ CHARTYPE = numpy.dtype(numpy.uint8)
 INDEXTYPE = numpy.dtype(numpy.int64)
 MASKTYPE = numpy.dtype(numpy.bool_)
 BITMASKTYPE = numpy.dtype(numpy.uint8)
+DEFAULTTYPE = numpy.dtype(numpy.float64)
 
 def toarray(value, defaultdtype, passthrough):
     if isinstance(value, passthrough):

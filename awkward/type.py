@@ -108,8 +108,8 @@ class Type(object):
             seen.add(id(self))
             return out + self._subrepr(labeled, seen)
 
-    def __str__(self):
-        return self._str(self._labeled(), set(), "")
+    def __str__(self, indent=""):
+        return self._str(self._labeled(), set(), indent)
 
     def _str(self, labeled, seen, indent):
         if id(self) in seen:
@@ -257,7 +257,6 @@ class ArrayType(Type):
     def takes(self, value):
         if value == numpy.inf or (isinstance(value, (numbers.Integral, numpy.integer)) and value >= 0):
             self._takes = value
-
         else:
             raise ValueError("{0} is not allowed in type specification".format(value))
 
@@ -271,6 +270,34 @@ class ArrayType(Type):
             self._to = value
         else:
             self._to = self._finaltype(value)
+
+    @property
+    def shape(self):
+        if self._takes == numpy.inf:
+            return ()
+        else:
+            return (self._takes,) + self._to.shape
+
+    @property
+    def dtype(self):
+        if self._takes == numpy.inf:
+            return numpy.dtype(object)
+
+        elif isinstance(self._to.dtype, numpy.dtype):
+            if self._to.dtype.subdtype is None:
+                return self._to.dtype
+            else:
+                return self._to.dtype.subdtype[0]
+
+        else:
+            return self._to.dtype
+
+    @property
+    def jshape(self):
+        if isinstance(self._to, numpy.dtype):
+            return (self._takes, self._to)
+        else:
+            return self._takes + self._to.jshape
 
     def _subrepr(self, labeled, seen):
         if isinstance(self._to, Type):
@@ -306,6 +333,20 @@ class TableType(Type):
         self._fields = awkward.util.OrderedDict()
         for n, x in fields.items():
             self._fields[n] = x
+
+    @property
+    def shape(self):
+        return ()
+
+    @property
+    def dtype(self):
+        if not all(x.shape for x in self._fields.values()):
+            raise TypeError("Table with non-primitive fields has no Numpy dtype")
+        return [(n, x.dtype) for n, x in self._fields.items()]
+
+    @property
+    def jshape(self):
+        return dict((n, x.jshape) for n, x in self.items())
 
     def __getitem__(self, key):
         return self._fields[key]

@@ -35,6 +35,7 @@ import itertools
 import numpy
 
 import awkward.array.base
+import awkward.type
 import awkward.util
 
 class ChunkedArray(awkward.array.base.AwkwardArray):
@@ -42,20 +43,52 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         self.chunks = chunks
         self.counts = counts
         
-    def copy(self, index=None, content=None):
-        raise NotImplementedError
+    def copy(self, chunks=None, counts=None):
+        out = self.__class__.__new__(self.__class__)
+        out._chunks = list(self._chunks)
+        out._counts = list(self._counts)
+        out._types = list(self._types)
+        out._offsets = self._offsets
+        if chunks is not None:
+            out.chunks = chunks
+        if counts is not None:
+            out.counts = counts
+        return out
 
-    def deepcopy(self, index=None, content=None):
-        raise NotImplementedError
+    def deepcopy(self, chunks=None, counts=None):
+        out = self.copy(chunks=chunks, counts=counts)
+        out._chunks = [awkward.util.deepcopy(out._chunks) for x in out._chunks]
+        return out
 
     def empty_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        if len(self._chunks) == 0:
+            chunks = []
+        elif isinstance(self._chunks[0], awkward.util.numpy.ndarray):
+            chunks = [awkward.util.numpy.empty_like(self._chunks[0])]
+        else:
+            chunks = [self._chunks[0].empty_like(**overrides)]
+        return self.copy(chunks=chunks, counts=[len(self._chunks[0])])
 
     def zeros_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        if len(self._chunks) == 0:
+            chunks = []
+        elif isinstance(self._chunks[0], awkward.util.numpy.ndarray):
+            chunks = [awkward.util.numpy.zeros_like(self._chunks[0])]
+        else:
+            chunks = [self._chunks[0].zeros_like(**overrides)]
+        return self.copy(chunks=chunks, counts=[len(self._chunks[0])])
 
     def ones_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        if len(self._chunks) == 0:
+            chunks = []
+        elif isinstance(self._chunks[0], awkward.util.numpy.ndarray):
+            chunks = [awkward.util.numpy.ones_like(self._chunks[0])]
+        else:
+            chunks = [self._chunks[0].ones_like(**overrides)]
+        return self.copy(chunks=chunks, counts=[len(self._chunks[0])])
 
     @property
     def chunks(self):
@@ -67,7 +100,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             self._chunks = list(value)
         except TypeError:
             raise TypeError("chunks must be iterable")
-        self._offsets = None
+        self._types = [None] * len(self._chunks)
 
     @property
     def counts(self):
@@ -83,6 +116,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         if (value < 0).any():
             raise ValueError("counts must be a non-negative array")
         self._counts = value
+        self._offsets = None
 
     @property
     def offsets(self):
@@ -95,9 +129,17 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def countsknown(self):
         return len(self._counts) == len(self._chunks)
 
-    def knowcounts(self):
+    @property
+    def typesknown(self):
+        return all(x is not None for x in self._types)
+
+    def _knowcounts(self):
         for i in range(len(self._counts), len(self._chunks)):
             self._counts.append(len(self._chunks[i]))
+
+    def _knowtype(self, i):
+        self._types[i] = awkward.type.fromarray(self._chunks[i]).to
+        return self._types[i]
 
     def index2chunkid(self, index):
         self._valid()
@@ -138,14 +180,29 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     @property
     def type(self):
-        raise NotImplementedError
+        for tpe in self._types[0]:
+            if tpe is not None:
+                break
+        else:
+            if len(self._chunks) == 0:
+                return awkward.type.ArrayType(0, awkward.util.DEFAULTTYPE)
+            else:
+                tpe = self._knowtype(0)
+
+        self._valid()
+        return awkward.type.ArrayType(len(self), tpe)
 
     def __len__(self):
-        self.knowcounts()
+        self._knowcounts()
         return self.offsets[-1]
 
     @property
     def shape(self):
+        HERE
+
+        self.type
+
+
         raise NotImplementedError
 
     @property
@@ -157,6 +214,15 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         raise NotImplementedError
 
     def _valid(self):
+        if len(self._types) > 0:
+            for i in range(1, len(self._types)):
+                if self._types[i] is self._types[0]:
+                    pass
+                elif self._types[i] == self._types[0]:
+                    self._types[i] = self._types[0]
+                else:
+                    raise TypeError("chunks do not have matching types:\n\n{0}\n\nversus\n\n{1}".format(self._types[0].__str__(indent="    "), self._types[i].__str__(indent="    ")))
+
         return len(self._counts) <= len(self._chunks)
 
     def _argfields(self, function):
@@ -166,7 +232,13 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         raise NotImplementedError
 
     def __getitem__(self, where):
-        raise NotImplementedError
+        self._valid()
+
+        if awkward.util.isstringslice(where):
+            HERE
+
+
+
 
     def __setitem__(self, where, what):
         raise NotImplementedError
