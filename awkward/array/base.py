@@ -58,7 +58,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return self[where[1:]]
         else:
             raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
-    
+
     def tolist(self):
         import awkward.array.table
         out = []

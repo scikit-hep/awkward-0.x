@@ -505,6 +505,15 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
+    def __delitem__(self, where):
+        if isinstance(where, awkward.util.string):
+            del self._content[where]
+        elif awkward.util.isstringslice(where):
+            for x in where:
+                del self._content[x]
+        else:
+            raise TypeError("invalid index for removing column from Table: {0}".format(where))
+
     def _broadcast(self, data):
         data = awkward.util.toarray(data, self._content.dtype, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
         good = (self.parents >= 0)

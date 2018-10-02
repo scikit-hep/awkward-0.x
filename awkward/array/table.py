@@ -451,7 +451,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     def __setitem__(self, where, what):
         if self._view is not None:
-                raise ValueError("new columns can only be attached to the original table, not a view (try table.base['col'] = array)")
+            raise ValueError("new columns can only be attached to the original table, not a view (try table.base['col'] = array)")
 
         if isinstance(where, awkward.util.string):
             self._content[where] = awkward.util.toarray(what, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
@@ -464,6 +464,18 @@ class Table(awkward.array.base.AwkwardArray):
 
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+
+    def __delitem__(self, where):
+        if self._view is not None:
+            raise ValueError("columns can only be removed from the original table, not a view (try del table.base['col'])")
+
+        if isinstance(where, awkward.util.string):
+            del self._content[where]
+        elif awkward.util.isstringslice(where):
+            for x in where:
+                del self._content[x]
+        else:
+            raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         if method != "__call__":

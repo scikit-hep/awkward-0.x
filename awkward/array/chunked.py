@@ -38,9 +38,10 @@ import awkward.array.base
 import awkward.util
 
 class ChunkedArray(awkward.array.base.AwkwardArray):
-    def __init__(self, chunks):
-        raise NotImplementedError
-
+    def __init__(self, chunks, counts=[]):
+        self.chunks = chunks
+        self.counts = counts
+        
     def copy(self, index=None, content=None):
         raise NotImplementedError
 
@@ -57,19 +58,91 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         raise NotImplementedError
 
     @property
-    def content(self):
-        return self._content
+    def chunks(self):
+        return self._chunks
 
-    @content.setter
-    def content(self, value):
-        raise NotImplementedError
+    @chunks.setter
+    def chunks(self, value):
+        try:
+            self._chunks = list(value)
+        except TypeError:
+            raise TypeError("chunks must be iterable")
+        self._offsets = None
+
+    @property
+    def counts(self):
+        return self._counts
+
+    @counts.setter
+    def counts(self, value):
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+            raise TypeError("counts must have integer dtype")
+        if len(value.shape) != 1:
+            raise ValueError("counts must be one-dimensional")
+        if (value < 0).any():
+            raise ValueError("counts must be a non-negative array")
+        self._counts = value
+
+    @property
+    def offsets(self):
+        import awkward.array.jagged
+        if self._offsets is None or len(self._offsets) != len(self._counts) + 1:
+            self._offsets = awkward.array.jagged.counts2offsets(self._counts)
+        return self._offsets
+
+    @property
+    def countsknown(self):
+        return len(self._counts) == len(self._chunks)
+
+    def knowcounts(self):
+        for i in range(len(self._counts), len(self._chunks)):
+            self._counts.append(len(self._chunks[i]))
+
+    def index2chunkid(self, index):
+        self._valid()
+
+        if isinstance(index, numbers.Integral, awkward.util.numpy.integer):
+            if index < 0:
+                index += len(self)
+            if index < 0:
+                raise IndexError("index {0} out of bounds for length {1}".format(index, len(self)))
+
+            cumulative = self.offsets[-1]
+            while index >= cumulative:
+                if self.countsknown:
+                    raise IndexError("index {0} out of bounds for length {1}".format(index, len(self)))
+                count = len(self._chunks[len(self._counts)])
+                cumulative += count
+                self._counts.append(count)
+
+            return awkward.util.numpy.searchsorted(self.offsets, index, "right") - 1
+
+        else:
+            index = awkward.util.numpy.array(index, copy=False)
+            if len(index.shape) == 1 and issubclass(index.dtype.type, awkward.util.numpy.integer):
+                if len(index) == 0:
+                    return awkward.util.numpy.empty(0, dtype=awkward.util.INDEXTYPE)
+
+                if (index < 0).any():
+                    index += len(self)
+                if (index < 0).any():
+                    raise IndexError("index out of bounds for length {0}".format(len(self)))
+
+                index2chunkid(index.max())    # make sure all the counts we need are known
+
+                return awkward.util.numpy.searchsorted(self.offsets, index, "right") - 1
+
+            else:
+                raise TypeError("index2chunkid requires an integer or an array of integers")
 
     @property
     def type(self):
         raise NotImplementedError
 
     def __len__(self):
-        raise NotImplementedError
+        self.knowcounts()
+        return self.offsets[-1]
 
     @property
     def shape(self):
@@ -84,7 +157,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         raise NotImplementedError
 
     def _valid(self):
-        raise NotImplementedError
+        return len(self._counts) <= len(self._chunks)
 
     def _argfields(self, function):
         raise NotImplementedError
@@ -503,6 +576,9 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 #             return super(PartitionedArray, self).__getitem__(where)
 #         else:
 #             return super(PartitionedArray, self).__getitem__(self._normalizeindex(where))
+
+class AppendableArray(ChunkedArray):
+    pass
 
 # class AppendableArray(PartitionedArray):
 #     @classmethod
