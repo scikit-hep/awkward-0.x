@@ -223,6 +223,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     @starts.setter
     def starts(self, value):
         value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+            raise TypeError("starts must have integer dtype")
         if (value < 0).any():
             raise ValueError("starts must be a non-negative array")
         self._starts = value
@@ -236,6 +238,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     @stops.setter
     def stops(self, value):
         value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+            raise TypeError("stops must have integer dtype")
         if (value < 0).any():
             raise ValueError("stops must be a non-negative array")
         self._stops = value
@@ -266,6 +270,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     @offsets.setter
     def offsets(self, value):
         value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+            raise TypeError("offsets must have integer dtype")
         if len(value.shape) != 1 or (value < 0).any():
             raise ValueError("offsets must be a one-dimensional, non-negative array")
         self._starts = value[:-1]
@@ -284,6 +290,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     @counts.setter
     def counts(self, value):
         value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+            raise TypeError("counts must have integer dtype")
         if (value < 0).any():
             raise ValueError("counts must be a non-negative array")
         offsets = counts2offsets(value.reshape(-1))
@@ -307,6 +315,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     @parents.setter
     def parents(self, value):
         value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+            raise TypeError("parents must have integer dtype")
         if len(value) != len(content):
             raise ValueError("parents array must have the same length as content")
         self._starts, self._stops = parents2startsstops(value)
@@ -319,21 +329,21 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return self.copy(content=(out - out[self._starts[self.parents]]))
 
     @property
-    def type(self):
-        return awkward.type.ArrayType(*(self._starts.shape + (awkward.type.ArrayType(awkward.util.numpy.inf, awkward.type.fromarray(self._content).to),)))
-
-    def __len__(self):
-        self._valid()
-        return len(self._starts)
+    def dtype(self):
+        return awkward.util.numpy.dtype(awkward.util.numpy.object)      # specifically, Numpy arrays
 
     @property
     def shape(self):
         self._valid()
         return self._starts.shape
 
+    def __len__(self):
+        self._valid()
+        return len(self._starts)
+
     @property
-    def dtype(self):
-        return awkward.util.numpy.dtype(awkward.util.numpy.object)      # specifically, Numpy arrays
+    def type(self):
+        return awkward.type.ArrayType(*(self._starts.shape + (awkward.type.ArrayType(awkward.util.numpy.inf, awkward.type.fromarray(self._content).to),)))
 
     @property
     def base(self):

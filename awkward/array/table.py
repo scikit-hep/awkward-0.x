@@ -269,21 +269,21 @@ class Table(awkward.array.base.AwkwardArray):
             kwargs = [n for n in self._content if n not in required]
 
         return args, kwargs
-        
-    @property
-    def type(self):
-        return awkward.type.ArrayType(self._length(), functools.reduce(lambda a, b: a & b, [awkward.type.ArrayType(n, awkward.type.fromarray(x).to) for n, x in self._content.items()]))
 
-    def __len__(self):
-        return self._length()
+    @property
+    def dtype(self):
+        return awkward.util.numpy.dtype([(n, x.dtype) for n, x in self._content.items()])
 
     @property
     def shape(self):
         return (self._length(),)
 
+    def __len__(self):
+        return self._length()
+
     @property
-    def dtype(self):
-        return awkward.util.numpy.dtype([(n, x.dtype) for n, x in self._content.items()])
+    def type(self):
+        return awkward.type.ArrayType(self._length(), functools.reduce(lambda a, b: a & b, [awkward.type.ArrayType(n, awkward.type.fromarray(x).to) for n, x in self._content.items()]))
 
     def _length(self):
         if self._view is None:

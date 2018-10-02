@@ -150,21 +150,21 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         self._kwargs = value
 
     @property
-    def type(self):
-        out = awkward.type.fromarray(self._content)
-        out.to = self._generator
-        return out
-
-    def __len__(self):
-        return len(self._content)
+    def dtype(self):
+        return awkward.util.numpy.dtype(object)
 
     @property
     def shape(self):
         return self._content.shape
 
+    def __len__(self):
+        return len(self._content)
+
     @property
-    def dtype(self):
-        return awkward.util.numpy.dtype(object)
+    def type(self):
+        out = awkward.type.fromarray(self._content)
+        out.to = self._generator
+        return out
 
     @property
     def base(self):

@@ -102,27 +102,27 @@ class Test(unittest.TestCase):
         self.assertEqual(a["b"].tolist(), [3, 2, 4, 0])
         self.assertEqual(a["c"].tolist(), ["a", "b", "c", "d"])
 
-    # def test_byteindexed_get(self):
-    #     a = ByteIndexedArray([12, 8, 4, 0], b"\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00", numpy.int32)
-    #     self.assertEqual([x for x in a], [3, 2, 1, 0])
-    #     self.assertEqual([a[i] for i in range(len(a))], [3, 2, 1, 0])
-    #     self.assertEqual(a[:].tolist(), [3, 2, 1, 0])
-    #     self.assertEqual(a[[3, 2, 1, 0]].tolist(), [0, 1, 2, 3])
-    #     self.assertEqual(a[[True, False, True, False]].tolist(), [3, 1])
+    def test_byteindexed_get(self):
+        a = ByteIndexedArray([12, 8, 4, 0], b"\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00", numpy.int32)
+        self.assertEqual([x for x in a], [3, 2, 1, 0])
+        self.assertEqual([a[i] for i in range(len(a))], [3, 2, 1, 0])
+        self.assertEqual(a[:].tolist(), [3, 2, 1, 0])
+        self.assertEqual(a[[3, 2, 1, 0]].tolist(), [0, 1, 2, 3])
+        self.assertEqual(a[[True, False, True, False]].tolist(), [3, 1])
 
-    # def test_byteindexed_get5byte(self):
-    #     a = ByteIndexedArray([15, 10, 5, 1], b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x00\x03\x00\x00\x00\x00", numpy.int32)
-    #     self.assertEqual([x for x in a], [3, 2, 1, 0])
-    #     self.assertEqual([a[i] for i in range(len(a))], [3, 2, 1, 0])
-    #     self.assertEqual(a[:].tolist(), [3, 2, 1, 0])
-    #     self.assertEqual(a[[3, 2, 1, 0]].tolist(), [0, 1, 2, 3])
-    #     self.assertEqual(a[[True, False, True, False]].tolist(), [3, 1])
+    def test_byteindexed_get5byte(self):
+        a = ByteIndexedArray([15, 10, 5, 1], b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x00\x03\x00\x00\x00\x00", numpy.int32)
+        self.assertEqual([x for x in a], [3, 2, 1, 0])
+        self.assertEqual([a[i] for i in range(len(a))], [3, 2, 1, 0])
+        self.assertEqual(a[:].tolist(), [3, 2, 1, 0])
+        self.assertEqual(a[[3, 2, 1, 0]].tolist(), [0, 1, 2, 3])
+        self.assertEqual(a[[True, False, True, False]].tolist(), [3, 1])
 
-    # def test_indexed_byteindexed(self):
-    #     a = IndexedArray([1, 2, 3], ByteIndexedArray([12, 8, 4, 0], b"\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00", numpy.int32))
-    #     self.assertEqual([a[i] for i in range(len(a))], [2, 1, 0])
-    #     self.assertEqual(a[:].tolist(), [2, 1, 0])
+    def test_byteindexed_ufunc(self):
+        a = ByteIndexedArray([15, 10, 5, 1], b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x00\x03\x00\x00\x00\x00", numpy.int32)
+        self.assertEqual((a + 100).tolist(), [103, 102, 101, 100])
 
-    # def test_union_get(self):
-    #     a = UnionArray([0, 1, 0, 1, 0, 1, 0, 1, 0, 1], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]])
-    #     self.assertEqual(a.tolist(), [0.0, 100, 2.2, 300, 4.4, 500, 6.6, 700, 8.8, 900])
+    def test_indexed_byteindexed(self):
+        a = IndexedArray([1, 2, 3], ByteIndexedArray([12, 8, 4, 0], b"\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00", numpy.int32))
+        self.assertEqual([a[i] for i in range(len(a))], [2, 1, 0])
+        self.assertEqual(a[:].tolist(), [2, 1, 0])

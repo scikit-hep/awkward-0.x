@@ -102,6 +102,8 @@ class IndexedArray(awkward.array.base.AwkwardArray):
     @index.setter
     def index(self, value):
         value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+            raise TypeError("index must have integer dtype")
         if (value < 0).any():
             raise ValueError("index must be a non-negative array")
         self._index = value
@@ -118,19 +120,19 @@ class IndexedArray(awkward.array.base.AwkwardArray):
         self._isvalid = False
 
     @property
-    def type(self):
-        return self._content.type
-
-    def __len__(self):
-        return len(self._index)
+    def dtype(self):
+        return self._content.dtype
 
     @property
     def shape(self):
         return self._index.shape
 
+    def __len__(self):
+        return len(self._index)
+
     @property
-    def dtype(self):
-        return self._content.dtype
+    def type(self):
+        return self._content.type
 
     @property
     def base(self):
@@ -204,7 +206,7 @@ class IndexedArray(awkward.array.base.AwkwardArray):
         inputs = list(inputs)
         for i in range(len(inputs)):
             if isinstance(inputs[i], IndexedArray):
-                inputs[i] = inputs[i]._content[inputs[i]._index]
+                inputs[i] = inputs[i][:]
 
         return getattr(ufunc, method)(*inputs, **kwargs)
 
@@ -230,71 +232,59 @@ class IndexedArray(awkward.array.base.AwkwardArray):
         else:
             return self._content[self._index].pandas()
 
-# class IndexedArray(awkward.array.base.AwkwardArray):
-#     def __init__(self, index, content):
-#         self.index = index
-#         self.content = content
-
-#     @property
-#     def index(self):
-#         return self._index
-
-#     @index.setter
-#     def index(self, value):
-#         value = self._toarray(value, self.INDEXTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-
-#         if len(value.shape) != 1:
-#             raise TypeError("index must have 1-dimensional shape")
-#         if value.shape[0] == 0:
-#             value = value.view(self.INDEXTYPE)
-#         if not issubclass(value.dtype.type, numpy.integer):
-#             raise TypeError("index must have integer dtype")
-
-#         self._index = value
-
-#     @property
-#     def content(self):
-#         return self._content
-
-#     @content.setter
-#     def content(self, value):
-#         self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-
-#     @property
-#     def dtype(self):
-#         return self._content.dtype
-
-#     @property
-#     def shape(self):
-#         return (len(self._index),) + self._content.shape[1:]
-
-#     def __len__(self):
-#         return len(self._index)
-        
-#     def __getitem__(self, where):
-#         if self._isstring(where):
-#             return IndexedArray(self._index, self._content[where])
-
-#         return self._content[self._index[where]]
-
 class ByteIndexedArray(IndexedArray):
     def __init__(self, index, content, dtype):
-        raise NotImplementedError
+        super(ByteIndexedArray, self).__init__(index, content)
+        self.dtype = dtype
 
-    def copy(self, index=None, content=None):
-        raise NotImplementedError
+    def copy(self, index=None, content=None, dtype=None):
+        out = self.__class__.__new__(self.__class__)
+        out._index = self._index
+        out._content = self._content
+        out._dtype = self._dtype
+        if index is not None:
+            out.index = index
+        if content is not None:
+            out.content = content
+        if dtype is not None:
+            out.dtype = dtype
+        return out
 
-    def deepcopy(self, index=None, content=None):
-        raise NotImplementedError
+    def deepcopy(self, index=None, content=None, dtype=None):
+        out = self.copy(index=index, content=content)
+        out._index   = awkward.util.deepcopy(out._index)
+        out._content = awkward.util.deepcopy(out._content)
+        return out
 
     def empty_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        mine["index"] = overrides.pop("index", self._index)
+        mine["content"] = overrides.pop("content", self._content)
+        mine["dtype"] = overrides.pop("dtype", self._dtype)
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.empty_like(self._content), **mine)
+        else:
+            return self.copy(content=self._content.empty_like(**overrides), **mine)
 
     def zeros_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        mine["index"] = overrides.pop("index", self._index)
+        mine["content"] = overrides.pop("content", self._content)
+        mine["dtype"] = overrides.pop("dtype", self._dtype)
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.zeros_like(self._content), **mine)
+        else:
+            return self.copy(content=self._content.zeros_like(**overrides), **mine)
 
     def ones_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        mine["index"] = overrides.pop("index", self._index)
+        mine["content"] = overrides.pop("content", self._content)
+        mine["dtype"] = overrides.pop("dtype", self._dtype)
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
+        else:
+            return self.copy(content=self._content.ones_like(**overrides), **mine)
 
     @property
     def content(self):
@@ -302,51 +292,69 @@ class ByteIndexedArray(IndexedArray):
 
     @content.setter
     def content(self, value):
-        raise NotImplementedError
+        self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, awkward.util.numpy.ndarray).view(awkward.util.CHARTYPE).reshape(-1)
 
     @property
     def type(self):
-        raise NotImplementedError
-
-    def __len__(self):
-        raise NotImplementedError
-
-    @property
-    def shape(self):
-        raise NotImplementedError
+        return awkward.type.ArrayType(self._index.shape, self._dtype)
 
     @property
     def dtype(self):
-        raise NotImplementedError
+        return self._dtype
 
-    @property
-    def base(self):
-        raise NotImplementedError
+    @dtype.setter
+    def dtype(self, value):
+        self._dtype = awkward.util.numpy.dtype(value)
 
     def _valid(self):
-        raise NotImplementedError
-
-    def _argfields(self, function):
-        raise NotImplementedError
+        if not self._isvalid:
+            if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
+                raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
 
     def __iter__(self):
-        raise NotImplementedError
+        self._valid()
+        itemsize = self._dtype.itemsize
+        for i in self._index:
+            yield self._content[i : i + itemsize].view(self._dtype)[0]
 
     def __getitem__(self, where):
-        raise NotImplementedError
+        self._valid()
+
+        if awkward.util.isstringslice(where):
+            raise IndexError("only integers, slices (`:`), and integer or boolean arrays are valid indices")
+
+        if isinstance(where, tuple) and len(where) == 0:
+            return self
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[:len(self._index.shape)], where[len(self._index.shape):]
+
+        if len(tail) != 0:
+            raise IndexError("too many indices for array")
+
+        starts = self._index[where]
+
+        if len(starts.shape) == 0:
+            return self._content[starts : starts + self._dtype.itemsize].view(self._dtype)[0]
+
+        else:
+            if len(starts) == 0:
+                return awkward.util.numpy.empty(0, dtype=self._dtype)
+
+            else:
+                index = awkward.util.numpy.repeat(starts, self._dtype.itemsize)
+                index += awkward.util.numpy.tile(awkward.util.numpy.arange(self._dtype.itemsize), len(starts))
+                return self._content[index].view(self._dtype)
 
     def __setitem__(self, where, what):
-        raise NotImplementedError
-
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        raise NotImplementedError
+        self._valid()
+        if awkward.util.isstringslice(where):
+            raise IndexError("only integers, slices (`:`), and integer or boolean arrays are valid indices")
+        else:
+            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     @classmethod
     def concat(cls, first, *rest):
-        raise NotImplementedError
-
-    @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
         raise NotImplementedError
 
     @property
@@ -359,57 +367,6 @@ class ByteIndexedArray(IndexedArray):
 
     def pandas(self):
         raise NotImplementedError
-
-# class ByteIndexedArray(IndexedArray):
-#     def __init__(self, index, content, dtype):
-#         super(ByteIndexedArray, self).__init__(index, content)
-#         self.dtype = dtype
-
-#     @property
-#     def content(self):
-#         return self._content
-
-#     @content.setter
-#     def content(self, value):
-#         self._content = self._toarray(value, self.CHARTYPE, numpy.ndarray).view(self.CHARTYPE).reshape(-1)
-
-#     @property
-#     def dtype(self):
-#         return self._dtype
-
-#     @dtype.setter
-#     def dtype(self, value):
-#         self._dtype = numpy.dtype(value)
-        
-#     def __getitem__(self, where):
-#         if self._isstring(where):
-#             return ByteIndexedArray(self._index, self._content[where], self._dtype)
-
-#         starts = self._index[where]
-
-#         if len(starts.shape) == 0:
-#             pos, offset = divmod(starts, self._dtype.itemsize)
-#             return numpy.frombuffer(self._content, dtype=self._dtype, count=(pos + 1), offset=offset)[pos]
-
-#         else:
-#             if len(starts) == 0:
-#                 return numpy.empty(0, dtype=self._dtype)
-
-#             else:
-#                 hold = numpy.empty(len(starts), dtype=self._dtype)
-
-#                 contidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
-#                 contidx[::self._dtype.itemsize] = starts
-#                 for offset in range(1, self._dtype.itemsize):
-#                     contidx[offset::self._dtype.itemsize] = contidx[::self._dtype.itemsize] + offset
-                
-#                 holdidx = numpy.empty(len(starts) * self._dtype.itemsize, dtype=self.INDEXTYPE)
-#                 holdidx[::self._dtype.itemsize] = numpy.arange(0, len(starts) * self._dtype.itemsize, self._dtype.itemsize)
-#                 for offset in range(1, self._dtype.itemsize):
-#                     holdidx[offset::self._dtype.itemsize] = holdidx[::self._dtype.itemsize] + offset
-
-#                 numpy.frombuffer(hold, dtype=self.CHARTYPE)[holdidx] = self._content[contidx]
-#                 return hold
 
 class IndexedMaskedArray(IndexedArray):
     def __init__(self, index, content, maskedwhen=-1):
@@ -477,10 +434,6 @@ class IndexedMaskedArray(IndexedArray):
 
     @classmethod
     def concat(cls, first, *rest):
-        raise NotImplementedError
-
-    @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
         raise NotImplementedError
 
     @property

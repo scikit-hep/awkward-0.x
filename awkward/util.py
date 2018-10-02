@@ -86,7 +86,10 @@ def toarray(value, defaultdtype, passthrough):
         try:
             return numpy.frombuffer(value, dtype=getattr(value, "dtype", defaultdtype)).reshape(getattr(value, "shape", -1))
         except AttributeError:
-            return numpy.array(value, copy=False)
+            if len(value) == 0:
+                return numpy.array(value, dtype=defaultdtype, copy=False)
+            else:
+                return numpy.array(value, copy=False)
 
 def array_str(array):
     import awkward.array.base
