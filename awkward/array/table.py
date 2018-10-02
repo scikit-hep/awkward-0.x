@@ -55,19 +55,15 @@ class Table(awkward.array.base.AwkwardArray):
         def __contains__(self, name):
             return name in self._table._content
 
+        def tolist(self):
+            return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._content.items())
+
         def __getattr__(self, name):
-            if name == "tolist":
-                return lambda: dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._content.items())
-
-            content = self._table._content.get(name, None)
-            if content is not None:
-                return content[self._index]
-
             content = self._table._content.get("_" + name, None)
             if content is not None:
                 return content[self._index]
 
-            raise AttributeError("neither {0} nor _{1} are columns in this {2}".format(name, name, self._table.rowname))
+            raise AttributeError("neither _{0} is not a column in this {1}".format(name, self._table.rowname))
 
         def __getitem__(self, where):
             if isinstance(where, awkward.util.string):
@@ -86,7 +82,7 @@ class Table(awkward.array.base.AwkwardArray):
                 return self._table.Row(table, index + where)
 
         def __dir__(self):
-            return ["_" + x if len(x) == 0 or not x[0].isalpha() else x for x in self._table._content]
+            return ["_" + x for x in self._table._content if x.isnumeric() or x.isidentifier()] + ["tolist"]
 
         def __iter__(self):
             i = 0
@@ -144,6 +140,9 @@ class Table(awkward.array.base.AwkwardArray):
             seen.add(n)
 
             self[n] = x
+
+    def tolist(self):
+        return list(x.tolist() for x in self)
 
     @classmethod
     def named(cls, rowname, columns1={}, *columns2, **columns3):
@@ -222,16 +221,23 @@ class Table(awkward.array.base.AwkwardArray):
         return out
 
     @property
-    def columns(self):
-        return [x for x in self._content if awkward.util.isintstring(x)] + [x for x in self._content if awkward.util.isidentifier(x)]
-
-    @property
-    def allcolumns(self):
-        return list(self._content)
-
-    @property
     def base(self):
         return self._base
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        if not isinstance(value, dict) or not all(isinstance(n, awkward.util.string) for n in value):
+            raise TypeError("content must be a dict from strings to arrays")
+        for n in list(value):
+            value[n] = awkward.util.toarray(value[n], awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        self._content = value
+
+    def _valid(self):
+        return True
 
     def _argfields(self, function):
         if not isinstance(function, types.FunctionType):
@@ -263,6 +269,17 @@ class Table(awkward.array.base.AwkwardArray):
             kwargs = [n for n in self._content if n not in required]
 
         return args, kwargs
+        
+    @property
+    def type(self):
+        return awkward.type.ArrayType(self._length(), functools.reduce(lambda a, b: a & b, [awkward.type.ArrayType(n, awkward.type.fromarray(x).to) for n, x in self._content.items()]))
+
+    def __len__(self):
+        return self._length()
+
+    @property
+    def shape(self):
+        return (self._length(),)
 
     @property
     def dtype(self):
@@ -385,20 +402,6 @@ class Table(awkward.array.base.AwkwardArray):
 
             else:
                 raise TypeError("cannot interpret dtype {0} as a fancy index or mask".format(head.dtype))
-
-    @property
-    def shape(self):
-        return (self._length(),)
-        
-    @property
-    def type(self):
-        return awkward.type.ArrayType(self._length(), functools.reduce(lambda a, b: a & b, [awkward.type.ArrayType(n, awkward.type.fromarray(x).to) for n, x in self._content.items()]))
-
-    def __len__(self):
-        return self._length()
-
-    def _valid(self):
-        return True
 
     def __iter__(self):
         if self._view is None:
@@ -533,9 +536,22 @@ class Table(awkward.array.base.AwkwardArray):
                     out[i][n] = newcolumns[n]
             return tuple(out)
 
-    def tolist(self):
-        return list(x.tolist() for x in self)
-    
+    @classmethod
+    def concat(cls, first, *rest):
+        raise NotImplementedError
+
+    @classmethod
+    def zip(cls, columns1={}, *columns2, **columns3):
+        return cls(columns1, *columns2, **columns3)
+
+    @property
+    def columns(self):
+        return [x for x in self._content if awkward.util.isintstring(x)] + [x for x in self._content if awkward.util.isidentifier(x)]
+
+    @property
+    def allcolumns(self):
+        return list(self._content)
+
     def pandas(self):
         import pandas
         return pandas.DataFrame(self._content)
