@@ -297,7 +297,7 @@ class ArrayType(Type):
         if isinstance(self._to, numpy.dtype):
             return (self._takes, self._to)
         else:
-            return self._takes + self._to.jshape
+            return (self._takes,) + self._to.jshape
 
     def _subrepr(self, labeled, seen):
         if isinstance(self._to, Type):
@@ -340,13 +340,19 @@ class TableType(Type):
 
     @property
     def dtype(self):
-        if not all(x.shape for x in self._fields.values()):
-            raise TypeError("Table with non-primitive fields has no Numpy dtype")
-        return [(n, x.dtype) for n, x in self._fields.items()]
+        out = []
+        for n, x in self._fields.items():
+            if x.shape != ():
+                raise TypeError("Table with non-primitive fields has no Numpy dtype")
+            elif isinstance(x, numpy.dtype):
+                out.append((n, x))
+            else:
+                out.append((n, x.dtype))
+        return out
 
     @property
     def jshape(self):
-        return dict((n, x.jshape) for n, x in self.items())
+        return (dict((n, x if isinstance(x, numpy.dtype) else x.jshape) for n, x in self._fields.items()),)
 
     def __getitem__(self, key):
         return self._fields[key]
@@ -397,6 +403,18 @@ class UnionType(Type):
         self._possibilities = []
         for x in possibilities:
             self.append(x)
+
+    @property
+    def shape(self):
+        raise TypeError("Union has no Numpy dtype")
+
+    @property
+    def dtype(self):
+        raise TypeError("Union has no Numpy dtype")
+
+    @property
+    def jshape(self):
+        return ([x.jshape for x in self._possibilities],)
 
     def __len__(self):
         return len(self._possibilities)
@@ -459,6 +477,18 @@ class OptionType(Type):
             self._type = value
         else:
             self._type = self._finaltype(self._type)
+
+    @property
+    def shape(self):
+        raise TypeError("Option has no Numpy dtype")
+
+    @property
+    def dtype(self):
+        raise TypeError("Option has no Numpy dtype")
+
+    @property
+    def jshape(self):
+        return ([self._type.jshape, None],)
 
     def _subrepr(self, labeled, seen):
         return "OptionType({0})".format(self._type._repr(labeled, seen) if isinstance(self._type, Type) else repr(self._type))
