@@ -39,6 +39,85 @@ class MaskedArray(awkward.array.base.AwkwardArray):
     def __init__(self, mask, content, maskedwhen=True):
         raise NotImplementedError
 
+    def copy(self, index=None, content=None):
+        raise NotImplementedError
+
+    def deepcopy(self, index=None, content=None):
+        raise NotImplementedError
+
+    def empty_like(self, **overrides):
+        raise NotImplementedError
+
+    def zeros_like(self, **overrides):
+        raise NotImplementedError
+
+    def ones_like(self, **overrides):
+        raise NotImplementedError
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        raise NotImplementedError
+
+    @property
+    def type(self):
+        raise NotImplementedError
+
+    def __len__(self):
+        raise NotImplementedError
+
+    @property
+    def shape(self):
+        raise NotImplementedError
+
+    @property
+    def dtype(self):
+        raise NotImplementedError
+
+    @property
+    def base(self):
+        raise NotImplementedError
+
+    def _valid(self):
+        raise NotImplementedError
+
+    def _argfields(self, function):
+        raise NotImplementedError
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __getitem__(self, where):
+        raise NotImplementedError
+
+    def __setitem__(self, where, what):
+        raise NotImplementedError
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        raise NotImplementedError
+
+    @classmethod
+    def concat(cls, first, *rest):
+        raise NotImplementedError
+
+    @classmethod
+    def zip(cls, columns1={}, *columns2, **columns3):
+        raise NotImplementedError
+
+    @property
+    def columns(self):
+        raise NotImplementedError
+
+    @property
+    def allcolumns(self):
+        raise NotImplementedError
+
+    def pandas(self):
+        raise NotImplementedError
+
 # class MaskedArray(awkward.array.base.AwkwardArray):
 #     def __init__(self, mask, content, maskedwhen=True):
 #         self.mask = mask
@@ -115,6 +194,85 @@ class MaskedArray(awkward.array.base.AwkwardArray):
 
 class BitMaskedArray(MaskedArray):
     def __init__(self, mask, content, maskedwhen=True, lsb=True):
+        raise NotImplementedError
+
+    def copy(self, index=None, content=None):
+        raise NotImplementedError
+
+    def deepcopy(self, index=None, content=None):
+        raise NotImplementedError
+
+    def empty_like(self, **overrides):
+        raise NotImplementedError
+
+    def zeros_like(self, **overrides):
+        raise NotImplementedError
+
+    def ones_like(self, **overrides):
+        raise NotImplementedError
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        raise NotImplementedError
+
+    @property
+    def type(self):
+        raise NotImplementedError
+
+    def __len__(self):
+        raise NotImplementedError
+
+    @property
+    def shape(self):
+        raise NotImplementedError
+
+    @property
+    def dtype(self):
+        raise NotImplementedError
+
+    @property
+    def base(self):
+        raise NotImplementedError
+
+    def _valid(self):
+        raise NotImplementedError
+
+    def _argfields(self, function):
+        raise NotImplementedError
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __getitem__(self, where):
+        raise NotImplementedError
+
+    def __setitem__(self, where, what):
+        raise NotImplementedError
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        raise NotImplementedError
+
+    @classmethod
+    def concat(cls, first, *rest):
+        raise NotImplementedError
+
+    @classmethod
+    def zip(cls, columns1={}, *columns2, **columns3):
+        raise NotImplementedError
+
+    @property
+    def columns(self):
+        raise NotImplementedError
+
+    @property
+    def allcolumns(self):
+        raise NotImplementedError
+
+    def pandas(self):
         raise NotImplementedError
 
 # class BitMaskedArray(MaskedArray):

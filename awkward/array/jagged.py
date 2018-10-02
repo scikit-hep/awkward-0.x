@@ -339,6 +339,16 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     def base(self):
         return self._content.base
 
+    def _valid(self):
+        if not self._isvalid:
+            self._validstartsstops(self._starts, self._stops)
+
+            stops = self._stops[self._starts != self._stops].reshape(-1)
+            if len(stops) != 0 and stops.max() > len(self._content):
+                raise ValueError("maximum stop ({0}) is beyond the length of the content ({1})".format(self._stops.reshape(-1).max(), len(self._content)))
+
+            self._isvalid = True
+
     def _argfields(self, function):
         if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
             return awkward.util._argfields(function)
@@ -363,16 +373,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         if len(starts) > len(stops):
             raise ValueError("starts must not have more elements than stops")
-
-    def _valid(self):
-        if not self._isvalid:
-            self._validstartsstops(self._starts, self._stops)
-
-            stops = self._stops[self._starts != self._stops].reshape(-1)
-            if len(stops) != 0 and stops.max() > len(self._content):
-                raise ValueError("maximum stop ({0}) is beyond the length of the content ({1})".format(self._stops.reshape(-1).max(), len(self._content)))
-
-            self._isvalid = True
 
     def __iter__(self):
         self._valid()
