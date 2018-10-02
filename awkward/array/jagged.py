@@ -1025,9 +1025,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
     @classmethod
     def zip(cls, columns1={}, *columns2, **columns3):
         import awkward.array.table
-        table = awkward.array.table.Table(0, columns1, *columns2, **columns3)
+        table = awkward.array.table.Table(columns1, *columns2, **columns3)
         inputs = list(table._content.values())
-        table._length = min(len(x) for x in inputs)
 
         first = None
         for i in range(len(inputs)):
@@ -1044,7 +1043,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             if not isinstance(inputs[i], JaggedArray):
                 inputs[i] = first._broadcast(inputs[i])
 
-        newtable = awkward.array.table.Table(len(first._content), awkward.util.OrderedDict(zip(table._content, [x._content for x in inputs])))
+        newtable = awkward.array.table.Table(awkward.util.OrderedDict(zip(table._content, [x._content for x in inputs])))
         return cls(first._starts, first._stops, newtable)
 
     @property

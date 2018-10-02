@@ -38,7 +38,7 @@ def invert(permutation):
     out = awkward.util.numpy.zeros(permutation.max() + 1, dtype=awkward.util.INDEXTYPE)
     identity = awkward.util.numpy.arange(len(permutation))
     out[permutation] = identity
-    if not numpy.array_equal(out[permutation], identity):
+    if not awkward.util.numpy.array_equal(out[permutation], identity):
         raise ValueError("cannot invert index; it contains duplicates")
     return out
 
@@ -53,12 +53,12 @@ class IndexedArray(awkward.array.base.AwkwardArray):
         out = self.__class__.__new__(self.__class__)
         out._index = self._index
         out._content = self._content
-        self._inverse = self._inverse
-        self._isvalid = self._isvalid
+        out._inverse = self._inverse
+        out._isvalid = self._isvalid
         if index is not None:
-            self.index = index
+            out.index = index
         if content is not None:
-            self.content = content
+            out.content = content
         return out
 
     def deepcopy(self, index=None, content=None):
