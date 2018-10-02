@@ -300,10 +300,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 #             else:
 #                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
 
-class PartitionedArray(ChunkedArray):
-    def __init__(self, offsets, chunks):
-        raise NotImplementedError
-
 # class PartitionedArray(ChunkedArray):
 #     def __init__(self, offsets, chunks):
 #         super(PartitionedArray, self).__init__(chunks)
@@ -428,10 +424,6 @@ class PartitionedArray(ChunkedArray):
 #             return super(PartitionedArray, self).__getitem__(where)
 #         else:
 #             return super(PartitionedArray, self).__getitem__(self._normalizeindex(where))
-
-class AppendableArray(PartitionedArray):
-    def __init__(self, offsets, chunks, generator):
-        raise NotImplementedError
 
 # class AppendableArray(PartitionedArray):
 #     @classmethod

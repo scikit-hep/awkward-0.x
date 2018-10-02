@@ -28,13 +28,14 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from awkward.array.chunked import ChunkedArray, PartitionedArray, AppendableArray
-from awkward.array.indexed import IndexedArray, ByteIndexedArray, IndexedMaskedArray, UnionArray
+from awkward.array.chunked import ChunkedArray
+from awkward.array.indexed import IndexedArray, ByteIndexedArray, IndexedMaskedArray
 from awkward.array.jagged import JaggedArray, ByteJaggedArray
 from awkward.array.masked import MaskedArray, BitMaskedArray
 from awkward.array.objects import Methods, ObjectArray
 from awkward.array.sparse import SparseArray
 from awkward.array.table import Table
+from awkward.array.union import UnionArray
 from awkward.array.virtual import VirtualArray
 
 from awkward.generate import fromiter
@@ -42,4 +43,4 @@ from awkward.generate import fromiter
 # convenient access to the version number
 from awkward.version import __version__
 
-__all__ = ["ChunkedArray", "PartitionedArray", "AppendableArray", "IndexedArray", "ByteIndexedArray", "IndexedMaskedArray", "UnionArray", "JaggedArray", "ByteJaggedArray", "MaskedArray", "BitMaskedArray", "ObjectArray", "SparseArray", "Table", "VirtualArray", "fromiter", "__version__"]
+__all__ = ["ChunkedArray", "IndexedArray", "ByteIndexedArray", "IndexedMaskedArray", "JaggedArray", "ByteJaggedArray", "MaskedArray", "BitMaskedArray", "Methods", "ObjectArray", "SparseArray", "Table", "UnionArray", "VirtualArray", "fromiter", "__version__"]
