@@ -344,7 +344,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
             self._validstartsstops(self._starts, self._stops)
 
             stops = self._stops[self._starts != self._stops].reshape(-1)
-            if len(stops) != 0 and stops.max() > len(self._content):
+            if len(stops) != 0 and stops.reshape(-1).max() > len(self._content):
                 raise ValueError("maximum stop ({0}) is beyond the length of the content ({1})".format(self._stops.reshape(-1).max(), len(self._content)))
 
             self._isvalid = True
@@ -389,21 +389,18 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         self._valid()
 
         if awkward.util.isstringslice(where):
-            out = JaggedArray(self._starts, self._stops, self._content[where])
+            out = self.copy(self._starts, self._stops, self._content[where])
             out._offsets = self._offsets
             out._counts = self._counts
             out._parents = self._parents
-            out._isvalid = False
+            out._isvalid = True
             return out
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
         if not isinstance(where, tuple):
             where = (where,)
-        if len(self._starts.shape) == 1:
-            head, tail = where[0], where[1:]
-        else:
-            head, tail = where[:len(self._starts.shape)], where[len(self._starts.shape):]
+        head, tail = where[:len(self._starts.shape)], where[len(self._starts.shape):]
 
         if isinstance(head, JaggedArray):
             if issubclass(head._content.dtype.type, awkward.util.numpy.integer):
@@ -478,6 +475,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return node[tail]
 
     def __setitem__(self, where, what):
+        self._valid()
+
         if isinstance(where, awkward.util.string):
             if isinstance(what, JaggedArray):
                 self._content[where] = what._tojagged(self._starts, self._stops, copy=False)._content
@@ -1058,6 +1057,8 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
     def pandas(self):
         import pandas
+
+        self._valid()
 
         if isinstance(self._content, awkward.util.numpy.ndarray):
             out = pandas.DataFrame(self._content)

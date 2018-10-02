@@ -28,31 +28,72 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import collections
 import numbers
 
-import numpy
-
 import awkward.array.base
+import awkward.util
+
+def invert(permutation):
+    permutation = permutation.reshape(-1)
+    out = awkward.util.numpy.zeros(permutation.max() + 1, dtype=awkward.util.INDEXTYPE)
+    identity = awkward.util.numpy.arange(len(permutation))
+    out[permutation] = identity
+    if not numpy.array_equal(out[permutation], identity):
+        raise ValueError("cannot invert index; it contains duplicates")
+    return out
 
 class IndexedArray(awkward.array.base.AwkwardArray):
     def __init__(self, index, content):
-        raise NotImplementedError
+        self.index = index
+        self.content = content
+        self._inverse = None
+        self._isvalid = False
 
     def copy(self, index=None, content=None):
-        raise NotImplementedError
+        out = self.__class__.__new__(self.__class__)
+        out._index = self._index
+        out._content = self._content
+        self._inverse = self._inverse
+        self._isvalid = self._isvalid
+        if index is not None:
+            self.index = index
+        if content is not None:
+            self.content = content
+        return out
 
     def deepcopy(self, index=None, content=None):
-        raise NotImplementedError
+        out = self.copy(index=index, content=content)
+        out._index   = awkward.util.deepcopy(out._index)
+        out._content = awkward.util.deepcopy(out._content)
+        out._inverse = awkward.util.deepcopy(out._inverse)
+        return out
 
     def empty_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        mine["index"] = overrides.pop("index", self._index)
+        mine["content"] = overrides.pop("content", self._content)
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.empty_like(self._content), **mine)
+        else:
+            return self.copy(content=self._content.empty_like(**overrides), **mine)
 
     def zeros_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        mine["index"] = overrides.pop("index", self._index)
+        mine["content"] = overrides.pop("content", self._content)
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.zeros_like(self._content), **mine)
+        else:
+            return self.copy(content=self._content.zeros_like(**overrides), **mine)
 
     def ones_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        mine["index"] = overrides.pop("index", self._index)
+        mine["content"] = overrides.pop("content", self._content)
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
+        else:
+            return self.copy(content=self._content.ones_like(**overrides), **mine)
 
     @property
     def index(self):
@@ -60,7 +101,12 @@ class IndexedArray(awkward.array.base.AwkwardArray):
 
     @index.setter
     def index(self, value):
-        raise NotImplementedError
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        if (value < 0).any():
+            raise ValueError("index must be a non-negative array")
+        self._index = value
+        self._inverse = None
+        self._isvalid = False
 
     @property
     def content(self):
@@ -68,63 +114,121 @@ class IndexedArray(awkward.array.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        raise NotImplementedError
+        self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        self._isvalid = False
 
     @property
     def type(self):
-        raise NotImplementedError
+        return self._content.type
 
     def __len__(self):
-        raise NotImplementedError
+        return len(self._index)
 
     @property
     def shape(self):
-        raise NotImplementedError
+        return self._index.shape
 
     @property
     def dtype(self):
-        raise NotImplementedError
+        return self._content.dtype
 
     @property
     def base(self):
-        raise NotImplementedError
+        return self._content.base
 
     def _valid(self):
-        raise NotImplementedError
+        if not self._isvalid:
+            if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
+                raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
+            self._isvalid = True
 
     def _argfields(self, function):
-        raise NotImplementedError
+        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
+            return awkward.util._argfields(function)
+        else:
+            return self._content._argfields(function)
 
     def __iter__(self):
-        raise NotImplementedError
+        self._valid()
+        for i in self._index:
+            yield self._content[i]
 
     def __getitem__(self, where):
-        raise NotImplementedError
+        self._valid()
+
+        if awkward.util.isstringslice(where):
+            out = self.copy(self._index, self._content[where])
+            out._isvalid = True
+            return out
+
+        if isinstance(where, tuple) and len(where) == 0:
+            return self
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[:len(self._index.shape)], where[len(self._index.shape):]
+
+        where = self._index[where]
+        if len(where.shape) != 0 and len(where) == 0:
+            return awkward.util.numpy.empty(0, dtype=self._content.dtype)[tail]
+        else:
+            return self._content[(where,) + tail]
+
+    def _invert(self, what):
+        if what.shape != self._index.shape:
+            raise ValueError("array to assign does not have the same shape as index")
+        if self._inverse is None:
+            self._inverse = invert(self._index)
+        return IndexedArray(self._inverse, what)
 
     def __setitem__(self, where, what):
-        raise NotImplementedError
+        self._valid()
+
+        if isinstance(where, awkward.util.string):
+            self._content[where] = self._invert(what)
+
+        elif awkward.util.isstringslice(where):
+            if len(where) != len(what):
+                raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
+            for x, y in zip(where, what):
+                self._content[x] = self._invert(y)
+
+        else:
+            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        raise NotImplementedError
+        self._valid()
+
+        if method != "__call__":
+            return NotImplemented
+
+        inputs = list(inputs)
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], IndexedArray):
+                inputs[i] = inputs[i]._content[inputs[i]._index]
+
+        return getattr(ufunc, method)(*inputs, **kwargs)
 
     @classmethod
     def concat(cls, first, *rest):
         raise NotImplementedError
 
-    @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
-        raise NotImplementedError
-
     @property
     def columns(self):
-        raise NotImplementedError
+        return self._content.columns
 
     @property
     def allcolumns(self):
-        raise NotImplementedError
+        return self._content.allcolumns
 
     def pandas(self):
-        raise NotImplementedError
+        import pandas
+
+        self._valid()
+
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return pandas.DataFrame(self._content[self._index])
+        else:
+            return self._content[self._index].pandas()
 
 # class IndexedArray(awkward.array.base.AwkwardArray):
 #     def __init__(self, index, content):
