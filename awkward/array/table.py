@@ -67,10 +67,19 @@ class Table(awkward.array.base.AwkwardArray):
 
         def __getitem__(self, where):
             if isinstance(where, awkward.util.string):
-                return self._table._content[where][self._index]
+                try:
+                    return self._table._content[where][self._index]
+                except KeyError:
+                    raise ValueError("no column named {0}".format(repr(where)))
 
             elif awkward.util.isstringslice(where):
-                table = self._table.copy(content=awkward.util.OrderedDict([(n, self._table._content[n]) for n in where]))
+                content = awkward.util.OrderedDict()
+                for n in where:
+                    try:
+                        content[n] = self._table._content[n]
+                    except KeyError:
+                        raise ValueError("no column named {0}".format(repr(n)))
+                table = self._table.copy(content=content)
                 return table.Row(table, self._index)
 
             else:
@@ -425,12 +434,21 @@ class Table(awkward.array.base.AwkwardArray):
         if awkward.util.isstringslice(where):
             if isinstance(where, awkward.util.string):
                 index = self._index()
-                if index is None:
-                    return self._content[where]
-                else:
-                    return self._content[where][index]
+                try:
+                    if index is None:
+                        return self._content[where]
+                    else:
+                        return self._content[where][index]
+                except KeyError:
+                    raise ValueError("no column named {0}".format(repr(where)))
             else:
-                return self.copy(content=[(n, self._content[n]) for n in where])
+                content = awkward.util.OrderedDict()
+                for n in where:
+                    try:
+                        content[n] = self._content[n]
+                    except KeyError:
+                        raise ValueError("no column named {0}".format(repr(n)))
+                return self.copy(content=content)
 
         if isinstance(where, tuple) and where == ():
             return self

@@ -54,6 +54,9 @@ def fromarray(array):
         return array.type
 
 class Type(object):
+    def hascolumn(self, name):
+        return self._hascolumn(name, set())
+
     def __or__(self, other):
         out = UnionType.__new__(UnionType)
 
@@ -299,6 +302,17 @@ class ArrayType(Type):
         else:
             return (self._takes,) + self._to.jshape
 
+    def _hascolumn(self, name, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        if isinstance(self._to, numpy.dtype) and self._to.names is None:
+            return False
+        elif isinstance(self._to, numpy.dtype):
+            return name in self._to.names
+        else:
+            return self._to._hascolumn(name, seen)
+
     def _subrepr(self, labeled, seen):
         if isinstance(self._to, Type):
             to = self._to._repr(labeled, seen)
@@ -353,6 +367,12 @@ class TableType(Type):
     @property
     def jshape(self):
         return (dict((n, x if isinstance(x, numpy.dtype) else x.jshape) for n, x in self._fields.items()),)
+
+    def _hascolumn(self, name, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        return name in self._fields
 
     def __getitem__(self, key):
         return self._fields[key]
@@ -415,6 +435,12 @@ class UnionType(Type):
     @property
     def jshape(self):
         return ([x.jshape for x in self._possibilities],)
+
+    def _hascolumn(self, name, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        return any(x._to._hascolumn(name, seen) for x in self._possibilities)
 
     def __len__(self):
         return len(self._possibilities)
@@ -489,6 +515,12 @@ class OptionType(Type):
     @property
     def jshape(self):
         return ([self._type.jshape, None],)
+
+    def _hascolumn(self, name, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        return self._type._hascolumn(name, seen)
 
     def _subrepr(self, labeled, seen):
         return "OptionType({0})".format(self._type._repr(labeled, seen) if isinstance(self._type, Type) else repr(self._type))

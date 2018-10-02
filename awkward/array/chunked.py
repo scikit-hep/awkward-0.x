@@ -108,14 +108,12 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     @counts.setter
     def counts(self, value):
-        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
-        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
-            raise TypeError("counts must have integer dtype")
-        if len(value.shape) != 1:
-            raise ValueError("counts must be one-dimensional")
-        if (value < 0).any():
-            raise ValueError("counts must be a non-negative array")
-        self._counts = value
+        try:
+            if not all(isinstance(x, (numbers.Integral and awkward.util.numpy.integer)) and x >= 0 for x in value):
+                raise ValueError("counts must contain only non-negative integers")
+        except TypeError:
+            raise TypeError("counts must be iterable")
+        self._counts = list(value)
         self._offsets = None
 
     @property
@@ -198,20 +196,21 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     @property
     def shape(self):
-        HERE
-
-        self.type
-
-
-        raise NotImplementedError
+        return self.type.shape
 
     @property
     def dtype(self):
-        raise NotImplementedError
+        return self.type.dtype
+
+    @property
+    def slices(self):
+        self._knowcounts()
+        offsets = self.offsets
+        return [slice(start, stop) for start, stop in zip(offsets[:-1], offsets[1:])]
 
     @property
     def base(self):
-        raise NotImplementedError
+        raise TypeError("ChunkedArray has no base")
 
     def _valid(self):
         if len(self._types) > 0:
@@ -226,7 +225,12 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         return len(self._counts) <= len(self._chunks)
 
     def _argfields(self, function):
-        raise NotImplementedError
+        if isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1:
+            return awkward.util._argfields(function)
+        if len(self._chunks) == 0 or isinstance(self._chunks[0], awkward.util.numpy.ndarray):
+            return awkward.util._argfields(function)
+        else:
+            return self._chunks[0]._argfields(function)
 
     def __iter__(self):
         raise NotImplementedError
@@ -235,23 +239,87 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         self._valid()
 
         if awkward.util.isstringslice(where):
-            HERE
+            if isinstance(where, awkward.util.string):
+                if not self.type.hascolumn(where):
+                    raise ValueError("no column named {0}".format(repr(where)))
+            else:
+                for x in where:
+                    if not self.type.hascolumn(x):
+                        raise ValueError("no column named {0}".format(repr(x)))
+            chunks = []
+            counts = []
+            for chunk in self._chunks:
+                chunks.append(chunk[where])
+                counts.append(len(chunks[-1]))
+            return ChunkedArray(chunks, counts=counts)
 
+        if isinstance(where, tuple) and len(where) == 0:
+            return self
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
 
+        if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
+            raise NotImplementedError
 
+        elif isinstance(head, slice):
+            raise NotImplementedError
+
+        else:
+            head = numpy.array(head, copy=False)
+            if len(head.shape) == 1 and issubclass(head.dtype.type, awkward.util.numpy.integer):
+                raise NotImplementedError
+
+            elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+                raise NotImplementedError
+
+            else:
+                raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
+
+    def _aligned(self, what):
+        self._knowcounts()
+        what._knowcounts()
+        return self._counts == what._counts
 
     def __setitem__(self, where, what):
-        raise NotImplementedError
-
+        if isinstance(what, ChunkedArray) and self._aligned(what):
+            for mine, theirs in zip(self._chunks, what._chunks):
+                mine[where] = theirs
+        else:
+            raise ValueError("only ChunkedArrays with the same chunk sizes can be assigned to columns of a ChunkedArray")
+                    
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        self._valid()
+
+        if method != "__call__":
+            return NotImplemented
+
+        first = None
+        rest = []
+        for x in inputs:
+            if isinstance(x, ChunkedArray):
+                if first is None:
+                    first = x
+                else:
+                    rest.append(x)
+
+        if not all(first._aligned(x) for x in rest):
+            raise ValueError("ChunkedArrays can only be combined if they have the same chunk sizes")
+
+        assert first is not None
+
+        slices = first.slices
+
+        out = []
+        # ...
+
+        
+        # all chunked arrays in the inputs have to align; others have to be sliced
+
         raise NotImplementedError
 
     @classmethod
     def concat(cls, first, *rest):
-        raise NotImplementedError
-
-    @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
         raise NotImplementedError
 
     @property
