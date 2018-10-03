@@ -291,6 +291,18 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def __iter__(self):
         raise NotImplementedError
 
+    def __array__(self, *args, **kwargs):
+        if isinstance(self.type.to, awkward.util.numpy.dtype):
+            if len(self) == 0:
+                return awkward.util.numpy.empty(0, dtype=awkward.util.DEFAULTTYPE)
+            else:
+                out = awkward.util.numpy.empty(self.shape, dtype=self.dtype)
+                for chunk, slc in zip(self._chunks, self._slices()):
+                    out[slc] = chunk
+                return out
+        else:
+            return super(ChunkedArray, self).__array__(*args, **kwargs)
+
     def __getitem__(self, where):
         import awkward.array.indexed
         self._valid()
@@ -440,7 +452,16 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     return awkward.array.indexed.IndexedArray(head, self)
 
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-                raise NotImplementedError
+                if len(self) != len(head):
+                    raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(len(self), len(head)))
+
+                chunks = []
+                for chunk, slc in zip(self._chunks, self._slices()):
+                    x = chunk[(head[slc],) + tail]
+                    if len(x) > 0:
+                        chunks.append(x)
+
+                return self.__class__(chunks)
 
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))

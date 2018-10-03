@@ -286,11 +286,11 @@ class ArrayType(Type):
         if self._takes == numpy.inf:
             return numpy.dtype(object)
 
-        elif isinstance(self._to.dtype, numpy.dtype):
-            if self._to.dtype.subdtype is None:
-                return self._to.dtype
+        elif isinstance(self._to, numpy.dtype):
+            if self._to.subdtype is None:
+                return self._to
             else:
-                return self._to.dtype.subdtype[0]
+                return self._to.subdtype[0]
 
         else:
             return self._to.dtype
