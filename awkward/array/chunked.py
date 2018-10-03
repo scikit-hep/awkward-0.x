@@ -254,8 +254,8 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def dtype(self):
         return self.type.dtype
 
-    @property
-    def slices(self):
+    def _slices(self):
+        # perhaps this should be a (public) @staticmethod that finds the largest possible slices to serve no more than one chunk each from a set of ChunkedArrays
         self.knowcounts()
         offsets = self.offsets
         return [slice(start, stop) for start, stop in zip(offsets[:-1], offsets[1:])]
@@ -292,6 +292,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         raise NotImplementedError
 
     def __getitem__(self, where):
+        import awkward.array.indexed
         self._valid()
 
         if awkward.util.isstringslice(where):
@@ -421,7 +422,8 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     return self.__class__([self._chunks[0][(slice(0, 0),) + tail]])
 
                 chunkid, head = self.global2chunkid(head, return_normalized=True)
-                diff = chunkid[1:] - chunkid[:-1]
+
+                diff = (chunkid[1:] - chunkid[:-1])
                 if (diff >= 0).all():
                     diff2 = awkward.util.numpy.empty(len(chunkid), dtype=awkward.util.INDEXTYPE)
                     diff2[0] = 1
@@ -429,17 +431,13 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     mask = (diff2 > 0)
                     offsets = list(awkward.util.numpy.nonzero(mask)[0]) + [len(chunkid)]
                     chunks = []
-                    for i in chunkid[mask]:
-                        localindex = head[offsets[i]:offsets[i + 1]] - self.offsets[i]
-
-                        print()
-
-                        chunks.append(self._chunks[i][localindex])
+                    for i, cid in enumerate(chunkid[mask]):
+                        localindex = head[offsets[i]:offsets[i + 1]] - self.offsets[cid]
+                        chunks.append(self._chunks[cid][localindex])
                     return self.__class__(chunks)
 
                 else:
-                    # need to use IndexedArray for the general case
-                    raise NotImplementedError
+                    return awkward.array.indexed.IndexedArray(head, self)
 
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
                 raise NotImplementedError
@@ -476,10 +474,12 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
         assert first is not None
         if not all(first._aligned(x) for x in rest):
+            # FIXME: we may need to handle a more general case if ChunkedArrays are inside other awkward types
+            # perhaps split at the largest possible slices such that all of them are one chunk each, and then unpack the single chunk after slicing
             raise ValueError("ChunkedArrays can only be combined if they have the same chunk sizes")
 
         batches = []
-        for i, slc in enumerate(first.slices):
+        for i, slc in enumerate(first._slices()):
             batch = []
             for x in inputs:
                 if isinstance(x, ChunkedArray):
