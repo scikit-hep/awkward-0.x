@@ -380,7 +380,11 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     if step > 0:
                         local_start = skip
                     else:
-                        local_start = self._counts[chunkid] - skip
+                        local_start = self._counts[chunkid] - 1 - skip
+
+                if local_start < 0:
+                    skip -= self._counts[chunkid]
+                    continue
 
                 if chunkid == stop_chunkid - (1 if step > 0 else -1):
                     if stop == -1:
@@ -389,15 +393,12 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                         local_stop = stop - offsets[chunkid]
                 else:
                     local_stop = None
+                    if step > 0:
+                        skip = (local_start - self._counts[chunkid]) % step
+                    else:
+                        skip = (-1 - local_start) % -step
 
                 slc = slice(local_start, local_stop, step)
-
-                local_start, local_stop, _ = slc.indices(self._counts[chunkid])
-                if local_stop != local_start:
-                    if step > 0:
-                        skip = (local_stop - local_start) % step
-                    else:
-                        skip = -(local_stop - local_start) % -step
 
                 chunk = self._chunks[chunkid][(slc,) + tail]
                 if len(chunk) > 0:
@@ -502,11 +503,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     @property
     def columns(self):
-        
-
-
-
-
         raise NotImplementedError
 
     @property

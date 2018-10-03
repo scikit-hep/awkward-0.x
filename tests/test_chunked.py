@@ -38,6 +38,15 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
+    def test_chunked_allslices(self):
+        chunked = ChunkedArray([[], [0.0, 1.1, 2.2, 3.3, 4.4], [5.5, 6.6], [], [7.7], [8.8, 9.9], []])
+        regular = numpy.concatenate(chunked.chunks).tolist()
+        for start in [None] + list(range(-12, 12 + 1)):
+            for stop in [None] + list(range(-12, 12 + 1)):
+                for step in [None, 1, 2, 3, 4, 5, 9, 10, 11, -1, -2, -3, -4, -5, -9, -10, -11]:
+                    # print(start, stop, step)
+                    self.assertEqual(numpy.concatenate(chunked[start:stop:step].chunks).tolist(), regular[start:stop:step])
+
     ################### old tests
 
 #     def test_chunked_iteration(self):
