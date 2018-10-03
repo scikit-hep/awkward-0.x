@@ -242,7 +242,7 @@ class Table(awkward.array.base.AwkwardArray):
         if not isinstance(value, dict) or not all(isinstance(n, awkward.util.string) for n in value):
             raise TypeError("content must be a dict from strings to arrays")
         for n in list(value):
-            value[n] = awkward.util.toarray(value[n], awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+            value[n] = awkward.util.toarray(value[n], awkward.util.DEFAULTTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
         self._content = value
 
     def _valid(self):
@@ -472,13 +472,13 @@ class Table(awkward.array.base.AwkwardArray):
             raise ValueError("new columns can only be attached to the original table, not a view (try table.base['col'] = array)")
 
         if isinstance(where, awkward.util.string):
-            self._content[where] = awkward.util.toarray(what, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+            self._content[where] = awkward.util.toarray(what, awkward.util.DEFAULTTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
 
         elif awkward.util.isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
-                self._content[x] = awkward.util.toarray(y, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+                self._content[x] = awkward.util.toarray(y, awkward.util.DEFAULTTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
 
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))

@@ -95,9 +95,11 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     @chunks.setter
     def chunks(self, value):
         try:
-            self._chunks = list(value)
+            iter(value)
         except TypeError:
             raise TypeError("chunks must be iterable")
+
+        self._chunks = [awkward.util.toarray(x, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)) for x in value]
         self._types = [None] * len(self._chunks)
 
     @property
@@ -146,16 +148,17 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def global2chunkid(self, index):
         self._valid()
 
-        if isinstance(index, numbers.Integral, awkward.util.numpy.integer):
+        if isinstance(index, (numbers.Integral, awkward.util.numpy.integer)):
+            original_index = index
             if index < 0:
                 index += len(self)
             if index < 0:
-                raise IndexError("index {0} out of bounds for length {1}".format(index, len(self)))
+                raise IndexError("index {0} out of bounds for length {1}".format(original_index, len(self)))
 
             cumulative = self.offsets[-1]
             while index >= cumulative:
                 if self.countsknown:
-                    raise IndexError("index {0} out of bounds for length {1}".format(index, len(self)))
+                    raise IndexError("index {0} out of bounds for length {1}".format(original_index, len(self)))
                 count = len(self._chunks[len(self._counts)])
                 cumulative += count
                 self._counts.append(count)
@@ -182,10 +185,16 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     def global2local(self, index):
         chunkid = self.global2chunkid(index)
-        if isinstance(index, numbers.Integral, awkward.util.numpy.integer):
-            return index - self.offsets[chunkid], self._chunks[chunkid]
+
+        if isinstance(index, (numbers.Integral, awkward.util.numpy.integer)):
+            if index < 0:
+                index += len(self)
+            return self._chunks[chunkid], index - self.offsets[chunkid]
+
         else:
-            return index - self.offsets[chunkid], awkward.util.numpy.array(self._chunks, dtype=awkward.util.numpy.object)[chunkid]
+            if (index < 0).any():
+                index += len(self)
+            return awkward.util.numpy.array(self._chunks, dtype=awkward.util.numpy.object)[chunkid], index - self.offsets[chunkid]
 
     def local2global(self, index, chunkid):
         if isinstance(chunkid, (numbers.Integral, awkward.util.numpy.integer)):
@@ -305,14 +314,84 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         head, tail = where[0], where[1:]
 
         if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
-            i = self.global2chunkid(head)
-
-
-
-
+            chunk, localhead = self.global2local(head)
+            return chunk[(localhead,) + tail]
 
         elif isinstance(head, slice):
-            raise NotImplementedError
+            if head.step == 0:
+                raise ValueError("slice step cannot be zero")
+            elif (head.start is None or head.start >= 0) and (head.stop is not None and head.stop >= 0) and (head.step is None or head.step > 0):
+                # case A
+                start, stop, step = head.start, head.stop, head.step
+                if start is None:
+                    start = 0
+                if step is None:
+                    step = 1
+            elif (head.start is not None and head.start >= 0) and (head.stop is None or head.stop >= 0) and (head.step is not None and head.step < 0):
+                # case B
+                start, stop, step = head.start, head.stop, head.step
+                if stop is None:
+                    stop = -1
+            else:
+                # case C (requires potentially expensive len(self))
+                start, stop, step = head.indices(len(self))
+
+            # now start, stop, step are not None and not Python_negative_indices
+            # stop can be len(self) if step > 0
+            # stop can be -1 if step < 0 (not a Python_negative_indices, but an indicator to go all the way to 0)
+
+            try:
+                start_chunkid = self.global2chunkid(start)
+            except IndexError:
+                # case A or B start was set beyond len(self), clamp it
+                if step > 0:
+                    start = len(self)
+                    start_chunkid = len(self._chunks)
+                else:
+                    start = len(self) - 1
+                    start_chunkid = len(self._chunks) - 1
+
+            if stop == -1:
+                # case B or C stop not set with step < 0; go all the way to 0
+                stop_chunkid = -1
+            else:
+                try:
+                    stop_chunkid = self.global2chunkid(stop)
+                except IndexError:
+                    # stop is at or beyond len(self), clamp it
+                    stop = len(self)
+                    stop_chunkid = len(self._chunks)
+
+            offsets = self.offsets
+            chunks = []
+            skip = 0
+            for chunkid in range(start_chunkid, stop_chunkid, 1 if step > 0 else -1):
+                if chunkid == start_chunkid:
+                    local_start = start - offsets[chunkid]
+                else:
+                    if step > 0:
+                        local_start = skip
+                    else:
+                        local_start = self._counts[chunkid] - skip
+
+                if chunkid == stop_chunkid:
+                    if stop == -1:
+                        local_stop = None
+                    else:
+                        local_stop = stop - offsets[chunkid]
+                else:
+                    local_stop = None
+
+                slc = slice(local_start, local_stop, step)
+                chunks.append(self._chunks[chunkid][slc])
+
+                local_start, local_stop, _ = slc.indices(self._counts[chunkid])
+                if step > 0:
+                    skip = (local_stop - local_start) % step
+                else:
+                    skip = -(local_stop - local_start) % -step
+
+            return self.__class__(chunks)
 
         else:
             head = numpy.array(head, copy=False)
@@ -362,7 +441,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             for x in inputs:
                 if isinstance(x, ChunkedArray):
                     batch.append(x._chunks[i])
-                elif isinstance(x, awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray):
+                elif isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
                     batch.append(x[slc])
                 else:
                     batch.append(x)
