@@ -99,7 +99,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         except TypeError:
             raise TypeError("chunks must be iterable")
 
-        self._chunks = [awkward.util.toarray(x, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)) for x in value]
+        self._chunks = [awkward.util.toarray(x, awkward.util.DEFAULTTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)) for x in value]
         self._types = [None] * len(self._chunks)
 
     @property
@@ -340,16 +340,19 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             # stop can be len(self) if step > 0
             # stop can be -1 if step < 0 (not a Python_negative_indices, but an indicator to go all the way to 0)
 
-            try:
-                start_chunkid = self.global2chunkid(start)
-            except IndexError:
-                # case A or B start was set beyond len(self), clamp it
-                if step > 0:
-                    start = len(self)
-                    start_chunkid = len(self._chunks)
-                else:
-                    start = len(self) - 1
-                    start_chunkid = len(self._chunks) - 1
+            if start == -1:
+                # case C start below 0
+                start_chunkid = -1
+            else:
+                try:
+                    start_chunkid = self.global2chunkid(start)
+                except IndexError:
+                    if start > 0:
+                        # case A or B start was set beyond len(self), clamp it
+                        start, start_chunkid = len(self), len(self._chunks)
+                    if step < 0:
+                        start -= 1
+                        start_chunkid -= 1
 
             if stop == -1:
                 # case B or C stop not set with step < 0; go all the way to 0
@@ -360,7 +363,12 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 except IndexError:
                     # stop is at or beyond len(self), clamp it
                     stop = len(self)
-                    stop_chunkid = len(self._chunks)
+                if step > 0:
+                    # we want the chunkid at or to the right of stop (no -1)
+                    stop_chunkid = min(awkward.util.numpy.searchsorted(self.offsets, stop, "right"), len(self._chunks))
+                else:
+                    # we want the chunkid to the left of stop
+                    stop_chunkid = max(awkward.util.numpy.searchsorted(self.offsets, stop, "right") - 2, -1)
 
             offsets = self.offsets
             chunks = []
@@ -374,7 +382,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     else:
                         local_start = self._counts[chunkid] - skip
 
-                if chunkid == stop_chunkid:
+                if chunkid == stop_chunkid - (1 if step > 0 else -1):
                     if stop == -1:
                         local_stop = None
                     else:
@@ -383,13 +391,20 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     local_stop = None
 
                 slc = slice(local_start, local_stop, step)
-                chunks.append(self._chunks[chunkid][slc])
 
                 local_start, local_stop, _ = slc.indices(self._counts[chunkid])
-                if step > 0:
-                    skip = (local_stop - local_start) % step
-                else:
-                    skip = -(local_stop - local_start) % -step
+                if local_stop != local_start:
+                    if step > 0:
+                        skip = (local_stop - local_start) % step
+                    else:
+                        skip = -(local_stop - local_start) % -step
+
+                chunk = self._chunks[chunkid][(slc,) + tail]
+                if len(chunk) > 0:
+                    chunks.append(chunk)
+
+            if len(chunks) == 0 and len(self._chunks) > 0:
+                chunks.append(self._chunks[0][(slice(0, 0),) + tail])   # so sliced.type == self.type
 
             return self.__class__(chunks)
 
