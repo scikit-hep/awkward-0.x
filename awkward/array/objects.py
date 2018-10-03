@@ -243,10 +243,14 @@ class ObjectArray(awkward.array.base.AwkwardArray):
 
     @property
     def columns(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            raise TypeError("array has no Table, and hence no columns")
         return self._content.columns
 
     @property
     def allcolumns(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            raise TypeError("array has no Table, and hence no columns")
         return self._content.allcolumns
 
     def pandas(self):

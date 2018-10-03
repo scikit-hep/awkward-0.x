@@ -32,8 +32,6 @@ import collections
 import numbers
 import itertools
 
-import numpy
-
 import awkward.array.base
 import awkward.type
 import awkward.util
@@ -131,15 +129,21 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def typesknown(self):
         return all(x is not None for x in self._types)
 
-    def _knowcounts(self):
-        for i in range(len(self._counts), len(self._chunks)):
+    def knowcounts(self, until=None):
+        if until is None:
+            until = len(self._chunks)
+        if not 0 <= until <= len(self._chunks):
+            raise IndexError("cannot knowcounts until chunkid {0} with {1} chunks".format(until, len(self._chunks)))
+        for i in range(len(self._counts), until):
             self._counts.append(len(self._chunks[i]))
 
-    def _knowtype(self, i):
-        self._types[i] = awkward.type.fromarray(self._chunks[i]).to
-        return self._types[i]
+    def knowtype(self, at):
+        if not 0 <= at < len(self._chunks):
+            raise IndexError("cannot knowtype at chunkid {0} with {1} chunks".format(at, len(self._chunks)))
+        self._types[at] = awkward.type.fromarray(self._chunks[at]).to
+        return self._types[at]
 
-    def index2chunkid(self, index):
+    def global2chunkid(self, index):
         self._valid()
 
         if isinstance(index, numbers.Integral, awkward.util.numpy.integer):
@@ -169,29 +173,66 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 if (index < 0).any():
                     raise IndexError("index out of bounds for length {0}".format(len(self)))
 
-                index2chunkid(index.max())    # make sure all the counts we need are known
+                global2chunkid(index.max())    # make sure all the counts we need are known
 
                 return awkward.util.numpy.searchsorted(self.offsets, index, "right") - 1
 
             else:
-                raise TypeError("index2chunkid requires an integer or an array of integers")
+                raise TypeError("global2chunkid requires an integer or an array of integers")
+
+    def global2local(self, index):
+        chunkid = self.global2chunkid(index)
+        if isinstance(index, numbers.Integral, awkward.util.numpy.integer):
+            return index - self.offsets[chunkid], self._chunks[chunkid]
+        else:
+            return index - self.offsets[chunkid], awkward.util.numpy.array(self._chunks, dtype=awkward.util.numpy.object)[chunkid]
+
+    def local2global(self, index, chunkid):
+        if isinstance(chunkid, (numbers.Integral, awkward.util.numpy.integer)):
+            self.knowcounts(chunkid + 1)
+            self._valid()
+            original_index = index
+            if index < 0:
+                index += self._counts[chunkid]
+            if not 0 <= index < self._counts[chunkid]:
+                raise IndexError("local index {0} is out of bounds in chunk {1}, which has length {2}".format(original_index, chunkid, self._counts[chunkid]))
+            return self.offsets[chunkid] + index
+
+        else:
+            index = awkward.util.numpy.array(index, copy=False)
+            chunkid = awkward.util.numpy.array(chunkid, copy=False)
+            if len(index.shape) == 1 and issubclass(index.dtype.type, awkward.util.numpy.integer) and len(chunkid.shape) == 1 and issubclass(chunkid.dtype.type, awkward.util.numpy.integer):
+                if len(index) != len(chunkid):
+                    raise ValueError("len(index) is {0} and len(chunkid) is {1}, but they should be equal".format(len(index), len(chunkid)))
+
+                self.knowcounts(chunkid.max() + 1)
+                self._valid()
+                counts = numpy.array(self._counts, dtype=awkward.util.INDEXTYPE)
+                mask = (index < 0)
+                index[mask] += counts[mask]
+                if not ((0 <= index) & (index < counts)).all():
+                    raise IndexError("some local indexes are out of bounds")
+                return counts[chunkid] + index
+
+            else:
+                raise TypeError("local2global requires index and chunkid to be integers or arrays of integers")
 
     @property
     def type(self):
-        for tpe in self._types[0]:
+        for tpe in self._types:
             if tpe is not None:
                 break
         else:
             if len(self._chunks) == 0:
-                return awkward.type.ArrayType(0, awkward.util.DEFAULTTYPE)
+                tpe = awkward.util.DEFAULTTYPE
             else:
-                tpe = self._knowtype(0)
+                tpe = self.knowtype(0)
 
         self._valid()
         return awkward.type.ArrayType(len(self), tpe)
 
     def __len__(self):
-        self._knowcounts()
+        self.knowcounts()
         return self.offsets[-1]
 
     @property
@@ -204,7 +245,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     @property
     def slices(self):
-        self._knowcounts()
+        self.knowcounts()
         offsets = self.offsets
         return [slice(start, stop) for start, stop in zip(offsets[:-1], offsets[1:])]
 
@@ -213,21 +254,25 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         raise TypeError("ChunkedArray has no base")
 
     def _valid(self):
-        if len(self._types) > 0:
-            for i in range(1, len(self._types)):
-                if self._types[i] is self._types[0]:
+        for tpe in self._types:
+            if tpe is not None:
+                break
+
+        if tpe is not None:
+            for i in range(len(self._types)):
+                if self._types[i] is None or self._types[i] is tpe:
                     pass
-                elif self._types[i] == self._types[0]:
-                    self._types[i] = self._types[0]
+                elif self._types[i] == tpe:
+                    self._types[i] = tpe
                 else:
-                    raise TypeError("chunks do not have matching types:\n\n{0}\n\nversus\n\n{1}".format(self._types[0].__str__(indent="    "), self._types[i].__str__(indent="    ")))
+                    raise TypeError("chunks do not have matching types:\n\n{0}\n\nversus\n\n{1}".format(tpe.__str__(indent="    "), self._types[i].__str__(indent="    ")))
 
         return len(self._counts) <= len(self._chunks)
 
     def _argfields(self, function):
         if isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1:
             return awkward.util._argfields(function)
-        if len(self._chunks) == 0 or isinstance(self._chunks[0], awkward.util.numpy.ndarray):
+        if len(self._chunks) == 0 or isinstance(self.type.to, awkward.util.numpy.dtype):
             return awkward.util._argfields(function)
         else:
             return self._chunks[0]._argfields(function)
@@ -260,7 +305,11 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         head, tail = where[0], where[1:]
 
         if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
-            raise NotImplementedError
+            i = self.global2chunkid(head)
+
+
+
+
 
         elif isinstance(head, slice):
             raise NotImplementedError
@@ -277,8 +326,8 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
 
     def _aligned(self, what):
-        self._knowcounts()
-        what._knowcounts()
+        self.knowcounts()
+        what.knowcounts()
         return self._counts == what._counts
 
     def __setitem__(self, where, what):
@@ -359,6 +408,11 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     @property
     def columns(self):
+        
+
+
+
+
         raise NotImplementedError
 
     @property
