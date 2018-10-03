@@ -303,20 +303,55 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 else:
                     rest.append(x)
 
+        assert first is not None
         if not all(first._aligned(x) for x in rest):
             raise ValueError("ChunkedArrays can only be combined if they have the same chunk sizes")
 
-        assert first is not None
-
-        slices = first.slices
-
-        out = []
-        # ...
-
+        batches = []
+        for i, slc in enumerate(first.slices):
+            batch = []
+            for x in inputs:
+                if isinstance(x, ChunkedArray):
+                    batch.append(x._chunks[i])
+                elif isinstance(x, awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray):
+                    batch.append(x[slc])
+                else:
+                    batch.append(x)
+            batches.append(batch)
         
-        # all chunked arrays in the inputs have to align; others have to be sliced
+        out = None
+        chunks = {}
+        for batch in batches:
+            result = getattr(ufunc, method)(*batch, **kwargs)
 
-        raise NotImplementedError
+            if isinstance(result, tuple):
+                if out is None:
+                    out = list(result)
+                for i, x in enumerate(result):
+                    if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)):
+                        if i not in chunks:
+                            chunks[i] = []
+                        chunks[i].append(x)
+
+            elif method == "at":
+                pass
+
+            else:
+                if isinstance(result, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)):
+                    if None not in chunks:
+                        chunks[None] = []
+                    chunks[None].append(result)
+
+            if out is None:
+                if None in chunks:
+                    return ChunkedArray(chunks[None])
+                else:
+                    return None
+            else:
+                for i in range(len(out)):
+                    if i in chunks:
+                        out[i] = ChunkedArray(chunks[i])
+                return tuple(out)
 
     @classmethod
     def concat(cls, first, *rest):

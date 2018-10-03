@@ -665,7 +665,7 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         result = getattr(ufunc, method)(*inputs, **kwargs)
 
         if isinstance(result, tuple):
-            return tuple(awkward.array.objects.Methods.maybemixin(type(x), JaggedArray)(starts, stops, x) for x in result)
+            return tuple(awkward.array.objects.Methods.maybemixin(type(x), JaggedArray)(starts, stops, x) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
         elif method == "at":
             return None
         else:
