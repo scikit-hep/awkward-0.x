@@ -145,7 +145,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         self._types[at] = awkward.type.fromarray(self._chunks[at]).to
         return self._types[at]
 
-    def global2chunkid(self, index):
+    def global2chunkid(self, index, return_normalized=False):
         self._valid()
 
         if isinstance(index, (numbers.Integral, awkward.util.numpy.integer)):
@@ -163,37 +163,39 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 cumulative += count
                 self._counts.append(count)
 
-            return awkward.util.numpy.searchsorted(self.offsets, index, "right") - 1
+            out = awkward.util.numpy.searchsorted(self.offsets, index, "right") - 1
 
         else:
             index = awkward.util.numpy.array(index, copy=False)
             if len(index.shape) == 1 and issubclass(index.dtype.type, awkward.util.numpy.integer):
                 if len(index) == 0:
-                    return awkward.util.numpy.empty(0, dtype=awkward.util.INDEXTYPE)
+                    out = awkward.util.numpy.empty(0, dtype=awkward.util.INDEXTYPE)
 
-                if (index < 0).any():
-                    index += len(self)
-                if (index < 0).any():
-                    raise IndexError("index out of bounds for length {0}".format(len(self)))
+                else:
+                    mask = (index < 0)
+                    if mask.any():
+                        index = awkward.util.deepcopy(index)
+                        index[mask] += len(self)
+                    if (index < 0).any():
+                        raise IndexError("index out of bounds for length {0}".format(len(self)))
 
-                global2chunkid(index.max())    # make sure all the counts we need are known
-
-                return awkward.util.numpy.searchsorted(self.offsets, index, "right") - 1
+                    self.global2chunkid(index.max())    # make sure all the counts we need are known
+                    out = awkward.util.numpy.searchsorted(self.offsets, index, "right") - 1
 
             else:
                 raise TypeError("global2chunkid requires an integer or an array of integers")
 
+        if return_normalized:
+            return out, index
+        else:
+            return out
+
     def global2local(self, index):
-        chunkid = self.global2chunkid(index)
+        chunkid, index = self.global2chunkid(index, return_normalized=True)
 
         if isinstance(index, (numbers.Integral, awkward.util.numpy.integer)):
-            if index < 0:
-                index += len(self)
             return self._chunks[chunkid], index - self.offsets[chunkid]
-
         else:
-            if (index < 0).any():
-                index += len(self)
             return awkward.util.numpy.array(self._chunks, dtype=awkward.util.numpy.object)[chunkid], index - self.offsets[chunkid]
 
     def local2global(self, index, chunkid):
@@ -336,9 +338,8 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 # case C (requires potentially expensive len(self))
                 start, stop, step = head.indices(len(self))
 
-            # now start, stop, step are not None and not Python_negative_indices
-            # stop can be len(self) if step > 0
-            # stop can be -1 if step < 0 (not a Python_negative_indices, but an indicator to go all the way to 0)
+            # if step > 0, stop can be len(self)
+            # if step < 0, stop can be -1 (not a Python "negative index", but an indicator to go all the way to 0)
 
             if start == -1:
                 # case C start below 0
@@ -374,6 +375,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             chunks = []
             skip = 0
             for chunkid in range(start_chunkid, stop_chunkid, 1 if step > 0 else -1):
+                # set the local_start
                 if chunkid == start_chunkid:
                     local_start = start - offsets[chunkid]
                 else:
@@ -383,9 +385,11 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                         local_start = self._counts[chunkid] - 1 - skip
 
                 if local_start < 0:
+                    # skip is bigger than this entire chunk
                     skip -= self._counts[chunkid]
                     continue
 
+                # set the local_stop and new skip
                 if chunkid == stop_chunkid - (1 if step > 0 else -1):
                     if stop == -1:
                         local_stop = None
@@ -398,21 +402,44 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     else:
                         skip = (-1 - local_start) % -step
 
-                slc = slice(local_start, local_stop, step)
-
-                chunk = self._chunks[chunkid][(slc,) + tail]
+                # add a sliced chunk
+                chunk = self._chunks[chunkid][(slice(local_start, local_stop, step),) + tail]
                 if len(chunk) > 0:
                     chunks.append(chunk)
 
             if len(chunks) == 0 and len(self._chunks) > 0:
-                chunks.append(self._chunks[0][(slice(0, 0),) + tail])   # so sliced.type == self.type
+                chunks.append(self._chunks[0][(slice(0, 0),) + tail])   # so that sliced.type == self.type
 
             return self.__class__(chunks)
 
         else:
-            head = numpy.array(head, copy=False)
+            head = awkward.util.numpy.array(head, copy=False)
             if len(head.shape) == 1 and issubclass(head.dtype.type, awkward.util.numpy.integer):
-                raise NotImplementedError
+                if len(head) == 0 and len(self._chunks) == 0:
+                    return self.__class__([])[tail]
+                elif len(head) == 0:
+                    return self.__class__([self._chunks[0][(slice(0, 0),) + tail]])
+
+                chunkid, head = self.global2chunkid(head, return_normalized=True)
+                diff = chunkid[1:] - chunkid[:-1]
+                if (diff >= 0).all():
+                    diff2 = awkward.util.numpy.empty(len(chunkid), dtype=awkward.util.INDEXTYPE)
+                    diff2[0] = 1
+                    diff2[1:] = diff
+                    mask = (diff2 > 0)
+                    offsets = list(awkward.util.numpy.nonzero(mask)[0]) + [len(chunkid)]
+                    chunks = []
+                    for i in chunkid[mask]:
+                        localindex = head[offsets[i]:offsets[i + 1]] - self.offsets[i]
+
+                        print()
+
+                        chunks.append(self._chunks[i][localindex])
+                    return self.__class__(chunks)
+
+                else:
+                    # need to use IndexedArray for the general case
+                    raise NotImplementedError
 
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
                 raise NotImplementedError
