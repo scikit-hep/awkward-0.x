@@ -1124,7 +1124,10 @@ class ByteJaggedArray(JaggedArray):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, awkward.util.numpy.ndarray).view(awkward.util.CHARTYPE).reshape(-1)
+        value = awkward.util.toarray(value, awkward.util.CHARTYPE, awkward.util.numpy.ndarray)
+        if len(value.shape) != 1:
+            raise TypeError("content of ByteJaggedArray must have 1-dimensional shape")
+        self._content = value.view(awkward.util.CHARTYPE)
         self._isvalid = False
 
     @property

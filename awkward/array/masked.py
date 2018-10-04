@@ -78,25 +78,27 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         out._content = awkward.util.deepcopy(out._content)
         return out
 
-    def empty_like(self, **overrides):
+    def _mine(self, overrides):
         mine = {}
         mine["maskedwhen"] = overrides.pop("maskedwhen", self._maskedwhen)
+        return mine
+
+    def empty_like(self, **overrides):
+        mine = self._mine(overrides)
         if isinstance(self._content, awkward.util.numpy.ndarray):
             return self.copy(content=awkward.util.numpy.empty_like(self._content), **mine)
         else:
             return self.copy(content=self._content.empty_like(**overrides), **mine)
 
     def zeros_like(self, **overrides):
-        mine = {}
-        mine["maskedwhen"] = overrides.pop("maskedwhen", self._maskedwhen)
+        mine = self._mine(overrides)
         if isinstance(self._content, awkward.util.numpy.ndarray):
             return self.copy(content=awkward.util.numpy.zeros_like(self._content), **mine)
         else:
             return self.copy(content=self._content.zeros_like(**overrides), **mine)
 
     def ones_like(self, **overrides):
-        mine = {}
-        mine["maskedwhen"] = overrides.pop("maskedwhen", self._maskedwhen)
+        mine = self._mine(overrides)
         if isinstance(self._content, awkward.util.numpy.ndarray):
             return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
         else:
@@ -160,11 +162,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def __iter__(self):
         self._valid()
-        for i, x in enumerate(self._content):
-            if self._mask[i] == self._maskedwhen:
+        byte = 0
+        for x in self._content:
+            if self._mask[byte] == self._maskedwhen:
                 yield self.masked
             else:
                 yield x
+            byte += 1
 
     def __getitem__(self, where):
         self._valid()
@@ -238,56 +242,85 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         raise NotImplementedError
 
 class BitMaskedArray(MaskedArray):
-    def __init__(self, mask, content, maskedwhen=True, lsb=True):
-        raise NotImplementedError
+    def __init__(self, mask, content, maskedwhen=True, lsborder=True):
+        super(BitMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
+        self.lsborder = lsborder
 
-    def copy(self, index=None, content=None):
-        raise NotImplementedError
+    def copy(self, mask=None, content=None, maskedwhen=None, lsborder=None):
+        out = super(BitMaskedArray, self).copy(mask=mask, content=content, maskedwhen=maskedwhen)
+        out._lsborder = lsborder
+        return out
 
-    def deepcopy(self, index=None, content=None):
-        raise NotImplementedError
-
-    def empty_like(self, **overrides):
-        raise NotImplementedError
-
-    def zeros_like(self, **overrides):
-        raise NotImplementedError
-
-    def ones_like(self, **overrides):
-        raise NotImplementedError
+    def _mine(self, overrides):
+        mine = {}
+        mine["maskedwhen"] = overrides.pop("maskedwhen", self._maskedwhen)
+        mine["lsborder"] = overrides.pop("lsborder", self._lsborder)
+        return mine
 
     @property
-    def content(self):
-        return self._content
+    def mask(self):
+        return self._mask
 
-    @content.setter
-    def content(self, value):
-        raise NotImplementedError
-
-    @property
-    def type(self):
-        raise NotImplementedError
-
-    def __len__(self):
-        raise NotImplementedError
+    @mask.setter
+    def mask(self, value):
+        value = awkward.util.toarray(value, awkward.util.CHARTYPE, awkward.util.numpy.ndarray)
+        if len(value.shape) != 1:
+            raise TypeError("mask must have 1-dimensional shape")
+        self._mask = value.view(awkward.util.CHARTYPE)
 
     @property
-    def shape(self):
-        raise NotImplementedError
-
+    def boolmask(self):
+        out = awkward.util.numpy.unpackbits(self._mask)
+        if self._lsborder:
+            out = out.reshape(-1, 8)[:,::-1].reshape(-1)
+        return out.view(awkward.util.MASKTYPE)[:len(self._content)]
+        
     @property
-    def dtype(self):
-        raise NotImplementedError
+    def lsborder(self):
+        return self._lsborder
 
-    @property
-    def base(self):
-        raise NotImplementedError
+    @lsborder.setter
+    def lsborder(self, value):
+        self._lsborder = bool(value)
+
+    @staticmethod
+    def _ceildiv8(x):
+        return -(-x >> 3)   # this is int(math.ceil(x / 8))
 
     def _valid(self):
-        raise NotImplementedError
-
+        if len(self._mask) != self._ceildiv8(len(self._content)):
+            raise ValueError("mask length ({0}) is not equal to ceil(content length / 8) ({1})".format(len(self._mask), self._ceildiv8(len(self._content))))
+            
     def __iter__(self):
-        raise NotImplementedError
+        self._valid()
+        one = awkward.util.numpy.uint8(1)
+        zero = awkward.util.numpy.uint8(0)
+
+        if self._lsborder:
+            byte = 0
+            bit = start = awkward.util.numpy.uint8(1)
+            for x in self._content:
+                if ((self._mask[byte] & bit) != 0) == self._maskedwhen:
+                    yield self.masked
+                else:
+                    yield x
+                bit <<= one
+                if bit == zero:
+                    bit = start
+                    byte += 1
+
+        else:
+            byte = 0
+            bit = start = awkward.util.numpy.uint8(128)
+            for x in self._content:
+                if ((self._mask[byte] & bit) != 0) == self._maskedwhen:
+                    yield self.masked
+                else:
+                    yield x
+                bit >>= one
+                if bit == zero:
+                    bit = start
+                    byte += 1
 
     def __getitem__(self, where):
         raise NotImplementedError
