@@ -30,15 +30,13 @@
 
 import numbers
 
-import numpy
-
 import awkward.util
 
 def fromarray(array):
-    if isinstance(array, numpy.ndarray):
+    if isinstance(array, awkward.util.numpy.ndarray):
         if array.dtype.names is None:
             out = ArrayType(*(array.shape + (array.dtype,)))
-            if isinstance(array, numpy.ma.MaskedArray):
+            if isinstance(array, awkward.util.numpy.ma.MaskedArray):
                 out = OptionType(out)
             return out
         else:
@@ -47,13 +45,29 @@ def fromarray(array):
             for n in array.dtype.names:
                 table[n] = array.dtype[n]
             out = ArrayType(*(array.shape + (table,)))
-            if isinstance(array, numpy.ma.MaskedArray):
+            if isinstance(array, awkward.util.numpy.ma.MaskedArray):
                 out = OptionType(out)
             return out
     else:
         return array.type
 
+def fromnumpy(shape, dtype, masked=False):
+    if masked:
+        return OptionType(fromnumpy(shape, dtype))
+    elif dtype.subdtype is not None:
+        dt, sh = dtype.subdtype
+        return fromnumpy(shape + sh, dt)
+    else:
+        return ArrayType(*(shape + (dtype,)))
+
 class Type(object):
+    def hascolumn(self, name):
+        return self._hascolumn(name, set())
+
+    @property
+    def isnumpy(self):
+        return self._isnumpy(set())
+
     def __or__(self, other):
         out = UnionType.__new__(UnionType)
 
@@ -108,8 +122,8 @@ class Type(object):
             seen.add(id(self))
             return out + self._subrepr(labeled, seen)
 
-    def __str__(self):
-        return self._str(self._labeled(), set(), "")
+    def __str__(self, indent=""):
+        return self._str(self._labeled(), set(), indent)
 
     def _str(self, labeled, seen, indent):
         if id(self) in seen:
@@ -209,19 +223,22 @@ class Type(object):
         return x
 
     def __eq__(self, other):
-        one = Type._canonical(Type._copy(self, {}), set())
-        two = Type._canonical(Type._copy(other, {}), set())
-        return one._eq(two, set())
+        if not isinstance(other, Type):
+            return False
+        else:
+            one = Type._canonical(Type._copy(self, {}), set())
+            two = Type._canonical(Type._copy(other, {}), set())
+            return one._eq(two, set())
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     @staticmethod
     def _finaltype(x):
-        if isinstance(x, type) and issubclass(x, (numbers.Number, numpy.generic)):
-            return numpy.dtype(x)
+        if isinstance(x, type) and issubclass(x, (numbers.Number, awkward.util.numpy.generic)):
+            return awkward.util.numpy.dtype(x)
         elif isinstance(x, (awkward.util.unicode, bytes)):
-            return numpy.dtype(x)
+            return awkward.util.numpy.dtype(x)
         else:
             return x
 
@@ -255,9 +272,8 @@ class ArrayType(Type):
 
     @takes.setter
     def takes(self, value):
-        if value == numpy.inf or (isinstance(value, (numbers.Integral, numpy.integer)) and value >= 0):
+        if value == awkward.util.numpy.inf or (isinstance(value, (numbers.Integral, awkward.util.numpy.integer)) and value >= 0):
             self._takes = value
-
         else:
             raise ValueError("{0} is not allowed in type specification".format(value))
 
@@ -271,6 +287,56 @@ class ArrayType(Type):
             self._to = value
         else:
             self._to = self._finaltype(value)
+
+    @property
+    def shape(self):
+        if self._takes == awkward.util.numpy.inf:
+            return ()
+        else:
+            return (self._takes,) + self._to.shape
+
+    @property
+    def dtype(self):
+        if self._takes == awkward.util.numpy.inf:
+            return awkward.util.numpy.dtype(object)
+
+        elif isinstance(self._to, awkward.util.numpy.dtype):
+            if self._to.subdtype is None:
+                return self._to
+            else:
+                return self._to.subdtype[0]
+
+        else:
+            return self._to.dtype
+
+    @property
+    def jshape(self):
+        if isinstance(self._to, awkward.util.numpy.dtype):
+            return (self._takes, self._to)
+        else:
+            return (self._takes,) + self._to.jshape
+
+    def _isnumpy(self, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        if self._takes == awkward.util.numpy.inf:
+            return False
+        elif isinstance(self._to, awkward.util.numpy.dtype):
+            return True
+        else:
+            return self._to._isnumpy(seen)
+
+    def _hascolumn(self, name, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        if isinstance(self._to, awkward.util.numpy.dtype) and self._to.names is None:
+            return False
+        elif isinstance(self._to, awkward.util.numpy.dtype):
+            return name in self._to.names
+        else:
+            return self._to._hascolumn(name, seen)
 
     def _subrepr(self, labeled, seen):
         if isinstance(self._to, Type):
@@ -306,6 +372,44 @@ class TableType(Type):
         self._fields = awkward.util.OrderedDict()
         for n, x in fields.items():
             self._fields[n] = x
+
+    @property
+    def shape(self):
+        return ()
+
+    @property
+    def dtype(self):
+        out = []
+        for n, x in self._fields.items():
+            if x.shape != ():
+                raise TypeError("Table with non-primitive fields has no Numpy dtype")
+            elif isinstance(x, awkward.util.numpy.dtype):
+                out.append((n, x))
+            else:
+                out.append((n, x.dtype))
+        return awkward.util.numpy.dtype(out)
+
+    @property
+    def jshape(self):
+        return (dict((n, x if isinstance(x, awkward.util.numpy.dtype) else x.jshape) for n, x in self._fields.items()),)
+
+    def _isnumpy(self, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        for x in self._fields.values():
+            if isinstance(x, awkward.util.numpy.dtype):
+                return True
+            elif not isinstance(x, OptionType) and x._isnumpy(seen):
+                return x.shape != ()
+            else:
+                return False
+
+    def _hascolumn(self, name, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        return name in self._fields
 
     def __getitem__(self, key):
         return self._fields[key]
@@ -356,6 +460,27 @@ class UnionType(Type):
         self._possibilities = []
         for x in possibilities:
             self.append(x)
+
+    @property
+    def shape(self):
+        raise TypeError("Union has no Numpy dtype")
+
+    @property
+    def dtype(self):
+        raise TypeError("Union has no Numpy dtype")
+
+    @property
+    def jshape(self):
+        return ([x.jshape for x in self._possibilities],)
+
+    def _isnumpy(self, seen):
+        return False
+
+    def _hascolumn(self, name, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        return any(x._to._hascolumn(name, seen) for x in self._possibilities)
 
     def __len__(self):
         return len(self._possibilities)
@@ -418,6 +543,33 @@ class OptionType(Type):
             self._type = value
         else:
             self._type = self._finaltype(self._type)
+
+    @property
+    def shape(self):
+        return self._type.shape
+
+    @property
+    def dtype(self):
+        return self._type.dtype
+
+    @property
+    def jshape(self):
+        return ([self._type.jshape, None],)
+
+    def _isnumpy(self, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        if isinstance(self._type, awkward.util.numpy.dtype):
+            return True
+        else:
+            return self._type._isnumpy(seen)
+
+    def _hascolumn(self, name, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        return self._type._hascolumn(name, seen)
 
     def _subrepr(self, labeled, seen):
         return "OptionType({0})".format(self._type._repr(labeled, seen) if isinstance(self._type, Type) else repr(self._type))

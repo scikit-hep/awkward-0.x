@@ -28,13 +28,92 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import numbers
-
 import awkward.array.base
 import awkward.util
 
 class VirtualArray(awkward.array.base.AwkwardArray):
     def __init__(self, generator, cache=None, persistentkey=None, dtype=None, shape=None):
+        raise NotImplementedError
+
+    def copy(self, index=None, content=None):
+        raise NotImplementedError
+
+    def deepcopy(self, index=None, content=None):
+        raise NotImplementedError
+
+    def empty_like(self, **overrides):
+        raise NotImplementedError
+
+    def zeros_like(self, **overrides):
+        raise NotImplementedError
+
+    def ones_like(self, **overrides):
+        raise NotImplementedError
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        raise NotImplementedError
+
+    @property
+    def type(self):
+        raise NotImplementedError
+
+    def __len__(self):
+        raise NotImplementedError
+
+    @property
+    def shape(self):
+        raise NotImplementedError
+
+    @property
+    def dtype(self):
+        raise NotImplementedError
+
+    @property
+    def base(self):
+        raise NotImplementedError
+
+    def _valid(self):
+        raise NotImplementedError
+
+    def _argfields(self, function):
+        raise NotImplementedError
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __getitem__(self, where):
+        raise NotImplementedError
+
+    def __setitem__(self, where, what):
+        raise NotImplementedError
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        raise NotImplementedError
+
+    def any(self):
+        raise NotImplementedError
+
+    def all(self):
+        raise NotImplementedError
+
+    @classmethod
+    def concat(cls, first, *rest):
+        raise NotImplementedError
+
+    @property
+    def columns(self):
+        raise NotImplementedError
+
+    @property
+    def allcolumns(self):
+        raise NotImplementedError
+
+    def pandas(self):
         raise NotImplementedError
 
 # class VirtualArray(awkward.array.base.AwkwardArray):

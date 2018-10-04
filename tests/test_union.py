@@ -28,10 +28,16 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
+import unittest
 
-__version__ = "0.1.0"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+import numpy
 
-del re
+from awkward import *
+
+class Test(unittest.TestCase):
+    def runTest(self):
+        pass
+
+    # def test_union_get(self):
+    #     a = UnionArray([0, 1, 0, 1, 0, 1, 0, 1, 0, 1], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]])
+    #     self.assertEqual(a.tolist(), [0.0, 100, 2.2, 300, 4.4, 500, 6.6, 700, 8.8, 900])

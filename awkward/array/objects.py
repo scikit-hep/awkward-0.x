@@ -28,7 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import numbers
 import types
 
 import awkward.array.base
@@ -117,7 +116,7 @@ class ObjectArray(awkward.array.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
 
     @property
     def generator(self):
@@ -150,25 +149,21 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         self._kwargs = value
 
     @property
-    def type(self):
-        out = awkward.type.fromarray(self._content)
-        out.to = self._generator
-        return out
-
-    def __len__(self):
-        return len(self._content)
+    def dtype(self):
+        return awkward.util.numpy.dtype(object)
 
     @property
     def shape(self):
         return self._content.shape
 
-    @property
-    def columns(self):
-        return self._content.columns
+    def __len__(self):
+        return len(self._content)
 
     @property
-    def allcolumns(self):
-        return self._content.allcolumns
+    def type(self):
+        out = awkward.type.fromarray(self._content)
+        out.to = self._generator
+        return out
 
     @property
     def base(self):
@@ -179,10 +174,6 @@ class ObjectArray(awkward.array.base.AwkwardArray):
             return awkward.util._argfields(function)
         else:
             return self._content._argfields(function)
-
-    @property
-    def dtype(self):
-        return awkward.util.numpy.dtype(object)
 
     def __iter__(self):
         for x in self._content:
@@ -199,7 +190,7 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         head, tail = where[0], where[1:]
 
         content = self._content[head]
-        if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
+        if isinstance(head, awkward.util.integer):
             if isinstance(tail, tuple) and tail == ():
                 return self.generator(content, *self._args, **self._kwargs)
             else:
@@ -213,6 +204,15 @@ class ObjectArray(awkward.array.base.AwkwardArray):
 
     def __setitem__(self, where, what):
         self._content[where] = what
+
+    def __delitem__(self, where):
+        if isinstance(where, awkward.util.string):
+            del self._content[where]
+        elif awkward.util.isstringslice(where):
+            for x in where:
+                del self._content[x]
+        else:
+            raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         if method != "__call__":
@@ -231,3 +231,28 @@ class ObjectArray(awkward.array.base.AwkwardArray):
             return result
         else:
             return self.copy(content=result)
+
+    def any(self):
+        return any(x for x in self)
+
+    def all(self):
+        return all(x for x in self)
+
+    @classmethod
+    def concat(cls, first, *rest):
+        raise NotImplementedError
+
+    @property
+    def columns(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            raise TypeError("array has no Table, and hence no columns")
+        return self._content.columns
+
+    @property
+    def allcolumns(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            raise TypeError("array has no Table, and hence no columns")
+        return self._content.allcolumns
+
+    def pandas(self):
+        raise NotImplementedError

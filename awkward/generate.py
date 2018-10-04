@@ -32,16 +32,17 @@ import codecs
 import collections
 import numbers
 
-import numpy
-
 import awkward.array.base
 import awkward.util
-from awkward.array.chunked import PartitionedArray, AppendableArray
-from awkward.array.indexed import IndexedMaskedArray, UnionArray
+from awkward.array.chunked import ChunkedArray, AppendableArray
+from awkward.array.indexed import IndexedMaskedArray
 from awkward.array.jagged import JaggedArray
 from awkward.array.masked import BitMaskedArray
 from awkward.array.objects import ObjectArray
 from awkward.array.table import Table
+from awkward.array.union import UnionArray
+
+# FIXME: the following must be totally broken from upstream changes
 
 def fromiter(iterable, chunksize=1024, maskmissing=True, references=False):
     if references:
@@ -234,17 +235,17 @@ def fromiter(iterable, chunksize=1024, maskmissing=True, references=False):
             insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
 
         elif isinstance(obj, bytes):
-            # bytes -> VirtualObjectArray of JaggedArray
+            # bytes -> ObjectArray of JaggedArray
 
             def newchunk(obj):
-                out = VirtualObjectArray(tobytes, JaggedArray.fromoffsets(
+                out = ObjectArray(tobytes, JaggedArray.fromoffsets(
                     numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
                     AppendableArray.empty(lambda: numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.CHARTYPE))))
                 out._content._starts[0] = 0
                 return out
 
             def ismine(obj, x):
-                return isinstance(x, VirtualObjectArray) and (x._generator is tobytes or x._generator is tostring)
+                return isinstance(x, ObjectArray) and (x._generator is tobytes or x._generator is tostring)
 
             def promote(obj, x):
                 return x
@@ -256,23 +257,23 @@ def fromiter(iterable, chunksize=1024, maskmissing=True, references=False):
             insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
 
         elif isinstance(obj, awkward.util.string):
-            # str -> VirtualObjectArray of JaggedArray
+            # str -> ObjectArray of JaggedArray
 
             def newchunk(obj):
-                out = VirtualObjectArray(tostring, JaggedArray.fromoffsets(
+                out = ObjectArray(tostring, JaggedArray.fromoffsets(
                     numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
                     AppendableArray.empty(lambda: numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.CHARTYPE))))
                 out._content._starts[0] = 0
                 return out
 
             def ismine(obj, x):
-                return isinstance(x, VirtualObjectArray) and (x._generator is tobytes or x._generator is tostring)
+                return isinstance(x, ObjectArray) and (x._generator is tobytes or x._generator is tostring)
 
             def promote(obj, x):
                 if x._generator is tostring:
                     return x
                 else:
-                    return VirtualObjectArray(tostring, x._content)
+                    return ObjectArray(tostring, x._content)
 
             def fillobj(obj, array, where):
                 bytes = codecs.utf_8_encode(obj)[0]
@@ -469,8 +470,8 @@ def fromiter(iterable, chunksize=1024, maskmissing=True, references=False):
         elif isinstance(array, Table):
             return Table(length, collections.OrderedDict((n, trim(length, x)) for n, x in array._content.items()))
 
-        elif isinstance(array, VirtualObjectArray):
-            return VirtualObjectArray(array._generator, trim(length, array._content))
+        elif isinstance(array, ObjectArray):
+            return ObjectArray(array._generator, trim(length, array._content))
 
         else:
             raise AssertionError(array)

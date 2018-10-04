@@ -30,6 +30,7 @@
 
 import ast
 import itertools
+import numbers
 import re
 import sys
 import types
@@ -69,21 +70,48 @@ is_intstring._pattern = re.compile("^_(0|[1-9]+[0-9]*)$")
 
 ################################################################ array helpers
 
+import distutils.version
 import numpy   # all access to Numpy passes through here
+if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVersion("1.13.1"):
+    raise ImportError("Numpy 1.13.1 or later required")
+
+integer = (numbers.Integral, numpy.integer)
 
 CHARTYPE = numpy.dtype(numpy.uint8)
 INDEXTYPE = numpy.dtype(numpy.int64)
 MASKTYPE = numpy.dtype(numpy.bool_)
 BITMASKTYPE = numpy.dtype(numpy.uint8)
+DEFAULTTYPE = numpy.dtype(numpy.float64)
 
-def toarray(value, defaultdtype, passthrough):
+def toarray(value, defaultdtype, passthrough=None):
+    import awkward.array.base
+    if passthrough is None:
+        passthrough = (numpy.ndarray, awkward.array.base.AwkwardArray)
     if isinstance(value, passthrough):
         return value
     else:
         try:
             return numpy.frombuffer(value, dtype=getattr(value, "dtype", defaultdtype)).reshape(getattr(value, "shape", -1))
         except AttributeError:
-            return numpy.array(value, copy=False)
+            if len(value) == 0:
+                return numpy.array(value, dtype=defaultdtype, copy=False)
+            else:
+                return numpy.array(value, copy=False)
+
+def array_str(array):
+    import awkward.array.base
+    if isinstance(array, numpy.ndarray):
+        return numpy.array_str(array, numpy.inf)
+    elif isinstance(array, awkward.array.base.AwkwardArray):
+        return str(array).replace("\n", "")
+    else:
+        return repr(array)
+
+def isnumpy(dtype):
+    if isinstance(dtype, numpy.dtype):
+        return True
+    else:
+        return dtype.isnumpy
 
 def deepcopy(array):
     if array is None:
@@ -93,10 +121,23 @@ def deepcopy(array):
     else:
         return array.deepcopy()
 
+def concatenate(arrays):
+    if all(isinstance(x, numpy.ndarray) for x in arrays):
+        return numpy.concatenate(arrays)
+    else:
+        return arrays[0].concat(*arrays[1:])
+
 def isstringslice(where):
+    import awkward.array.base
     if isinstance(where, string):
         return True
     elif isinstance(where, tuple):
+        return False
+    elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)) and issubclass(where.dtype.type, (numpy.str, numpy.str_)):
+        return True
+    elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)) and issubclass(where.dtype.type, (numpy.object, numpy.object_)) and not issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
+        return all(isinstance(x, string) for x in where)
+    elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)):
         return False
     try:
         assert all(isinstance(x, string) for x in where)
