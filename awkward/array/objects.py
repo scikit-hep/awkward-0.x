@@ -232,12 +232,14 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         else:
             return self.copy(content=result)
 
-    @classmethod
-    def concat(cls, first, *rest):
-        raise NotImplementedError
+    def any(self):
+        return any(x for x in self)
+
+    def all(self):
+        return all(x for x in self)
 
     @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
+    def concat(cls, first, *rest):
         raise NotImplementedError
 
     @property

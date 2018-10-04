@@ -59,6 +59,11 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
 
+    def __bool__(self):
+        raise ValueError("The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()")
+
+    __nonzero__ = __bool__
+
     @property
     def jshape(self):
         return self.type.jshape

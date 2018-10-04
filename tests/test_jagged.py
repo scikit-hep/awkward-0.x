@@ -169,9 +169,12 @@ class Test(unittest.TestCase):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         self.assertEqual((awkward.ObjectArray([100, 200, 300, 400], Z) + a).tolist(), [Z([100., 101.1, 102.2]), Z([]), Z([303.3, 304.4]), Z([405.5, 406.6, 407.7, 408.8, 409.9])])
 
+        self.assertRaises(ValueError, lambda: "yay" if (a + [100, 200, 300, 400]) == [[100.0, 101.1, 102.2], [], [303.3, 304.4], [405.5, 406.6, 407.7, 408.8, 409.9]] else "boo")
+        self.assertRaises(ValueError, lambda: "yay" if (a + [100, 200, 300, 400]).content == [100.0, 101.1, 102.2, 303.3, 304.4, 405.5, 406.6, 407.7, 408.8, 409.9] else "boo")
+
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], awkward.ObjectArray([0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], Z))
-        self.assertEqual(a, [[Z(0.0), Z(1.1), Z(2.2)], [], [Z(3.3), Z(4.4)], [Z(5.5), Z(6.6), Z(7.7), Z(8.8), Z(9.9)]])
-        self.assertEqual(a + awkward.ObjectArray([100, 200, 300, 400], Z), [[Z(100.0), Z(101.1), Z(102.2)], [], [Z(303.3), Z(304.4)], [Z(405.5), Z(406.6), Z(407.7), Z(408.8), Z(409.9)]])
+        self.assertEqual(a.tolist(), [[Z(0.0), Z(1.1), Z(2.2)], [], [Z(3.3), Z(4.4)], [Z(5.5), Z(6.6), Z(7.7), Z(8.8), Z(9.9)]])
+        self.assertEqual((a + awkward.ObjectArray([100, 200, 300, 400], Z)).tolist(), [[Z(100.0), Z(101.1), Z(102.2)], [], [Z(303.3), Z(304.4)], [Z(405.5), Z(406.6), Z(407.7), Z(408.8), Z(409.9)]])
 
     def test_jagged_ufunc_table(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])

@@ -97,12 +97,14 @@ class MaskedArray(awkward.array.base.AwkwardArray):
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         raise NotImplementedError
 
-    @classmethod
-    def concat(cls, first, *rest):
+    def any(self):
+        raise NotImplementedError
+
+    def all(self):
         raise NotImplementedError
 
     @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
+    def concat(cls, first, *rest):
         raise NotImplementedError
 
     @property
@@ -254,12 +256,14 @@ class BitMaskedArray(MaskedArray):
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         raise NotImplementedError
 
-    @classmethod
-    def concat(cls, first, *rest):
+    def any(self):
+        raise NotImplementedError
+
+    def all(self):
         raise NotImplementedError
 
     @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
+    def concat(cls, first, *rest):
         raise NotImplementedError
 
     @property

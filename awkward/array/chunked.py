@@ -567,6 +567,12 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                         out[i] = ChunkedArray(chunks[i])
                 return tuple(out)
 
+    def any(self):
+        return any(x.any() for x in self._chunks)
+
+    def all(self):
+        return all(x.all() for x in self._chunks)
+
     @classmethod
     def concat(cls, first, *rest):
         raise NotImplementedError

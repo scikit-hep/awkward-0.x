@@ -355,6 +355,12 @@ class ByteIndexedArray(IndexedArray):
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
+    def any(self):
+        return self._content[self._index].any()
+
+    def all(self):
+        return self._content[self._index].all()
+
     @classmethod
     def concat(cls, first, *rest):
         raise NotImplementedError

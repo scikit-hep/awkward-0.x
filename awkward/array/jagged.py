@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import math
+import numbers
 import types
 
 import awkward.array.base
@@ -603,6 +604,21 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 else:
                     inputs[i] = inputs[i]._tojagged(starts, stops, copy=False)
 
+            elif isinstance(inputs[i], (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
+                pass
+
+            else:
+                try:
+                    for first in inputs[i]:
+                        break
+                except TypeError:
+                    pass
+                else:
+                    if "first" not in locals() or isinstance(first, (numbers.Number, awkward.util.numpy.bool_, awkward.util.numpy.bool, awkward.util.numpy.number)):
+                        inputs[i] = awkward.util.numpy.array(inputs[i], copy=False)
+                    else:
+                        inputs[i] = JaggedArray.fromiter(inputs[i])
+
         for jaggedarray in inputs:
             if isinstance(jaggedarray, JaggedArray):
                 starts, stops, parents, good = jaggedarray._starts, jaggedarray._stops, None, None
@@ -778,6 +794,9 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         else:
             offsets = counts2offsets(self.counts.reshape(-1))
             return self._tojagged(offsets[:-1], offsets[1:], copy=False)._content
+
+    def __bool__(self):
+        raise ValueError("The truth value of an array with more than one element is ambiguous. Use a.flatten().any() or a.flatten().all()")
 
     def any(self):
         if self._canuseoffset():

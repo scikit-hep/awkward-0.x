@@ -565,6 +565,12 @@ class Table(awkward.array.base.AwkwardArray):
                     out[i][n] = newcolumns[n]
             return tuple(out)
 
+    def any(self):
+        return any(x.any() for x in self._content.values())
+
+    def all(self):
+        return all(x.all() for x in self._content.values())
+
     @classmethod
     def concat(cls, first, *rest):
         raise NotImplementedError
