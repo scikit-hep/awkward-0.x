@@ -108,7 +108,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @mask.setter
     def mask(self, value):
-        value = awkward.util.toarray(value, awkward.util.MASKTYPE)
+        value = awkward.util.toarray(value, awkward.util.MASKTYPE, awkward.util.numpy.ndarray)
         if len(value.shape) != 1:
             raise TypeError("mask must have 1-dimensional shape")
         if not issubclass(value.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
@@ -192,18 +192,38 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
                 raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
             else:
                 return self.copy(mask=mask, content=self._content[(head,) + tail])
-
-    def __setitem__(self, where, what):
-        raise NotImplementedError
-
+        
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        raise NotImplementedError
+        import awkward.array.objects
+        self._valid()
+
+        if method != "__call__":
+            return NotImplemented
+
+        inputs = list(inputs)
+        intersection = None
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], MaskedArray):
+                if intersection is None:
+                    intersection = inputs[i]._mask
+                else:
+                    intersection &= inputs[i]._mask
+                inputs[i] = inputs[i]._content
+
+        result = getattr(ufunc, method)(*inputs, **kwargs)
+
+        if isinstance(result, tuple):
+            return tuple(awkward.array.objects.Methods.maybemixin(type(x), MaskedArray)(intersection, x) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+        elif method == "at":
+            return None
+        else:
+            return awkward.array.objects.Methods.maybemixin(type(result), MaskedArray)(intersection, result)
 
     def any(self):
-        raise NotImplementedError
+        return self._content[self._mask].any()
 
     def all(self):
-        raise NotImplementedError
+        return self._content[self._mask].all()
 
     @classmethod
     def concat(cls, first, *rest):
@@ -342,6 +362,9 @@ class BitMaskedArray(MaskedArray):
         raise NotImplementedError
 
     def __setitem__(self, where, what):
+        raise NotImplementedError
+
+    def __delitem__(self, where, what):
         raise NotImplementedError
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):

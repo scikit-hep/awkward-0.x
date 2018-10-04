@@ -91,6 +91,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def __setitem__(self, where, what):
         raise NotImplementedError
 
+    def __delitem__(self, where, what):
+        raise NotImplementedError
+
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         raise NotImplementedError
 

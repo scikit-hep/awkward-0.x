@@ -82,6 +82,9 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                 out.append(self._try_tolist(x))
         return out
 
+    def _valid(self):
+        pass
+
     def valid(self):
         try:
             self._valid()
@@ -132,6 +135,28 @@ class AwkwardArrayWithContent(AwkwardArray):
             return awkward.util._argfields(function)
         else:
             return self._content._argfields(function)
+
+    def __setitem__(self, where, what):
+        if isinstance(where, awkward.util.string):
+            self._content[where] = self._invert(what)
+
+        elif awkward.util.isstringslice(where):
+            if len(where) != len(what):
+                raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
+            for x, y in zip(where, what):
+                self._content[x] = self._invert(y)
+
+        else:
+            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+
+    def __delitem__(self, where):
+        if isinstance(where, awkward.util.string):
+            del self._content[where]
+        elif awkward.util.isstringslice(where):
+            for x in where:
+                del self._content[x]
+        else:
+            raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
     @property
     def columns(self):

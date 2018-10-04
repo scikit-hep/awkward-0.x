@@ -165,21 +165,6 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             self._inverse = invert(self._index)
         return IndexedArray(self._inverse, what)
 
-    def __setitem__(self, where, what):
-        self._valid()
-
-        if isinstance(where, awkward.util.string):
-            self._content[where] = self._invert(what)
-
-        elif awkward.util.isstringslice(where):
-            if len(where) != len(what):
-                raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
-            for x, y in zip(where, what):
-                self._content[x] = self._invert(y)
-
-        else:
-            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
-
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         self._valid()
 
@@ -322,11 +307,16 @@ class ByteIndexedArray(IndexedArray):
                 return self._content[index].view(self._dtype)
 
     def __setitem__(self, where, what):
-        self._valid()
         if awkward.util.isstringslice(where):
             raise IndexError("only integers, slices (`:`), and integer or boolean arrays are valid indices")
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+
+    def __delitem__(self, where):
+        if awkward.util.isstringslice(where):
+            raise IndexError("only integers, slices (`:`), and integer or boolean arrays are valid indices")
+        else:
+            raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
     def any(self):
         return self._content[self._index].any()
@@ -397,6 +387,9 @@ class IndexedMaskedArray(IndexedArray):
         raise NotImplementedError
 
     def __setitem__(self, where, what):
+        raise NotImplementedError
+
+    def __delitem__(self, where, what):
         raise NotImplementedError
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):

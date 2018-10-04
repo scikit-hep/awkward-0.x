@@ -499,8 +499,20 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 mine[where] = theirs
         else:
             raise ValueError("only ChunkedArrays with the same chunk sizes can be assigned to columns of a ChunkedArray")
-                    
+
+    def __delitem__(self, where):
+        if isinstance(where, awkward.util.string):
+            for chunk in self._chunks:
+                del chunk[where]
+        elif awkward.util.isstringslice(where):
+            for chunk in self._chunks:
+                for x in where:
+                    del chunk[x]
+        else:
+            raise TypeError("invalid index for removing column from Table: {0}".format(where))
+
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        import awkward.array.objects
         self._valid()
 
         if method != "__call__":
@@ -535,6 +547,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         
         out = None
         chunks = {}
+        types = {}
         for batch in batches:
             result = getattr(ufunc, method)(*batch, **kwargs)
 
@@ -546,6 +559,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                         if i not in chunks:
                             chunks[i] = []
                         chunks[i].append(x)
+                        types[i] = type(result)
 
             elif method == "at":
                 pass
@@ -555,16 +569,17 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     if None not in chunks:
                         chunks[None] = []
                     chunks[None].append(result)
+                    types[None] = type(result)
 
             if out is None:
                 if None in chunks:
-                    return ChunkedArray(chunks[None])
+                    return awkward.array.objects.Methods.maybemixin(types[None], ChunkedArray)(chunks[None])
                 else:
                     return None
             else:
                 for i in range(len(out)):
                     if i in chunks:
-                        out[i] = ChunkedArray(chunks[i])
+                        out[i] = awkward.array.objects.Methods.maybemixin(types[i], ChunkedArray)(chunks[i])
                 return tuple(out)
 
     def any(self):
