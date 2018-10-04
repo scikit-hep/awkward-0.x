@@ -201,23 +201,28 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             return NotImplemented
 
         inputs = list(inputs)
-        intersection = None
+        allmask = None
         for i in range(len(inputs)):
             if isinstance(inputs[i], MaskedArray):
-                if intersection is None:
-                    intersection = inputs[i]._mask
+                mask = inputs[i]._mask
+                if not inputs[i]._maskedwhen:
+                    mask = awkward.util.numpy.logical_not(mask)
+
+                if allmask is None:
+                    allmask = mask
                 else:
-                    intersection &= inputs[i]._mask
+                    allmask |= mask
+
                 inputs[i] = inputs[i]._content
 
         result = getattr(ufunc, method)(*inputs, **kwargs)
 
         if isinstance(result, tuple):
-            return tuple(awkward.array.objects.Methods.maybemixin(type(x), MaskedArray)(intersection, x) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+            return tuple(awkward.array.objects.Methods.maybemixin(type(x), MaskedArray)(allmask, x, maskedwhen=True) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
         elif method == "at":
             return None
         else:
-            return awkward.array.objects.Methods.maybemixin(type(result), MaskedArray)(intersection, result)
+            return awkward.array.objects.Methods.maybemixin(type(result), MaskedArray)(allmask, result, maskedwhen=True)
 
     def any(self):
         return self._content[self._mask].any()
@@ -231,80 +236,6 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def pandas(self):
         raise NotImplementedError
-
-# class MaskedArray(awkward.array.base.AwkwardArray):
-#     def __init__(self, mask, content, maskedwhen=True):
-#         self.mask = mask
-#         self.content = content
-#         self.maskedwhen = maskedwhen
-
-#     @property
-#     def mask(self):
-#         return self._mask
-
-#     @mask.setter
-#     def mask(self, value):
-#         value = self._toarray(value, self.MASKTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-
-#         if len(value.shape) != 1:
-#             raise TypeError("mask must have 1-dimensional shape")
-#         if value.shape[0] == 0:
-#             value = value.view(self.MASKTYPE)
-#         if not issubclass(value.dtype.type, (numpy.bool_, numpy.bool)):
-#             raise TypeError("mask must have boolean dtype")
-
-#         self._mask = value
-
-#     @property
-#     def boolmask(self):
-#         return self._mask
-
-#     @boolmask.setter
-#     def boolmask(self, value):
-#         self.mask = value
-
-#     @property
-#     def content(self):
-#         return self._content
-
-#     @content.setter
-#     def content(self, value):
-#         self._content = self._toarray(value, self.CHARTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-        
-#     @property
-#     def maskedwhen(self):
-#         return self._maskedwhen
-
-#     @maskedwhen.setter
-#     def maskedwhen(self, value):
-#         self._maskedwhen = bool(value)
-
-#     @property
-#     def dtype(self):
-#         return self._content.dtype
-
-#     @property
-#     def shape(self):
-#         return self._content.shape
-
-#     def __len__(self):
-#         return len(self._content)
-
-#     def __getitem__(self, where):
-#         if self._isstring(where):
-#             return MaskedArray(self._mask, self._content[where], maskedwhen=self._maskedwhen)
-
-#         if not isinstance(where, tuple):
-#             where = (where,)
-#         head, tail = where[0], where[1:]
-
-#         if isinstance(head, (numbers.Integral, numpy.integer)):
-#             if self._mask[head] == self._maskedwhen:
-#                 return numpy.ma.masked
-#             else:
-#                 return self._content[self._singleton(where)]
-#         else:
-#             return MaskedArray(self._mask[head], self._content[self._singleton(where)], maskedwhen=self._maskedwhen)
 
 class BitMaskedArray(MaskedArray):
     def __init__(self, mask, content, maskedwhen=True, lsb=True):

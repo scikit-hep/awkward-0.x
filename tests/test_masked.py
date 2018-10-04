@@ -60,6 +60,11 @@ class Test(unittest.TestCase):
         self.assertEqual(a[[3, 2, 1]].tolist(), [3.3, None, 1.1])
         self.assertEqual(a[[True, True, True, True, True, False, False, False, False, False]].tolist(), [None, 1.1, None, 3.3, None])
 
+    def test_masked_ufunc(self):
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True)
+        b = MaskedArray([True, True, True, True, True, False, False, False, False, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True)
+        self.assertEqual((a + b).tolist(), [None, None, None, None, None, 11.0, None, 15.4, None, 19.8])
+
     # def test_bitmasked_get(self):
     #     a = BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True, lsb=True)
     #     self.assertEqual(a.tolist(), [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9])
