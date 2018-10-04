@@ -35,9 +35,8 @@ import numbers
 import awkward.array.base
 import awkward.util
 from awkward.array.chunked import ChunkedArray, AppendableArray
-from awkward.array.indexed import IndexedMaskedArray
 from awkward.array.jagged import JaggedArray
-from awkward.array.masked import BitMaskedArray
+from awkward.array.masked import BitMaskedArray, IndexedMaskedArray
 from awkward.array.objects import ObjectArray
 from awkward.array.table import Table
 from awkward.array.union import UnionArray

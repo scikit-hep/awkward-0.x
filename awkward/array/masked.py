@@ -192,7 +192,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
         else:
             mask = self._mask[head]
-            if tail != () and ((self.maskedwhen and mask.any()) or (not self.maskedwhen and not self.mask.all())):
+            if tail != () and ((self._maskedwhen and mask.any()) or (not self._maskedwhen and not mask.all())):
                 raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
             else:
                 return self.copy(mask=mask, content=self._content[(head,) + tail])
@@ -208,7 +208,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         allmask = None
         for i in range(len(inputs)):
             if isinstance(inputs[i], MaskedArray):
-                mask = inputs[i]._mask
+                mask = inputs[i].boolmask
                 if not inputs[i]._maskedwhen:
                     mask = awkward.util.numpy.logical_not(mask)
 
@@ -242,13 +242,19 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         raise NotImplementedError
 
 class BitMaskedArray(MaskedArray):
-    def __init__(self, mask, content, maskedwhen=True, lsborder=True):
+    def __init__(self, mask, content, maskedwhen=True, lsborder=False):
         super(BitMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
         self.lsborder = lsborder
 
+    @classmethod
+    def fromboolmask(cls, mask, content, maskedwhen=True, lsborder=False):
+        return BitMaskedArray(BitMaskedArray.bool2bit(mask, lsborder=lsborder), content, maskedwhen=maskedwhen, lsborder=lsborder)
+        
     def copy(self, mask=None, content=None, maskedwhen=None, lsborder=None):
         out = super(BitMaskedArray, self).copy(mask=mask, content=content, maskedwhen=maskedwhen)
-        out._lsborder = lsborder
+        out._lsborder = self._lsborder
+        if lsborder is not None:
+            out._lsborder = lsborder
         return out
 
     def _mine(self, overrides):
@@ -268,13 +274,51 @@ class BitMaskedArray(MaskedArray):
             raise TypeError("mask must have 1-dimensional shape")
         self._mask = value.view(awkward.util.CHARTYPE)
 
+    @staticmethod
+    def _ceildiv8(x):
+        return -(-x >> 3)   # this is int(math.ceil(x / 8))
+
+    @staticmethod
+    def bit2bool(bitmask, lsborder=False):
+        out = awkward.util.numpy.unpackbits(bitmask)
+        if lsborder:
+            out = out.reshape(-1, 8)[:,::-1].reshape(-1)
+        return out.view(awkward.util.MASKTYPE)
+        
+    @staticmethod
+    def bool2bit(boolmask, lsborder=False):
+        boolmask = awkward.util.toarray(boolmask, awkward.util.MASKTYPE, awkward.util.numpy.ndarray)
+        if len(boolmask.shape) != 1:
+            raise TypeError("boolmask must have 1-dimensional shape")
+        if not issubclass(boolmask.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+            boolmask = (boolmask != 0)
+
+        if lsborder:
+            # maybe pad the length for reshape
+            length = BitMaskedArray._ceildiv8(len(boolmask)) * 8
+            if length != len(boolmask):
+                out = awkward.util.numpy.ones(length, dtype=boolmask.dtype)
+                out[:len(boolmask)] = boolmask
+            else:
+                out = boolmask
+
+            # reverse the order in groups of 8
+            out = out.reshape(-1, 8)[:,::-1].reshape(-1)
+
+        else:
+            # numpy.packbits encodes as msb (most significant bit); already in the right order
+            out = boolmask
+
+        return awkward.util.numpy.packbits(out)
+
     @property
     def boolmask(self):
-        out = awkward.util.numpy.unpackbits(self._mask)
-        if self._lsborder:
-            out = out.reshape(-1, 8)[:,::-1].reshape(-1)
-        return out.view(awkward.util.MASKTYPE)[:len(self._content)]
-        
+        return self.bit2bool(self._mask, lsborder=self._lsborder)[:len(self._content)]
+
+    @boolmask.setter
+    def boolmask(self, value):
+        self._mask = self.bool2bit(value, lsborder=self._lsborder)
+
     @property
     def lsborder(self):
         return self._lsborder
@@ -282,10 +326,6 @@ class BitMaskedArray(MaskedArray):
     @lsborder.setter
     def lsborder(self, value):
         self._lsborder = bool(value)
-
-    @staticmethod
-    def _ceildiv8(x):
-        return -(-x >> 3)   # this is int(math.ceil(x / 8))
 
     def _valid(self):
         if len(self._mask) != self._ceildiv8(len(self._content)):
@@ -322,17 +362,78 @@ class BitMaskedArray(MaskedArray):
                     bit = start
                     byte += 1
 
+    def _maskat(self, where):
+        bytepos = awkward.util.numpy.right_shift(where, 3)    # where // 8
+        bitpos  = where - 8*bytepos                           # where % 8
+
+        if self._lsborder:
+            bitmask = awkward.util.numpy.left_shift(1, bitpos)
+        else:
+            bitmask = awkward.util.numpy.right_shift(128, bitpos)
+
+        if isinstance(bitmask, awkward.util.numpy.ndarray):
+            bitmask = bitmask.astype(awkward.util.BITMASKTYPE)
+        else:
+            bitmask = awkward.util.BITMASKTYPE.type(bitmask)
+
+        return bytepos, bitmask
+
+    def _maskwhere(self, where):
+        if isinstance(where, awkward.util.integer):
+            bytepos, bitmask = self._maskat(where)
+            return awkward.util.numpy.bitwise_and(self._mask[bytepos], bitmask) != 0
+
+        elif isinstance(where, slice):
+            # assumes a small slice; for a big slice, it could be faster to unpack the whole mask
+            return self._maskwhere(awkward.util.numpy.arange(*where.indices(len(self._content))))
+
+        else:
+            where = awkward.util.numpy.array(where, copy=False)
+            if len(where.shape) == 1 and issubclass(where.dtype.type, awkward.util.numpy.integer):
+                byteposes, bitmasks = self._maskat(where)
+                awkward.util.numpy.bitwise_and(bitmasks, self._mask[byteposes], bitmasks)
+                return bitmasks.astype(awkward.util.numpy.bool_)
+        
+            elif len(where.shape) == 1 and issubclass(where.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+                # scales with the size of the mask anyway, so go ahead and unpack the whole mask
+                unpacked = awkward.util.numpy.unpackbits(self._mask).view(awkward.util.MASKTYPE)
+
+                if self._lsborder:
+                    unpacked = unpacked.reshape(-1, 8)[:,::-1].reshape(-1)[:len(where)]
+                else:
+                    unpacked = unpacked[:len(where)]
+
+                return unpacked[where]
+
+            else:
+                raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(where.shape, where.dtype))
+
     def __getitem__(self, where):
-        raise NotImplementedError
+        self._valid()
 
-    def __setitem__(self, where, what):
-        raise NotImplementedError
+        if awkward.util.isstringslice(where):
+            return self.copy(content=self._content[where])
 
-    def __delitem__(self, where, what):
-        raise NotImplementedError
+        if isinstance(where, tuple) and len(where) == 0:
+            return self
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
 
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        raise NotImplementedError
+        if isinstance(head, awkward.util.integer):
+            if self._maskwhere(head) == self._maskedwhen:
+                if tail != ():
+                    raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
+                return self.masked
+            else:
+                return self._content[(head,) + tail]
+
+        else:
+            mask = self._maskwhere(head)
+            if tail != () and ((self._maskedwhen and mask.any()) or (not self._maskedwhen and not mask.all())):
+                raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
+            else:
+                return self.copy(mask=self.bool2bit(mask, lsborder=False), content=self._content[(head,) + tail], lsborder=False)
 
     def any(self):
         raise NotImplementedError
@@ -347,165 +448,104 @@ class BitMaskedArray(MaskedArray):
     def pandas(self):
         raise NotImplementedError
 
-# class BitMaskedArray(MaskedArray):
-#     @staticmethod
-#     def fromboolmask(mask, content, maskedwhen=True, lsb=True):
-#         out = BitMaskedArray([], content, maskedwhen=maskedwhen, lsb=lsb)
-#         out.boolmask = mask
-#         return out
+class IndexedMaskedArray(MaskedArray):
+    def __init__(self, index, content, maskedwhen=-1):
+        raise NotImplementedError
 
-#     def __init__(self, mask, content, maskedwhen=True, lsb=True):
-#         self.mask = mask
-#         self.content = content
+    def copy(self, index=None, content=None):
+        raise NotImplementedError
+
+    def deepcopy(self, index=None, content=None):
+        raise NotImplementedError
+
+    def empty_like(self, **overrides):
+        raise NotImplementedError
+
+    def zeros_like(self, **overrides):
+        raise NotImplementedError
+
+    def ones_like(self, **overrides):
+        raise NotImplementedError
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        raise NotImplementedError
+
+    @property
+    def type(self):
+        raise NotImplementedError
+
+    def __len__(self):
+        raise NotImplementedError
+
+    @property
+    def shape(self):
+        raise NotImplementedError
+
+    @property
+    def dtype(self):
+        raise NotImplementedError
+
+    @property
+    def base(self):
+        raise NotImplementedError
+
+    def _valid(self):
+        raise NotImplementedError
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __getitem__(self, where):
+        raise NotImplementedError
+
+    def __setitem__(self, where, what):
+        raise NotImplementedError
+
+    def __delitem__(self, where, what):
+        raise NotImplementedError
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        raise NotImplementedError
+
+    @classmethod
+    def concat(cls, first, *rest):
+        raise NotImplementedError
+
+    def pandas(self):
+        raise NotImplementedError
+
+# class IndexedMaskedArray(MaskedArray):
+#     def __init__(self, index, content, maskedwhen=-1):
+#         super(IndexedMaskedArray, self).__init__(index, content)
 #         self.maskedwhen = maskedwhen
-#         self.lsb = lsb
 
 #     @property
-#     def mask(self):
-#         return self._mask
+#     def maskedwhen(self):
+#         return self._maskedwhen
 
-#     @mask.setter
-#     def mask(self, value):
-#         value = self._toarray(value, self.BITMASKTYPE, (numpy.ndarray, awkward.array.base.AwkwardArray))
-
-#         if len(value.shape) != 1:
-#             raise TypeError("mask must have 1-dimensional shape")
-
-#         self._mask = value.view(self.BITMASKTYPE)
-
-#     @property
-#     def boolmask(self):
-#         out = numpy.unpackbits(self._mask)
-#         if self._lsb:
-#             out = out.reshape(-1, 8)[:,::-1].reshape(-1)
-#         return out.view(self.MASKTYPE)[:len(self._content)]
-
-#     @boolmask.setter
-#     def boolmask(self, value):
-#         value = numpy.array(value, copy=False)
-
-#         if len(value.shape) != 1:
-#             raise TypeError("boolmask must have 1-dimensional shape")
-#         if not issubclass(value.dtype.type, (numpy.bool, numpy.bool_)):
-#             raise TypeError("boolmask must have boolean type")
-
-#         if self._lsb:
-#             # maybe pad the length for reshape
-#             length = 8*((len(value) + 8 - 1) >> 3)   # ceil(len(value) / 8.0) * 8
-#             if length != len(value):
-#                 out = numpy.empty(length, dtype=numpy.bool_)
-#                 out[:len(value)] = value
-#             else:
-#                 out = value
-
-#             # reverse the order in groups of 8
-#             out = out.reshape(-1, 8)[:,::-1].reshape(-1)
-
-#         else:
-#             # numpy.packbits encodes as msb (most significant bit); already in the right order
-#             out = value
-
-#         self._mask = numpy.packbits(out)
-        
-#     @property
-#     def lsb(self):
-#         return self._lsb
-
-#     @lsb.setter
-#     def lsb(self, value):
-#         self._lsb = bool(value)
-
-#     def _maskat(self, where):
-#         bytepos = numpy.right_shift(where, 3)    # where // 8
-#         bitpos  = where - 8*bytepos              # where % 8
-
-#         if self.lsb:
-#             bitmask = numpy.left_shift(1, bitpos)
-#         else:
-#             bitmask = numpy.right_shift(128, bitpos)
-
-#         if isinstance(bitmask, numpy.ndarray):
-#             bitmask = bitmask.astype(self.BITMASKTYPE)
-#         else:
-#             bitmask = self.BITMASKTYPE.type(bitmask)
-
-#         return bytepos, bitmask
-
-#     def _maskwhere(self, where):
-#         if isinstance(where, (numbers.Integral, numpy.integer)):
-#             bytepos, bitmask = self._maskat(where)
-#             return numpy.bitwise_and(self._mask[bytepos], bitmask) != 0
-
-#         elif isinstance(where, slice):
-#             # assumes a small slice; for a big slice, it could be faster to unpack the whole mask
-#             return self._maskwhere(numpy.arange(*where.indices(len(self._content))))
-
-#         else:
-#             where = numpy.array(where, copy=False)
-#             if len(where.shape) == 1 and issubclass(where.dtype.type, numpy.integer):
-#                 byteposes, bitmasks = self._maskat(where)
-#                 numpy.bitwise_and(bitmasks, self._mask[byteposes], bitmasks)
-#                 return bitmasks.astype(numpy.bool_)
-        
-#             elif len(where.shape) == 1 and issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
-#                 # scales with the size of the mask anyway, so go ahead and unpack the whole mask
-#                 unpacked = numpy.unpackbits(self._mask).view(self.MASKTYPE)
-
-#                 if self.lsb:
-#                     unpacked = unpacked.reshape(-1, 8)[:,::-1].reshape(-1)[:len(where)]
-#                 else:
-#                     unpacked = unpacked[:len(where)]
-
-#                 return unpacked[where]
-
-#             else:
-#                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(where.shape, where.dtype))
-
-#     def _setmask(self, where, valid):
-#         if isinstance(where, (numbers.Integral, numpy.integer)):        
-#             bytepos, bitmask = self._maskat(where)
-#             if self._maskedwhen != valid:
-#                 self._mask[bytepos] |= bitmask
-#             else:
-#                 self._mask[bytepos] &= numpy.bitwise_not(bitmask)
-
-#         elif isinstance(where, slice):
-#             # assumes a small slice; for a big slice, it could be faster to unpack the whole mask
-#             self._setmask(numpy.arange(*where.indices(len(self._content))), valid)
-
-#         else:
-#             where = numpy.array(where, copy=False)
-#             if len(where.shape) == 1 and issubclass(where.dtype.type, numpy.integer):
-#                 bytepos, bitmask = self._maskat(where)
-#                 if self._maskedwhen != valid:
-#                     numpy.bitwise_or.at(self._mask, bytepos, bitmask)
-#                 else:
-#                     numpy.bitwise_and.at(self._mask, bytepos, numpy.bitwise_not(bitmask))
-
-#             elif len(where.shape) == 1 and issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
-#                 tmp = self.boolmask
-#                 if self._maskedwhen != valid:
-#                     tmp[where] = True
-#                 else:
-#                     tmp[where] = False
-#                 self.boolmask = tmp
-
-#             else:
-#                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(where.shape, where.dtype))
+#     @maskedwhen.setter
+#     def maskedwhen(self, value):
+#         if not isinstance(value, (numbers.Integral, numpy.integer)):
+#             raise TypeError("maskedwhen must be an integer")
+#         self._maskedwhen = value
 
 #     def __getitem__(self, where):
 #         if self._isstring(where):
-#             return MaskedArray(self._mask, self._content[where], maskedwhen=self._maskedwhen)
+#             return IndexedMaskedArray(self._index, self._content[where], maskedwhen=self._maskedwhen)
 
 #         if not isinstance(where, tuple):
 #             where = (where,)
 #         head, tail = where[0], where[1:]
 
 #         if isinstance(head, (numbers.Integral, numpy.integer)):
-#             if self._maskwhere(head) == self._maskedwhen:
+#             if self._index[head] == self._maskedwhen:
 #                 return numpy.ma.masked
 #             else:
-#                 return self._content[self._singleton(where)]
-
+#                 return self._content[self._singleton((self._index[head],) + tail)]
 #         else:
-#             return MaskedArray(self._maskwhere(head), self._content[self._singleton(where)], maskedwhen=self._maskedwhen)
+#             return IndexedMaskedArray(self._index[head], self._content[self._singleton((slice(None),) + tail)], maskedwhen=self._maskedwhen)
