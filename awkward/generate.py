@@ -32,8 +32,6 @@ import codecs
 import collections
 import numbers
 
-import numpy
-
 import awkward.array.base
 import awkward.util
 from awkward.array.chunked import ChunkedArray, AppendableArray

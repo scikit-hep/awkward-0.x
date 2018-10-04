@@ -30,15 +30,13 @@
 
 import numbers
 
-import numpy
-
 import awkward.util
 
 def fromarray(array):
-    if isinstance(array, numpy.ndarray):
+    if isinstance(array, awkward.util.numpy.ndarray):
         if array.dtype.names is None:
             out = ArrayType(*(array.shape + (array.dtype,)))
-            if isinstance(array, numpy.ma.MaskedArray):
+            if isinstance(array, awkward.util.numpy.ma.MaskedArray):
                 out = OptionType(out)
             return out
         else:
@@ -47,11 +45,20 @@ def fromarray(array):
             for n in array.dtype.names:
                 table[n] = array.dtype[n]
             out = ArrayType(*(array.shape + (table,)))
-            if isinstance(array, numpy.ma.MaskedArray):
+            if isinstance(array, awkward.util.numpy.ma.MaskedArray):
                 out = OptionType(out)
             return out
     else:
         return array.type
+
+def fromnumpy(shape, dtype, masked=False):
+    if masked:
+        return OptionType(fromnumpy(shape, dtype))
+    elif dtype.subdtype is not None:
+        dt, sh = dtype.subdtype
+        return fromnumpy(shape + sh, dt)
+    else:
+        return ArrayType(*(shape + (dtype,)))
 
 class Type(object):
     def hascolumn(self, name):
@@ -228,10 +235,10 @@ class Type(object):
 
     @staticmethod
     def _finaltype(x):
-        if isinstance(x, type) and issubclass(x, (numbers.Number, numpy.generic)):
-            return numpy.dtype(x)
+        if isinstance(x, type) and issubclass(x, (numbers.Number, awkward.util.numpy.generic)):
+            return awkward.util.numpy.dtype(x)
         elif isinstance(x, (awkward.util.unicode, bytes)):
-            return numpy.dtype(x)
+            return awkward.util.numpy.dtype(x)
         else:
             return x
 
@@ -265,7 +272,7 @@ class ArrayType(Type):
 
     @takes.setter
     def takes(self, value):
-        if value == numpy.inf or (isinstance(value, (numbers.Integral, numpy.integer)) and value >= 0):
+        if value == awkward.util.numpy.inf or (isinstance(value, (numbers.Integral, awkward.util.numpy.integer)) and value >= 0):
             self._takes = value
         else:
             raise ValueError("{0} is not allowed in type specification".format(value))
@@ -283,17 +290,17 @@ class ArrayType(Type):
 
     @property
     def shape(self):
-        if self._takes == numpy.inf:
+        if self._takes == awkward.util.numpy.inf:
             return ()
         else:
             return (self._takes,) + self._to.shape
 
     @property
     def dtype(self):
-        if self._takes == numpy.inf:
-            return numpy.dtype(object)
+        if self._takes == awkward.util.numpy.inf:
+            return awkward.util.numpy.dtype(object)
 
-        elif isinstance(self._to, numpy.dtype):
+        elif isinstance(self._to, awkward.util.numpy.dtype):
             if self._to.subdtype is None:
                 return self._to
             else:
@@ -304,7 +311,7 @@ class ArrayType(Type):
 
     @property
     def jshape(self):
-        if isinstance(self._to, numpy.dtype):
+        if isinstance(self._to, awkward.util.numpy.dtype):
             return (self._takes, self._to)
         else:
             return (self._takes,) + self._to.jshape
@@ -313,9 +320,9 @@ class ArrayType(Type):
         if id(self) in seen:
             return False
         seen.add(id(self))
-        if self._takes == numpy.inf:
+        if self._takes == awkward.util.numpy.inf:
             return False
-        elif isinstance(self._to, numpy.dtype):
+        elif isinstance(self._to, awkward.util.numpy.dtype):
             return True
         else:
             return self._to._isnumpy(seen)
@@ -324,9 +331,9 @@ class ArrayType(Type):
         if id(self) in seen:
             return False
         seen.add(id(self))
-        if isinstance(self._to, numpy.dtype) and self._to.names is None:
+        if isinstance(self._to, awkward.util.numpy.dtype) and self._to.names is None:
             return False
-        elif isinstance(self._to, numpy.dtype):
+        elif isinstance(self._to, awkward.util.numpy.dtype):
             return name in self._to.names
         else:
             return self._to._hascolumn(name, seen)
@@ -376,22 +383,22 @@ class TableType(Type):
         for n, x in self._fields.items():
             if x.shape != ():
                 raise TypeError("Table with non-primitive fields has no Numpy dtype")
-            elif isinstance(x, numpy.dtype):
+            elif isinstance(x, awkward.util.numpy.dtype):
                 out.append((n, x))
             else:
                 out.append((n, x.dtype))
-        return numpy.dtype(out)
+        return awkward.util.numpy.dtype(out)
 
     @property
     def jshape(self):
-        return (dict((n, x if isinstance(x, numpy.dtype) else x.jshape) for n, x in self._fields.items()),)
+        return (dict((n, x if isinstance(x, awkward.util.numpy.dtype) else x.jshape) for n, x in self._fields.items()),)
 
     def _isnumpy(self, seen):
         if id(self) in seen:
             return False
         seen.add(id(self))
         for x in self._fields.values():
-            if isinstance(x, numpy.dtype):
+            if isinstance(x, awkward.util.numpy.dtype):
                 return True
             elif not isinstance(x, OptionType) and x._isnumpy(seen):
                 return x.shape != ()
@@ -539,11 +546,11 @@ class OptionType(Type):
 
     @property
     def shape(self):
-        raise TypeError("Option has no Numpy dtype")
+        return self._type.shape
 
     @property
     def dtype(self):
-        raise TypeError("Option has no Numpy dtype")
+        return self._type.dtype
 
     @property
     def jshape(self):
@@ -553,7 +560,7 @@ class OptionType(Type):
         if id(self) in seen:
             return False
         seen.add(id(self))
-        if isinstance(self._type, numpy.dtype):
+        if isinstance(self._type, awkward.util.numpy.dtype):
             return True
         else:
             return self._type._isnumpy(seen)

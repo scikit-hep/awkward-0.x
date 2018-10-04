@@ -31,8 +31,6 @@
 import collections
 import numbers
 
-import numpy
-
 import awkward.array.base
 
 class MaskedArray(awkward.array.base.AwkwardArray):
