@@ -28,10 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import collections
-import numbers
-import itertools
-
 import awkward.array.base
 import awkward.type
 import awkward.util
@@ -84,7 +80,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         except TypeError:
             raise TypeError("chunks must be iterable")
 
-        self._chunks = [awkward.util.toarray(x, awkward.util.DEFAULTTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)) for x in value]
+        self._chunks = [awkward.util.toarray(x, awkward.util.DEFAULTTYPE) for x in value]
         self._types = [None] * len(self._chunks)
 
     @property
@@ -94,7 +90,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     @counts.setter
     def counts(self, value):
         try:
-            if not all(isinstance(x, (numbers.Integral and awkward.util.numpy.integer)) and x >= 0 for x in value):
+            if not all(isinstance(x, awkward.util.integer) and x >= 0 for x in value):
                 raise ValueError("counts must contain only non-negative integers")
         except TypeError:
             raise TypeError("counts must be iterable")
@@ -137,7 +133,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def global2chunkid(self, index, return_normalized=False):
         self._valid()
 
-        if isinstance(index, (numbers.Integral, awkward.util.numpy.integer)):
+        if isinstance(index, awkward.util.integer):
             original_index = index
             if index < 0:
                 index += len(self)
@@ -182,13 +178,13 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def global2local(self, index):
         chunkid, index = self.global2chunkid(index, return_normalized=True)
 
-        if isinstance(index, (numbers.Integral, awkward.util.numpy.integer)):
+        if isinstance(index, awkward.util.integer):
             return self._chunks[chunkid], index - self.offsets[chunkid]
         else:
             return awkward.util.numpy.array(self._chunks, dtype=awkward.util.numpy.object)[chunkid], index - self.offsets[chunkid]
 
     def local2global(self, index, chunkid):
-        if isinstance(chunkid, (numbers.Integral, awkward.util.numpy.integer)):
+        if isinstance(chunkid, awkward.util.integer):
             self.knowcounts(chunkid + 1)
             self._valid()
             original_index = index
@@ -333,7 +329,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
+        if isinstance(head, awkward.util.integer):
             chunk, localhead = self.global2local(head)
             return chunk[(localhead,) + tail]
 

@@ -29,7 +29,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import functools
-import numbers
 import types
 
 import awkward.array.base
@@ -242,7 +241,7 @@ class Table(awkward.array.base.AwkwardArray):
         if not isinstance(value, dict) or not all(isinstance(n, awkward.util.string) for n in value):
             raise TypeError("content must be a dict from strings to arrays")
         for n in list(value):
-            value[n] = awkward.util.toarray(value[n], awkward.util.DEFAULTTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+            value[n] = awkward.util.toarray(value[n], awkward.util.DEFAULTTYPE)
         self._content = value
 
     def _valid(self):
@@ -323,7 +322,7 @@ class Table(awkward.array.base.AwkwardArray):
             return self._view
 
     def _newslice(self, head):
-        if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
+        if isinstance(head, awkward.util.integer):
             original_head = head
 
             if self._view is None:
@@ -376,7 +375,7 @@ class Table(awkward.array.base.AwkwardArray):
                 return self._view[head]
 
         else:
-            head = awkward.util.toarray(head, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+            head = awkward.util.toarray(head, awkward.util.INDEXTYPE)
             if issubclass(head.dtype.type, awkward.util.numpy.integer):
                 length = self._length()
                 negative = (head < 0)
@@ -458,7 +457,7 @@ class Table(awkward.array.base.AwkwardArray):
 
         newslice = self._newslice(head)
 
-        if isinstance(newslice, (numbers.Integral, awkward.util.numpy.integer)):
+        if isinstance(newslice, awkward.util.integer):
             return self.Row(self, newslice)
 
         else:
@@ -472,13 +471,13 @@ class Table(awkward.array.base.AwkwardArray):
             raise ValueError("new columns can only be attached to the original table, not a view (try table.base['col'] = array)")
 
         if isinstance(where, awkward.util.string):
-            self._content[where] = awkward.util.toarray(what, awkward.util.DEFAULTTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+            self._content[where] = awkward.util.toarray(what, awkward.util.DEFAULTTYPE)
 
         elif awkward.util.isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
-                self._content[x] = awkward.util.toarray(y, awkward.util.DEFAULTTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+                self._content[x] = awkward.util.toarray(y, awkward.util.DEFAULTTYPE)
 
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))

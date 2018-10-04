@@ -30,6 +30,7 @@
 
 import ast
 import itertools
+import numbers
 import re
 import sys
 import types
@@ -74,13 +75,18 @@ import numpy   # all access to Numpy passes through here
 if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVersion("1.13.1"):
     raise ImportError("Numpy 1.13.1 or later required")
 
+integer = (numbers.Integral, numpy.integer)
+
 CHARTYPE = numpy.dtype(numpy.uint8)
 INDEXTYPE = numpy.dtype(numpy.int64)
 MASKTYPE = numpy.dtype(numpy.bool_)
 BITMASKTYPE = numpy.dtype(numpy.uint8)
 DEFAULTTYPE = numpy.dtype(numpy.float64)
 
-def toarray(value, defaultdtype, passthrough):
+def toarray(value, defaultdtype, passthrough=None):
+    import awkward.array.base
+    if passthrough is None:
+        passthrough = (numpy.ndarray, awkward.array.base.AwkwardArray)
     if isinstance(value, passthrough):
         return value
     else:

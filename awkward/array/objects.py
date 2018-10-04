@@ -28,7 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import numbers
 import types
 
 import awkward.array.base
@@ -117,7 +116,7 @@ class ObjectArray(awkward.array.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
 
     @property
     def generator(self):
@@ -191,7 +190,7 @@ class ObjectArray(awkward.array.base.AwkwardArray):
         head, tail = where[0], where[1:]
 
         content = self._content[head]
-        if isinstance(head, (numbers.Integral, awkward.util.numpy.integer)):
+        if isinstance(head, awkward.util.integer):
             if isinstance(tail, tuple) and tail == ():
                 return self.generator(content, *self._args, **self._kwargs)
             else:

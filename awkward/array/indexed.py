@@ -28,8 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import numbers
-
 import awkward.array.base
 import awkward.util
 
@@ -101,7 +99,7 @@ class IndexedArray(awkward.array.base.AwkwardArray):
 
     @index.setter
     def index(self, value):
-        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE)
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("index must have integer dtype")
         if (value < 0).any():
@@ -116,7 +114,7 @@ class IndexedArray(awkward.array.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+        self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
         self._isvalid = False
 
     @property
