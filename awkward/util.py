@@ -101,6 +101,12 @@ def array_str(array):
     else:
         return repr(array)
 
+def isnumpy(dtype):
+    if isinstance(dtype, numpy.dtype):
+        return True
+    else:
+        return dtype.isnumpy
+
 def deepcopy(array):
     if array is None:
         return None

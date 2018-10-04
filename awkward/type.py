@@ -57,6 +57,10 @@ class Type(object):
     def hascolumn(self, name):
         return self._hascolumn(name, set())
 
+    @property
+    def isnumpy(self):
+        return self._isnumpy(set())
+
     def __or__(self, other):
         out = UnionType.__new__(UnionType)
 
@@ -212,9 +216,12 @@ class Type(object):
         return x
 
     def __eq__(self, other):
-        one = Type._canonical(Type._copy(self, {}), set())
-        two = Type._canonical(Type._copy(other, {}), set())
-        return one._eq(two, set())
+        if not isinstance(other, Type):
+            return False
+        else:
+            one = Type._canonical(Type._copy(self, {}), set())
+            two = Type._canonical(Type._copy(other, {}), set())
+            return one._eq(two, set())
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -302,6 +309,17 @@ class ArrayType(Type):
         else:
             return (self._takes,) + self._to.jshape
 
+    def _isnumpy(self, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        if self._takes == numpy.inf:
+            return False
+        elif isinstance(self._to, numpy.dtype):
+            return True
+        else:
+            return self._to._isnumpy(seen)
+
     def _hascolumn(self, name, seen):
         if id(self) in seen:
             return False
@@ -367,6 +385,18 @@ class TableType(Type):
     @property
     def jshape(self):
         return (dict((n, x if isinstance(x, numpy.dtype) else x.jshape) for n, x in self._fields.items()),)
+
+    def _isnumpy(self, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        for x in self._fields.values():
+            if isinstance(x, numpy.dtype):
+                return True
+            elif not isinstance(x, OptionType) and x._isnumpy(seen):
+                return x.shape != ()
+            else:
+                return False
 
     def _hascolumn(self, name, seen):
         if id(self) in seen:
@@ -435,6 +465,9 @@ class UnionType(Type):
     @property
     def jshape(self):
         return ([x.jshape for x in self._possibilities],)
+
+    def _isnumpy(self, seen):
+        return False
 
     def _hascolumn(self, name, seen):
         if id(self) in seen:
@@ -515,6 +548,15 @@ class OptionType(Type):
     @property
     def jshape(self):
         return ([self._type.jshape, None],)
+
+    def _isnumpy(self, seen):
+        if id(self) in seen:
+            return False
+        seen.add(id(self))
+        if isinstance(self._type, numpy.dtype):
+            return True
+        else:
+            return self._type._isnumpy(seen)
 
     def _hascolumn(self, name, seen):
         if id(self) in seen:
