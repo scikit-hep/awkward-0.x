@@ -593,7 +593,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 class AppendableArray(ChunkedArray):
     pass
 
-# class AppendableArray(PartitionedArray):
+# class AppendableArray(ChunkedArray):
 #     @classmethod
 #     def empty(cls, generator):
 #         return AppendableArray([0], [], generator)

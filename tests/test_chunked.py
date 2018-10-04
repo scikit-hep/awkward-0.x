@@ -159,24 +159,6 @@ class Test(unittest.TestCase):
         self.assertEqual(a[[True, False, True, False, True, False, True, False, True, False], 0].tolist(), [0.0, 2.0, 4.0, 6.0, 8.0])
         self.assertEqual(a[[True, False, True, False, True, False, True, False, True, False], 1].tolist(), [0.0, 2.2, 4.4, 6.6, 8.8])
 
-#     def test_partitioned(self):
-#         a = PartitionedArray([0, 3, 3, 5], [[0, 1, 2], [], [3, 4]])
-#         self.assertEqual(a.tolist(), [0, 1, 2, 3, 4])
-
-#         a = ChunkedArray([[0, 1, 2], [], [3, 4]]).topartitioned()
-#         self.assertEqual(a.tolist(), [0, 1, 2, 3, 4])
-#         self.assertEqual(a.offsets.tolist(), [0, 3, 3, 5])
-
-#     def test_partitioned_get(self):
-#         a = ChunkedArray([[], [0, 1, 2, 3, 4], [5, 6], [], [7, 8, 9], []]).topartitioned()
-#         self.assertEqual([a[-i] for i in range(1, 11)], [9, 8, 7, 6, 5, 4, 3, 2, 1, 0])
-#         self.assertEqual([a[-i : -i - 1 : -1].tolist() for i in range(1, 11)], [[9], [8], [7], [6], [5], [4], [3], [2], [1], [0]])
-#         self.assertEqual([a[-i : -i - 2 : -1].tolist() for i in range(1, 10)], [[9, 8], [8, 7], [7, 6], [6, 5], [5, 4], [4, 3], [3, 2], [2, 1], [1, 0]])
-#         self.assertEqual([a[-i : -i + 1].tolist() for i in range(2, 11)], [[8], [7], [6], [5], [4], [3], [2], [1], [0]])
-#         self.assertEqual([a[-i : -i + 2].tolist() for i in range(3, 11)], [[7, 8], [6, 7], [5, 6], [4, 5], [3, 4], [2, 3], [1, 2], [0, 1]])
-#         self.assertEqual(a[[-2, -4, 7, 5, 3, -6, 5]].tolist(), [8, 6, 7, 5, 3, 4, 5])
-#         self.assertEqual(a[[-2, -4, 7, 5, 3, -6, -5]].tolist(), [8, 6, 7, 5, 3, 4, 5])
-
 #     def test_appendable_append(self):
 #         a = AppendableArray.empty(lambda: numpy.empty(3, numpy.float64))
 #         self.assertEqual(a.tolist(), [])
