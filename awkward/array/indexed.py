@@ -40,7 +40,7 @@ def invert(permutation):
         raise ValueError("cannot invert index; it contains duplicates")
     return out
 
-class IndexedArray(awkward.array.base.AwkwardArray):
+class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     def __init__(self, index, content):
         self.index = index
         self.content = content
@@ -67,31 +67,22 @@ class IndexedArray(awkward.array.base.AwkwardArray):
         return out
 
     def empty_like(self, **overrides):
-        mine = {}
-        mine["index"] = overrides.pop("index", self._index)
-        mine["content"] = overrides.pop("content", self._content)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.empty_like(self._content), **mine)
+            return self.copy(content=awkward.util.numpy.empty_like(self._content))
         else:
-            return self.copy(content=self._content.empty_like(**overrides), **mine)
+            return self.copy(content=self._content.empty_like(**overrides))
 
     def zeros_like(self, **overrides):
-        mine = {}
-        mine["index"] = overrides.pop("index", self._index)
-        mine["content"] = overrides.pop("content", self._content)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.zeros_like(self._content), **mine)
+            return self.copy(content=awkward.util.numpy.zeros_like(self._content))
         else:
-            return self.copy(content=self._content.zeros_like(**overrides), **mine)
+            return self.copy(content=self._content.zeros_like(**overrides))
 
     def ones_like(self, **overrides):
-        mine = {}
-        mine["index"] = overrides.pop("index", self._index)
-        mine["content"] = overrides.pop("content", self._content)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
+            return self.copy(content=awkward.util.numpy.ones_like(self._content))
         else:
-            return self.copy(content=self._content.ones_like(**overrides), **mine)
+            return self.copy(content=self._content.ones_like(**overrides))
 
     @property
     def index(self):
@@ -142,12 +133,6 @@ class IndexedArray(awkward.array.base.AwkwardArray):
                 raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
             self._isvalid = True
 
-    def _argfields(self, function):
-        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
-            return awkward.util._argfields(function)
-        else:
-            return self._content._argfields(function)
-
     def __iter__(self):
         self._valid()
         for i in self._index:
@@ -157,7 +142,7 @@ class IndexedArray(awkward.array.base.AwkwardArray):
         self._valid()
 
         if awkward.util.isstringslice(where):
-            out = self.copy(self._index, self._content[where])
+            out = self.copy(content=self._content[where])
             out._isvalid = True
             return out
 
@@ -167,11 +152,11 @@ class IndexedArray(awkward.array.base.AwkwardArray):
             where = (where,)
         head, tail = where[:len(self._index.shape)], where[len(self._index.shape):]
 
-        where = self._index[where]
-        if len(where.shape) != 0 and len(where) == 0:
+        head = self._index[head]
+        if len(head.shape) != 0 and len(head) == 0:
             return awkward.util.numpy.empty(0, dtype=self._content.dtype)[tail]
         else:
-            return self._content[(where,) + tail]
+            return self._content[(head,) + tail]
 
     def _invert(self, what):
         if what.shape != self._index.shape:
@@ -211,18 +196,6 @@ class IndexedArray(awkward.array.base.AwkwardArray):
     @classmethod
     def concat(cls, first, *rest):
         raise NotImplementedError
-
-    @property
-    def columns(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            raise TypeError("array has no Table, and hence no columns")
-        return self._content.columns
-
-    @property
-    def allcolumns(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            raise TypeError("array has no Table, and hence no columns")
-        return self._content.allcolumns
 
     def pandas(self):
         import pandas
@@ -365,14 +338,6 @@ class ByteIndexedArray(IndexedArray):
     def concat(cls, first, *rest):
         raise NotImplementedError
 
-    @property
-    def columns(self):
-        raise NotImplementedError
-
-    @property
-    def allcolumns(self):
-        raise NotImplementedError
-
     def pandas(self):
         raise NotImplementedError
 
@@ -425,9 +390,6 @@ class IndexedMaskedArray(IndexedArray):
     def _valid(self):
         raise NotImplementedError
 
-    def _argfields(self, function):
-        raise NotImplementedError
-
     def __iter__(self):
         raise NotImplementedError
 
@@ -442,14 +404,6 @@ class IndexedMaskedArray(IndexedArray):
 
     @classmethod
     def concat(cls, first, *rest):
-        raise NotImplementedError
-
-    @property
-    def columns(self):
-        raise NotImplementedError
-
-    @property
-    def allcolumns(self):
         raise NotImplementedError
 
     def pandas(self):

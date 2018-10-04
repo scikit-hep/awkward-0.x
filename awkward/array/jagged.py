@@ -30,7 +30,6 @@
 
 import math
 import numbers
-import types
 
 import awkward.array.base
 import awkward.type
@@ -101,7 +100,7 @@ def uniques2offsetsparents(uniques):
 
     return offsets, parents
 
-class JaggedArray(awkward.array.base.AwkwardArray):
+class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def __init__(self, starts, stops, content):
         self.starts = starts
         self.stops = stops
@@ -189,31 +188,22 @@ class JaggedArray(awkward.array.base.AwkwardArray):
         return out
 
     def empty_like(self, **overrides):
-        mine = {}
-        mine["starts"] = overrides.pop("starts", self._starts)
-        mine["stops"] = overrides.pop("stops", self._stops)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.empty_like(self._content), **mine)
+            return self.copy(content=awkward.util.numpy.empty_like(self._content))
         else:
-            return self.copy(content=self._content.empty_like(**overrides), **mine)
+            return self.copy(content=self._content.empty_like(**overrides))
 
     def zeros_like(self, **overrides):
-        mine = {}
-        mine["starts"] = overrides.pop("starts", self._starts)
-        mine["stops"] = overrides.pop("stops", self._stops)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.zeros_like(self._content), **mine)
+            return self.copy(content=awkward.util.numpy.zeros_like(self._content))
         else:
-            return self.copy(content=self._content.zeros_like(**overrides), **mine)
+            return self.copy(content=self._content.zeros_like(**overrides))
 
     def ones_like(self, **overrides):
-        mine = {}
-        mine["starts"] = overrides.pop("starts", self._starts)
-        mine["stops"] = overrides.pop("stops", self._stops)
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
+            return self.copy(content=awkward.util.numpy.ones_like(self._content))
         else:
-            return self.copy(content=self._content.ones_like(**overrides), **mine)
+            return self.copy(content=self._content.ones_like(**overrides))
 
     @property
     def starts(self):
@@ -357,12 +347,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
                 raise ValueError("maximum stop ({0}) is beyond the length of the content ({1})".format(self._stops.reshape(-1).max(), len(self._content)))
 
             self._isvalid = True
-
-    def _argfields(self, function):
-        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
-            return awkward.util._argfields(function)
-        else:
-            return self._content._argfields(function)
 
     @staticmethod
     def _validstartsstops(starts, stops):
@@ -1070,18 +1054,6 @@ class JaggedArray(awkward.array.base.AwkwardArray):
 
         newtable = awkward.array.table.Table(awkward.util.OrderedDict(zip(table._content, [x._content for x in inputs])))
         return cls(first._starts, first._stops, newtable)
-
-    @property
-    def columns(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            raise TypeError("array has no Table, and hence no columns")
-        return self._content.columns
-
-    @property
-    def allcolumns(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            raise TypeError("array has no Table, and hence no columns")
-        return self._content.allcolumns
 
     def pandas(self):
         import pandas

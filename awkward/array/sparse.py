@@ -30,7 +30,7 @@
 
 import awkward.array.base
 
-class SparseArray(awkward.array.base.AwkwardArray):
+class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     def __init__(self, index, content, shape, default=0):
         raise NotImplementedError
 
@@ -79,9 +79,6 @@ class SparseArray(awkward.array.base.AwkwardArray):
     def _valid(self):
         raise NotImplementedError
 
-    def _argfields(self, function):
-        raise NotImplementedError
-
     def __iter__(self):
         raise NotImplementedError
 
@@ -102,14 +99,6 @@ class SparseArray(awkward.array.base.AwkwardArray):
 
     @classmethod
     def concat(cls, first, *rest):
-        raise NotImplementedError
-
-    @property
-    def columns(self):
-        raise NotImplementedError
-
-    @property
-    def allcolumns(self):
         raise NotImplementedError
 
     def pandas(self):

@@ -28,8 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import types
-
 import awkward.array.base
 import awkward.util
 
@@ -52,7 +50,7 @@ class Methods(object):
         else:
             return awkwardtype
 
-class ObjectArray(awkward.array.base.AwkwardArray):
+class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def __init__(self, content, generator, *args, **kwargs):
         self.content = content
         self.generator = generator
@@ -169,12 +167,6 @@ class ObjectArray(awkward.array.base.AwkwardArray):
     def base(self):
         return self._content.base
 
-    def _argfields(self, function):
-        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
-            return awkward.util._argfields(function)
-        else:
-            return self._content._argfields(function)
-
     def __iter__(self):
         for x in self._content:
             yield self.generator(x, *self._args, **self._kwargs)
@@ -241,18 +233,6 @@ class ObjectArray(awkward.array.base.AwkwardArray):
     @classmethod
     def concat(cls, first, *rest):
         raise NotImplementedError
-
-    @property
-    def columns(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            raise TypeError("array has no Table, and hence no columns")
-        return self._content.columns
-
-    @property
-    def allcolumns(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            raise TypeError("array has no Table, and hence no columns")
-        return self._content.allcolumns
 
     def pandas(self):
         raise NotImplementedError

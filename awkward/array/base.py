@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import types
+
 import awkward.util
 
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
@@ -123,3 +125,22 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             args = tuple(self[n] for n in args)
             kwargs = dict((n, self[n]) for n in kwargs)
             return self[function(*args, **kwargs).argmin()]
+
+class AwkwardArrayWithContent(AwkwardArray):
+    def _argfields(self, function):
+        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
+            return awkward.util._argfields(function)
+        else:
+            return self._content._argfields(function)
+
+    @property
+    def columns(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            raise TypeError("array has no Table, and hence no columns")
+        return self._content.columns
+
+    @property
+    def allcolumns(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            raise TypeError("array has no Table, and hence no columns")
+        return self._content.allcolumns

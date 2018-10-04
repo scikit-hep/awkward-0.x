@@ -32,25 +32,92 @@ import collections
 import numbers
 
 import awkward.array.base
+import awkward.util
 
-class MaskedArray(awkward.array.base.AwkwardArray):
+class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
+    ### WTF were the designers of numpy.ma thinking?
+    # @staticmethod
+    # def is_masked(x):
+    #     return awkward.util.numpy.ma.is_masked(x)
+    # masked = awkward.util.numpy.ma.masked
+
+    @staticmethod
+    def is_masked(x):
+        if isinstance(x, MaskedArray):
+            # numpy.ma.is_masked(array) if any element is masked
+            if x.maskedwhen:
+                return x.mask.any()
+            else:
+                return not x.mask.all()
+        else:
+            # numpy.ma.is_masked(x) if x represents a masked constant
+            return x is MaskedArray.masked
+    masked = None
+
     def __init__(self, mask, content, maskedwhen=True):
-        raise NotImplementedError
+        self.mask = mask
+        self.content = content
+        self.maskedwhen = maskedwhen
 
-    def copy(self, index=None, content=None):
-        raise NotImplementedError
+    def copy(self, mask=None, content=None, maskedwhen=None):
+        out = self.__class__.__new__(self.__class__)
+        out._mask = self._mask
+        out._content = self._content
+        out._maskedwhen = self._maskedwhen
+        if mask is not None:
+            out._mask = mask
+        if content is not None:
+            out._content = content
+        if maskedwhen is not None:
+            out._maskedwhen = maskedwhen
+        return out
 
-    def deepcopy(self, index=None, content=None):
-        raise NotImplementedError
+    def deepcopy(self, mask=None, content=None):
+        out = self.copy(mask=mask, content=content)
+        out._mask = awkward.util.deepcopy(out._mask)
+        out._content = awkward.util.deepcopy(out._content)
+        return out
 
     def empty_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        mine["maskedwhen"] = overrides.pop("maskedwhen", self._maskedwhen)
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.empty_like(self._content), **mine)
+        else:
+            return self.copy(content=self._content.empty_like(**overrides), **mine)
 
     def zeros_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        mine["maskedwhen"] = overrides.pop("maskedwhen", self._maskedwhen)
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.zeros_like(self._content), **mine)
+        else:
+            return self.copy(content=self._content.zeros_like(**overrides), **mine)
 
     def ones_like(self, **overrides):
-        raise NotImplementedError
+        mine = {}
+        mine["maskedwhen"] = overrides.pop("maskedwhen", self._maskedwhen)
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
+        else:
+            return self.copy(content=self._content.ones_like(**overrides), **mine)
+
+    @property
+    def mask(self):
+        return self._mask
+
+    @mask.setter
+    def mask(self, value):
+        value = awkward.util.toarray(value, awkward.util.MASKTYPE)
+        if len(value.shape) != 1:
+            raise TypeError("mask must have 1-dimensional shape")
+        if not issubclass(value.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+            value = (value != 0)
+        self._mask = value
+
+    @property
+    def boolmask(self):
+        return self._mask
 
     @property
     def content(self):
@@ -58,38 +125,73 @@ class MaskedArray(awkward.array.base.AwkwardArray):
 
     @content.setter
     def content(self, value):
-        raise NotImplementedError
+        self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
 
     @property
-    def type(self):
-        raise NotImplementedError
+    def maskedwhen(self):
+        return self._maskedwhen
 
-    def __len__(self):
-        raise NotImplementedError
-
-    @property
-    def shape(self):
-        raise NotImplementedError
+    @maskedwhen.setter
+    def maskedwhen(self, value):
+        self._maskedwhen = bool(value)
 
     @property
     def dtype(self):
-        raise NotImplementedError
+        return self._content.dtype
+
+    def __len__(self):
+        return len(self._content)
+
+    @property
+    def shape(self):
+        return self._content.shape
+
+    @property
+    def type(self):
+        return self._content.type
 
     @property
     def base(self):
-        raise NotImplementedError
+        return self._content.base
 
     def _valid(self):
-        raise NotImplementedError
-
-    def _argfields(self, function):
-        raise NotImplementedError
+        if len(self._mask) != len(self._content):
+            raise ValueError("mask length ({0}) is not equal to content length ({1})".format(len(self._mask), len(self._content)))
 
     def __iter__(self):
-        raise NotImplementedError
+        self._valid()
+        for i, x in enumerate(self._content):
+            if self._mask[i] == self._maskedwhen:
+                yield self.masked
+            else:
+                yield x
 
     def __getitem__(self, where):
-        raise NotImplementedError
+        self._valid()
+
+        if awkward.util.isstringslice(where):
+            return self.copy(content=self._content[where])
+
+        if isinstance(where, tuple) and len(where) == 0:
+            return self
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
+        if isinstance(head, awkward.util.integer):
+            if self._mask[head] == self._maskedwhen:
+                if tail != ():
+                    raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
+                return self.masked
+            else:
+                return self._content[(head,) + tail]
+
+        else:
+            mask = self._mask[head]
+            if tail != () and ((self.maskedwhen and mask.any()) or (not self.maskedwhen and not self.mask.all())):
+                raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
+            else:
+                return self.copy(mask=mask, content=self._content[(head,) + tail])
 
     def __setitem__(self, where, what):
         raise NotImplementedError
@@ -105,14 +207,6 @@ class MaskedArray(awkward.array.base.AwkwardArray):
 
     @classmethod
     def concat(cls, first, *rest):
-        raise NotImplementedError
-
-    @property
-    def columns(self):
-        raise NotImplementedError
-
-    @property
-    def allcolumns(self):
         raise NotImplementedError
 
     def pandas(self):
@@ -241,9 +335,6 @@ class BitMaskedArray(MaskedArray):
     def _valid(self):
         raise NotImplementedError
 
-    def _argfields(self, function):
-        raise NotImplementedError
-
     def __iter__(self):
         raise NotImplementedError
 
@@ -264,14 +355,6 @@ class BitMaskedArray(MaskedArray):
 
     @classmethod
     def concat(cls, first, *rest):
-        raise NotImplementedError
-
-    @property
-    def columns(self):
-        raise NotImplementedError
-
-    @property
-    def allcolumns(self):
         raise NotImplementedError
 
     def pandas(self):
