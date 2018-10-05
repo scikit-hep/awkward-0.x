@@ -165,6 +165,19 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             self._inverse = invert(self._index)
         return IndexedArray(self._inverse, what)
 
+    def __setitem__(self, where, what):
+        if isinstance(where, awkward.util.string):
+            self._content[where] = self._invert(what)
+
+        elif awkward.util.isstringslice(where):
+            if len(where) != len(what):
+                raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
+            for x, y in zip(where, what):
+                self._content[x] = self._invert(y)
+
+        else:
+            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         if method != "__call__":
             return NotImplemented

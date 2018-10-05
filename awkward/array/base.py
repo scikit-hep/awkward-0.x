@@ -55,11 +55,11 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         except AttributeError:
             return x
 
-    def __getattr__(self, where):
-        if awkward.util.is_intstring(where):
-            return self[where[1:]]
-        else:
-            raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
+    # def __getattr__(self, where):
+    #     if awkward.util.is_intstring(where):
+    #         return self[where[1:]]
+    #     else:
+    #         raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
 
     def __bool__(self):
         raise ValueError("The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()")
@@ -142,13 +142,13 @@ class AwkwardArrayWithContent(AwkwardArray):
 
     def __setitem__(self, where, what):
         if isinstance(where, awkward.util.string):
-            self._content[where] = self._invert(what)
+            self._content[where] = what
 
         elif awkward.util.isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
-                self._content[x] = self._invert(y)
+                self._content[x] = y
 
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
