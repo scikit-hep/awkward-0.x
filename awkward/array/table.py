@@ -244,9 +244,6 @@ class Table(awkward.array.base.AwkwardArray):
             value[n] = awkward.util.toarray(value[n], awkward.util.DEFAULTTYPE)
         self._content = value
 
-    def _valid(self):
-        return True
-
     def _argfields(self, function):
         if not isinstance(function, types.FunctionType):
             raise TypeError("function (or lambda) required")
@@ -501,6 +498,8 @@ class Table(awkward.array.base.AwkwardArray):
         inputsdict = None
         for x in inputs:
             if isinstance(x, Table):
+                x._valid()
+
                 if inputsdict is None:
                     inputsdict = awkward.util.OrderedDict([(n, []) for n in x._content])
                     table = x

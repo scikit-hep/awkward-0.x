@@ -260,8 +260,8 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         for i in range(len(self._types)):
             if self._types[i] is None or self._types[i] is () or self._types[i] is tpe.to:
                 pass
-            elif self._types[i] == tpe.to:
-                self._types[i] = tpe.to
+            elif self._types[i] == tpe.to:    # valid if all chunks have the same high-level type
+                self._types[i] = tpe.to       # once checked, make them identically equal for faster checking next time
             else:
                 raise TypeError("chunks do not have matching types:\n\n{0}\n\nversus\n\n{1}".format(tpe.to.__str__(indent="    "), self._types[i].__str__(indent="    ")))
 
@@ -513,7 +513,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         import awkward.array.objects
-        self._valid()
 
         if method != "__call__":
             return NotImplemented
@@ -522,6 +521,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         rest = []
         for x in inputs:
             if isinstance(x, ChunkedArray):
+                x._valid()
                 if first is None:
                     first = x
                 else:

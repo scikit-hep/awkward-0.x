@@ -195,14 +195,13 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
             return [x[tail] for x in content]
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        self._valid()
-        
         if method != "__call__":
             return NotImplemented
 
         contents = []
         for x in inputs:
             if isinstance(x, ObjectArray):
+                x._valid()
                 contents.append(x._content)
             else:
                 contents.append(x)

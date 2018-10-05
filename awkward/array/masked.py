@@ -142,11 +142,11 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         return self._content.dtype
 
     def __len__(self):
-        return len(self._content)
+        return len(self._mask)
 
     @property
     def shape(self):
-        return self._content.shape
+        return (len(self._mask),) + self._content.shape[1:]
 
     @property
     def type(self):
@@ -157,18 +157,25 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         return self._content.base
 
     def _valid(self):
-        if len(self._mask) != len(self._content):
-            raise ValueError("mask length ({0}) is not equal to content length ({1})".format(len(self._mask), len(self._content)))
+        if len(self._mask) > len(self._content):
+            raise ValueError("mask length ({0}) must be the same as (or shorter than) the content length ({1})".format(len(self._mask), len(self._content)))
 
     def __iter__(self):
         self._valid()
-        byte = 0
-        for x in self._content:
-            if self._mask[byte] == self._maskedwhen:
-                yield self.masked
+
+        mask = self._mask
+        lenmask = len(mask)
+        content = self._content
+        maskedwhen = self._maskedwhen
+        masked = self.masked
+
+        i = 0
+        while i < lenmask:
+            if mask[i] == maskedwhen:
+                yield masked
             else:
-                yield x
-            byte += 1
+                yield content[i]
+            i += 1
 
     def __getitem__(self, where):
         self._valid()
@@ -188,18 +195,17 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
                     raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
                 return self.masked
             else:
-                return self._content[(head,) + tail]
+                return self._content[:len(self._mask)][(head,) + tail]
 
         else:
             mask = self._mask[head]
             if tail != () and ((self._maskedwhen and mask.any()) or (not self._maskedwhen and not mask.all())):
                 raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
             else:
-                return self.copy(mask=mask, content=self._content[(head,) + tail])
+                return self.copy(mask=mask, content=self._content[:len(self._mask)][(head,) + tail])
         
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         import awkward.array.objects
-        self._valid()
 
         if method != "__call__":
             return NotImplemented
@@ -208,6 +214,8 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         allmask = None
         for i in range(len(inputs)):
             if isinstance(inputs[i], MaskedArray):
+                inputs[i]._valid()
+
                 mask = inputs[i].boolmask
                 if not inputs[i]._maskedwhen:
                     mask = awkward.util.numpy.logical_not(mask)
@@ -215,9 +223,9 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
                 if allmask is None:
                     allmask = mask
                 else:
-                    allmask |= mask
+                    allmask = allmask | mask
 
-                inputs[i] = inputs[i]._content
+                inputs[i] = inputs[i]._content[:len(inputs[i])]
 
         result = getattr(ufunc, method)(*inputs, **kwargs)
 
@@ -269,10 +277,17 @@ class BitMaskedArray(MaskedArray):
 
     @mask.setter
     def mask(self, value):
-        value = awkward.util.toarray(value, awkward.util.CHARTYPE, awkward.util.numpy.ndarray)
+        value = awkward.util.toarray(value, awkward.util.BITMASKTYPE, awkward.util.numpy.ndarray)
         if len(value.shape) != 1:
             raise TypeError("mask must have 1-dimensional shape")
-        self._mask = value.view(awkward.util.CHARTYPE)
+        self._mask = value.view(awkward.util.BITMASKTYPE)
+
+    def __len__(self):
+        return len(self._content)
+
+    @property
+    def shape(self):
+        return self._content.shape
 
     @staticmethod
     def _ceildiv8(x):
@@ -329,38 +344,46 @@ class BitMaskedArray(MaskedArray):
 
     def _valid(self):
         if len(self._mask) != self._ceildiv8(len(self._content)):
-            raise ValueError("mask length ({0}) is not equal to ceil(content length / 8) ({1})".format(len(self._mask), self._ceildiv8(len(self._content))))
-            
+            raise ValueError("mask length ({0}) must be equal to ceil(content length / 8) ({1})".format(len(self._mask), self._ceildiv8(len(self._content))))
+
     def __iter__(self):
         self._valid()
+
         one = awkward.util.numpy.uint8(1)
         zero = awkward.util.numpy.uint8(0)
+        mask = self._mask
+        content = self._content
+        lencontent = len(content)
+        maskedwhen = self._maskedwhen
+        masked = self.masked
 
         if self._lsborder:
-            byte = 0
+            byte = i = 0
             bit = start = awkward.util.numpy.uint8(1)
-            for x in self._content:
-                if ((self._mask[byte] & bit) != 0) == self._maskedwhen:
-                    yield self.masked
+            while i < lencontent:
+                if ((mask[byte] & bit) != 0) == self._maskedwhen:
+                    yield masked
                 else:
-                    yield x
+                    yield content[i]
                 bit <<= one
                 if bit == zero:
                     bit = start
                     byte += 1
+                i += 1
 
         else:
-            byte = 0
+            byte = i = 0
             bit = start = awkward.util.numpy.uint8(128)
-            for x in self._content:
-                if ((self._mask[byte] & bit) != 0) == self._maskedwhen:
-                    yield self.masked
+            while i < lencontent:
+                if ((mask[byte] & bit) != 0) == self._maskedwhen:
+                    yield masked
                 else:
-                    yield x
+                    yield content[i]
                 bit >>= one
                 if bit == zero:
                     bit = start
                     byte += 1
+                i += 1
 
     def _maskat(self, where):
         bytepos = awkward.util.numpy.right_shift(where, 3)    # where // 8
@@ -433,7 +456,7 @@ class BitMaskedArray(MaskedArray):
             if tail != () and ((self._maskedwhen and mask.any()) or (not self._maskedwhen and not mask.all())):
                 raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
             else:
-                return self.copy(mask=self.bool2bit(mask, lsborder=False), content=self._content[(head,) + tail], lsborder=False)
+                return self.copy(mask=self.bool2bit(mask, lsborder=self._lsborder), content=self._content[(head,) + tail], lsborder=self._lsborder)
 
     def any(self):
         raise NotImplementedError
@@ -449,23 +472,21 @@ class BitMaskedArray(MaskedArray):
         raise NotImplementedError
 
 class IndexedMaskedArray(MaskedArray):
-    def __init__(self, index, content, maskedwhen=-1):
-        raise NotImplementedError
+    def __init__(self, mask, content, maskedwhen=-1):
+        super(IndexedMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
 
-    def copy(self, index=None, content=None):
-        raise NotImplementedError
+    @property
+    def mask(self):
+        return self._mask
 
-    def deepcopy(self, index=None, content=None):
-        raise NotImplementedError
+    @mask.setter
+    def mask(self, value):
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
+        if len(value.shape) != 1:
+            raise TypeError("mask must have 1-dimensional shape")
+        
 
-    def empty_like(self, **overrides):
-        raise NotImplementedError
 
-    def zeros_like(self, **overrides):
-        raise NotImplementedError
-
-    def ones_like(self, **overrides):
-        raise NotImplementedError
 
     @property
     def content(self):

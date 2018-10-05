@@ -90,7 +90,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @index.setter
     def index(self, value):
-        value = awkward.util.toarray(value, awkward.util.INDEXTYPE)
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("index must have integer dtype")
         if (value < 0).any():
@@ -166,14 +166,13 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         return IndexedArray(self._inverse, what)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        self._valid()
-
         if method != "__call__":
             return NotImplemented
 
         inputs = list(inputs)
         for i in range(len(inputs)):
             if isinstance(inputs[i], IndexedArray):
+                inputs[i]._valid()
                 inputs[i] = inputs[i][:]
 
         return getattr(ufunc, method)(*inputs, **kwargs)
@@ -270,6 +269,7 @@ class ByteIndexedArray(IndexedArray):
         if not self._isvalid:
             if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
                 raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
+            self._isvalid = True
 
     def __iter__(self):
         self._valid()
