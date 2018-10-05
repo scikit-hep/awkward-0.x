@@ -70,6 +70,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def jshape(self):
         return self.type.jshape
 
+    @property
+    def size(self):
+        return len(self)
+
     def tolist(self):
         import awkward.array.table
         out = []
