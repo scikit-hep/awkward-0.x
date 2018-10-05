@@ -298,7 +298,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         for i, chunk in enumerate(self._chunks):
             if i >= len(self._counts):
                 self._counts.append(len(chunk))
-            for x in chunk:
+            for x in chunk[:self._counts[i]]:
                 yield x
 
     def __array__(self, *args, **kwargs):
@@ -618,15 +618,19 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
 class AppendableArray(ChunkedArray):
     def __init__(self, chunkshape, dtype, chunks=[]):
-        super(AppendableArray, self).__init__(chunks)
-        self.knowcounts()
         self.chunkshape = chunkshape
         self.dtype = dtype
+        self.chunks = chunks
 
     def copy(self, chunkshape=None, dtype=None, chunks=None):
-        out = super(AppendableArray, self).copy(chunks=chunks)
+        out = self.__class__.__new__(self.__class__)
         out._chunkshape = chunkshape
         out._dtype = dtype
+        out._chunks = list(self._chunks)
+        out._counts = list(self._counts)
+        out._types = list(self._types)
+        if chunks is not None:
+            out.chunks = chunks
         return out
 
     def _mine(self, overrides):
@@ -653,14 +657,6 @@ class AppendableArray(ChunkedArray):
                 self._chunkshape = tuple(value)
 
     @property
-    def type(self):
-        return awkward.type.ArrayType(*(self.shape + (self._dtype,)))
-
-    @property
-    def shape(self):
-        return (len(self),) + self._chunkshape[1:]
-
-    @property
     def dtype(self):
         return self._dtype
 
@@ -668,12 +664,55 @@ class AppendableArray(ChunkedArray):
     def dtype(self, value):
         self._dtype = awkward.util.numpy.dtype(value)
 
+    @property
+    def chunks(self):
+        return self._chunks
+
+    @chunks.setter
+    def chunks(self, value):
+        try:
+            iter(value)
+        except TypeError:
+            raise TypeError("chunks must be iterable")
+        chunks = [awkward.util.toarray(x, awkward.util.DEFAULTTYPE, awkward.util.numpy.ndarray) for x in value]
+        for chunk in chunks:
+            if chunk.dtype != self._dtype:
+                raise ValueError("cannot assign chunk with dtype ({0}) to an AppendableArray with dtype ({1})".format(chunk.dtype, self._dtype))
+            if chunk.shape[1:] != self._chunkshape[1:]:
+                raise ValueError("cannot assign chunk with dimensionality ({0}) to an AppendableArray with dimensionality ({1}), where dimensionality is shape[1:]".format(chunk.shape[1:], self._chunkshape[1:]))
+        self._chunks = chunks
+        self._counts = [len(x) for x in self._chunks]
+        self._types = [None] * len(self._chunks)
+
+    @property
+    def counts(self):
+        return self._counts
+
+    @counts.setter
+    def counts(self, value):
+        raise AttributeError("cannot assign to counts in AppendableArray")
+
+    def knowcounts(self, until=None):
+        pass
+
+    @property
+    def offsets(self):
+        import awkward.array.jagged
+        return awkward.array.jagged.counts2offsets(self._counts)
+
+    @property
+    def type(self):
+        return awkward.type.ArrayType(*(self.shape + (self._dtype,)))
+
+    @property
+    def shape(self):
+        return (len(self),) + self._chunkshape[1:]
+
+    def _valid(self):
+        pass
+
     def _argfields(self, function):
         return awkward.util._argfields(function)
-
-    def __str__(self):
-        self.knowcounts()
-        return super(AppendableArray, self).__str__()
 
     def __setitem__(self, where, what):
         raise TypeError("array has no Table, cannot assign columns")
@@ -682,68 +721,22 @@ class AppendableArray(ChunkedArray):
         raise TypeError("array has no Table, cannot remove columns")
 
     def append(self, value):
-        HERE
+        if len(self._chunks) == 0 or self._counts[-1] == len(self._chunks[-1]):
+            self._types.append(None)
+            self._counts.append(0)
+            self._chunks.append(awkward.util.numpy.empty(self._chunkshape, dtype=self._dtype))
 
+        self._chunks[-1][self._counts[-1]] = value
+        self._counts[-1] += 1
 
+    def extend(self, values):
+        while len(values) > 0:
+            if len(self._chunks) == 0 or self._counts[-1] == len(self._chunks[-1]):
+                self._types.append(None)
+                self._counts.append(0)
+                self._chunks.append(awkward.util.numpy.empty(self._chunkshape, dtype=self._dtype))
 
-
-
-        
-# class AppendableArray(ChunkedArray):
-#     @classmethod
-#     def empty(cls, generator):
-#         return AppendableArray([0], [], generator)
-
-#     def __init__(self, offsets, chunks, generator):
-#         super(AppendableArray, self).__init__(offsets, chunks)
-#         self.generator = generator
-
-#     @property
-#     def offsets(self):
-#         return self._offsets
-
-#     @offsets.setter
-#     def offsets(self, value):
-#         self._offsets = list(value)
-
-#     @property
-#     def generator(self):
-#         return self._generator
-
-#     @generator.setter
-#     def generator(self, value):
-#         if not callable(value):
-#             raise TypeError("generator must be a callable (of zero arguments)")
-#         self._generator = value
-
-#     def append(self, value):
-#         if len(self._offsets) != len(self._chunks) + 1:
-#             raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
-
-#         if len(self._chunks) == 0 or self._offsets[-1] - self._offsets[-2] == len(self._chunks[-1]):
-#             self._chunks.append(self._generator())
-#             self._offsets.append(self._offsets[-1])
-
-#         laststart = self._offsets[-1] - self._offsets[-2]
-#         self._chunks[-1][laststart] = value
-#         self._offsets[-1] += 1
-
-#     def extend(self, values):
-#         if len(self._offsets) != len(self._chunks) + 1:
-#             raise ValueError("length of offsets {0} must be equal to length of chunks {1} plus one ({2})".format(len(self._offsets), len(self._chunks), len(self._chunks) + 1))
-
-#         while len(values) > 0:
-#             if len(self._chunks) == 0 or self._offsets[-1] - self._offsets[-2] >= len(self._chunks[-1]):
-#                 self._chunks.append(self._generator())
-#                 self._offsets.append(self._offsets[-1])
-
-#             laststart = self._offsets[-1] - self._offsets[-2]
-#             available = len(self._chunks[-1]) - laststart
-#             if len(values) < available:
-#                 self._chunks[-1][laststart : laststart + len(values)] = values
-#                 self._offsets[-1] += len(values)
-#                 values = []
-#             else:
-#                 self._chunks[-1][laststart:] = values[:available]
-#                 self._offsets[-1] += available
-#                 values = values[available:]
+            howmany = min(len(values), len(self._chunks[-1]) - self._counts[-1])
+            self._chunks[-1][self._counts[-1] : self._counts[-1] + howmany] = values[:howmany]
+            self._counts[-1] += howmany
+            values = values[howmany:]

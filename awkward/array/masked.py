@@ -335,7 +335,7 @@ class BitMaskedArray(MaskedArray):
             # maybe pad the length for reshape
             length = BitMaskedArray._ceildiv8(len(boolmask)) * 8
             if length != len(boolmask):
-                out = awkward.util.numpy.ones(length, dtype=boolmask.dtype)
+                out = awkward.util.numpy.empty(length, dtype=boolmask.dtype)
                 out[:len(boolmask)] = boolmask
             else:
                 out = boolmask
