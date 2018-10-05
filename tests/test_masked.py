@@ -64,6 +64,9 @@ class Test(unittest.TestCase):
         a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True)
         b = MaskedArray([True, True, True, True, True, False, False, False, False, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True)
         self.assertEqual((a + b).tolist(), [None, None, None, None, None, 11.0, None, 15.4, None, 19.8])
+        self.assertEqual((a + [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]).tolist(), [None, 2.2, None, 6.6, None, 11.0, None, 15.4, None, 19.8])
+        self.assertEqual((a + numpy.array([0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])).tolist(), [None, 2.2, None, 6.6, None, 11.0, None, 15.4, None, 19.8])
+        self.assertEqual((a + IndexedMaskedArray([-1, -1, -1, 1, -1, 2, -1, 4, -1, 3], [0.0, 1.1, 2.2, 3.3, 4.4])).tolist(), [None, None, None, 4.4, None, 7.7, None, 12.100000000000001, None, 13.2])
 
     def test_bitmasked_get(self):
         a = BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True, lsborder=True)
@@ -124,3 +127,8 @@ class Test(unittest.TestCase):
         # doubled
         a = BitMaskedArray.fromboolmask([True, True, False, True, False, True, True, True, False, True, False, True], [0, 1, 999, 2, 999, 3, 0, 1, 999, 2, 999, 3], maskedwhen=False, lsborder=True)
         self.assertEqual(a.tolist(), [0, 1, None, 2, None, 3, 0, 1, None, 2, None, 3])
+
+    def test_indexedmasked_get(self):
+        a = IndexedMaskedArray([-1, 0, -1, 1, -1, 2, -1, 4, -1, 3], [0.0, 1.1, 2.2, 3.3, 4.4])
+        self.assertEqual(a.tolist(), [None, 0.0, None, 1.1, None, 2.2, None, 4.4, None, 3.3])
+        self.assertEqual([a[i] for i in range(len(a))], [None, 0.0, None, 1.1, None, 2.2, None, 4.4, None, 3.3])

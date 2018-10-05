@@ -117,9 +117,11 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             value = (value != 0)
         self._mask = value
 
-    @property
-    def boolmask(self):
-        return self._mask
+    def boolmask(self, maskedwhen=True):
+        if maskedwhen == self._maskedwhen:
+            return self._mask
+        else:
+            return awkward.util.numpy.logical_not(self._mask)
 
     @property
     def content(self):
@@ -210,37 +212,58 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         if method != "__call__":
             return NotImplemented
 
-        inputs = list(inputs)
-        allmask = None
-        for i in range(len(inputs)):
-            if isinstance(inputs[i], MaskedArray):
-                inputs[i]._valid()
-
-                mask = inputs[i].boolmask
-                if not inputs[i]._maskedwhen:
-                    mask = awkward.util.numpy.logical_not(mask)
-
-                if allmask is None:
-                    allmask = mask
+        tokeep = None
+        for x in inputs:
+            if isinstance(x, MaskedArray):
+                x._valid()
+                if tokeep is None:
+                    tokeep = x.boolmask(maskedwhen=False)
                 else:
-                    allmask = allmask | mask
+                    tokeep = tokeep & x.boolmask(maskedwhen=False)
 
-                inputs[i] = inputs[i]._content[:len(inputs[i])]
+        assert tokeep is not None
 
+        inputs = list(inputs)
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], IndexedMaskedArray):
+                inputs[i] = inputs[i]._content[inputs[i]._mask[tokeep]]
+            elif isinstance(inputs[i], MaskedArray):
+                inputs[i] = inputs[i]._content[tokeep]
+            elif isinstance(inputs[i], (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
+                inputs[i] = inputs[i][tokeep]
+            else:
+                try:
+                    for first in inputs[i]:
+                        break
+                except TypeError:
+                    pass
+                else:
+                    inputs[i] = awkward.util.numpy.array(inputs[i], copy=False)[tokeep]
+
+        # compute only the non-masked elements
         result = getattr(ufunc, method)(*inputs, **kwargs)
 
+        # put the masked out values back
+        index = awkward.util.numpy.full(len(tokeep), -1, dtype=awkward.util.INDEXTYPE)
+        index[tokeep] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(tokeep))
+
         if isinstance(result, tuple):
-            return tuple(awkward.array.objects.Methods.maybemixin(type(x), MaskedArray)(allmask, x, maskedwhen=True) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+            return tuple(awkward.array.objects.Methods.maybemixin(type(x), IndexedMaskedArray)(index, x, maskedwhen=-1) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
         elif method == "at":
             return None
         else:
-            return awkward.array.objects.Methods.maybemixin(type(result), MaskedArray)(allmask, result, maskedwhen=True)
+            return awkward.array.objects.Methods.maybemixin(type(result), IndexedMaskedArray)(index, result, maskedwhen=-1)
+
+    def indexed(self):
+        maskindex = awkward.util.numpy.arange(len(self), dtype=awkward.util.INDEXTYPE)
+        maskindex[self.boolmask(maskedwhen=True)] = -1
+        return IndexedMaskedArray(maskindex, self._content, maskedwhen=-1)
 
     def any(self):
-        return self._content[self._mask].any()
+        return self._content[self.boolmask(maskedwhen=False)].any()
 
     def all(self):
-        return self._content[self._mask].all()
+        return self._content[self.boolmask(maskedwhen=False)].all()
 
     @classmethod
     def concat(cls, first, *rest):
@@ -326,13 +349,12 @@ class BitMaskedArray(MaskedArray):
 
         return awkward.util.numpy.packbits(out)
 
-    @property
-    def boolmask(self):
-        return self.bit2bool(self._mask, lsborder=self._lsborder)[:len(self._content)]
-
-    @boolmask.setter
-    def boolmask(self, value):
-        self._mask = self.bool2bit(value, lsborder=self._lsborder)
+    def boolmask(self, maskedwhen=True):
+        if maskedwhen == self._maskedwhen:
+            bitmask = self._mask
+        else:
+            bitmask = awkward.util.numpy.bitwise_not(self._mask)
+        return self.bit2bool(bitmask, lsborder=self._lsborder)[:len(self._content)]
 
     @property
     def lsborder(self):
@@ -458,12 +480,6 @@ class BitMaskedArray(MaskedArray):
             else:
                 return self.copy(mask=self.bool2bit(mask, lsborder=self._lsborder), content=self._content[(head,) + tail], lsborder=self._lsborder)
 
-    def any(self):
-        raise NotImplementedError
-
-    def all(self):
-        raise NotImplementedError
-
     @classmethod
     def concat(cls, first, *rest):
         raise NotImplementedError
@@ -474,6 +490,21 @@ class BitMaskedArray(MaskedArray):
 class IndexedMaskedArray(MaskedArray):
     def __init__(self, mask, content, maskedwhen=-1):
         super(IndexedMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
+        self._isvalid = False
+
+    def copy(self, mask=None, content=None, maskedwhen=None):
+        out = self.__class__.__new__(self.__class__)
+        out._mask = self._mask
+        out._content = self._content
+        out._maskedwhen = self._maskedwhen
+        out._isvalid = self._isvalid
+        if mask is not None:
+            out._mask = mask
+        if content is not None:
+            out._content = content
+        if maskedwhen is not None:
+            out._maskedwhen = maskedwhen
+        return out
 
     @property
     def mask(self):
@@ -482,11 +513,12 @@ class IndexedMaskedArray(MaskedArray):
     @mask.setter
     def mask(self, value):
         value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
+        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+            raise TypeError("starts must have integer dtype")
         if len(value.shape) != 1:
             raise TypeError("mask must have 1-dimensional shape")
-        
-
-
+        self._mask = value
+        self._isvalid = False
 
     @property
     def content(self):
@@ -494,44 +526,82 @@ class IndexedMaskedArray(MaskedArray):
 
     @content.setter
     def content(self, value):
-        raise NotImplementedError
+        self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
+        self._isvalid = False
 
     @property
-    def type(self):
-        raise NotImplementedError
+    def maskedwhen(self):
+        return self._maskedwhen
 
-    def __len__(self):
-        raise NotImplementedError
+    @maskedwhen.setter
+    def maskedwhen(self, value):
+        if not isinstance(value, awkward.util.integer):
+            raise TypeError("maskedwhen must be an integer for IndexedMaskedArray")
+        self._maskedwhen = value
 
-    @property
-    def shape(self):
-        raise NotImplementedError
-
-    @property
-    def dtype(self):
-        raise NotImplementedError
-
-    @property
-    def base(self):
-        raise NotImplementedError
+    def boolmask(self, maskedwhen=True):
+        if maskedwhen:
+            return self._mask == self._maskedwhen
+        else:
+            return self._mask != self._maskedwhen
 
     def _valid(self):
-        raise NotImplementedError
+        if not self._isvalid:
+            if len(self._mask) != 0:
+                if self._mask.max() > len(self._content):
+                    raise ValueError("maximum mask-index ({0}) is beyond the length of the content ({1})".format(self._mask.max(), len(self._content)))
+                if (self._mask[self._mask != self._maskedwhen] < 0).any():
+                    raise ValueError("mask-index has negative values (other than maskedwhen)")
+            self._isvalid = True
 
     def __iter__(self):
-        raise NotImplementedError
+        self._valid()
+
+        mask = self._mask
+        lenmask = len(mask)
+        content = self._content
+        maskedwhen = self._maskedwhen
+        masked = self.masked
+
+        i = 0
+        while i < lenmask:
+            maskindex = mask[i]
+            if maskindex == maskedwhen:
+                yield masked
+            else:
+                yield content[maskindex]
+            i += 1
 
     def __getitem__(self, where):
-        raise NotImplementedError
+        self._valid()
 
-    def __setitem__(self, where, what):
-        raise NotImplementedError
+        if awkward.util.isstringslice(where):
+            return self.copy(content=self._content[where])
 
-    def __delitem__(self, where, what):
-        raise NotImplementedError
+        if isinstance(where, tuple) and len(where) == 0:
+            return self
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
 
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        raise NotImplementedError
+        if isinstance(head, awkward.util.integer):
+            maskindex = self._mask[head]
+            if maskindex == self._maskedwhen:
+                if tail != ():
+                    raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
+                return self.masked
+            else:
+                return self._content[(maskindex,) + tail]
+
+        else:
+            maskindex = self._mask[head]
+            if tail != () and (maskindex == self._maskedwhen).any():
+                raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
+            else:
+                return self.copy(mask=maskindex)
+
+    def indexed(self):
+        return self
 
     @classmethod
     def concat(cls, first, *rest):
@@ -539,34 +609,3 @@ class IndexedMaskedArray(MaskedArray):
 
     def pandas(self):
         raise NotImplementedError
-
-# class IndexedMaskedArray(MaskedArray):
-#     def __init__(self, index, content, maskedwhen=-1):
-#         super(IndexedMaskedArray, self).__init__(index, content)
-#         self.maskedwhen = maskedwhen
-
-#     @property
-#     def maskedwhen(self):
-#         return self._maskedwhen
-
-#     @maskedwhen.setter
-#     def maskedwhen(self, value):
-#         if not isinstance(value, (numbers.Integral, numpy.integer)):
-#             raise TypeError("maskedwhen must be an integer")
-#         self._maskedwhen = value
-
-#     def __getitem__(self, where):
-#         if self._isstring(where):
-#             return IndexedMaskedArray(self._index, self._content[where], maskedwhen=self._maskedwhen)
-
-#         if not isinstance(where, tuple):
-#             where = (where,)
-#         head, tail = where[0], where[1:]
-
-#         if isinstance(head, (numbers.Integral, numpy.integer)):
-#             if self._index[head] == self._maskedwhen:
-#                 return numpy.ma.masked
-#             else:
-#                 return self._content[self._singleton((self._index[head],) + tail)]
-#         else:
-#             return IndexedMaskedArray(self._index[head], self._content[self._singleton((slice(None),) + tail)], maskedwhen=self._maskedwhen)
