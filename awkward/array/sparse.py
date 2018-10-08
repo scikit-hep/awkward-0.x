@@ -36,6 +36,16 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         self.coordinates = coordinates
         self.content = content
 
+    @classmethod
+    def fromCOO(cls, length, coordinates, content, default=0):
+        content = awkward.util.toarray(content, awkward.util.DEFAULTTYPE)
+        if isinstance(content, awkward.util.numpy.ndarray):
+            content = awkward.util.numpy.insert(content, 0, default)
+        else:
+            # FIXME: maybe something with an IndexedArray of ChunkedArrays?
+            raise NotImplementedError(type(content))
+        return cls(length, coordinates, content)
+
     def copy(self, index=None, content=None):
         raise NotImplementedError
 
@@ -88,26 +98,26 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     @property
     def type(self):
-        raise NotImplementedError
-
+        return awkward.type.ArrayType(self._length, awkward.type.fromarray(self._content).to)
+        
     def __len__(self):
-        raise NotImplementedError
+        return self._length
 
     @property
     def shape(self):
-        raise NotImplementedError
+        return (self._length,) + self._content.shape[1:]
 
     @property
     def dtype(self):
-        raise NotImplementedError
+        return self._content.dtype
 
     @property
     def base(self):
-        raise NotImplementedError
+        return self._content.base
 
     def _valid(self):
-        if len(self._coordinates) + 1 != len(self._content):
-            raise ValueError("length of coordinates ({0}) must be one more than length of content ({1}, where content[0] is the default value)".format(len(self._coordinates), len(self._content)))
+        if len(self._coordinates) >= len(self._content):
+            raise ValueError("length of coordinates ({0}) must be less than the length of content ({1}); not equal because content[0] is the default value".format(len(self._coordinates), len(self._content)))
 
     def __iter__(self):
         self._valid()
@@ -131,12 +141,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
 
         if awkward.util.isstringslice(where):
-            out = self.copy(self._starts, self._stops, self._content[where])
-            out._offsets = self._offsets
-            out._counts = self._counts
-            out._parents = self._parents
-            out._isvalid = True
-            return out
+            return self.copy(self._length, self._coordinates, self._content[where])
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
@@ -205,3 +210,122 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     def pandas(self):
         raise NotImplementedError
+
+class PaddedJaggedArray(awkward.array.base.AwkwardArrayWithContent):
+    def __init__(self, starts, stops, length, content):
+        self.starts = starts
+        self.stops = stops
+        self.length = length
+        self.content = content
+
+    @property
+    def starts(self):
+        return self._starts
+
+    @starts.setter
+    def starts(self, value):
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
+        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+            raise TypeError("starts must have integer dtype")
+        if len(value.shape) == 0:
+            raise TypeError("starts must have at least one dimension")
+        if (value < 0).any():
+            raise ValueError("starts must be a non-negative array")
+        self._starts = value
+        self._offsets, self._counts, self._parents = None, None, None
+        self._isvalid = False
+        
+    @property
+    def stops(self):
+        return self._stops
+
+    @stops.setter
+    def stops(self, value):
+        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
+        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+            raise TypeError("stops must have integer dtype")
+        if len(value.shape) == 0:
+            raise TypeError("stops must have at least one dimension")
+        if (value < 0).any():
+            raise ValueError("stops must be a non-negative array")
+        self._stops = value
+        self._offsets, self._counts, self._parents = None, None, None
+        self._isvalid = False
+
+    @property
+    def length(self):
+        return self._length
+
+    @length.setter
+    def length(self, value):
+        if not isinstance(value, awkward.util.integer) or value < 0:
+            raise TypeError("length must be a non-negative integer")
+        self._length = value
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
+        self._isvalid = False
+
+    @property
+    def dtype(self):
+        return self._content.dtype
+
+    @property
+    def shape(self):
+        self._valid()
+        return self._starts.shape + (self._length,) + self._content.shape[1:]
+
+    @property
+    def type(self):
+        return awkward.type.ArrayType(*(self._starts.shape + (self._length,) + awkward.type.fromarray(self._content).to))
+
+    @property
+    def base(self):
+        return self._content.base
+
+    def _valid(self):
+        import awkward.array.jagged
+        if not self._isvalid:
+            awkward.array.jagged.JaggedArray._validstartsstops(self._starts, self._stops)
+            
+            nonempty = (self._starts != self._stops)
+
+            starts = self._starts[nonempty].reshape(-1)
+            if len(starts) != 0 and starts.reshape(-1).max() >= len(self._content):
+                raise ValueError("maximum start ({0}) is at or beyond the length of the content ({1})".format(starts.reshape(-1).max(), len(self._content)))
+
+            stops = self._stops[nonempty].reshape(-1)
+            if len(stops) != 0 and stops.reshape(-1).max() > len(self._content):
+                raise ValueError("maximum stop ({0}) is beyond the length of the content ({1})".format(self._stops.reshape(-1).max(), len(self._content)))
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __getitem__(self, where):
+        self._valid()
+        
+        if awkward.util.isstringslice(where):
+            return self.copy(self._length, self._coordinates, self._content[where])
+
+        if isinstance(where, tuple) and len(where) == 0:
+            return self
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[:len(self._starts.shape)], where[len(self._starts.shape):]
+
+        starts = self._starts[head]
+        stops = self._stops[head]
+        if len(starts.shape) == len(stops.shape) == 0:
+            index = awkward.util.numpy.zeros(self._length, dtype=awkward.util.INDEXTYPE)
+            index[: stops - starts] = awkward.util.numpy.arange(starts + 1, stops + 1)
+        else:
+            index = awkward.util.numpy.zeros(starts.shape + (self._length,), dtype=awkward.util.INDEXTYPE)
+            HERE
+
+
+        return self._content[index]
