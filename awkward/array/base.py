@@ -97,6 +97,40 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return True
 
+    def _argfields(self, function):
+        if not isinstance(function, types.FunctionType):
+            raise TypeError("function (or lambda) required")
+
+        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
+            return None, None
+
+        required = function.__code__.co_varnames[:function.__code__.co_argcount]
+        has_varargs = (function.__code__.co_flags & 0x04) != 0
+        has_kwargs = (function.__code__.co_flags & 0x08) != 0
+
+        args = []
+        kwargs = {}
+
+        order = self.columns
+
+        for i, n in enumerate(required):
+            if n in self._content:
+                args.append(n)
+            elif str(i) in self._content:
+                args.append(str(i))
+            else:
+                args.append(order[i])
+
+        if has_varargs:
+            while str(i) in self._content:
+                args.append(str(i))
+                i += 1
+
+        if has_kwargs:
+            kwargs = [n for n in self._content if n not in required]
+
+        return args, kwargs
+
     def apply(self, function):
         args, kwargs = self._argfields(function)
         if args is None and kwargs is None:
@@ -134,12 +168,6 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return self[function(*args, **kwargs).argmin()]
 
 class AwkwardArrayWithContent(AwkwardArray):
-    def _argfields(self, function):
-        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
-            return awkward.util._argfields(function)
-        else:
-            return self._content._argfields(function)
-
     def __setitem__(self, where, what):
         if isinstance(where, awkward.util.string):
             self._content[where] = what
@@ -171,11 +199,13 @@ class AwkwardArrayWithContent(AwkwardArray):
     @property
     def columns(self):
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            raise TypeError("array has no Table, and hence no columns")
-        return self._content.columns
+            return []
+        else:
+            return self._content.columns
 
     @property
     def allcolumns(self):
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            raise TypeError("array has no Table, and hence no allcolumns")
-        return self._content.allcolumns
+            return []
+        else:
+            return self._content.allcolumns

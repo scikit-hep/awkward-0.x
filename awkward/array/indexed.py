@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.base
+import awkward.type
 import awkward.util
 
 def invert(permutation):
@@ -119,7 +120,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @property
     def type(self):
-        return self._content.type
+        return awkward.type.ArrayType(*(self._index.shape + (awkward.type.fromarray(self._content).to,)))
 
     def _valid(self):
         if not self._isvalid:
@@ -136,9 +137,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
 
         if awkward.util.isstringslice(where):
-            out = self.copy(content=self._content[where])
-            out._isvalid = True
-            return out
+            return self.copy(content=self._content[where])
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
@@ -262,7 +261,7 @@ class ByteIndexedArray(IndexedArray):
 
     @property
     def type(self):
-        return awkward.type.ArrayType(self._index.shape, self._dtype)
+        return awkward.type.ArrayType(*(self._index.shape + (self._dtype,)))
 
     @property
     def dtype(self):

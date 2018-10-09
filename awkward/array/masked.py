@@ -32,6 +32,7 @@ import collections
 import numbers
 
 import awkward.array.base
+import awkward.type
 import awkward.util
 
 class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
@@ -152,7 +153,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @property
     def type(self):
-        return self._content.type
+        return awkward.type.ArrayType(len(self._mask), awkward.type.fromarray(self._content).to)
 
     def _valid(self):
         if len(self._mask) > len(self._content):

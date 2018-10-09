@@ -154,15 +154,6 @@ def iscomparison(ufunc):
             ufunc is numpy.greater or
             ufunc is numpy.greater_equal)
 
-def _argfields(function):
-    if not isinstance(function, types.FunctionType):
-        raise TypeError("apply method requires a function (or lambda)")
-
-    if function.__code__.co_argcount != 1:
-        raise TypeError("apply method requires a one-argument function (or lambda) when applied to non-Tables")
-
-    return None, None
-
 try:
     NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin
 

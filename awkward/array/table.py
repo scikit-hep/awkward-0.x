@@ -244,37 +244,6 @@ class Table(awkward.array.base.AwkwardArray):
             value[n] = awkward.util.toarray(value[n], awkward.util.DEFAULTTYPE)
         self._content = value
 
-    def _argfields(self, function):
-        if not isinstance(function, types.FunctionType):
-            raise TypeError("function (or lambda) required")
-
-        required = function.__code__.co_varnames[:function.__code__.co_argcount]
-        has_varargs = (function.__code__.co_flags & 0x04) != 0
-        has_kwargs = (function.__code__.co_flags & 0x08) != 0
-
-        args = []
-        kwargs = {}
-
-        order = self.columns
-
-        for i, n in enumerate(required):
-            if n in self._content:
-                args.append(n)
-            elif str(i) in self._content:
-                args.append(str(i))
-            else:
-                args.append(order[i])
-
-        if has_varargs:
-            while str(i) in self._content:
-                args.append(str(i))
-                i += 1
-
-        if has_kwargs:
-            kwargs = [n for n in self._content if n not in required]
-
-        return args, kwargs
-
     @property
     def dtype(self):
         return awkward.util.numpy.dtype([(n, x.dtype) for n, x in self._content.items()])

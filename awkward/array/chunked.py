@@ -272,14 +272,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
         return tpe
 
-    def _argfields(self, function):
-        if isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1:
-            return awkward.util._argfields(function)
-        if len(self._chunks) == 0 or isinstance(self.type.to, awkward.util.numpy.dtype):
-            return awkward.util._argfields(function)
-        else:
-            return self._chunks[0]._argfields(function)
-
     def __str__(self):
         if self.countsknown:
             return super(ChunkedArray, self).__str__()
@@ -604,14 +596,16 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     @property
     def columns(self):
         if len(self._chunks) == 0 or isinstance(self.type.to, awkward.util.numpy.dtype):
-            raise TypeError("array has no Table, and hence no columns")
-        return self._chunks[0].columns
+            return []
+        else:
+            return self._chunks[0].columns
 
     @property
     def allcolumns(self):
         if len(self._chunks) == 0 or isinstance(self.type.to, awkward.util.numpy.dtype):
-            raise TypeError("array has no Table, and hence no columns")
-        return self._chunks[0].allcolumns
+            return []
+        else:
+            return self._chunks[0].allcolumns
 
     def pandas(self):
         raise NotImplementedError
@@ -710,9 +704,6 @@ class AppendableArray(ChunkedArray):
 
     def _valid(self):
         pass
-
-    def _argfields(self, function):
-        return awkward.util._argfields(function)
 
     def __setitem__(self, where, what):
         raise TypeError("array has no Table, cannot assign columns")

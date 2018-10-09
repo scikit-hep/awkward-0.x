@@ -76,9 +76,6 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def _valid(self):
         raise NotImplementedError
 
-    def _argfields(self, function):
-        raise NotImplementedError
-
     def __iter__(self):
         raise NotImplementedError
 

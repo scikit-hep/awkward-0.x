@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.base
+import awkward.type
 import awkward.util
 
 class Methods(object):
@@ -159,9 +160,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
     @property
     def type(self):
-        out = awkward.type.fromarray(self._content)
-        out.to = self._generator
-        return out
+        return awkward.type.fromarray(*(self._content.shape + (self._generator,)))
 
     def __iter__(self):
         for x in self._content:
