@@ -345,21 +345,22 @@ class ByteIndexedArray(IndexedArray):
         raise NotImplementedError
 
 class SparseArray(awkward.array.base.AwkwardArrayWithContent):
-    def __init__(self, view, index, content, default=None):
-        self._view = view
+    def __init__(self, length, index, content, default=None):
+        if isinstance(length, awkward.util.integer):
+            self._view = (length,)
+        else:
+            raise TypeError("length must be an integer")
         self.index = index
         self.content = content
         self.default = default
 
-    def copy(self, view=None, index=None, content=None, default=None):
+    def copy(self, index=None, content=None, default=None):
         out = self.__class__.__new__(self.__class__)
         out._view = self._view
         out._index = self._index
         out._isvalid = self._isvalid
         out._content = self._content
         out._default = self._default
-        if view is not None:
-            out._view = view
         if index is not None:
             out._index = index
         if content is not None:
@@ -368,12 +369,13 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             out._default = default
         return out
 
-    def deepcopy(self, view=None, index=None, content=None, default=None):
-        out = self.copy(view=view, index=index, content=content, default=default)
-        if isinstance(out._view, awkward.util.numpy.ndarray):
-            out._view = awkward.util.deepcopy(out._view)
-        out._index    = awkward.util.deepcopy(out._index)
-        out._content  = awkward.util.deepcopy(out._content)
+    def deepcopy(self, index=None, content=None, default=None):
+        out = self.copy(index=index, content=content, default=default)
+        if len(out._view) == 2:
+            view, tail = out._view
+            out._view = (awkward.util.deepcopy(view), tail)
+        out._index = awkward.util.deepcopy(out._index)
+        out._content = awkward.util.deepcopy(out._content)
         return out
 
     def empty_like(self, **overrides):
@@ -449,13 +451,16 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         return awkward.type.ArrayType(len(self), awkward.type.fromarray(self._content).to)
         
     def __len__(self):
-        if isinstance(self._view, awkward.util.integer):
-            return self._view
-        elif isinstance(self._view, tuple):
-            start, step, length = self._view
-            return length
+        if len(self._view) == 1:
+            length, = self._view
+        elif len(self._view) == 4:
+            start, step, length, tail = self._view
+        elif len(self._view) == 2:
+            view, tail = self._view
+            length = len(view)
         else:
-            return len(self._view)
+            raise AssertionError(view)
+        return length
 
     @property
     def shape(self):
@@ -487,34 +492,35 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         content = self._content
         default = self.default
 
-        if isinstance(self._view, awkward.util.numpy.ndarray):
-            match = awkward.util.numpy.searchsorted(self._index, self._view, side="left")
-            for i in len(self._view):
-                if match[i] == self._view[i]:
-                    yield self._content[self._view[i]]
+        if len(self._view) == 2:
+            view, tail = self._view
+            match = awkward.util.numpy.searchsorted(self._index, view, side="left")
+            for i in len(view):
+                if match[i] == view[i]:
+                    yield self._content[self._view[i]][tail]
                 else:
-                    yield default
+                    yield default[tail]
 
         else:
-            if isinstance(self._view, awkward.util.integer):
-                start, step, length = 0, 1, self._view
-            elif isinstance(self._view, tuple):
-                start, step, length = self._view
+            if len(self._view) == 1:
+                start, step, length, tail = 0, 1, self._view[0], ()
+            elif len(self._view) == 4:
+                start, step, length, tail = self._view
             else:
-                raise AssertionError(type(self._view))
+                raise AssertionError(self._view)
 
             i = 0
             j = awkward.util.numpy.searchsorted(self._index, start, side="left")
             while i < length:
                 this = start + i
                 if j >= lenindex:
-                    yield default
+                    yield default[tail]
                 elif index[j] == this:
-                    yield content[j]
+                    yield content[j][tail]
                     while j < lenindex and index[j] == this:
                         j += 1
                 else:
-                    yield default
+                    yield default[tail]
                 i += step
 
     def __getitem__(self, where):
@@ -529,12 +535,17 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(self._view, awkward.util.integer):
-            start, step, length = 0, 1, self._view
-        elif isinstance(self._view, tuple):
-            start, step, length = self._view
-        else:
+        if len(self._view) == 1:
+            start, step, length, oldtail = 0, 1, self._view[0], ()
+            view = None
+        elif len(self._view) == 4:
+            start, step, length, oldtail = self._view
+            view = None
+        elif len(self._view) == 2:
+            view, oldtail = self._view
             start, step, length = None, None, len(self._view)
+        else:
+            raise AssertionError(self._view)
 
         if isinstance(head, awkward.util.integer):
             original_head = head
@@ -551,15 +562,17 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             match = awkward.util.numpy.searchsorted(self._index, head, side="left")
 
             if self._index[match] == head:
-                return self._content[(match,) + tail]
-            elif tail == ():
+                return self._content[(match,) + oldtail + tail]
+            elif oldtail + tail == ():
                 return self.default
             else:
-                return self.default[tail]
+                return self.default[oldtail + tail]
 
         elif isinstance(head, slice):
             if start is None:
-                return self.copy(view=self._view[head])[tail]
+                out = self.copy()
+                out._view = (view[head], oldtail + tail)
+                return out
 
             else:
                 headstart, headstop, headstep = head.indices(length)
@@ -575,8 +588,11 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
                     skip = headstart
                 else:
                     skip = length - 1 - headstart
-                view = (start + step*headstart, step*headstep, min(length - skip, headlength))
-                return self.copy(view=view)[tail]
+
+                out = self.copy()
+                out._view = (start + step*headstart, step*headstep, min(length - skip, headlength), oldtail + tail)
+                return out
 
         else:
             raise NotImplementedError
+            head = awkward.util.numpy.array(head, copy=False)
