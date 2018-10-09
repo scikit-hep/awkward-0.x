@@ -58,20 +58,39 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
         return out
 
-    def copy(self, index=None, content=None):
-        raise NotImplementedError
+    def copy(self, tags=None, index=None, contents=None):
+        out = self.__class__.__new__(self.__class__)
+        out._view = self._view
+        out._tags = self._tags
+        out._index = self._index
+        out._contents = self._contents
+        out._isvalid = self._isvalid
+        if tags is not None:
+            out.tags = tags
+        if index is not None:
+            out.index = index
+        if contents is not None:
+            out.contents = contents
+        return out
 
-    def deepcopy(self, index=None, content=None):
-        raise NotImplementedError
+    def deepcopy(self, tags=None, index=None, contents=None):
+        out = self.copy(tags=tags, index=index, contents=contents)
+        if len(out._view) == 2:
+            view, tail = out._view
+            out._view = (awkward.util.deepcopy(view), tail)
+        out._tags = awkward.util.deepcopy(out._tags)
+        out._index = awkward.util.deepcopy(out._index)
+        out._contents = [awkward.util.deepcopy(x) for x in out._contents]
+        return out
 
     def empty_like(self, **overrides):
-        raise NotImplementedError
+        return self.copy(contents=[awkward.util.numpy.empty_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.empty_like(**overrides) for x in self._contents])
 
     def zeros_like(self, **overrides):
-        raise NotImplementedError
+        return self.copy(contents=[awkward.util.numpy.zeros_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.zeros_like(**overrides) for x in self._contents])
 
     def ones_like(self, **overrides):
-        raise NotImplementedError
+        return self.copy(contents=[awkward.util.numpy.ones_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.ones_like(**overrides) for x in self._contents])
 
     @property
     def tags(self):
@@ -198,10 +217,11 @@ class UnionArray(awkward.array.base.AwkwardArray):
             if self._tags.reshape(-1).max() >= len(self._contents):
                 raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(self._tags.reshape(-1).max(), len(self._contents)))
 
-            maxindex = self._index[:len(self._tags)].reshape(-1).max()
-            for x in self._contents:
-                if maxindex >= len(self._contents):
-                    raise ValueError("maximum index ({0}) must be less than the length of all contents arrays ({1})".format(maxindex, len(self._contents)))
+            index = self._index[:len(self._tags)]
+            for tag, content in enumerate(self._contents):
+                maxindex = index[self._tags == tag].reshape(-1).max()
+                if maxindex >= len(content):
+                    raise ValueError("maximum index ({0}) must be less than the length of all contents arrays ({1})".format(maxindex, len(content)))
 
             self._isvalid = True
 
@@ -217,12 +237,6 @@ class UnionArray(awkward.array.base.AwkwardArray):
         if awkward.util.isstringslice(where):
             return self.copy(content=self._content[where])
 
-        if isinstance(where, tuple) and len(where) == 0:
-            return self
-        if not isinstance(where, tuple):
-            where = (where,)
-        head, tail = where[:len(self._tags.shape)], where[len(self._tags.shape):]
-
         view = None
         if self._view is None:
             start, step, length, oldtail = 0, 1, len(self._tags), ()
@@ -234,24 +248,55 @@ class UnionArray(awkward.array.base.AwkwardArray):
         else:
             raise AssertionError(self._view)
 
-        h = head[0]
-        if isinstance(h, awkward.util.integer):
-            if h < 0:
-                h += length
-            if not 0 <= h < length:
-                raise IndexError("index {0} is out of bounds for size {1}".format(head, length))
+        if isinstance(where, tuple) and len(where) == 0:
+            return self
+        if not isinstance(where, tuple):
+            where = (where,)
+        where = where + oldtail
+        head, tail = where[0], where[1:]
+
+        if isinstance(head, awkward.util.integer):
+            original_head = head
+            if head < 0:
+                head += length
+            if not 0 <= head < length:
+                raise IndexError("index {0} is out of bounds for size {1}".format(original_head, length))
 
             if view is None:
-                h = start + step*h
+                head = start + step*head
             else:
-                h = view[h]
-            head = (h,) + head[1:]
-            
-            return self._contents[self._tags[head]][(self._index[head],) + oldtail + tail]
+                head = view[head]
 
-        elif isinstance(h, slice):
-            raise NotImplementedError
+            where = (head,) + tail
+            tag = self._tags[where[:len(self._tags.shape)]]
+            index = self._index[where[:len(self._tags.shape)]]
+            return self._contents[tag][(index,) + tail]
 
+        elif isinstance(head, slice):
+            if view is None:
+                headstart, headstop, headstep = head.indices(length)
+                if headstep == 0:
+                    raise ValueError("slice step cannot be zero")
+                if (headstep > 0 and headstop - headstart > 0) or (headstep < 0 and headstop - headstart < 0):
+                    d, m = divmod(abs(headstart - headstop), abs(headstep))
+                    headlength = d + (1 if m != 0 else 0)
+                else:
+                    headlength = 0
+
+                if headstep > 0:
+                    skip = headstart
+                else:
+                    skip = length - 1 - headstart
+
+                out = self.copy()
+                out._view = (start + step*headstart, step*headstep, min(length - skip, headlength), tail)
+
+                print("out._view", out._view)
+
+                return out
+
+
+                
         else:
             raise NotImplementedError
 
