@@ -481,7 +481,6 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
 
         index = self._index
-        lenindex = len(index)
         content = self._content
         default = self.default
 
@@ -491,7 +490,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
             for i in range(len(match)):
                 if index[match[i]] == view[i]:
-                    yield self._content[match[i]][tail]
+                    yield content[match[i]][tail]
                 else:
                     yield default[tail]
 
@@ -503,15 +502,23 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 raise AssertionError(self._view)
 
-            j = awkward.util.numpy.searchsorted(self._index, i, side="left")
+            j = awkward.util.numpy.searchsorted(index, i, side="left")
             iend = i + step*length
-            jdelta = 1 if step > 0 else -1
+            if step > 0:
+                jdelta = 1
+                jend = len(index)
+            else:
+                jdelta = -1
+                jend = -1
+                while j != jend and index[j] > i:
+                    j += jdelta
+
             while i != iend:
-                if j >= lenindex:
+                if j == jend:
                     yield default[tail]
                 elif index[j] == i:
                     yield content[j][tail]
-                    while j < lenindex and index[j] == i:
+                    while j != jend and index[j] == i:
                         j += jdelta
                 else:
                     yield default[tail]
