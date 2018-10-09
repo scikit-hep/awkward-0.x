@@ -376,7 +376,8 @@ class Table(awkward.array.base.AwkwardArray):
             if issubclass(head.dtype.type, awkward.util.numpy.integer):
                 length = self._length()
                 negative = (head < 0)
-                head[negative] += length
+                if negative.any():
+                    head[negative] += length
                 if not awkward.util.numpy.bitwise_and(0 <= head, head < length).all():
                     raise IndexError("some indexes out of bounds for length {0}".format(length))
 
