@@ -494,41 +494,35 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
         if len(self._view) == 2:
             view, tail = self._view
-            # match = awkward.util.numpy.searchsorted(self._index, view, side="left")
-            # for i in range(len(view)):
-            #     if match[i] == view[i]:
-            #         yield self._content[view[i]][tail]
-            #     else:
-            #         yield default[tail]
+            match = awkward.util.numpy.searchsorted(index, view, side="left")
 
-            for i in range(len(view)):
-                yield self[i]
+            for i in range(len(match)):
+                if index[match[i]] == view[i]:
+                    yield self._content[match[i]][tail]
+                else:
+                    yield default[tail]
 
         else:
             if len(self._view) == 1:
-                start, step, length, tail = 0, 1, self._view[0], ()
+                i, step, length, tail = 0, 1, self._view[0], ()
             elif len(self._view) == 4:
-                start, step, length, tail = self._view
+                i, step, length, tail = self._view
             else:
                 raise AssertionError(self._view)
 
-            # FIXME
-            for i in range(length):
-                yield self[i]
-
-            # i = 0
-            # j = awkward.util.numpy.searchsorted(self._index, start, side="left" if step > 0 else "right")
-            # while i < length:
-            #     this = start + i
-            #     if j >= lenindex:
-            #         yield default[tail]
-            #     elif index[j] == this:
-            #         yield content[j][tail]
-            #         while j < lenindex and index[j] == this:
-            #             j += 1
-            #     else:
-            #         yield default[tail]
-            #     i += step
+            j = awkward.util.numpy.searchsorted(self._index, i, side="left")
+            iend = i + step*length
+            jdelta = 1 if step > 0 else -1
+            while i != iend:
+                if j >= lenindex:
+                    yield default[tail]
+                elif index[j] == i:
+                    yield content[j][tail]
+                    while j < lenindex and index[j] == i:
+                        j += jdelta
+                else:
+                    yield default[tail]
+                i += step
 
     def __getitem__(self, where):
         self._valid()
@@ -622,7 +616,15 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
                 return out
 
             elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-                raise NotImplementedError
+                if len(head) != length:
+                    raise IndexError("boolean index of length {0} does not fit array of length {1}".format(len(head), length))
 
+                if view is None:
+                    view = awkward.util.numpy.arange(start, start + step*length, step)
+
+                out = self.copy()
+                out._view = (view[head], oldtail + tail)
+                return out
+                
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
