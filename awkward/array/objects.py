@@ -163,10 +163,6 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         out.to = self._generator
         return out
 
-    @property
-    def base(self):
-        return self._content.base
-
     def __iter__(self):
         for x in self._content:
             yield self.generator(x, *self._args, **self._kwargs)

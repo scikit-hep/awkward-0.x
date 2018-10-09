@@ -44,8 +44,6 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     def __init__(self, index, content):
         self.index = index
         self.content = content
-        self._inverse = None
-        self._isvalid = False
 
     def copy(self, index=None, content=None):
         out = self.__class__.__new__(self.__class__)
@@ -122,10 +120,6 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     @property
     def type(self):
         return self._content.type
-
-    @property
-    def base(self):
-        return self._content.base
 
     def _valid(self):
         if not self._isvalid:
@@ -358,9 +352,10 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         out = self.__class__.__new__(self.__class__)
         out._view = self._view
         out._index = self._index
-        out._isvalid = self._isvalid
         out._content = self._content
         out._default = self._default
+        out._inverse = self._inverse
+        out._isvalid = self._isvalid
         if index is not None:
             out._index = index
         if content is not None:
@@ -376,6 +371,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             out._view = (awkward.util.deepcopy(view), tail)
         out._index = awkward.util.deepcopy(out._index)
         out._content = awkward.util.deepcopy(out._content)
+        out._inverse = awkward.util.deepcopy(out._inverse)
         return out
 
     def empty_like(self, **overrides):
@@ -416,6 +412,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         if (value < 0).any():
             raise ValueError("index must be a non-negative array")
         self._index = value
+        self._inverse = None
         self._isvalid = False
 
     @property
@@ -469,10 +466,6 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     @property
     def dtype(self):
         return self._content.dtype
-
-    @property
-    def base(self):
-        return self._content.base
 
     def _valid(self):
         if not self._isvalid:
@@ -622,9 +615,70 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
                 if view is None:
                     view = awkward.util.numpy.arange(start, start + step*length, step)
 
-                out = self.copy()
-                out._view = (view[head], oldtail + tail)
-                return out
+                match = awkward.util.numpy.searchsorted(self._index, view, side="left")
+                matchhead = match[head]
+
+                if (self._index[matchhead] == view[head]).all():
+                    return self._content[(matchhead,) + oldtail + tail]
+                else:
+                    out = self.copy()
+                    out._view = (view[head], oldtail + tail)
+                    return out
                 
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
+
+    def boolmask(self, maskedwhen=True):
+        if self._inverse is None:
+            view = None
+            if len(self._view) == 1:
+                start, step, length, oldtail = 0, 1, self._view[0], ()
+            elif len(self._view) == 4:
+                start, step, length, oldtail = self._view
+            elif len(self._view) == 2:
+                view, oldtail = self._view
+                length = len(view)
+            else:
+                raise AssertionError(self._view)
+
+            if view is None:
+                view = awkward.util.numpy.arange(start, start + step*length, step)
+
+            self._inverse = awkward.util.numpy.searchsorted(self._index, view, side="left")
+        
+        if maskedwhen:
+            return self._index[self._inverse] == view
+        else:
+            return self._index[self._inverse] != view
+
+    def _invert(self, what):
+        if len(self._view) != 1:
+            raise ValueError("new columns can only be attached to the original SparseArray, not a view")
+
+        length, = self._view
+        if len(what) != length:
+            raise ValueError("cannot assign array of length {0} to sparse table of length {1}".format(len(what), length))
+
+        test = what[self.boolmask(maskedwhen=False)].any()
+        while not isinstance(test, bool):
+            test = test.any()
+
+        if test:
+            raise ValueError("cannot assign an array with non-zero elements in the undefined spots of a sparse table")
+
+        return IndexedArray(self._inverse, what)
+
+    def __setitem__(self, where, what):
+        if isinstance(where, awkward.util.string):
+            self._content[where] = self._invert(what)
+
+        elif awkward.util.isstringslice(where):
+            if len(where) != len(what):
+                raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
+            for x, y in zip(where, what):
+                self._content[x] = self._invert(y)
+
+        else:
+            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+
+

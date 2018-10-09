@@ -254,10 +254,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         offsets = self.offsets
         return [slice(start, stop) for start, stop in zip(offsets[:-1], offsets[1:])]
 
-    @property
-    def base(self):
-        raise TypeError("ChunkedArray has no base")
-
     def _valid(self):
         if len(self._counts) > len(self._chunks):
             raise ValueError("ChunkArray has more counts than chunks")
@@ -600,6 +596,10 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     @classmethod
     def concat(cls, first, *rest):
         raise NotImplementedError
+
+    @property
+    def base(self):
+        raise TypeError("ChunkedArray has no base")
 
     @property
     def columns(self):

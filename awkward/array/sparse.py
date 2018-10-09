@@ -111,10 +111,6 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     def dtype(self):
         return self._content.dtype
 
-    @property
-    def base(self):
-        return self._content.base
-
     def _valid(self):
         if len(self._coordinates) >= len(self._content):
             raise ValueError("length of coordinates ({0}) must be less than the length of content ({1}); not equal because content[0] is the default value".format(len(self._coordinates), len(self._content)))
@@ -283,10 +279,6 @@ class PaddedJaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @property
     def type(self):
         return awkward.type.ArrayType(*(self._starts.shape + (self._length,) + awkward.type.fromarray(self._content).to))
-
-    @property
-    def base(self):
-        return self._content.base
 
     def _valid(self):
         import awkward.array.jagged

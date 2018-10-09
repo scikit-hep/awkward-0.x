@@ -73,10 +73,6 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def dtype(self):
         raise NotImplementedError
 
-    @property
-    def base(self):
-        raise NotImplementedError
-
     def _valid(self):
         raise NotImplementedError
 
@@ -106,6 +102,10 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @classmethod
     def concat(cls, first, *rest):
+        raise NotImplementedError
+
+    @property
+    def base(self):
         raise NotImplementedError
 
     @property

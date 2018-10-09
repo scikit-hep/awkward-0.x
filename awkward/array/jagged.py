@@ -348,10 +348,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def type(self):
         return awkward.type.ArrayType(*(self._starts.shape + (awkward.type.ArrayType(awkward.util.numpy.inf, awkward.type.fromarray(self._content).to),)))
 
-    @property
-    def base(self):
-        return self._content.base
-
     def _valid(self, assign_isvalid=True):
         if not self._isvalid:
             self._validstartsstops(self._starts, self._stops)

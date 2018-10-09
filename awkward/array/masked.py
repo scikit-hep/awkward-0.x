@@ -154,10 +154,6 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def type(self):
         return self._content.type
 
-    @property
-    def base(self):
-        return self._content.base
-
     def _valid(self):
         if len(self._mask) > len(self._content):
             raise ValueError("mask length ({0}) must be the same as (or shorter than) the content length ({1})".format(len(self._mask), len(self._content)))

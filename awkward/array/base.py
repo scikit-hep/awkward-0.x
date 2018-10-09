@@ -163,6 +163,12 @@ class AwkwardArrayWithContent(AwkwardArray):
             raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
     @property
+    def base(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            raise TypeError("array has no Table, and hence no base")
+        return self._content.base
+
+    @property
     def columns(self):
         if isinstance(self._content, awkward.util.numpy.ndarray):
             raise TypeError("array has no Table, and hence no columns")
@@ -171,5 +177,5 @@ class AwkwardArrayWithContent(AwkwardArray):
     @property
     def allcolumns(self):
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            raise TypeError("array has no Table, and hence no columns")
+            raise TypeError("array has no Table, and hence no allcolumns")
         return self._content.allcolumns
