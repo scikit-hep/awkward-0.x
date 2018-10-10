@@ -544,8 +544,18 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
             return self.copy(length=length, index=index[mask], content=self._content[mask])[tail]
 
+        elif isinstance(head, SparseArray) and len(head.shape) == 1 and isinstance(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+            # FIXME: optimization
+            raise NotImplementedError
+
         else:
             head = awkward.util.toarray(head, awkward.util.INDEXTYPE)
+            if len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+                if self._length != len(head):
+                    raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(self._length, len(head)))
+
+                head = awkward.util.numpy.arange(self._length, dtype=awkward.util.INDEXTYPE)[head]
+
             if len(head.shape) == 1 and issubclass(head.dtype.type, awkward.util.numpy.integer):
                 mask = (head < 0)
                 if mask.any():
@@ -561,90 +571,8 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
                 tags[explicit] = 1
                 index[explicit] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(explicit))
 
-                return awkward.array.union.UnionArray(tags, index, [awkward.util.numpy.array(), self._content[match]])
+                return awkward.array.union.UnionArray(tags, index, [awkward.util.numpy.array(), self._content[match[explicit]]])[tail]
 
-            elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-                HERE
-
-
-            else:
-                raise TypeError("cannot interpret dtype {0} as a fancy index or mask".format(head.dtype))
-
-
-
-
-
-
-
-
-            if view is None:
-                headstart, headstop, headstep = head.indices(length)
-                if headstep == 0:
-                    raise ValueError("slice step cannot be zero")
-                if (headstep > 0 and headstop - headstart > 0) or (headstep < 0 and headstop - headstart < 0):
-                    d, m = divmod(abs(headstart - headstop), abs(headstep))
-                    headlength = d + (1 if m != 0 else 0)
-                else:
-                    headlength = 0
-
-                if headstep > 0:
-                    skip = headstart
-                else:
-                    skip = length - 1 - headstart
-
-                out = self.copy()
-                out._view = (start + step*headstart, step*headstep, min(length - skip, headlength), oldtail + tail)
-                out._inverse = None
-                return out
-
-            else:
-                out = self.copy()
-                out._view = (view[head], oldtail + tail)
-                out._inverse = None
-                return out
-
-        else:
-            head = awkward.util.numpy.array(head, copy=False)
-            if len(head.shape) == 1 and issubclass(head.dtype.type, awkward.util.numpy.integer):
-                negative = (head < 0)
-                if negative.any():
-                    head[negative] += length
-                if not awkward.util.numpy.bitwise_and(0 <= head, head < length).all():
-                    raise IndexError("some indexes out of bounds for length {0}".format(length))
-
-                if view is None:
-                    if start == 0 and step == 1:
-                        out = self.copy()
-                        out._view = (head, oldtail + tail)
-                        out._inverse = None
-                        return out
-
-                    else:
-                        view = awkward.util.numpy.arange(start, start + step*length, step)
-
-                out = self.copy()
-                out._view = (view[head], oldtail + tail)
-                out._inverse = None
-                return out
-
-            elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-                if len(head) != length:
-                    raise IndexError("boolean index of length {0} does not fit array of length {1}".format(len(head), length))
-
-                if view is None:
-                    view = awkward.util.numpy.arange(start, start + step*length, step)
-
-                match = awkward.util.numpy.searchsorted(self._index, view, side="left")
-                matchhead = match[head]
-
-                if (self._index[matchhead] == view[head]).all():
-                    return self._content[(matchhead,) + oldtail + tail]
-                else:
-                    out = self.copy()
-                    out._view = (view[head], oldtail + tail)
-                    out._inverse = None
-                    return out
-                
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
 
