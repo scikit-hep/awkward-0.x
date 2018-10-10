@@ -44,7 +44,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def fromtags(cls, tags, contents):
         out = cls.__new__(cls)
         out.tags = tags
-        out.index = awkward.util.numpy.empty(out._tags.shape, dtype=awkward.util.INDEXTYPE)
+        out.index = awkward.util.numpy.empty(out._tags.shape, dtype=awkward.util.TAGTYPE)
         out.contents = contents
 
         if out._tags.reshape(-1).max() >= len(out._contents):
@@ -93,7 +93,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @tags.setter
     def tags(self, value):
-        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
+        value = awkward.util.toarray(value, awkward.util.TAGTYPE, awkward.util.numpy.ndarray)
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("tags must have integer dtype")
         if (value < 0).any():
@@ -297,14 +297,67 @@ class UnionArray(awkward.array.base.AwkwardArray):
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        import awkward.array.objects
+
         if method != "__call__":
             return NotImplemented
 
-        HERE
+        tags = []
+        for x in inputs:
+            if isinstance(x, UnionArray):
+                x._valid()
+                tags.append(x._tags)
+        assert len(tags) > 0
 
+        if any(x.shape != tags[0].shape for x in tags[1:]):
+            raise ValueError("cannot {0} UnionArrays because tag shapes differ".format(ufunc))
 
+        combos = awkward.util.numpy.stack(tags, axis=-1).view([(str(i), x.dtype) for i, x in enumerate(tags)]).reshape(tags[0].shape)
 
-        
+        outtags = awkward.util.numpy.empty(tags[0].shape, dtype=awkward.util.TAGTYPE)
+        outindex = awkward.util.numpy.empty(tags[0].shape, dtype=awkward.util.INDEXTYPE)
+
+        out = None
+        contents = {}
+        types = {}
+        for outtag, combo in enumerate(awkward.util.numpy.unique(combos)):
+            mask = (combos == combo)
+            outtags[mask] = outtag
+            outindex[mask] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(mask))
+
+            result = getattr(ufunc, method)(*[x[mask] for x in inputs], **kwargs)
+
+            if isinstance(result, tuple):
+                if out is None:
+                    out = list(result)
+                for i, x in enumerate(result):
+                    if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
+                        if i not in contents:
+                            contents[i] = []
+                        contents[i].append(x)
+                        types[i] = type(x)
+
+            elif method == "at":
+                pass
+
+            else:
+                if isinstance(result, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
+                    if None not in contents:
+                        contents[None] = []
+                    contents[None].append(result)
+                    types[None] = type(result)
+
+        if out is None:
+            if None in contents:
+                return awkward.array.objects.Methods.maybemixin(types[None], UnionArray)(outtags, outindex, contents[None])
+            else:
+                return None
+        else:
+            for i in range(len(out)):
+                if i in contents:
+                    out[i] = awkward.array.objects.Methods.maybemixin(types[i], UnionArray)(outtags, outindex, contents[i])
+            return tuple(out)
+
     def any(self):
         self._valid()
         index = self._index[:len(self._tag)]

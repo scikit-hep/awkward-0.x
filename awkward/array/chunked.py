@@ -552,32 +552,32 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 if out is None:
                     out = list(result)
                 for i, x in enumerate(result):
-                    if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)):
+                    if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
                         if i not in chunks:
                             chunks[i] = []
                         chunks[i].append(x)
-                        types[i] = type(result)
+                        types[i] = type(x)
 
             elif method == "at":
                 pass
 
             else:
-                if isinstance(result, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)):
+                if isinstance(result, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
                     if None not in chunks:
                         chunks[None] = []
                     chunks[None].append(result)
                     types[None] = type(result)
 
-            if out is None:
-                if None in chunks:
-                    return awkward.array.objects.Methods.maybemixin(types[None], ChunkedArray)(chunks[None])
-                else:
-                    return None
+        if out is None:
+            if None in chunks:
+                return awkward.array.objects.Methods.maybemixin(types[None], ChunkedArray)(chunks[None])
             else:
-                for i in range(len(out)):
-                    if i in chunks:
-                        out[i] = awkward.array.objects.Methods.maybemixin(types[i], ChunkedArray)(chunks[i])
-                return tuple(out)
+                return None
+        else:
+            for i in range(len(out)):
+                if i in chunks:
+                    out[i] = awkward.array.objects.Methods.maybemixin(types[i], ChunkedArray)(chunks[i])
+            return tuple(out)
 
     def any(self):
         return any(x.any() for x in self._chunks)
