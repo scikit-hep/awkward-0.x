@@ -36,8 +36,6 @@ import awkward.util
 
 class UnionArray(awkward.array.base.AwkwardArray):
     def __init__(self, tags, index, contents):
-        self._view = None
-        self._base = None
         self.tags = tags
         self.index = index
         self.contents = contents
@@ -45,8 +43,6 @@ class UnionArray(awkward.array.base.AwkwardArray):
     @classmethod
     def fromtags(cls, tags, contents):
         out = cls.__new__(cls)
-        out._view = None
-        out._base = None
         out.tags = tags
         out.index = awkward.util.numpy.empty(out._tags.shape, dtype=awkward.util.INDEXTYPE)
         out.contents = contents
@@ -62,8 +58,6 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     def copy(self, tags=None, index=None, contents=None):
         out = self.__class__.__new__(self.__class__)
-        out._view = self._view
-        out._base = self._base
         out._tags = self._tags
         out._index = self._index
         out._contents = self._contents
@@ -79,12 +73,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     def deepcopy(self, tags=None, index=None, contents=None):
         out = self.copy(tags=tags, index=index, contents=contents)
-        if len(out._view) == 2:
-            view, tail = out._view
-            out._view = (awkward.util.deepcopy(view), tail)
         out._tags = awkward.util.deepcopy(out._tags)
         out._index = awkward.util.deepcopy(out._index)
-        out._contents = [awkward.util.deepcopy(x) for x in out._contents]
+        out._contents = [awkward.util.deepcopy(x) for x in out._contents]            
         return out
 
     def empty_like(self, **overrides):
@@ -102,8 +93,6 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @tags.setter
     def tags(self, value):
-        if self._view is not None:
-            raise ValueError("tags can only be set on the original UnionArray, not a view (try union.base.tags = array)")
         value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("tags must have integer dtype")
@@ -118,8 +107,6 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @index.setter
     def index(self, value):
-        if self._view is not None:
-            raise ValueError("index can only be set on the original UnionArray, not a view (try union.base.index = array)")
         value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("index must have integer dtype")
@@ -134,8 +121,6 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @contents.setter
     def contents(self, value):
-        if self._view is not None:
-            raise ValueError("contents can only be set on the original UnionArray, not a view (try union.base.contents = array)")
         value = tuple(awkward.util.toarray(x, awkward.util.DEFAULTTYPE) for x in value)
         if len(value) == 0:
             raise ValueError("contents must be a non-empty iterable")
@@ -249,82 +234,39 @@ class UnionArray(awkward.array.base.AwkwardArray):
         self._valid()
 
         if awkward.util.isstringslice(where):
-            return self.copy(content=self._content[where])
-
-        view = None
-        if self._view is None:
-            start, step, length, oldtail = 0, 1, len(self._tags), ()
-        elif len(self._view) == 4:
-            start, step, length, oldtail = self._view
-        elif len(self._view) == 2:
-            view, oldtail = self._view
-            length = len(view)
-        else:
-            raise AssertionError(self._view)
+            raise NotImplementedError
+            # return self.copy(contents=self._contents[where])
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
         if not isinstance(where, tuple):
             where = (where,)
-        where = where + oldtail
-        head, tail = where[0], where[1:]
+        head, tail = where[:len(self._tags.shape)], where[len(self._tags.shape):]
 
-        if isinstance(head, awkward.util.integer):
-            original_head = head
-            if head < 0:
-                head += length
-            if not 0 <= head < length:
-                raise IndexError("index {0} is out of bounds for size {1}".format(original_head, length))
+        tags = self._tags[head]
+        index = self._index[:len(self._tags)][head]
 
-            if view is None:
-                head = start + step*head
+        if len(tags.shape) == len(index.shape) == 0:
+            return self._contents[tags][(index,) + tail]
+        else:
+            if len(tags) == 0:
+                return self._contents[0][(index,) + tail]
+            elif (tags == tags[0]).all():
+                return self._contents[tags[0]][(index,) + tail]
             else:
-                head = view[head]
+                return self.copy(tags=tags, index=index)
 
-            where = (head,) + tail
-            tag = self._tags[where[:len(self._tags.shape)]]
-            index = self._index[where[:len(self._tags.shape)]]
-            return self._contents[tag][(index,) + tail]
+    # def __setitem__(self, where, what):
+    #     if awkward.util.isstringslice(where):
+    #         raise NotImplementedError("cannot assign columns to a Table through a UnionArray")
+    #     else:
+    #         raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
-        elif isinstance(head, slice):
-            if view is None:
-                headstart, headstop, headstep = head.indices(length)
-                if headstep == 0:
-                    raise ValueError("slice step cannot be zero")
-                if (headstep > 0 and headstop - headstart > 0) or (headstep < 0 and headstop - headstart < 0):
-                    d, m = divmod(abs(headstart - headstop), abs(headstep))
-                    headlength = d + (1 if m != 0 else 0)
-                else:
-                    headlength = 0
-
-                if headstep > 0:
-                    skip = headstart
-                else:
-                    skip = length - 1 - headstart
-
-                out = self.copy()
-                out._view = (start + step*headstart, step*headstep, min(length - skip, headlength), tail)
-
-                print("out._view", out._view)
-
-                return out
-
-
-                
-        else:
-            raise NotImplementedError
-
-    def __setitem__(self, where, what):
-        if awkward.util.isstringslice(where):
-            raise NotImplementedError("cannot assign columns to a Table through a UnionArray")
-        else:
-            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
-
-    def __delitem__(self, where, what):
-        if awkward.util.isstringslice(where):
-            raise NotImplementedError("cannot assign columns to a Table through a UnionArray")
-        else:
-            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+    # def __delitem__(self, where, what):
+    #     if awkward.util.isstringslice(where):
+    #         raise NotImplementedError("cannot assign columns to a Table through a UnionArray")
+    #     else:
+    #         raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         raise NotImplementedError
