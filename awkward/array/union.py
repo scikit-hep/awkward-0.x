@@ -37,6 +37,7 @@ import awkward.util
 class UnionArray(awkward.array.base.AwkwardArray):
     def __init__(self, tags, index, contents):
         self._view = None
+        self._base = None
         self.tags = tags
         self.index = index
         self.contents = contents
@@ -45,8 +46,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def fromtags(cls, tags, contents):
         out = cls.__new__(cls)
         out._view = None
+        out._base = None
         out.tags = tags
-        out._index = awkward.util.numpy.empty(out._tags.shape, dtype=awkward.util.INDEXTYPE)
+        out.index = awkward.util.numpy.empty(out._tags.shape, dtype=awkward.util.INDEXTYPE)
         out.contents = contents
 
         if out._tags.reshape(-1).max() >= len(out._contents):
@@ -61,9 +63,11 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def copy(self, tags=None, index=None, contents=None):
         out = self.__class__.__new__(self.__class__)
         out._view = self._view
+        out._base = self._base
         out._tags = self._tags
         out._index = self._index
         out._contents = self._contents
+        out._dtype = self._dtype
         out._isvalid = self._isvalid
         if tags is not None:
             out.tags = tags
@@ -98,6 +102,8 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @tags.setter
     def tags(self, value):
+        if self._view is not None:
+            raise ValueError("tags can only be set on the original UnionArray, not a view (try union.base.tags = array)")
         value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("tags must have integer dtype")
@@ -112,6 +118,8 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @index.setter
     def index(self, value):
+        if self._view is not None:
+            raise ValueError("index can only be set on the original UnionArray, not a view (try union.base.index = array)")
         value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("index must have integer dtype")
@@ -126,70 +134,76 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @contents.setter
     def contents(self, value):
+        if self._view is not None:
+            raise ValueError("contents can only be set on the original UnionArray, not a view (try union.base.contents = array)")
         value = tuple(awkward.util.toarray(x, awkward.util.DEFAULTTYPE) for x in value)
         if len(value) == 0:
             raise ValueError("contents must be a non-empty iterable")
         self._contents = value
+        self._dtype = None
         self._isvalid = False
 
     @property
     def dtype(self):
-        if all(issubclass(x.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.bool_)
+        if self._dtype is None:
+            if all(issubclass(x.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.bool_)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.int8)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.int8)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.uint8)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.uint8)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8, awkward.util.numpy.uint8, awkward.util.numpy.int16)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.int16)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8, awkward.util.numpy.uint8, awkward.util.numpy.int16)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.int16)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8, awkward.util.numpy.uint16)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.uint16)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8, awkward.util.numpy.uint16)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.uint16)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8, awkward.util.numpy.uint8, awkward.util.numpy.int16, awkward.util.numpy.uint16, awkward.util.numpy.int32)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.int32)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8, awkward.util.numpy.uint8, awkward.util.numpy.int16, awkward.util.numpy.uint16, awkward.util.numpy.int32)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.int32)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8, awkward.util.numpy.uint16, awkward.util.numpy.uint32)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.uint32)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8, awkward.util.numpy.uint16, awkward.util.numpy.uint32)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.uint32)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8, awkward.util.numpy.uint8, awkward.util.numpy.int16, awkward.util.numpy.uint16, awkward.util.numpy.int32, awkward.util.numpy.uint32, awkward.util.numpy.int64)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.int64)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8, awkward.util.numpy.uint8, awkward.util.numpy.int16, awkward.util.numpy.uint16, awkward.util.numpy.int32, awkward.util.numpy.uint32, awkward.util.numpy.int64)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.int64)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8, awkward.util.numpy.uint16, awkward.util.numpy.uint32, awkward.util.numpy.uint64)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.uint64)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8, awkward.util.numpy.uint16, awkward.util.numpy.uint32, awkward.util.numpy.uint64)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.uint64)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.float16)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float16)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.float32)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float32)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.float64)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float64)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64, awkward.util.numpy.float128)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.float128)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64, awkward.util.numpy.float128)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float128)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.integer, awkward.util.numpy.floating)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.float64)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.integer, awkward.util.numpy.floating)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float64)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.complex64)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex64)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.complex128)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex128)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128, awkward.util.numpy.complex256)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.complex256)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128, awkward.util.numpy.complex256)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex256)
 
-        elif all(issubclass(x.dtype.type, (awkward.util.numpy.integer, awkward.util.numpy.floating, awkward.util.numpy.complexfloating)) for x in self._contents):
-            return awkward.util.numpy.dtype(awkward.util.numpy.complex256)
+            elif all(issubclass(x.dtype.type, (awkward.util.numpy.integer, awkward.util.numpy.floating, awkward.util.numpy.complexfloating)) for x in self._contents):
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex256)
 
-        else:
-            return awkward.util.numpy.dtype(awkward.util.numpy.object_)
+            else:
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.object_)
+
+        return self._dtype
 
     @property
     def shape(self):
@@ -327,7 +341,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @property
     def base(self):
-        raise TypeError("UnionArray has no base")
+        return self._base
 
     @property
     def columns(self):
