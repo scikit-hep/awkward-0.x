@@ -190,16 +190,8 @@ class Test(unittest.TestCase):
         self.assertEqual(a[-1::-2].dense.tolist(), [104, 103, 102, 101, 100])
         self.assertEqual(a[-2::-2].dense.tolist(), [0, 0, 0, 0, 0])
         self.assertEqual(a[-3::-2].dense.tolist(), [103, 102, 101, 100])
-        self.assertEqual(a[[1, 3, 5, 7, 9]].dense.tolist(), [100, 101, 102, 103, 104])
-        self.assertEqual(a[[1, 3, 5, 7, 8, 9]].dense.tolist(), [100, 101, 102, 103, 0, 104])
-        self.assertEqual(a[[1, 3, 5, 9, 7]].dense.tolist(), [100, 101, 102, 104, 103])
-        self.assertEqual(a[[1, 3, 5, 9, 8, 7]].dense.tolist(), [100, 101, 102, 104, 0, 103])
-        self.assertEqual(a[[True, True, False, True, False, True, False, True, False, True]].dense.tolist(), [0, 100, 101, 102, 103, 104])
-        self.assertEqual(a[[True, True, True, True, False, True, False, True, False, True]].dense.tolist(), [0, 100, 0, 101, 102, 103, 104])
 
         self.assertEqual([a[1:].dense[i].tolist() for i in range(9)], [100, 0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual([a[[1, 3, 5, 9, 8, 7]].dense[i].tolist() for i in range(6)], [100, 101, 102, 104, 0, 103])
-        self.assertEqual([a[[True, True, True, True, False, True, False, True, False, True]].dense[i].tolist() for i in range(7)], [0, 100, 0, 101, 102, 103, 104])
 
     def test_sparse_get2d_content(self):
         a = SparseArray(10, [1, 3, 5, 7, 9], [[100], [101], [102], [103], [104]])
@@ -264,16 +256,8 @@ class Test(unittest.TestCase):
         self.assertEqual(a[-1::-2].dense.tolist(), [[104], [103], [102], [101], [100]])
         self.assertEqual(a[-2::-2].dense.tolist(), [[0], [0], [0], [0], [0]])
         self.assertEqual(a[-3::-2].dense.tolist(), [[103], [102], [101], [100]])
-        self.assertEqual(a[[1, 3, 5, 7, 9]].dense.tolist(), [[100], [101], [102], [103], [104]])
-        self.assertEqual(a[[1, 3, 5, 7, 8, 9]].dense.tolist(), [[100], [101], [102], [103], [0], [104]])
-        self.assertEqual(a[[1, 3, 5, 9, 7]].dense.tolist(), [[100], [101], [102], [104], [103]])
-        self.assertEqual(a[[1, 3, 5, 9, 8, 7]].dense.tolist(), [[100], [101], [102], [104], [0], [103]])
-        self.assertEqual(a[[True, True, False, True, False, True, False, True, False, True]].dense.tolist(), [[0], [100], [101], [102], [103], [104]])
-        self.assertEqual(a[[True, True, True, True, False, True, False, True, False, True]].dense.tolist(), [[0], [100], [0], [101], [102], [103], [104]])
 
         self.assertEqual([a[1:].dense[i].tolist() for i in range(9)], [[100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual([a[[1, 3, 5, 9, 8, 7]].dense[i].tolist() for i in range(6)], [[100], [101], [102], [104], [0], [103]])
-        self.assertEqual([a[[True, True, True, True, False, True, False, True, False, True]].dense[i].tolist() for i in range(7)], [[0], [100], [0], [101], [102], [103], [104]])
 
     def test_indexed_ufunc(self):
         a = SparseArray(10, [1, 3, 5, 7, 9], [100, 101, 102, 103, 104])

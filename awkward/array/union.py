@@ -47,7 +47,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
         out.index = awkward.util.numpy.empty(out._tags.shape, dtype=awkward.util.INDEXTYPE)
         out.contents = contents
 
-        if out._tags.reshape(-1).max() >= len(out._contents):
+        if len(out._tags.reshape(-1)) > 0 and out._tags.reshape(-1).max() >= len(out._contents):
             raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(out._tags.reshape(-1).max(), len(out._contents)))
 
         for tag, content in enumerate(out._contents):
@@ -213,14 +213,14 @@ class UnionArray(awkward.array.base.AwkwardArray):
             if self._tags.shape[1:] != self._index.shape[1:]:
                 raise ValueError("tags dimensionality ({0}) must be equal to index dimensionality ({1})".format(self._tags.shape[1:], self._index.shape[1:]))
 
-            if self._tags.reshape(-1).max() >= len(self._contents):
+            if len(self._tags.reshape(-1)) > 0 and self._tags.reshape(-1).max() >= len(self._contents):
                 raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(self._tags.reshape(-1).max(), len(self._contents)))
 
             index = self._index[:len(self._tags)]
-            for tag, content in enumerate(self._contents):
+            for tag in awkward.util.numpy.unique(self._tags):
                 maxindex = index[self._tags == tag].reshape(-1).max()
-                if maxindex >= len(content):
-                    raise ValueError("maximum index ({0}) must be less than the length of all contents arrays ({1})".format(maxindex, len(content)))
+                if maxindex >= len(self._contents[tag]):
+                    raise ValueError("maximum index ({0}) must be less than the length of all contents arrays ({1})".format(maxindex, len(self._contents[tag])))
 
             self._isvalid = True
 
