@@ -554,6 +554,17 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(length=length, index=index, content=content)[tail]
 
         elif isinstance(head, SparseArray) and len(head.shape) == 1 and isinstance(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+            if self._length != head._length:
+                raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(self._length, head._length))
+
+            match = awkward.util.numpy.searchsorted(self._index, head._index, side="left")
+            mask = (self._index[match] == head._index)
+
+            self._index[mask]
+            self._content[mask]
+
+            awkward.util.numpy.cumsum(head._content)
+
             # FIXME: optimization
             raise NotImplementedError
 
@@ -653,7 +664,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         for i in range(len(inputs)):
             if isinstance(inputs[i], SparseArray):
                 inputs[i]._valid()
-                inputs[i] = inputs[i].dense
+                inputs[i] = inputs[i].dense   # FIXME: can do better (optimization)
 
         return getattr(ufunc, method)(*inputs, **kwargs)
 
