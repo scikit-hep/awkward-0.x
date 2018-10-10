@@ -490,6 +490,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             i += 1
 
     def __getitem__(self, where):
+        import awkward.array.union
         self._valid()
 
         if awkward.util.isstringslice(where):
@@ -502,7 +503,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         head, tail = where[0], where[1:]
 
         if isinstance(head, awkward.util.integer):
-            original_head
+            original_head = head
             if head < 0:
                 head += length
             if not 0 <= head < length:
@@ -541,17 +542,28 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
                 index, remainder = awkward.util.numpy.divmod(index, abs(step))
                 mask[remainder != 0] = False
 
-            return self.copy(length=length, index=index[mask], content=self._content[mask])
+            return self.copy(length=length, index=index[mask], content=self._content[mask])[tail]
 
         else:
             head = awkward.util.toarray(head, awkward.util.INDEXTYPE)
-            if issubclass(head.dtype.type, awkward.util.numpy.integer):
-                HERE
+            if len(head.shape) == 1 and issubclass(head.dtype.type, awkward.util.numpy.integer):
+                mask = (head < 0)
+                if mask.any():
+                    head[mask] += self._length
+                if (head < 0) | (head >= self._length):
+                    raise IndexError("indexes out of bounds for size {0}".format(self._length))
+                
+                match = awkward.util.numpy.searchsorted(self._index, head, side="left")
+                explicit = (self._index[match] == head)
 
+                tags = awkward.util.numpy.zeros(len(head), dtype=awkward.util.TAGTYPE)
+                index = awkward.util.numpy.zeros(len(head), dtype=awkward.util.INDEXTYPE)
+                tags[explicit] = 1
+                index[explicit] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(explicit))
 
+                return awkward.array.union.UnionArray(tags, index, [awkward.util.numpy.array(), self._content[match]])
 
-
-            elif issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+            elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
                 HERE
 
 
