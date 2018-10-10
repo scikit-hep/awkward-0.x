@@ -234,8 +234,13 @@ class UnionArray(awkward.array.base.AwkwardArray):
         self._valid()
 
         if awkward.util.isstringslice(where):
-            raise NotImplementedError
-            # return self.copy(contents=self._contents[where])
+            contents = []
+            for tag in awkward.util.numpy.unique(self._tags):
+                contents.append(self._contents[tag][where])
+            if len(contents) == 0:
+                return self.copy(contents=[self._contents[0][where]])
+            else:
+                return self.copy(contents=contents)
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
@@ -255,27 +260,66 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 return self._contents[tags[0]][(index,) + tail]
             else:
                 return self.copy(tags=tags, index=index)
+    
+    def __setitem__(self, where, what):
+        import awkward.array.index
 
-    # def __setitem__(self, where, what):
-    #     if awkward.util.isstringslice(where):
-    #         raise NotImplementedError("cannot assign columns to a Table through a UnionArray")
-    #     else:
-    #         raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+        if what.shape[:len(self._tags.shape)] != self._tags.shape:
+            raise ValueError("array to assign does not have the same starting shape as tags")
 
-    # def __delitem__(self, where, what):
-    #     if awkward.util.isstringslice(where):
-    #         raise NotImplementedError("cannot assign columns to a Table through a UnionArray")
-    #     else:
-    #         raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+        if isinstance(where, awkward.util.string):
+            for tag in awkward.util.numpy.unique(self._tags):
+                inverseindex = awkward.array.index.invert(self._index[:len(self._tags)][self._tags == tag])
+                self._contents[tag][where] = awkward.array.index.IndexedArray(inverseindex, what)
+
+        elif awkward.util.isstringslice(where):
+            if len(where) != len(what):
+                raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
+            for tag in awkward.util.numpy.unique(self._tags):
+                inverseindex = awkward.array.index.invert(self._index[:len(self._tags)][self._tags == tag])
+                for x, y in zip(where, what):
+                    self._contents[tag][x] = awkward.array.index.IndexedArray(inverseindex, y)
+
+        else:
+            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+
+    def __delitem__(self, where):
+        if isinstance(where, awkward.util.string):
+            for tag in awkward.util.numpy.unique(self._tags):
+                del self._contents[tag][where]
+
+        elif awkward.util.isstringslice(where):
+            for tag in awkward.util.numpy.unique(self._tags):
+                for x in where:
+                    del self._contents[tag][x]
+
+        else:
+            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        raise NotImplementedError
+        if method != "__call__":
+            return NotImplemented
 
+        HERE
+
+
+
+        
     def any(self):
-        raise NotImplementedError
+        self._valid()
+        index = self._index[:len(self._tag)]
+        for tag in awkward.util.numpy.unique(self._tags):
+            if self._contents[tag][index[self._tags == tag]].any():
+                return True
+        return False
 
     def all(self):
-        raise NotImplementedError
+        self._valid()
+        index = self._index[:len(self._tag)]
+        for tag in awkward.util.numpy.unique(self._tags):
+            if not self._contents[tag][index[self._tags == tag]].all():
+                return False
+        return True
 
     @classmethod
     def concat(cls, first, *rest):

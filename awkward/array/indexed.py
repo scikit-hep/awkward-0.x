@@ -152,13 +152,14 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             return self._content[(head,) + tail]
 
     def _invert(self, what):
-        if what.shape != self._index.shape:
-            raise ValueError("array to assign does not have the same shape as index")
         if self._inverse is None:
             self._inverse = invert(self._index)
         return IndexedArray(self._inverse, what)
 
     def __setitem__(self, where, what):
+        if what.shape[:len(self._index.shape)] != self._index.shape:
+            raise ValueError("array to assign does not have the same starting shape as index")
+
         if isinstance(where, awkward.util.string):
             self._content[where] = self._invert(what)
 
