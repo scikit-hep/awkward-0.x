@@ -553,20 +553,27 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
             return self.copy(length=length, index=index, content=content)[tail]
 
-        elif isinstance(head, SparseArray) and len(head.shape) == 1 and isinstance(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+        elif isinstance(head, SparseArray) and len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+            head._valid()
             if self._length != head._length:
                 raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(self._length, head._length))
 
-            match = awkward.util.numpy.searchsorted(self._index, head._index, side="left")
-            mask = (self._index[match] == head._index)
+            # the new index is a cumsum (starting at zero) of the boolean values
+            index = awkward.util.numpy.cumsum(head._content)
+            length = index[-1]
+            index[1:] = index[:-1]
+            index[0] = 0
 
-            self._index[mask]
-            self._content[mask]
+            # find my sparse elements in the mask's sparse elements
+            match1 = awkward.util.numpy.searchsorted(head._index, self._index, side="left")
+            match1[match1 >= len(head._index)] = len(head._index) - 1
+            content = self._content[awkward.util.numpy.logical_and(head._index[match1] == self._index, head._content[match1])]
 
-            awkward.util.numpy.cumsum(head._content)
+            # find the mask's sparse elements in my sparse elements
+            match2 = awkward.util.numpy.searchsorted(self._index, head._index, side="left")
+            index = index[awkward.util.numpy.logical_and(self._index[match2] == head._index, head._content)]
 
-            # FIXME: optimization
-            raise NotImplementedError
+            return self.copy(length=length, index=index, content=content)
 
         else:
             head = awkward.util.toarray(head, awkward.util.INDEXTYPE)
