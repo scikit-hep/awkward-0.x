@@ -302,7 +302,11 @@ class ByteIndexedArray(IndexedArray):
         starts = self._index[where]
 
         if len(starts.shape) == 0:
-            return self._content[starts : starts + self._dtype.itemsize].view(self._dtype)[0]
+            if self._dtype.subdtype is None:
+                return self._content[starts : starts + self._dtype.itemsize].view(self._dtype)[0]
+            else:
+                dt, sh = self._dtype.subdtype
+                return self._content[starts : starts + self._dtype.itemsize].view(dt).reshape(sh)
 
         else:
             if len(starts) == 0:
@@ -311,7 +315,11 @@ class ByteIndexedArray(IndexedArray):
             else:
                 index = awkward.util.numpy.repeat(starts, self._dtype.itemsize)
                 index += awkward.util.numpy.tile(awkward.util.numpy.arange(self._dtype.itemsize), len(starts))
-                return self._content[index].view(self._dtype)
+                if self._dtype.subdtype is None:
+                    return self._content[index].view(self._dtype)
+                else:
+                    dt, sh = self._dtype.subdtype
+                    return self._content[index].view(dt).reshape((-1,) + sh)
 
     def __setitem__(self, where, what):
         if awkward.util.isstringslice(where):

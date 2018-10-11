@@ -52,6 +52,11 @@ def fromarray(array):
         return array.type
 
 def fromnumpy(shape, dtype, masked=False):
+    if not isinstance(shape, tuple):
+        shape = (shape,)
+    if not isinstance(dtype, awkward.util.numpy.dtype):
+        dtype = awkward.util.numpy.dtype(dtype)
+
     if masked:
         return OptionType(fromnumpy(shape, dtype))
     elif dtype.subdtype is not None:

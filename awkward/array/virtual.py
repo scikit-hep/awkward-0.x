@@ -53,6 +53,8 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         self.persistentkey = persistentkey
         self.type = type
         self._array = None
+        self._setitem = None
+        self._delitem = None
 
     def copy(self, generator=None, cache=None, persistentkey=None, type=None):
         out = self.__class__.__new__(self.__class__)
@@ -61,6 +63,14 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         out._persistentkey = self._persistentkey
         out._type = self._type
         out._array = self._array
+        if self._setitem is None:
+            out._setitem = None
+        else:
+            out._setitem = awkward.util.OrderedDict(self._setitem.items())
+        if self._delitem is None:
+            out._delitem = None
+        else:
+            out._delitem = list(self._delitem)
         if generator is not None:
             out.generator = generator
         if cache is not None:
@@ -74,6 +84,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def deepcopy(self, generator=None, cache=None, persistentkey=None, type=None):
         out = self.copy(generator=generator, cache=cache, persistentkey=persistentkey, type=type)
         out._array = awkward.util.deepcopy(out._array)
+        if out._setitem is not None:
+            for n in list(out._setitem):
+                out._setitem[n] = awkward.util.deepcopy(out._setitem[n])
         return out
 
     def empty_like(self, **overrides):
@@ -125,22 +138,28 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         self._persistentkey = value
 
     @property
-    def dtype(self):
-        return self.type.dtype
-
-    @property
-    def shape(self):
-        return self.type.shape
-
-    @property
     def type(self):
         if self._type is None or self.ismaterialized:
             return awkward.type.fromarray(self.array)
         else:
             return self._type
 
+    @type.setter
+    def type(self, value):
+        if value is not None and not isinstance(value, awkward.type.ArrayType):
+            raise TypeError("type must be None or an awkward type (to set Numpy parameters, use awkward.util.fromnumpy(shape, dtype, masked=False))")
+        self._type = value
+
     def __len__(self):
         return self.shape[0]
+
+    @property
+    def shape(self):
+        return self.type.shape
+
+    @property
+    def dtype(self):
+        return self.type.dtype
 
     def _valid(self):
         pass
@@ -198,7 +217,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             return self._array is not None and self._array in self._cache
 
     def materialize(self):
-        array = awkward.util.toarray(self._generator(), akward.util.DEFAULTTYPE)
+        array = awkward.util.toarray(self._generator(), awkward.util.DEFAULTTYPE)
         if self._setitem is not None:
             for n, x in self._setitem.items():
                 array[n] = x
@@ -206,10 +225,8 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             for n in self._delitem:
                 del array[n]
 
-        if self._type is not None and self._type != array.type:
-            raise ValueError("materialized array has type\n\n{0}\n\nexpected type\n\n{1}".format(array.type.__str__(indent="    "), self._type.__str__(indent="    ")))
-        if isinstance(self.type, awkward.util.numpy.dtype):
-            raise ValueError("materialized object is scalar: {0}".format(array))
+        if self._type is not None and self._type != awkward.type.fromarray(array):
+            raise ValueError("materialized array has type\n\n{0}\n\nexpected type\n\n{1}".format(awkward.type.fromarray(array).__str__(indent="    "), self._type.__str__(indent="    ")))
 
         if self._cache is None:
             # states (1), (2), and (6)
@@ -224,7 +241,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def __del__(self):
         # TransientKeys are based on runtime ids, which Python may reuse after an object is garbage collected
         # they *MUST* be removed from the cache to avoid confusion; persistentkeys can (and should) stay in
-        if self._cache is not None and isinstance(self._array, VirtualArray.TransientKey):
+        if getattr(self, "_cache", None) is not None and isinstance(self._array, VirtualArray.TransientKey):
             try:
                 del self._cache[self._array]
             except:
@@ -242,7 +259,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def __setitem__(self, where, what):
         self.array[where] = what
         if self._type is not None:
-            self._type = array.type
+            self._type = awkward.type.fromarray(array)
         if self._setitem is None:
             self._setitem = awkward.util.OrderedDict()
         self._setitem[where] = what
@@ -250,7 +267,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def __delitem__(self, where):
         del self.array[where]
         if self._type is not None:
-            self._type = array.type
+            self._type = awkward.type.fromarray(array)
         if self._setitem is not None and where in self._setitem:
             del self._setitem
         if self._delitem is None:
