@@ -314,13 +314,6 @@ class ArrayType(Type):
         else:
             return self._to.dtype
 
-    @property
-    def jshape(self):
-        if isinstance(self._to, awkward.util.numpy.dtype):
-            return (self._takes, self._to)
-        else:
-            return (self._takes,) + self._to.jshape
-
     def _isnumpy(self, seen):
         if id(self) in seen:
             return False
@@ -393,10 +386,6 @@ class TableType(Type):
             else:
                 out.append((n, x.dtype))
         return awkward.util.numpy.dtype(out)
-
-    @property
-    def jshape(self):
-        return (dict((n, x if isinstance(x, awkward.util.numpy.dtype) else x.jshape) for n, x in self._fields.items()),)
 
     def _isnumpy(self, seen):
         if id(self) in seen:
@@ -473,10 +462,6 @@ class UnionType(Type):
     @property
     def dtype(self):
         raise TypeError("Union has no Numpy dtype")
-
-    @property
-    def jshape(self):
-        return ([x.jshape for x in self._possibilities],)
 
     def _isnumpy(self, seen):
         return False
@@ -556,10 +541,6 @@ class OptionType(Type):
     @property
     def dtype(self):
         return self._type.dtype
-
-    @property
-    def jshape(self):
-        return ([self._type.jshape, None],)
 
     def _isnumpy(self, seen):
         if id(self) in seen:

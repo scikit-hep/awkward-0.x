@@ -67,10 +67,6 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     __nonzero__ = __bool__
 
     @property
-    def jshape(self):
-        return self.type.jshape
-
-    @property
     def size(self):
         return len(self)
 
