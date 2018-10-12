@@ -28,11 +28,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import types
+
 import awkward.util
 
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def __array__(self, *args, **kwargs):
-        raise Exception("{0} {1}".format(args, kwargs))
+        # hitting this function is usually undesirable; uncomment to search for performance bugs
+        # raise Exception("{0} {1}".format(args, kwargs))
+        return awkward.util.numpy.array(self, *args, **kwargs)
 
     def __iter__(self):
         for i in range(len(self)):
@@ -65,8 +69,8 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     __nonzero__ = __bool__
 
     @property
-    def jshape(self):
-        return self.type.jshape
+    def size(self):
+        return len(self)
 
     def tolist(self):
         import awkward.array.table
@@ -80,6 +84,9 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                 out.append(self._try_tolist(x))
         return out
 
+    def _valid(self):
+        pass
+
     def valid(self):
         try:
             self._valid()
@@ -87,6 +94,40 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return False
         else:
             return True
+
+    def _argfields(self, function):
+        if not isinstance(function, types.FunctionType):
+            raise TypeError("function (or lambda) required")
+
+        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
+            return None, None
+
+        required = function.__code__.co_varnames[:function.__code__.co_argcount]
+        has_varargs = (function.__code__.co_flags & 0x04) != 0
+        has_kwargs = (function.__code__.co_flags & 0x08) != 0
+
+        args = []
+        kwargs = {}
+
+        order = self.columns
+
+        for i, n in enumerate(required):
+            if n in self._content:
+                args.append(n)
+            elif str(i) in self._content:
+                args.append(str(i))
+            else:
+                args.append(order[i])
+
+        if has_varargs:
+            while str(i) in self._content:
+                args.append(str(i))
+                i += 1
+
+        if has_kwargs:
+            kwargs = [n for n in self._content if n not in required]
+
+        return args, kwargs
 
     def apply(self, function):
         args, kwargs = self._argfields(function)
@@ -123,3 +164,46 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             args = tuple(self[n] for n in args)
             kwargs = dict((n, self[n]) for n in kwargs)
             return self[function(*args, **kwargs).argmin()]
+
+class AwkwardArrayWithContent(AwkwardArray):
+    def __setitem__(self, where, what):
+        if isinstance(where, awkward.util.string):
+            self._content[where] = what
+
+        elif awkward.util.isstringslice(where):
+            if len(where) != len(what):
+                raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
+            for x, y in zip(where, what):
+                self._content[x] = y
+
+        else:
+            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+
+    def __delitem__(self, where):
+        if isinstance(where, awkward.util.string):
+            del self._content[where]
+        elif awkward.util.isstringslice(where):
+            for x in where:
+                del self._content[x]
+        else:
+            raise TypeError("invalid index for removing column from Table: {0}".format(where))
+
+    @property
+    def base(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            raise TypeError("array has no Table, and hence no base")
+        return self._content.base
+
+    @property
+    def columns(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return []
+        else:
+            return self._content.columns
+
+    @property
+    def allcolumns(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return []
+        else:
+            return self._content.allcolumns

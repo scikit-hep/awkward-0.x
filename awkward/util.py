@@ -77,11 +77,12 @@ if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVe
 
 integer = (numbers.Integral, numpy.integer)
 
+DEFAULTTYPE = numpy.dtype(numpy.float64)
 CHARTYPE = numpy.dtype(numpy.uint8)
 INDEXTYPE = numpy.dtype(numpy.int64)
+TAGTYPE = numpy.dtype(numpy.uint8)
 MASKTYPE = numpy.dtype(numpy.bool_)
 BITMASKTYPE = numpy.dtype(numpy.uint8)
-DEFAULTTYPE = numpy.dtype(numpy.float64)
 
 def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
@@ -153,15 +154,6 @@ def iscomparison(ufunc):
             ufunc is numpy.not_equal or
             ufunc is numpy.greater or
             ufunc is numpy.greater_equal)
-
-def _argfields(function):
-    if not isinstance(function, types.FunctionType):
-        raise TypeError("apply method requires a function (or lambda)")
-
-    if function.__code__.co_argcount != 1:
-        raise TypeError("apply method requires a one-argument function (or lambda) when applied to non-Tables")
-
-    return None, None
 
 try:
     NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin

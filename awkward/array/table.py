@@ -62,7 +62,7 @@ class Table(awkward.array.base.AwkwardArray):
             if content is not None:
                 return content[self._index]
 
-            raise AttributeError("neither _{0} is not a column in this {1}".format(name, self._table.rowname))
+            raise AttributeError("{0} is not a column in this {1}".format(repr(name), self._table.rowname))
 
         def __getitem__(self, where):
             if isinstance(where, awkward.util.string):
@@ -244,40 +244,6 @@ class Table(awkward.array.base.AwkwardArray):
             value[n] = awkward.util.toarray(value[n], awkward.util.DEFAULTTYPE)
         self._content = value
 
-    def _valid(self):
-        return True
-
-    def _argfields(self, function):
-        if not isinstance(function, types.FunctionType):
-            raise TypeError("function (or lambda) required")
-
-        required = function.__code__.co_varnames[:function.__code__.co_argcount]
-        has_varargs = (function.__code__.co_flags & 0x04) != 0
-        has_kwargs = (function.__code__.co_flags & 0x08) != 0
-
-        args = []
-        kwargs = {}
-
-        order = self.columns
-
-        for i, n in enumerate(required):
-            if n in self._content:
-                args.append(n)
-            elif str(i) in self._content:
-                args.append(str(i))
-            else:
-                args.append(order[i])
-
-        if has_varargs:
-            while str(i) in self._content:
-                args.append(str(i))
-                i += 1
-
-        if has_kwargs:
-            kwargs = [n for n in self._content if n not in required]
-
-        return args, kwargs
-
     @property
     def dtype(self):
         return awkward.util.numpy.dtype([(n, x.dtype) for n, x in self._content.items()])
@@ -379,7 +345,8 @@ class Table(awkward.array.base.AwkwardArray):
             if issubclass(head.dtype.type, awkward.util.numpy.integer):
                 length = self._length()
                 negative = (head < 0)
-                head[negative] += length
+                if negative.any():
+                    head[negative] += length
                 if not awkward.util.numpy.bitwise_and(0 <= head, head < length).all():
                     raise IndexError("some indexes out of bounds for length {0}".format(length))
 
@@ -455,6 +422,9 @@ class Table(awkward.array.base.AwkwardArray):
             where = (where,)
         head, tail = where[0], where[1:]
 
+        if tail != ():
+            raise IndexError("cannot pass multidimensional indexes through a Table")
+
         newslice = self._newslice(head)
 
         if isinstance(newslice, awkward.util.integer):
@@ -468,7 +438,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     def __setitem__(self, where, what):
         if self._view is not None:
-            raise ValueError("new columns can only be attached to the original table, not a view (try table.base['col'] = array)")
+            raise ValueError("new columns can only be attached to the original Table, not a view (try table.base['col'] = array)")
 
         if isinstance(where, awkward.util.string):
             self._content[where] = awkward.util.toarray(what, awkward.util.DEFAULTTYPE)
@@ -484,7 +454,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     def __delitem__(self, where):
         if self._view is not None:
-            raise ValueError("columns can only be removed from the original table, not a view (try del table.base['col'])")
+            raise ValueError("columns can only be removed from the original Table, not a view (try del table.base['col'])")
 
         if isinstance(where, awkward.util.string):
             del self._content[where]
@@ -501,6 +471,8 @@ class Table(awkward.array.base.AwkwardArray):
         inputsdict = None
         for x in inputs:
             if isinstance(x, Table):
+                x._valid()
+
                 if inputsdict is None:
                     inputsdict = awkward.util.OrderedDict([(n, []) for n in x._content])
                     table = x
