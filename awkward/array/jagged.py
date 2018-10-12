@@ -223,7 +223,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("starts must have integer dtype")
         if len(value.shape) == 0:
-            raise TypeError("starts must have at least one dimension")
+            raise ValueError("starts must have at least one dimension")
         if (value < 0).any():
             raise ValueError("starts must be a non-negative array")
         self._starts = value
@@ -240,7 +240,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("stops must have integer dtype")
         if len(value.shape) == 0:
-            raise TypeError("stops must have at least one dimension")
+            raise ValueError("stops must have at least one dimension")
         if (value < 0).any():
             raise ValueError("stops must be a non-negative array")
         self._stops = value
@@ -294,7 +294,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("counts must have integer dtype")
         if len(value.shape) == 0:
-            raise TypeError("counts must have at least one dimension")
+            raise ValueError("counts must have at least one dimension")
         if (value < 0).any():
             raise ValueError("counts must be a non-negative array")
         offsets = counts2offsets(value.reshape(-1))
@@ -321,7 +321,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("parents must have integer dtype")
         if len(value.shape) == 0:
-            raise TypeError("parents must have at least one dimension")
+            raise ValueError("parents must have at least one dimension")
         self._starts, self._stops = parents2startsstops(value)
         self._offsets, self._counts = None, None
         self._parents = value
@@ -510,26 +510,26 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         elif stops is None:
             starts = awkward.util.toarray(starts, awkward.util.INDEXTYPE)
             if len(self) != len(starts):
-                raise IndexError("cannot fit JaggedArray of length {0} into starts of length {1}".format(len(self), len(starts)))
+                raise ValueError("cannot fit JaggedArray of length {0} into starts of length {1}".format(len(self), len(starts)))
 
             stops = starts + self.counts
 
             if (stops[:-1] > starts[1:]).any():
-                raise IndexError("cannot fit contents of JaggedArray into the given starts array")
+                raise ValueError("cannot fit contents of JaggedArray into the given starts array")
 
         elif starts is None:
             stops = awkward.util.toarray(stops, awkward.util.INDEXTYPE)
             if len(self) != len(stops):
-                raise IndexError("cannot fit JaggedArray of length {0} into stops of length {1}".format(len(self), len(stops)))
+                raise ValueError("cannot fit JaggedArray of length {0} into stops of length {1}".format(len(self), len(stops)))
 
             starts = stops - self.counts
 
             if (stops[:-1] > starts[1:]).any():
-                raise IndexError("cannot fit contents of JaggedArray into the given stops array")
+                raise ValueError("cannot fit contents of JaggedArray into the given stops array")
 
         else:
             if not awkward.util.numpy.array_equal(stops - starts, self.counts):
-                raise IndexError("cannot fit contents of JaggedArray into the given starts and stops arrays")
+                raise ValueError("cannot fit contents of JaggedArray into the given starts and stops arrays")
 
         self._validstartsstops(starts, stops)
 
@@ -722,7 +722,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
 
         if not isinstance(other, JaggedArray):
-            raise ValueError("both arrays must be JaggedArrays")
+            raise TypeError("both arrays must be JaggedArrays")
         
         if len(self) != len(other):
             raise ValueError("both JaggedArrays must have the same length")
@@ -1000,7 +1000,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             x._valid()
 
         if not all(isinstance(x, JaggedArray) for x in arrays):
-            raise ValueError("cannot hconcat JaggedArrays with non-JaggedArrays")
+            raise TypeError("cannot concat JaggedArrays with non-JaggedArrays")
 
         starts = awkward.util.numpy.concatenate([x._starts for x in arrays])
         stops = awkward.util.numpy.concatenate([x._stops for x in arrays])
@@ -1126,7 +1126,7 @@ class ByteJaggedArray(JaggedArray):
     def content(self, value):
         value = awkward.util.toarray(value, awkward.util.CHARTYPE, awkward.util.numpy.ndarray)
         if len(value.shape) != 1:
-            raise TypeError("content of ByteJaggedArray must have 1-dimensional shape")
+            raise ValueError("content of ByteJaggedArray must have 1-dimensional shape")
         self._content = value.view(awkward.util.CHARTYPE)
         self._isvalid = False
 
@@ -1229,31 +1229,31 @@ class ByteJaggedArray(JaggedArray):
         elif stops is None:
             starts = awkward.util.toarray(starts, awkward.util.INDEXTYPE)
             if self._starts.shape != starts.shape:
-                raise IndexError("cannot fit ByteJaggedArray with shape {0} into starts with shape {1}".format(self._starts.shape, starts.shape))
+                raise ValueError("cannot fit ByteJaggedArray with shape {0} into starts with shape {1}".format(self._starts.shape, starts.shape))
 
             bytestarts = starts * self._subdtype.itemsize
             bytestops = bytestarts + self.counts
             stops = self._divitemsize(bytestops)
 
             if (stops[:-1] > starts[1:]).any():
-                raise IndexError("cannot fit contents of ByteJaggedArray into the given starts array")
+                raise ValueError("cannot fit contents of ByteJaggedArray into the given starts array")
 
         elif starts is None:
             stops = awkward.util.toarray(stops, awkward.util.INDEXTYPE)
             if self._stops.shape != stops.shape:
-                raise IndexError("cannot fit ByteJaggedArray with shape {0} into stops with shape {1}".format(self._stops.shape, stops.shape))
+                raise ValueError("cannot fit ByteJaggedArray with shape {0} into stops with shape {1}".format(self._stops.shape, stops.shape))
 
             bytestops = stops * self._subdtype.itemsize
             bytestarts = bytestops - self.counts
             starts = self._divitemsize(bytestarts)
 
             if (stops[:-1] > starts[1:]).any():
-                raise IndexError("cannot fit contents of ByteJaggedArray into the given stops array")
+                raise ValueError("cannot fit contents of ByteJaggedArray into the given stops array")
 
         else:
             bytestarts, bytestops = starts * self._subdtype.itemsize, stops * self._subdtype.itemsize
             if not awkward.util.numpy.array_equal(bytestops - bytestarts, self.counts):
-                raise IndexError("cannot fit contents of ByteJaggedArray into the given starts and stops arrays")
+                raise ValueError("cannot fit contents of ByteJaggedArray into the given starts and stops arrays")
         
         JaggedArray._validstartsstops(bytestarts, bytestops)
         if (bytestops - bytestarts != (stops - starts) * self._subdtype.itemsize).any():

@@ -122,13 +122,13 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         if until is None:
             until = len(self._chunks)
         if not 0 <= until <= len(self._chunks):
-            raise IndexError("cannot knowcounts until chunkid {0} with {1} chunks".format(until, len(self._chunks)))
+            raise ValueError("cannot knowcounts until chunkid {0} with {1} chunks".format(until, len(self._chunks)))
         for i in range(len(self._counts), until):
             self._counts.append(len(self._chunks[i]))
 
     def knowtype(self, at):
         if not 0 <= at < len(self._chunks):
-            raise IndexError("cannot knowtype at chunkid {0} with {1} chunks".format(at, len(self._chunks)))
+            raise ValueError("cannot knowtype at chunkid {0} with {1} chunks".format(at, len(self._chunks)))
         tpe = awkward.type.fromarray(self._chunks[at])
         if tpe.takes == 0:
             self._types[at] = ()
@@ -645,8 +645,10 @@ class AppendableArray(ChunkedArray):
             try:
                 for x in value:
                     assert isinstance(x, awkward.util.integer) and value > 0
-            except (TypeError, AssertionError):
-                raise TypeError("chunkshape must be a positive integer or tuple of positive integers")
+            except TypeError:
+                raise TypeError("chunkshape must be an integer or a tuple of integers")
+            except AssertionError:
+                raise ValueError("chunkshape must be a positive integer or tuple of positive integers")
             else:
                 self._chunkshape = tuple(value)
 

@@ -226,7 +226,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
                 del array[n]
 
         if self._type is not None and self._type != awkward.type.fromarray(array):
-            raise ValueError("materialized array has type\n\n{0}\n\nexpected type\n\n{1}".format(awkward.type.fromarray(array).__str__(indent="    "), self._type.__str__(indent="    ")))
+            raise TypeError("materialized array has type\n\n{0}\n\nexpected type\n\n{1}".format(awkward.type.fromarray(array).__str__(indent="    "), self._type.__str__(indent="    ")))
 
         if self._cache is None:
             # states (1), (2), and (6)

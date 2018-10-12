@@ -410,8 +410,10 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     @length.setter
     def length(self, value):
-        if not isinstance(value, awkward.util.integer) or value < 0:
-            raise TypeError("length must be a non-negative integer")
+        if not isinstance(value, awkward.util.integer):
+            raise TypeError("length must be an integer")
+        if value < 0:
+            raise ValueError("length must be a non-negative integer") 
         self._length = value
 
     @property
@@ -424,7 +426,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("index must have integer dtype")
         if len(value.shape) != 1:
-            raise TypeError("index must be one-dimensional")
+            raise ValueError("index must be one-dimensional")
         if (value < 0).any():
             raise ValueError("index must be a non-negative array")
         if len(value) > 0 and not (value[1:] >= value[:-1]).all():

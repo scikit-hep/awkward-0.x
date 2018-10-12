@@ -121,9 +121,13 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @contents.setter
     def contents(self, value):
+        try:
+            iter(value)
+        except TypeError:
+            raise TypeError("contents must be iterable")
         value = tuple(awkward.util.toarray(x, awkward.util.DEFAULTTYPE) for x in value)
         if len(value) == 0:
-            raise ValueError("contents must be a non-empty iterable")
+            raise ValueError("contents must be non-empty")
         self._contents = value
         self._dtype = None
         self._isvalid = False

@@ -113,7 +113,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def mask(self, value):
         value = awkward.util.toarray(value, awkward.util.MASKTYPE, awkward.util.numpy.ndarray)
         if len(value.shape) != 1:
-            raise TypeError("mask must have 1-dimensional shape")
+            raise ValueError("mask must have 1-dimensional shape")
         if not issubclass(value.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
             value = (value != 0)
         self._mask = value
@@ -299,7 +299,7 @@ class BitMaskedArray(MaskedArray):
     def mask(self, value):
         value = awkward.util.toarray(value, awkward.util.BITMASKTYPE, awkward.util.numpy.ndarray)
         if len(value.shape) != 1:
-            raise TypeError("mask must have 1-dimensional shape")
+            raise ValueError("mask must have 1-dimensional shape")
         self._mask = value.view(awkward.util.BITMASKTYPE)
 
     def __len__(self):
@@ -324,7 +324,7 @@ class BitMaskedArray(MaskedArray):
     def bool2bit(boolmask, lsborder=False):
         boolmask = awkward.util.toarray(boolmask, awkward.util.MASKTYPE, awkward.util.numpy.ndarray)
         if len(boolmask.shape) != 1:
-            raise TypeError("boolmask must have 1-dimensional shape")
+            raise ValueError("boolmask must have 1-dimensional shape")
         if not issubclass(boolmask.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
             boolmask = (boolmask != 0)
 
@@ -513,7 +513,7 @@ class IndexedMaskedArray(MaskedArray):
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("starts must have integer dtype")
         if len(value.shape) != 1:
-            raise TypeError("mask must have 1-dimensional shape")
+            raise ValueError("mask must have 1-dimensional shape")
         self._mask = value
         self._isvalid = False
 

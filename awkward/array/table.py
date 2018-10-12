@@ -62,7 +62,7 @@ class Table(awkward.array.base.AwkwardArray):
             if content is not None:
                 return content[self._index]
 
-            raise AttributeError("neither _{0} is not a column in this {1}".format(name, self._table.rowname))
+            raise AttributeError("{0} is not a column in this {1}".format(repr(name), self._table.rowname))
 
         def __getitem__(self, where):
             if isinstance(where, awkward.util.string):

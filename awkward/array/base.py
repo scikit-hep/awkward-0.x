@@ -34,7 +34,9 @@ import awkward.util
 
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def __array__(self, *args, **kwargs):
-        raise Exception("{0} {1}".format(args, kwargs))
+        # hitting this function is usually undesirable; uncomment to search for performance bugs
+        # raise Exception("{0} {1}".format(args, kwargs))
+        return awkward.util.numpy.array(self, *args, **kwargs)
 
     def __iter__(self):
         for i in range(len(self)):
@@ -55,11 +57,11 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         except AttributeError:
             return x
 
-    # def __getattr__(self, where):
-    #     if awkward.util.is_intstring(where):
-    #         return self[where[1:]]
-    #     else:
-    #         raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
+    def __getattr__(self, where):
+        if awkward.util.is_intstring(where):
+            return self[where[1:]]
+        else:
+            raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
 
     def __bool__(self):
         raise ValueError("The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()")
