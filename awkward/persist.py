@@ -111,9 +111,12 @@ class State(object):
         return not self.__eq__(other)
 
     def fromstate(self, seen):
-        decompress, decompressname = importlib.import_module(self.decompress[0]), self.decompress[1:]
-        while len(decompressname) > 0:
-            decompress, decompressname = getattr(decompress, decompressname[0]), decompressname[1:]
+        if self.decompress is None:
+            decompress = lambda x: x
+        else:
+            decompress, decompressname = importlib.import_module(self.decompress[0]), self.decompress[1:]
+            while len(decompressname) > 0:
+                decompress, decompressname = getattr(decompress, decompressname[0]), decompressname[1:]
 
         create, createname = importlib.import_module(self.create[0]), self.create[1:]
         while len(createname) > 0:

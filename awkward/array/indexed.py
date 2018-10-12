@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.base
+import awkward.persist
 import awkward.type
 import awkward.util
 
@@ -82,6 +83,9 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=awkward.util.numpy.ones_like(self._content))
         else:
             return self.copy(content=self._content.ones_like(**overrides))
+
+    def _tostate(self, seen):
+        return awkward.persist.State()
 
     @property
     def index(self):
