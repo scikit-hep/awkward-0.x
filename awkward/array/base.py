@@ -39,12 +39,12 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         # raise Exception("{0} {1}".format(args, kwargs))
         return awkward.util.numpy.array(self, *args, **kwargs)
 
-    def __getstate__(self):
-        return awkward.persist.tostate(self, None, set())
+    # def __getstate__(self):
+    #     return awkward.persist.tostate(self, None, set())
 
-    def __setstate__(self, state):
-        out = awkward.persist.fromstate(state, {})
-        self.__dict__.update(out.__dict__)
+    # def __setstate__(self, state):
+    #     out = awkward.persist.fromstate(state, {})
+    #     self.__dict__.update(out.__dict__)
 
     def __iter__(self):
         for i in range(len(self)):
