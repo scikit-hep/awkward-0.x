@@ -83,7 +83,7 @@ INDEXTYPE = numpy.dtype(numpy.int64)
 TAGTYPE = numpy.dtype(numpy.uint8)
 MASKTYPE = numpy.dtype(numpy.bool_)
 BITMASKTYPE = numpy.dtype(numpy.uint8)
-
+        
 def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
     if passthrough is None:
