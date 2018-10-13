@@ -36,6 +36,7 @@ import zlib
 
 import numpy
 
+import awkward.util
 import awkward.version
 
 contexts = ("ChunkedArray.chunks",
@@ -71,6 +72,25 @@ default = [
     [8192, [numpy.bool_, numpy.bool, numpy.integer], list(contexts), (zlib.compress, ("zlib", "decompress"))],
     ]
 
+def dtype2json(obj):
+    if obj.subdtype is not None:
+        dt, sh = obj.subdtype
+        return (dtype2json(dt), sh)
+    elif obj.names is not None:
+        return [(n, dtype2json(obj[n])) for n in obj.names]
+    else:
+        return str(obj)
+
+def json2dtype(obj):
+    def recurse(obj):
+        if isinstance(obj, (list, tuple)) and len(obj) > 0 and (isinstance(obj[-1], numbers.Integral) or isinstance(obj[0], str) or (isinstance(obj[-1], (list, tuple)) and all(isinstance(x, numbers.Integral) for x in obj[-1]))):
+            return tuple(recurse(x) for x in obj)
+        elif isinstance(obj, (list, tuple)):
+            return [recurse(x) for x in obj]
+        else:
+            return obj
+    return numpy.dtype(recurse(obj))
+
 def serialize(obj, sink, prefix="", policy=None):
     import awkward.array.base
 
@@ -88,12 +108,10 @@ def serialize(obj, sink, prefix="", policy=None):
         seen[id(obj)] = ident
 
         if type(obj) is numpy.ndarray and len(obj.shape) != 0:
-            dtype = obj.dtype
-            # FIXME: recarrays
-            if len(obj.shape) == 1:
-                dtype = str(dtype)
+            if len(obj.shape) > 1:
+                dtype = dtype2json(numpy.dtype((obj.dtype, obj.shape[1:])))
             else:
-                dtype = ",".join(obj.shape[1:]) + str(dtype)
+                dtype = dtype2json(obj.dtype)
 
             for minsize, types, contexts, pair in policy:
                 if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(types)) and context in contexts:
@@ -128,16 +146,16 @@ def serialize(obj, sink, prefix="", policy=None):
     sink[prefix] = json.dumps(schema)
     return schema
 
-def deserialize(source, prefix=""):
-    schema = json.loads(schema)
-    prefix = schema["prefix"]
-    seen = {}
+# def deserialize(source, prefix=""):
+#     schema = json.loads(schema)
+#     prefix = schema["prefix"]
+#     seen = {}
 
-    def unfill(schema):
-        if isinstance(schema, numbers.Integral):
-            return seen[schema]
+#     def unfill(schema):
+#         if isinstance(schema, numbers.Integral):
+#             return seen[schema]
 
-        else:
+#         else:
             
 
 
