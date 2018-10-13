@@ -120,49 +120,73 @@ def serialize(obj, sink, prefix="", policy=None):
 
                     return {"id": ident,
                             "gen": ["numpy", "frombuffer"],
-                            "get": {"buffer": {"gen": decompress, "id": str(ident)}},
-                            "args": {"dtype": dtype, "count": len(obj)}}
+                            "args": {"0": {"gen": decompress, "args": {"read": str(ident)}},
+                                     "dtype": {"gen": ["awkward.persist", "json2dtype"], {"args": "0": dtype}},
+                                     "count": len(obj)}}
 
             else:
                 sink[prefix + str(ident)] = obj.tostring()
                 return {"id": ident,
                         "gen": ["numpy", "frombuffer"],
-                        "get": {"buffer": {"id": str(ident)}},
-                        "args": {"dtype": dtype, "count": len(obj)}}
+                        "args": {"0": {"read": str(ident)},
+                                 "dtype": {"gen": ["awkward.persist", "json2dtype"], {"args": "0": dtype}},
+                                 "count": len(obj)}}
 
         elif isinstance(obj, awkward.array.base.AwkwardArray):
-            return obj._persist(fill)
+            return obj.__awkward_persist__(ident, fill, sink)
 
         else:
             sink[prefix + str(ident)] = pickle.dumps(obj)
             return {"id": ident,
                     "gen": ["pickle", "loads"],
-                    "get": {"data": {"id": str(ident)}}}
+                    "args": {"0": {"read": str(ident)}}}
 
     schema = {"awkward": awkward.version.__version__,
               "prefix": prefix,
-              "data": fill(obj, None)}
+              "schema": fill(obj, None)}
 
-    sink[prefix] = json.dumps(schema)
+    sink[prefix] = json.dumps(schema).encode("ascii")
     return schema
 
-# def deserialize(source, prefix=""):
-#     schema = json.loads(schema)
-#     prefix = schema["prefix"]
-#     seen = {}
+def deserialize(source, prefix=""):
+    schema = json.loads(schema)
+    prefix = schema["prefix"]
+    seen = {}
 
-#     def unfill(schema):
-#         if isinstance(schema, numbers.Integral):
-#             return seen[schema]
+    def getgen(schema):
+        gen, genname = importlib.import_module(schema[0]), schema[1:]
+        while len(genname) > 0:
+            gen, genname = getattr(gen, genname[0]), genname[1:]
+        return gen
 
-#         else:
+    def fromsource(schema):
+        data = source[schema["id"]]
+        if "gen" in schema:
+            gen = getgen(schema["gen"])
+            data = gen(data)
+        return data
+
+    def unfill(schema):
+        if isinstance(schema, numbers.Integral):
+            return seen[schema]
+
+        else:
+            ident = schema["ident"]
+            gen = getgen(schema["gen"])
+            get = schema.get("get", {})
+            args = schema.get("args", {})
+
             
+            for n, x in get.items():
+                fromsource(x)
 
 
 
 
 
 
+
+            
 # class Ident(object):
 #     __slots__ = ("_i",)
 
