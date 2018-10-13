@@ -31,7 +31,6 @@
 import importlib
 import json
 import numbers
-import pickle
 import zlib
 
 import numpy
@@ -68,7 +67,7 @@ contexts = ("ChunkedArray.chunks",
             "UnionArray.content",
             "VirtualArray.setitem")
 
-default = [
+compression = [
     [8192, [numpy.bool_, numpy.bool, numpy.integer], list(contexts), (zlib.compress, ("zlib", "decompress"))],
     ]
 
@@ -91,18 +90,16 @@ def json2dtype(obj):
             return obj
     return numpy.dtype(recurse(obj))
 
-def serialize(obj, sink, prefix="", policy=None):
+def serialize(obj, sink, prefix="", compression=compression):
     import awkward.array.base
 
-    if policy is None:
-        policy = default
-    elif isinstance(policy, tuple) and len(policy) == 2 and callable(policy[0]):
-        policy = [(0, (object,), contexts, (zlib.compress, ("zlib", "decompress")))]
+    if isinstance(compression, tuple) and len(compression) == 2 and callable(compression[0]):
+        compression = [(0, (object,), contexts, (zlib.compress, ("zlib", "decompress")))]
 
     seen = {}
     def fill(obj, context):
         if id(obj) in seen:
-            return seen
+            return {"ref": seen[id(obj)]}
 
         ident = len(seen)
         seen[id(obj)] = ident
@@ -113,33 +110,30 @@ def serialize(obj, sink, prefix="", policy=None):
             else:
                 dtype = dtype2json(obj.dtype)
 
-            for minsize, types, contexts, pair in policy:
+            for minsize, types, contexts, pair in compression:
                 if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(types)) and context in contexts:
                     compress, decompress = pair
                     sink[prefix + str(ident)] = compress(obj)
 
                     return {"id": ident,
                             "gen": ["numpy", "frombuffer"],
-                            "args": {"0": {"gen": decompress, "args": {"read": str(ident)}},
-                                     "dtype": {"gen": ["awkward.persist", "json2dtype"], {"args": "0": dtype}},
-                                     "count": len(obj)}}
+                            "args": [{"gen": decompress, "args": [{"read": str(ident)}]},
+                                     {"gen": ["awkward.persist", "json2dtype"], [dtype]},
+                                     len(obj)]}
 
             else:
                 sink[prefix + str(ident)] = obj.tostring()
                 return {"id": ident,
                         "gen": ["numpy", "frombuffer"],
-                        "args": {"0": {"read": str(ident)},
-                                 "dtype": {"gen": ["awkward.persist", "json2dtype"], {"args": "0": dtype}},
-                                 "count": len(obj)}}
+                        "args": [{"read": str(ident)},
+                                 {"gen": ["awkward.persist", "json2dtype"], [dtype]},
+                                 len(obj)]}
 
-        elif isinstance(obj, awkward.array.base.AwkwardArray):
+        elif hasattr(obj, "__awkward_persist__"):
             return obj.__awkward_persist__(ident, fill, sink)
 
         else:
-            sink[prefix + str(ident)] = pickle.dumps(obj)
-            return {"id": ident,
-                    "gen": ["pickle", "loads"],
-                    "args": {"0": {"read": str(ident)}}}
+            raise TypeError("cannot serialize {0} instance (has no __awkward_persist__ method)".format(type(obj)))
 
     schema = {"awkward": awkward.version.__version__,
               "prefix": prefix,
@@ -148,37 +142,43 @@ def serialize(obj, sink, prefix="", policy=None):
     sink[prefix] = json.dumps(schema).encode("ascii")
     return schema
 
-def deserialize(source, prefix=""):
+whitelist = [["numpy", "frombuffer"], ["zlib", "decompress"], ["awkward", "*"], ["awkward.persist", "*"]]
+
+def deserialize(source, prefix="", whitelist=whitelist):
     schema = json.loads(schema)
     prefix = schema["prefix"]
     seen = {}
 
-    def getgen(schema):
-        gen, genname = importlib.import_module(schema[0]), schema[1:]
-        while len(genname) > 0:
-            gen, genname = getattr(gen, genname[0]), genname[1:]
-        return gen
-
-    def fromsource(schema):
-        data = source[schema["id"]]
-        if "gen" in schema:
-            gen = getgen(schema["gen"])
-            data = gen(data)
-        return data
-
     def unfill(schema):
-        if isinstance(schema, numbers.Integral):
-            return seen[schema]
+        if isinstance(schema, dict):
+            if hasattr(schema, "gen"):
+                gen, genname = importlib.import_module(schema[0]), schema[1:]
+                while len(genname) > 0:
+                    gen, genname = getattr(gen, genname[0]), genname[1:]
+
+                args = [unfill(x) for x in schema.get("args", [])]
+
+                out = gen(*args)
+                if "id" in schema:
+                    seen[schema["id"]] = out
+                return out
+                
+            elif hasattr(schema, "read"):
+                if schema.get("absolute", False):
+                    return source[schema["read"]]
+                else:
+                    return source[prefix + schema["read"]]
+                
+            elif hasattr(schema, "ref"):
+                return seen[schema["ref"]]
+
+            else:
+                return schema
 
         else:
-            ident = schema["ident"]
-            gen = getgen(schema["gen"])
-            get = schema.get("get", {})
-            args = schema.get("args", {})
+            return schema
 
-            
-            for n, x in get.items():
-                fromsource(x)
+    return unfill(schema["schema"])
 
 
 
