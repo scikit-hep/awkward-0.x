@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import fnmatch
 import importlib
 import json
 import numbers
@@ -38,38 +39,11 @@ import numpy
 import awkward.util
 import awkward.version
 
-contexts = ("ChunkedArray.chunks",
-            "AppendableArray.chunks",
-            "IndexedArray.index",
-            "IndexedArray.content",
-            "ByteIndexedArray.index",
-            "ByteIndexedArray.content",
-            "SparseArray.index",
-            "SparseArray.content",
-            "JaggedArray.counts",
-            "JaggedArray.starts",
-            "JaggedArray.stops",
-            "JaggedArray.content",
-            "ByteJaggedArray.counts",
-            "ByteJaggedArray.starts",
-            "ByteJaggedArray.stops",
-            "ByteJaggedArray.content",
-            "MaskedArray.mask",
-            "MaskedArray.content",
-            "BitMaskedArray.mask",
-            "BitMaskedArray.content",
-            "IndexedMaskedArray.mask",
-            "IndexedMaskedArray.content",
-            "ObjectArray.content",
-            "Table.content",
-            "UnionArray.tags",
-            "UnionArray.index",
-            "UnionArray.content",
-            "VirtualArray.setitem")
-
 compression = [
-    [8192, [numpy.bool_, numpy.bool, numpy.integer], list(contexts), (zlib.compress, ("zlib", "decompress"))],
+    [8192, [numpy.bool_, numpy.bool, numpy.integer], "*", (zlib.compress, ("zlib", "decompress"))],
     ]
+
+whitelist = [["numpy", "frombuffer"], ["zlib", "decompress"], ["awkward", "*"], ["awkward.persist", "*"]]
 
 def dtype2json(obj):
     if obj.subdtype is not None:
@@ -90,11 +64,11 @@ def json2dtype(obj):
             return obj
     return numpy.dtype(recurse(obj))
 
-def serialize(obj, sink, prefix="", compression=compression):
+def serialize(obj, sink, name="", compression=compression):
     import awkward.array.base
 
     if isinstance(compression, tuple) and len(compression) == 2 and callable(compression[0]):
-        compression = [(0, (object,), contexts, (zlib.compress, ("zlib", "decompress")))]
+        compression = [(0, (object,), "*", (zlib.compress, ("zlib", "decompress")))]
 
     seen = {}
     def fill(obj, context):
@@ -111,22 +85,22 @@ def serialize(obj, sink, prefix="", compression=compression):
                 dtype = dtype2json(obj.dtype)
 
             for minsize, types, contexts, pair in compression:
-                if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(types)) and context in contexts:
+                if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(types)) and any(fnmatch.fnmatchcase(context, p) for p in contexts):
                     compress, decompress = pair
-                    sink[prefix + str(ident)] = compress(obj)
+                    sink[name + str(ident)] = compress(obj)
 
                     return {"id": ident,
                             "gen": ["numpy", "frombuffer"],
                             "args": [{"gen": decompress, "args": [{"read": str(ident)}]},
-                                     {"gen": ["awkward.persist", "json2dtype"], [dtype]},
+                                     {"gen": ["awkward.persist", "json2dtype"], "args": [dtype]},
                                      len(obj)]}
 
             else:
-                sink[prefix + str(ident)] = obj.tostring()
+                sink[name + str(ident)] = obj.tostring()
                 return {"id": ident,
                         "gen": ["numpy", "frombuffer"],
                         "args": [{"read": str(ident)},
-                                 {"gen": ["awkward.persist", "json2dtype"], [dtype]},
+                                 {"gen": ["awkward.persist", "json2dtype"], "args": [dtype]},
                                  len(obj)]}
 
         elif hasattr(obj, "__awkward_persist__"):
@@ -136,25 +110,30 @@ def serialize(obj, sink, prefix="", compression=compression):
             raise TypeError("cannot serialize {0} instance (has no __awkward_persist__ method)".format(type(obj)))
 
     schema = {"awkward": awkward.version.__version__,
-              "prefix": prefix,
-              "schema": fill(obj, None)}
+              "prefix": name,
+              "schema": fill(obj, "")}
 
-    sink[prefix] = json.dumps(schema).encode("ascii")
-    return schema
+    sink[name] = json.dumps(schema).encode("ascii")
 
-whitelist = [["numpy", "frombuffer"], ["zlib", "decompress"], ["awkward", "*"], ["awkward.persist", "*"]]
-
-def deserialize(source, prefix="", whitelist=whitelist):
-    schema = json.loads(schema)
+def deserialize(source, name="", whitelist=whitelist):
+    schema = json.loads(source[name])
     prefix = schema["prefix"]
     seen = {}
 
     def unfill(schema):
         if isinstance(schema, dict):
-            if hasattr(schema, "gen"):
-                gen, genname = importlib.import_module(schema[0]), schema[1:]
-                while len(genname) > 0:
-                    gen, genname = getattr(gen, genname[0]), genname[1:]
+            if "gen" in schema and isinstance(schema["gen"], list) and len(schema["gen"]) > 0:
+                for white in whitelist:
+                    for n, p in zip(schema["gen"], white):
+                        if not fnmatch.fnmatchcase(n, p):
+                            break
+                    else:
+                        gen, genname = importlib.import_module(schema["gen"][0]), schema["gen"][1:]
+                        while len(genname) > 0:
+                            gen, genname = getattr(gen, genname[0]), genname[1:]
+                        break
+                else:
+                    raise RuntimeError("callable {0} not in whitelist: {1}".format(schema["gen"], whitelist))
 
                 args = [unfill(x) for x in schema.get("args", [])]
 
@@ -163,13 +142,13 @@ def deserialize(source, prefix="", whitelist=whitelist):
                     seen[schema["id"]] = out
                 return out
                 
-            elif hasattr(schema, "read"):
+            elif "read" in schema:
                 if schema.get("absolute", False):
                     return source[schema["read"]]
                 else:
                     return source[prefix + schema["read"]]
                 
-            elif hasattr(schema, "ref"):
+            elif "ref" in schema:
                 return seen[schema["ref"]]
 
             else:
@@ -179,122 +158,3 @@ def deserialize(source, prefix="", whitelist=whitelist):
             return schema
 
     return unfill(schema["schema"])
-
-
-
-
-
-
-
-            
-# class Ident(object):
-#     __slots__ = ("_i",)
-
-#     def __init__(self, obj):
-#         self._i = id(obj)
-
-#     def __repr__(self):
-#         return "<Ident {0}>".format(self._i)
-
-#     def __hash__(self):
-#         return hash((Ident, self._i))
-
-#     def __eq__(self, other):
-#         return isinstance(other, Ident) and self._i == other._i
-
-#     def __ne__(self, other):
-#         return not self.__eq__(other)
-
-# class State(object):
-#     __slots__ = ("ident", "decompress", "create", "compressed", "uncompressed")
-
-#     def __init__(self, ident, decompress, create, compressed, uncompressed):
-#         self.ident = ident
-#         self.decompress = decompress
-#         self.create = create
-#         self.compressed = compressed
-#         self.uncompressed = uncompressed
-
-#     def __repr__(self):
-#         return "<State {0} {1} {2} {3} {4}>".format(self.ident, self.decompress, self.create, self.compressed, self.uncompressed)
-
-#     def __hash__(self):
-#         return hash((State, self.ident, self.decompress, self.create, tuple((n, self.compressed[n]) for n in sorted(self.compressed)), tuple((n, self.uncompressed[n]) for n in sorted(self.uncompressed))))
-
-#     def __eq__(self, other):
-#         return isinstance(other, State) and self.ident == other.ident and self.decompress == other.decompress and self.create == other.create and self.compressed == other.compressed and self.uncompressed == other.uncompressed
-
-#     def __ne__(self, other):
-#         return not self.__eq__(other)
-
-#     def fromstate(self, seen):
-#         if self.decompress is None:
-#             decompress = lambda x: x
-#         else:
-#             decompress, decompressname = importlib.import_module(self.decompress[0]), self.decompress[1:]
-#             while len(decompressname) > 0:
-#                 decompress, decompressname = getattr(decompress, decompressname[0]), decompressname[1:]
-
-#         create, createname = importlib.import_module(self.create[0]), self.create[1:]
-#         while len(createname) > 0:
-#             create, createname = getattr(create, createname[0]), createname[1:]
-
-#         kwargs = {}
-#         for n, x in self.compressed.items():
-#             kwargs[n] = decompress(x)
-
-#         for n, x in self.uncompressed.items():
-#             if isinstance(x, State):
-#                 kwargs[n] = fromstate(x, seen)
-#             else:
-#                 kwargs[n] = x
-
-#         return create(**kwargs)
-        
-# def tostate(obj, context, seen):
-#     import awkward.array.base
-
-#     ident = Ident(obj)
-#     if ident in seen:
-#         return ident
-
-#     elif type(obj) is numpy.ndarray and len(obj.shape) != 0:
-#         for minsize, types, contexts, pair in compressor:
-#             if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(types)) and context in contexts:
-#                 compress, decompress = pair
-
-#                 if len(obj.shape) == 1:
-#                     dtype = obj.dtype
-#                 else:
-#                     dtype = numpy.dtype((obj.dtype, obj.shape[1:]))
-
-#                 create = ("numpy", "frombuffer")
-#                 compressed = {"buffer": compress(obj)}
-#                 uncompressed = {"dtype": dtype, "count": len(obj), "offset": 0}
-                    
-#                 seen.add(ident)
-#                 return State(ident, decompress, create, compressed, uncompressed)
-
-#         else:
-#             return obj
-
-#     elif isinstance(obj, awkward.array.base.AwkwardArray):
-#         seen.add(ident)
-#         return obj._tostate(seen)
-
-#     else:
-#         return obj
-
-# def fromstate(state, seen):
-#     import awkward.array.base
-
-#     if isinstance(state, Ident):
-#         return seen[state]
-
-#     elif isinstance(state, State):
-#         out = state.fromstate(seen)
-#         seen[state.ident] = out
-#         return out
-
-#     else:
-#         return state
