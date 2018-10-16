@@ -164,6 +164,26 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return out
 
     @classmethod
+    def fromindex(cls, index, content, validate=True):
+        index = awkward.util.toarray(index, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
+        if isinstance(index, JaggedArray):
+            index = index.content
+        if not issubclass(index.dtype.type, awkward.util.numpy.integer):
+            raise TypeError("index must have integer dtype")
+        if len(index.shape) != 1 or len(index) != len(content):
+            raise ValueError("index array must be one-dimensional with the same length as content")
+
+        if validate:
+            if not ((index[1:] - index[:-1])[(index != 0)[1:]] == 1).all():
+                raise ValueError("every index that is not zero must be one greater than the previous")
+
+        starts = awkward.util.numpy.nonzero(index == 0)[0]
+        offsets = awkward.util.numpy.empty(len(starts) + 1, dtype=awkward.util.INDEXTYPE)
+        offsets[:-1] = starts
+        offsets[-1] = len(index)
+        return cls.fromoffsets(offsets, content)
+
+    @classmethod
     def fromjagged(cls, jagged):
         jagged = jagged._tojagged(copy=False)
         return cls(jagged._starts, jagged._stops, jagged._content)
