@@ -196,7 +196,10 @@ def deserialize(storage, name="", whitelist=whitelist):
                     return storage[prefix + schema["read"]]
                 
             elif "ref" in schema:
-                return awkward.array.virtual.VirtualArray(lambda: seen[schema["ref"]])
+                if schema["ref"] in seen:
+                    return seen[schema["ref"]]
+                else:
+                    return awkward.array.virtual.VirtualArray(lambda: seen[schema["ref"]])
                        
             else:
                 return schema
