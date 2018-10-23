@@ -76,6 +76,14 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         mine = self._mine(overrides)
         return self.copy([awkward.util.numpy.ones_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.ones_like(**overrides) for x in self._chunks], counts=list(self._counts), **mine)
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self.knowcounts()
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [{"list": [fill(x, n + ".chunk") for c, x in zip(self._counts, self._chunks) if c > 0]},
+                         fill(awkward.util.numpy.array([c for c in self._counts if c > 0]), n + ".counts")]}
+
     @property
     def chunks(self):
         return self._chunks

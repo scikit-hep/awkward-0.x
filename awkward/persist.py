@@ -188,7 +188,10 @@ def deserialize(storage, name="", whitelist=whitelist):
                 if "id" in schema:
                     seen[schema["id"]] = out
                 return out
-                
+
+            elif "list" in schema:
+                return [unfill(x) for x in schema["list"]]
+
             elif "read" in schema:
                 if schema.get("absolute", False):
                     return storage[schema["read"]]

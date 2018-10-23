@@ -101,3 +101,11 @@ class Test(unittest.TestCase):
         serialize(a, storage)
         b = deserialize(storage)
         assert a.tolist() == b.tolist()
+
+    def test_chunked(self):
+        print()
+        storage = {}
+        a = awkward.ChunkedArray([[0.0, 1.1, 2.2], [], [3.3, 4.4]])
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
