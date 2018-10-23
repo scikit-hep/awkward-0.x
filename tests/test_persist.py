@@ -65,3 +65,14 @@ class Test(unittest.TestCase):
         serialize(a, storage)
         b = deserialize(storage)
         assert a.tolist() == b.tolist()
+
+    def test_jagged_two(self):
+        storage = {}
+        a1 = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = awkward.JaggedArray.fromiter([[], [1, 2], [3], []])
+        serialize(a1, storage, "one")
+        serialize(a2, storage, "two")
+        b1 = deserialize(storage, "one")
+        b2 = deserialize(storage, "two")
+        assert a1.tolist() == b1.tolist()
+        assert a2.tolist() == b2.tolist()

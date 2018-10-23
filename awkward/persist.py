@@ -71,9 +71,15 @@ def json2dtype(obj):
             return obj
     return numpy.dtype(recurse(obj))
 
-def serialize(obj, storage, name="", compression=compression):
+def serialize(obj, storage, name=None, delimiter="-", compression=compression):
     import awkward.array.base
 
+    if name is None or name == "":
+        name = ""
+        prefix = ""
+    else:
+        prefix = name + delimiter
+        
     if compression is None:
         compression = []
     if isinstance(compression, dict) or callable(compression) or (len(compression) == 2 and callable(compression[0])):
@@ -119,7 +125,7 @@ def serialize(obj, storage, name="", compression=compression):
                 minsize, types, contexts, pair = policy["minsize"], policy["types"], policy["contexts"], policy["pair"]
                 if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(types)) and any(fnmatch.fnmatchcase(context, p) for p in contexts):
                     compress, decompress = pair
-                    storage[name + str(ident)] = compress(obj)
+                    storage[prefix + str(ident)] = compress(obj)
 
                     return {"id": ident,
                             "call": ["numpy", "frombuffer"],
@@ -128,7 +134,7 @@ def serialize(obj, storage, name="", compression=compression):
                                      len(obj)]}
 
             else:
-                storage[name + str(ident)] = obj.tostring()
+                storage[prefix + str(ident)] = obj.tostring()
                 return {"id": ident,
                         "call": ["numpy", "frombuffer"],
                         "args": [{"read": str(ident)},
@@ -142,15 +148,16 @@ def serialize(obj, storage, name="", compression=compression):
             raise TypeError("cannot serialize {0} instance (has no __awkward_persist__ method)".format(type(obj)))
 
     schema = {"awkward": awkward.version.__version__,
-              "prefix": name,
               "schema": fill(obj, "")}
+    if prefix != "":
+        schema["prefix"] = prefix
 
     storage[name] = json.dumps(schema).encode("ascii")
     return schema
 
 def deserialize(storage, name="", whitelist=whitelist):
     schema = json.loads(storage[name])
-    prefix = schema["prefix"]
+    prefix = schema.get("prefix", "")
     seen = {}
 
     def unfill(schema):
