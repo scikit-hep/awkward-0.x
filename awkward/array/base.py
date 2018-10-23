@@ -92,12 +92,9 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                 out.append(self._try_tolist(x))
         return out
 
-    def _valid(self):
-        pass
-
     def valid(self):
         try:
-            self._valid()
+            self._valid(set())
         except:
             return False
         else:

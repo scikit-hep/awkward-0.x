@@ -122,6 +122,11 @@ def deepcopy(array):
     else:
         return array.deepcopy()
 
+def _valid(array, seen):
+    import awkward.array.base
+    if isinstance(array, awkward.array.base.AwkwardArray):
+        array._valid(seen)
+
 def concatenate(arrays):
     if all(isinstance(x, numpy.ndarray) for x in arrays):
         return numpy.concatenate(arrays)

@@ -65,12 +65,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         out._mask = self._mask
         out._content = self._content
         out._maskedwhen = self._maskedwhen
+        out._isvalid = self._isvalid
         if mask is not None:
-            out._mask = mask
+            out.mask = mask
         if content is not None:
-            out._content = content
+            out.content = content
         if maskedwhen is not None:
-            out._maskedwhen = maskedwhen
+            out.maskedwhen = maskedwhen
         return out
 
     def deepcopy(self, mask=None, content=None):
@@ -117,6 +118,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         if not issubclass(value.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
             value = (value != 0)
         self._mask = value
+        self._isvalid = False
 
     def boolmask(self, maskedwhen=True):
         if maskedwhen == self._maskedwhen:
@@ -131,6 +133,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     @content.setter
     def content(self, value):
         self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
+        self._isvalid = False
 
     @property
     def maskedwhen(self):
@@ -155,12 +158,20 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def type(self):
         return awkward.type.ArrayType(len(self._mask), awkward.type.fromarray(self._content).to)
 
-    def _valid(self):
-        if len(self._mask) > len(self._content):
-            raise ValueError("mask length ({0}) must be the same as (or shorter than) the content length ({1})".format(len(self._mask), len(self._content)))
+    def _valid(self, seen):
+        if id(self) not in seen:
+            seen.add(id(self))
+            awkward.util._valid(self._mask, seen)
+            awkward.util._valid(self._content, seen)
+
+            if not self._isvalid:
+                if len(self._mask) > len(self._content):
+                    raise ValueError("mask length ({0}) must be the same as (or shorter than) the content length ({1})".format(len(self._mask), len(self._content)))
+
+                self._isvalid = True
 
     def __iter__(self):
-        self._valid()
+        self._valid(set())
 
         mask = self._mask
         lenmask = len(mask)
@@ -177,7 +188,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             i += 1
 
     def __getitem__(self, where):
-        self._valid()
+        self._valid(set())
 
         if awkward.util.isstringslice(where):
             return self.copy(content=self._content[where])
@@ -212,7 +223,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         tokeep = None
         for x in inputs:
             if isinstance(x, MaskedArray):
-                x._valid()
+                x._valid(set())
                 if tokeep is None:
                     tokeep = x.boolmask(maskedwhen=False)
                 else:
@@ -301,6 +312,7 @@ class BitMaskedArray(MaskedArray):
         if len(value.shape) != 1:
             raise ValueError("mask must have 1-dimensional shape")
         self._mask = value.view(awkward.util.BITMASKTYPE)
+        self._isvalid = False
 
     def __len__(self):
         return len(self._content)
@@ -361,12 +373,20 @@ class BitMaskedArray(MaskedArray):
     def lsborder(self, value):
         self._lsborder = bool(value)
 
-    def _valid(self):
-        if len(self._mask) != self._ceildiv8(len(self._content)):
-            raise ValueError("mask length ({0}) must be equal to ceil(content length / 8) ({1})".format(len(self._mask), self._ceildiv8(len(self._content))))
+    def _valid(self, seen):
+        if id(self) not in seen:
+            seen.add(id(self))
+            awkward.util._valid(self._mask, seen)
+            awkward.util._valid(self._content, seen)
+
+            if not self._isvalid:
+                if len(self._mask) != self._ceildiv8(len(self._content)):
+                    raise ValueError("mask length ({0}) must be equal to ceil(content length / 8) ({1})".format(len(self._mask), self._ceildiv8(len(self._content))))
+
+                self._isvalid = True
 
     def __iter__(self):
-        self._valid()
+        self._valid(set())
 
         one = awkward.util.numpy.uint8(1)
         zero = awkward.util.numpy.uint8(0)
@@ -451,7 +471,7 @@ class BitMaskedArray(MaskedArray):
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(where.shape, where.dtype))
 
     def __getitem__(self, where):
-        self._valid()
+        self._valid(set())
 
         if awkward.util.isstringslice(where):
             return self.copy(content=self._content[where])
@@ -542,17 +562,23 @@ class IndexedMaskedArray(MaskedArray):
         else:
             return self._mask != self._maskedwhen
 
-    def _valid(self):
-        if not self._isvalid:
-            if len(self._mask) != 0:
-                if self._mask.max() > len(self._content):
-                    raise ValueError("maximum mask-index ({0}) is beyond the length of the content ({1})".format(self._mask.max(), len(self._content)))
-                if (self._mask[self._mask != self._maskedwhen] < 0).any():
-                    raise ValueError("mask-index has negative values (other than maskedwhen)")
-            self._isvalid = True
+    def _valid(self, seen):
+        if id(self) not in seen:
+            seen.add(id(self))
+            awkward.util._valid(self._mask, seen)
+            awkward.util._valid(self._content, seen)
+
+            if not self._isvalid:
+                if len(self._mask) != 0:
+                    if self._mask.max() > len(self._content):
+                        raise ValueError("maximum mask-index ({0}) is beyond the length of the content ({1})".format(self._mask.max(), len(self._content)))
+                    if (self._mask[self._mask != self._maskedwhen] < 0).any():
+                        raise ValueError("mask-index has negative values (other than maskedwhen)")
+
+                self._isvalid = True
 
     def __iter__(self):
-        self._valid()
+        self._valid(set())
 
         mask = self._mask
         lenmask = len(mask)
@@ -570,7 +596,7 @@ class IndexedMaskedArray(MaskedArray):
             i += 1
 
     def __getitem__(self, where):
-        self._valid()
+        self._valid(set())
 
         if awkward.util.isstringslice(where):
             return self.copy(content=self._content[where])

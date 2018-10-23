@@ -60,19 +60,19 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     def empty_like(self, **overrides):
         self.knowcounts()
-        self._valid()
+        self._valid(set())
         mine = self._mine(overrides)
         return self.copy([awkward.util.numpy.empty_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.empty_like(**overrides) for x in self._chunks], counts=list(self._counts), **mine)
 
     def zeros_like(self, **overrides):
         self.knowcounts()
-        self._valid()
+        self._valid(set())
         mine = self._mine(overrides)
         return self.copy([awkward.util.numpy.zeros_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.zeros_like(**overrides) for x in self._chunks], counts=list(self._counts), **mine)
 
     def ones_like(self, **overrides):
         self.knowcounts()
-        self._valid()
+        self._valid(set())
         mine = self._mine(overrides)
         return self.copy([awkward.util.numpy.ones_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.ones_like(**overrides) for x in self._chunks], counts=list(self._counts), **mine)
 
@@ -137,7 +137,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         return self._types[at]
 
     def global2chunkid(self, index, return_normalized=False):
-        self._valid()
+        self._valid(set())
 
         if isinstance(index, awkward.util.integer):
             original_index = index
@@ -192,7 +192,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def local2global(self, index, chunkid):
         if isinstance(chunkid, awkward.util.integer):
             self.knowcounts(chunkid + 1)
-            self._valid()
+            self._valid(set())
             original_index = index
             if index < 0:
                 index += self._counts[chunkid]
@@ -208,7 +208,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     raise ValueError("len(index) is {0} and len(chunkid) is {1}, but they should be equal".format(len(index), len(chunkid)))
 
                 self.knowcounts(chunkid.max() + 1)
-                self._valid()
+                self._valid(set())
                 counts = numpy.array(self._counts, dtype=awkward.util.INDEXTYPE)
                 mask = (index < 0)
                 index[mask] += counts[mask]
@@ -234,7 +234,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     @property
     def type(self):
-        return self._valid()
+        return self._gettype()
 
     def __len__(self):
         self.knowcounts()
@@ -254,13 +254,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         offsets = self.offsets
         return [slice(start, stop) for start, stop in zip(offsets[:-1], offsets[1:])]
 
-    def _valid(self):
-        if len(self._counts) > len(self._chunks):
-            raise ValueError("ChunkArray has more counts than chunks")
-        for i, count in enumerate(self._counts):
-            if count != len(self._chunks[i]):
-                raise ValueError("count[{0}] does not agree with len(chunk[{0}])".format(i))
-
+    def _gettype(self):
         tpe = self._type()
         for i in range(len(self._types)):
             if self._types[i] is None or self._types[i] is () or self._types[i] is tpe.to:
@@ -271,6 +265,19 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 raise TypeError("chunks do not have matching types:\n\n{0}\n\nversus\n\n{1}".format(tpe.to.__str__(indent="    "), self._types[i].__str__(indent="    ")))
 
         return tpe
+
+    def _valid(self, seen):
+        if id(self) not in seen:
+            seen.add(id(self))
+
+            if len(self._counts) > len(self._chunks):
+                raise ValueError("ChunkArray has more counts than chunks")
+            for i, count in enumerate(self._counts):
+                awkward.util._valid(self._chunks[i], seen)
+                if count != len(self._chunks[i]):
+                    raise ValueError("count[{0}] does not agree with len(chunk[{0}])".format(i))
+
+            self._gettype()
 
     def __str__(self):
         if self.countsknown:
@@ -303,7 +310,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     def __getitem__(self, where):
         import awkward.array.indexed
-        self._valid()
+        self._valid(set())
 
         if awkward.util.isstringslice(where):
             if isinstance(where, awkward.util.string):
@@ -518,7 +525,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         rest = []
         for x in inputs:
             if isinstance(x, ChunkedArray):
-                x._valid()
+                x._valid(set())
                 if first is None:
                     first = x
                 else:
@@ -704,7 +711,7 @@ class AppendableArray(ChunkedArray):
     def shape(self):
         return (len(self),) + self._chunkshape[1:]
 
-    def _valid(self):
+    def _valid(self, seen):
         pass
 
     def __setitem__(self, where, what):

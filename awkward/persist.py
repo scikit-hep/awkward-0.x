@@ -143,7 +143,7 @@ def serialize(obj, storage, name=None, delimiter="-", compression=compression):
                                  len(obj)]}
 
         elif hasattr(obj, "__awkward_persist__"):
-            return obj.__awkward_persist__(ident, fill, storage)
+            return obj.__awkward_persist__(ident, fill)
 
         else:
             raise TypeError("cannot serialize {0} instance (has no __awkward_persist__ method)".format(type(obj)))

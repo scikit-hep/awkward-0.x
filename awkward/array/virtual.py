@@ -161,8 +161,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def dtype(self):
         return self.type.dtype
 
-    def _valid(self):
-        pass
+    def _valid(self, seen):
+        if self.ismaterialized:
+            awkward.util._valid(self.array, seen)
 
     @property
     def key(self):
@@ -282,7 +283,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         inputs = list(inputs)
         for i in range(len(inputs)):
             if isinstance(inputs[i], VirtualArray):
-                inputs[i]._valid()
+                inputs[i]._valid(set())
                 inputs[i] = inputs[i].array
 
         return getattr(ufunc, method)(*inputs, **kwargs)

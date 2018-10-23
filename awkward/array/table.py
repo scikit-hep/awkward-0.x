@@ -378,6 +378,12 @@ class Table(awkward.array.base.AwkwardArray):
             else:
                 raise TypeError("cannot interpret dtype {0} as a fancy index or mask".format(head.dtype))
 
+    def _valid(self, seen):
+        if id(self) not in seen:
+            seen.add(id(self))
+            for x in self._content.values():
+                awkward.util._valid(x, seen)
+
     def __iter__(self):
         if self._view is None:
             length = self._length()
@@ -471,7 +477,7 @@ class Table(awkward.array.base.AwkwardArray):
         inputsdict = None
         for x in inputs:
             if isinstance(x, Table):
-                x._valid()
+                x._valid(set())
 
                 if inputsdict is None:
                     inputsdict = awkward.util.OrderedDict([(n, []) for n in x._content])

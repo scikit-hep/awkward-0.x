@@ -29,7 +29,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.base
-import awkward.persist
 import awkward.type
 import awkward.util
 
@@ -84,7 +83,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides))
 
-    def __awkward_persist__(self, ident, fill, storage):
+    def __awkward_persist__(self, ident, fill, **kwargs):
         n = self.__class__.__name__
         return {"id": ident,
                 "call": ["awkward", n],
@@ -130,19 +129,25 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     def type(self):
         return awkward.type.ArrayType(*(self._index.shape + (awkward.type.fromarray(self._content).to,)))
 
-    def _valid(self):
-        if not self._isvalid:
-            if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
-                raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
-            self._isvalid = True
+    def _valid(self, seen):
+        if id(self) not in seen:
+            seen.add(id(self))
+            awkward.util._valid(self._index, seen)
+            awkward.util._valid(self._content, seen)
+
+            if not self._isvalid:
+                if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
+                    raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
+
+                self._isvalid = True
 
     def __iter__(self):
-        self._valid()
+        self._valid(set())
         for i in self._index:
             yield self._content[i]
 
     def __getitem__(self, where):
-        self._valid()
+        self._valid(set())
 
         if awkward.util.isstringslice(where):
             return self.copy(content=self._content[where])
@@ -187,7 +192,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         inputs = list(inputs)
         for i in range(len(inputs)):
             if isinstance(inputs[i], IndexedArray):
-                inputs[i]._valid()
+                inputs[i]._valid(set())
                 inputs[i] = inputs[i][:]
 
         return getattr(ufunc, method)(*inputs, **kwargs)
@@ -199,7 +204,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     def pandas(self):
         import pandas
 
-        self._valid()
+        self._valid(set())
 
         if isinstance(self._content, awkward.util.numpy.ndarray):
             return pandas.DataFrame(self._content[self._index])
@@ -280,20 +285,26 @@ class ByteIndexedArray(IndexedArray):
     def dtype(self, value):
         self._dtype = awkward.util.numpy.dtype(value)
 
-    def _valid(self):
-        if not self._isvalid:
-            if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
-                raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
-            self._isvalid = True
+    def _valid(self, seen):
+        if id(self) not in seen:
+            seen.add(id(self))
+            awkward.util._valid(self._index, seen)
+            awkward.util._valid(self._content, seen)
+
+            if not self._isvalid:
+                if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
+                    raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
+
+                self._isvalid = True
 
     def __iter__(self):
-        self._valid()
+        self._valid(set())
         itemsize = self._dtype.itemsize
         for i in self._index:
             yield self._content[i : i + itemsize].view(self._dtype)[0]
 
     def __getitem__(self, where):
-        self._valid()
+        self._valid(set())
 
         if awkward.util.isstringslice(where):
             raise IndexError("only integers, slices (`:`), and integer or boolean arrays are valid indices")
@@ -368,6 +379,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         out._content = self._content
         out._default = self._default
         out._inverse = self._inverse
+        out._isvalid = self._isvalid
         if length is not None:
             out.length = length
         if index is not None:
@@ -441,6 +453,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             raise ValueError("index must be monatonically increasing")
         self._index = value
         self._inverse = None
+        self._isvalid = False
 
     @property
     def content(self):
@@ -449,6 +462,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     @content.setter
     def content(self, value):
         self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
+        self._isvalid = False
 
     @property
     def default(self):
@@ -464,6 +478,8 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
         else:
             return self._default
+
+        self._isvalid = False
 
     @default.setter
     def default(self, value):
@@ -484,12 +500,20 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     def dtype(self):
         return self._content.dtype
 
-    def _valid(self):
-        if len(self._index) > len(self._content):
-            raise ValueError("length of index ({0}) must not be greater than the length of content ({1})".format(len(self._index), len(self._content)))
+    def _valid(self, seen):
+        if id(self) not in seen:
+            seen.add(id(self))
+            awkward.util._valid(self._index, seen)
+            awkward.util._valid(self._content, seen)
+
+            if not self._isvalid:
+                if len(self._index) > len(self._content):
+                    raise ValueError("length of index ({0}) must not be greater than the length of content ({1})".format(len(self._index), len(self._content)))
+
+                self._isvalid = True
 
     def __iter__(self):
-        self._valid()
+        self._valid(set())
 
         length = self._length
         index = self._index
@@ -512,7 +536,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     def __getitem__(self, where):
         import awkward.array.union
-        self._valid()
+        self._valid(set())
 
         if awkward.util.isstringslice(where):
             return self.copy(content=self._content[where])
@@ -572,7 +596,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(length=length, index=index, content=content)[tail]
 
         elif isinstance(head, SparseArray) and len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-            head._valid()
+            head._valid(set())
             if self._length != head._length:
                 raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(self._length, head._length))
 
@@ -632,7 +656,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     @property
     def dense(self):
-        self._valid()
+        self._valid(set())
 
         if isinstance(self._content, awkward.util.numpy.ndarray):
             out = awkward.util.numpy.full(self.shape, self.default, dtype=self.dtype)
@@ -645,7 +669,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             raise NotImplementedError(type(self._content))
 
     def boolmask(self, maskedwhen=True):
-        self._valid()
+        self._valid(set())
 
         if len(self._index) == 0:
             return awkward.util.numpy.empty(0, dtype=awkward.util.numpy.bool_)
@@ -688,7 +712,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         inputs = list(inputs)
         for i in range(len(inputs)):
             if isinstance(inputs[i], SparseArray):
-                inputs[i]._valid()
+                inputs[i]._valid(set())
                 inputs[i] = inputs[i].dense   # FIXME: can do better (optimization)
 
         return getattr(ufunc, method)(*inputs, **kwargs)
