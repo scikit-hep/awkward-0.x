@@ -214,22 +214,23 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=self._content.ones_like(**overrides))
 
     def __awkward_persist__(self, ident, fill, storage):
+        n = self.__class__.__name__
         if self._canuseoffset():
             if len(self._starts) > 0 and self._starts[0] != 0:
                 content = self._content[self._starts[0]:]
             else:
                 content = self._content
             return {"id": ident,
-                    "call": ["awkward.array.jagged", "JaggedArray", "fromcounts"],
-                    "args": [fill(self.counts, "JaggedArray.counts"),
-                             fill(content, "JaggedArray.content")]}
+                    "call": ["awkward", n, "fromcounts"],
+                    "args": [fill(self.counts, n + ".counts"),
+                             fill(content, n + ".content")]}
 
         else:
             return {"id": ident,
-                    "call": ["awkward.array.jagged", "JaggedArray"],
-                    "args": [fill(self._starts, "JaggedArray.starts"),
-                             fill(self._stops, "JaggedArray.stops"),
-                             fill(self._content, "JaggedArray.content")]}
+                    "call": ["awkward", n],
+                    "args": [fill(self._starts, n + ".starts"),
+                             fill(self._stops, n + ".stops"),
+                             fill(self._content, n + ".content")]}
 
     @property
     def starts(self):

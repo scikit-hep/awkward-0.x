@@ -84,8 +84,12 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides))
 
-    def _tostate(self, seen):
-        return awkward.persist.State()
+    def __awkward_persist__(self, ident, fill, storage):
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [fill(self._index, n + ".index"),
+                         fill(self._content, n + ".content")]}
 
     @property
     def index(self):

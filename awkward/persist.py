@@ -49,6 +49,7 @@ partner = {
 
 whitelist = [["numpy", "frombuffer"],
              ["zlib", "decompress"],
+             ["awkward", "*"],
              ["awkward.persist", "*"],
              ["awkward.array.*", "*"]]
 
