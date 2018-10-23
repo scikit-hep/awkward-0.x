@@ -94,7 +94,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     def valid(self):
         try:
-            self._valid(set())
+            self._valid()
         except:
             return False
         else:

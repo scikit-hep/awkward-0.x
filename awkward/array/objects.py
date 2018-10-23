@@ -162,10 +162,8 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def type(self):
         return awkward.type.fromarray(*(self._content.shape + (self._generator,)))
 
-    def _valid(self, seen):
-        if id(self) not in seen:
-            seen.add(id(self))
-            awkward.util._valid(self._content, seen)
+    def _valid(self):
+        pass
         
     def __iter__(self):
         for x in self._content:
@@ -201,7 +199,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         contents = []
         for x in inputs:
             if isinstance(x, ObjectArray):
-                x._valid(set())
+                x._valid()
                 contents.append(x._content)
             else:
                 contents.append(x)

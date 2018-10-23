@@ -209,33 +209,26 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def type(self):
         return awkward.type.ArrayType(*(self._tags.shape + (functools.reduce(lambda a, b: a | b, [awkward.type.fromarray(x).to for x in self._contents]),)))
 
-    def _valid(self, seen):
-        if id(self) not in seen:
-            seen.add(id(self))
-            awkward.util._valid(self._tags, seen)
-            awkward.util._valid(self._index, seen)
-            awkward.util._valid(self._contents, seen)
+    def _valid(self):
+        if len(self._tags.shape) > len(self._index.shape):
+            raise ValueError("tags length ({0}) must be less than or equal to index length ({1})".format(len(self._tags.shape), len(self._index.shape)))
 
-            if not self._isvalid:
-                if len(self._tags.shape) > len(self._index.shape):
-                    raise ValueError("tags length ({0}) must be less than or equal to index length ({1})".format(len(self._tags.shape), len(self._index.shape)))
+        if self._tags.shape[1:] != self._index.shape[1:]:
+            raise ValueError("tags dimensionality ({0}) must be equal to index dimensionality ({1})".format(self._tags.shape[1:], self._index.shape[1:]))
 
-                if self._tags.shape[1:] != self._index.shape[1:]:
-                    raise ValueError("tags dimensionality ({0}) must be equal to index dimensionality ({1})".format(self._tags.shape[1:], self._index.shape[1:]))
+        if len(self._tags.reshape(-1)) > 0 and self._tags.reshape(-1).max() >= len(self._contents):
+            raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(self._tags.reshape(-1).max(), len(self._contents)))
 
-                if len(self._tags.reshape(-1)) > 0 and self._tags.reshape(-1).max() >= len(self._contents):
-                    raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(self._tags.reshape(-1).max(), len(self._contents)))
+        index = self._index[:len(self._tags)]
+        for tag in awkward.util.numpy.unique(self._tags):
+            maxindex = index[self._tags == tag].reshape(-1).max()
+            if maxindex >= len(self._contents[tag]):
+                raise ValueError("maximum index ({0}) must be less than the length of all contents arrays ({1})".format(maxindex, len(self._contents[tag])))
 
-                index = self._index[:len(self._tags)]
-                for tag in awkward.util.numpy.unique(self._tags):
-                    maxindex = index[self._tags == tag].reshape(-1).max()
-                    if maxindex >= len(self._contents[tag]):
-                        raise ValueError("maximum index ({0}) must be less than the length of all contents arrays ({1})".format(maxindex, len(self._contents[tag])))
-
-                self._isvalid = True
+        self._isvalid = True
 
     def __iter__(self):
-        self._valid(set())
+        self._valid()
 
         tags = self._tags
         lentags = len(self._tags)
@@ -248,7 +241,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
             i += 1
 
     def __getitem__(self, where):
-        self._valid(set())
+        self._valid()
 
         if awkward.util.isstringslice(where):
             contents = []
@@ -322,7 +315,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
         tags = []
         for x in inputs:
             if isinstance(x, UnionArray):
-                x._valid(set())
+                x._valid()
                 tags.append(x._tags)
         assert len(tags) > 0
 
@@ -376,7 +369,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
             return tuple(out)
 
     def any(self):
-        self._valid(set())
+        self._valid()
         index = self._index[:len(self._tag)]
         for tag in awkward.util.numpy.unique(self._tags):
             if self._contents[tag][index[self._tags == tag]].any():
@@ -384,7 +377,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
         return False
 
     def all(self):
-        self._valid(set())
+        self._valid()
         index = self._index[:len(self._tag)]
         for tag in awkward.util.numpy.unique(self._tags):
             if not self._contents[tag][index[self._tags == tag]].all():

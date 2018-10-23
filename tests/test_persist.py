@@ -91,13 +91,13 @@ class Test(unittest.TestCase):
         b = deserialize(storage)
         assert a.tolist() == b.tolist()
 
-    # def test_crossref(self):
-    #     starts = [1, 0, 4, 0, 0]
-    #     stops  = [4, 0, 5, 0, 0]
-    #     a = awkward.JaggedArray(starts, stops, [])
-    #     a.content = a
-    #     a = awkward.IndexedArray([0], a)
-    #     print(a)
+    def test_crossref(self):
+        starts = [1, 0, 4, 0, 0]
+        stops  = [4, 0, 5, 0, 0]
+        a = awkward.JaggedArray(starts, stops, [])
+        a.content = a
+        a = awkward.IndexedArray([0, 4], a)
+        # print(a.tolist())
 
 
         # storage = {}
