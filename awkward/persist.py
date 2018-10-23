@@ -50,7 +50,7 @@ partner = {
 whitelist = [["numpy", "frombuffer"],
              ["zlib", "decompress"],
              ["awkward.persist", "*"],
-             ["awkward", "array", "*"]]
+             ["awkward.array.*", "*"]]
 
 def dtype2json(obj):
     if obj.subdtype is not None:

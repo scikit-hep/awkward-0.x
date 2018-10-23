@@ -43,16 +43,25 @@ class Test(unittest.TestCase):
 
     def test_uncompressed_numpy(self):
         storage = {}
-        a = numpy.arange(100, dtype=">u2")
+        a = numpy.arange(100, dtype=">u2").reshape(-1, 5)
         serialize(a, storage, compression=None)
         b = deserialize(storage)
         assert numpy.array_equal(a, b)
         assert a.dtype == b.dtype
+        assert a.shape == b.shape
 
     def test_compressed_numpy(self):
         storage = {}
-        a = numpy.arange(100, dtype=">u2")
+        a = numpy.arange(100, dtype=">u2").reshape(-1, 5)
         serialize(a, storage, compression=zlib.compress)
         b = deserialize(storage)
         assert numpy.array_equal(a, b)
         assert a.dtype == b.dtype
+        assert a.shape == b.shape
+
+    def test_jagged(self):
+        storage = {}
+        a = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
