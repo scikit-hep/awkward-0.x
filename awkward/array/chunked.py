@@ -129,11 +129,11 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def knowtype(self, at):
         if not 0 <= at < len(self._chunks):
             raise ValueError("cannot knowtype at chunkid {0} with {1} chunks".format(at, len(self._chunks)))
-        tpe = awkward.type.fromarray(self._chunks[at])
-        if tpe.takes == 0:
+        chunk = self._chunks[at]
+        if len(chunk) == 0:
             self._types[at] = ()
         else:
-            self._types[at] = tpe.to
+            self._types[at] = awkward.type.fromarray(chunk).to
         return self._types[at]
 
     def global2chunkid(self, index, return_normalized=False):
@@ -219,7 +219,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             else:
                 raise TypeError("local2global requires index and chunkid to be integers or arrays of integers")
 
-    def _type(self):
+    def _gettype(self, seen):
         for tpe in self._types:
             if tpe is not None and tpe is not ():
                 break
@@ -230,23 +230,23 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     break
             else:
                 tpe = awkward.util.DEFAULTTYPE
-        return awkward.type.ArrayType(len(self), tpe)
 
-    @property
-    def type(self):
-        return self._gettype()
+        for i in range(len(self._types)):
+            if self._types[i] is None or self._types[i] is () or self._types[i] is tpe:
+                pass
+            elif self._types[i] == tpe:       # valid if all chunks have the same high-level type
+                self._types[i] = tpe          # once checked, make them identically equal for faster checking next time
+            else:
+                raise TypeError("chunks do not have matching types:\n\n{0}\n\nversus\n\n{1}".format(awkward.type._str(tpe, indent="    "), awkward.type._str(self._types[i], indent="    ")))
+
+        return tpe
+
+    def _getshape(self):
+        return (len(self),)
 
     def __len__(self):
         self.knowcounts()
         return self.offsets[-1]
-
-    @property
-    def shape(self):
-        return self.type.shape
-
-    @property
-    def dtype(self):
-        return self.type.dtype
 
     def _slices(self):
         # perhaps this should be a (public) @staticmethod that finds the largest possible slices to serve no more than one chunk each from a set of ChunkedArrays
@@ -254,26 +254,13 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         offsets = self.offsets
         return [slice(start, stop) for start, stop in zip(offsets[:-1], offsets[1:])]
 
-    def _gettype(self):
-        tpe = self._type()
-        for i in range(len(self._types)):
-            if self._types[i] is None or self._types[i] is () or self._types[i] is tpe.to:
-                pass
-            elif self._types[i] == tpe.to:    # valid if all chunks have the same high-level type
-                self._types[i] = tpe.to       # once checked, make them identically equal for faster checking next time
-            else:
-                raise TypeError("chunks do not have matching types:\n\n{0}\n\nversus\n\n{1}".format(tpe.to.__str__(indent="    "), self._types[i].__str__(indent="    ")))
-
-        return tpe
-
     def _valid(self):
         if len(self._counts) > len(self._chunks):
             raise ValueError("ChunkArray has more counts than chunks")
         for i, count in enumerate(self._counts):
             if count != len(self._chunks[i]):
                 raise ValueError("count[{0}] does not agree with len(chunk[{0}])".format(i))
-
-        self._gettype()
+        self._gettype({})
 
     def __str__(self):
         if self.countsknown:
@@ -699,13 +686,11 @@ class AppendableArray(ChunkedArray):
         import awkward.array.jagged
         return awkward.array.jagged.counts2offsets(self._counts)
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(*(self.shape + (self._dtype,)))
+    def _gettype(self, seen):
+        return self._dtype
 
-    @property
-    def shape(self):
-        return (len(self),) + self._chunkshape[1:]
+    def _getshape(self):
+        return sum(self._counts)
 
     def _valid(self):
         pass

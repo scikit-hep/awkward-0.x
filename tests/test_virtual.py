@@ -86,7 +86,7 @@ class Test(unittest.TestCase):
     def test_virtual_dontmaterialize(self):
         a = VirtualArray(lambda: [1, 2, 3], type=awkward.type.fromnumpy(3, int))
         assert not a.ismaterialized
-        assert a.dtype, numpy.dtyp == (int)
+        assert a.dtype == numpy.dtype(int)
         assert a.shape == (3,)
         assert len(a) == 3
         assert a._array == None

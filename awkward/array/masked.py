@@ -143,20 +143,14 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def maskedwhen(self, value):
         self._maskedwhen = bool(value)
 
-    @property
-    def dtype(self):
-        return self._content.dtype
-
     def __len__(self):
         return len(self._mask)
 
-    @property
-    def shape(self):
-        return (len(self._mask),) + self._content.shape[1:]
+    def _gettype(self, seen):
+        return awkward.type._fromarray(self._content, seen)
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(len(self._mask), awkward.type.fromarray(self._content).to)
+    def _getshape(self):
+        return (len(self._mask),)
 
     def _valid(self):
         if not self._isvalid:
@@ -312,8 +306,7 @@ class BitMaskedArray(MaskedArray):
     def __len__(self):
         return len(self._content)
 
-    @property
-    def shape(self):
+    def _getshape(self):
         return self._content.shape
 
     @staticmethod

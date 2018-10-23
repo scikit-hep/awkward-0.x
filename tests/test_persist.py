@@ -97,14 +97,12 @@ class Test(unittest.TestCase):
         a = awkward.JaggedArray(starts, stops, [])
         a.content = a
         a = awkward.IndexedArray([0, 4], a)
-        # print(a.tolist())
+        print(a.tolist())
 
+        print(a.type)
 
         # storage = {}
+        # print(serialize(a, storage))
 
-
-        
-
-        # serialize(a, storage)
         # b = deserialize(storage)
         # assert a.tolist() == b.tolist()

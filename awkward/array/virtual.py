@@ -137,12 +137,18 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             raise TypeError("persistentkey must be None or a string")
         self._persistentkey = value
 
-    @property
-    def type(self):
+    def _gettype(self, seen):
         if self._type is None or self.ismaterialized:
-            return awkward.type.fromarray(self.array)
+            return awkward.type._fromarray(self.array, seen)
         else:
             return self._type
+
+    def _getshape(self):
+        return ()
+
+    @property
+    def type(self):
+        return self._gettype({})
 
     @type.setter
     def type(self, value):
@@ -152,14 +158,6 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def __len__(self):
         return self.shape[0]
-
-    @property
-    def shape(self):
-        return self.type.shape
-
-    @property
-    def dtype(self):
-        return self.type.dtype
 
     def _valid(self, seen):
         pass
@@ -226,7 +224,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
                 del array[n]
 
         if self._type is not None and self._type != awkward.type.fromarray(array):
-            raise TypeError("materialized array has type\n\n{0}\n\nexpected type\n\n{1}".format(awkward.type.fromarray(array).__str__(indent="    "), self._type.__str__(indent="    ")))
+            raise TypeError("materialized array has type\n\n{0}\n\nexpected type\n\n{1}".format(awkward.type._str(awkward.type.fromarray(array), indent="    "), awkward.type._str(self._type, indent="    ")))
 
         if self._cache is None:
             # states (1), (2), and (6)

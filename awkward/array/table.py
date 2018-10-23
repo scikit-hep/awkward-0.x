@@ -28,7 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import functools
 import types
 
 import awkward.array.base
@@ -244,20 +243,17 @@ class Table(awkward.array.base.AwkwardArray):
             value[n] = awkward.util.toarray(value[n], awkward.util.DEFAULTTYPE)
         self._content = value
 
-    @property
-    def dtype(self):
-        return awkward.util.numpy.dtype([(n, x.dtype) for n, x in self._content.items()])
-
-    @property
-    def shape(self):
-        return (self._length(),)
-
     def __len__(self):
         return self._length()
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(self._length(), functools.reduce(lambda a, b: a & b, [awkward.type.ArrayType(n, awkward.type.fromarray(x).to) for n, x in self._content.items()]))
+    def _gettype(self, seen):
+        out = awkward.type.TableType()
+        for n, x in self._content.items():
+            out[n] = awkward.type._fromarray(x, seen)
+        return out
+
+    def _getshape(self):
+        return (self._length(),)
 
     def _length(self):
         if self._view is None:

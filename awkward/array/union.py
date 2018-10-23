@@ -28,8 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import functools
-
 import awkward.array.base
 import awkward.type
 import awkward.util
@@ -194,20 +192,17 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
         return self._dtype
 
-    @property
-    def shape(self):
-        first = self._contents[0].shape
-        if self.dtype.kind == "O" or not all(x.shape == first for x in self._contents[1:]):
-            return self._tags.shape
-        else:
-            return self._tags.shape + first
-
     def __len__(self):
         return len(self._tags)
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(*(self._tags.shape + (functools.reduce(lambda a, b: a | b, [awkward.type.fromarray(x).to for x in self._contents]),)))
+    def _gettype(self, seen):
+        out = awkward.type.UnionType()
+        for x in self._contents:
+            out.possibilities.append(awkward.type._fromarray(x, seen))
+        return out
+
+    def _getshape(self):
+        return self._tags.shape
 
     def _valid(self):
         if len(self._tags.shape) > len(self._index.shape):

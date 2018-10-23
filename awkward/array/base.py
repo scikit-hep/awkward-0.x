@@ -31,6 +31,7 @@
 import types
 
 import awkward.persist
+import awkward.type
 import awkward.util
 
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
@@ -59,17 +60,29 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def __repr__(self):
         return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
 
+    @property
+    def type(self):
+        return awkward.type.ArrayType(*(self._getshape() + (awkward.type._resolve(self._gettype({}), {}),)))
+
+    @property
+    def dtype(self):
+        return self.type.dtype
+
+    @property
+    def shape(self):
+        return self.type.shape
+
     def _try_tolist(self, x):
         try:
             return x.tolist()
         except AttributeError:
             return x
 
-    def __getattr__(self, where):
-        if awkward.util.is_intstring(where):
-            return self[where[1:]]
-        else:
-            raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
+    # def __getattr__(self, where):
+    #     if awkward.util.is_intstring(where):
+    #         return self[where[1:]]
+    #     else:
+    #         raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
 
     def __bool__(self):
         raise ValueError("The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()")

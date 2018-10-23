@@ -350,20 +350,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out = awkward.util.numpy.arange(len(self._content), dtype=awkward.util.INDEXTYPE)
         return self.copy(content=(out - out[self._starts[self.parents]]))
 
-    @property
-    def dtype(self):
-        return awkward.util.numpy.dtype(awkward.util.numpy.object)      # specifically, Numpy arrays
-
-    @property
-    def shape(self):
-        return self._starts.shape
-
     def __len__(self):
         return len(self._starts)
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(*(self._starts.shape + (awkward.type.ArrayType(awkward.util.numpy.inf, awkward.type.fromarray(self._content).to),)))
+    def _gettype(self, seen):
+        return awkward.type.ArrayType(awkward.util.numpy.inf, awkward.type._fromarray(self._content, seen))
+
+    def _getshape(self):
+        return self._starts.shape
 
     def _valid(self):
         if not self._isvalid:
@@ -1154,9 +1148,8 @@ class ByteJaggedArray(JaggedArray):
         self._subdtype = awkward.util.numpy.dtype(value)
         self._isvalid = False
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(*(self._starts.shape + (awkward.type.ArrayType(awkward.util.numpy.inf, self._subdtype),)))
+    def _gettype(self, seen):
+        return awkward.type.ArrayType(awkward.util.numpy.inf, self._subdtype)
 
     def __iter__(self):
         self._valid()

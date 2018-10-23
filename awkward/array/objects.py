@@ -147,20 +147,17 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
             raise TypeError("kwargs must be a dict")
         self._kwargs = value
 
-    @property
-    def dtype(self):
-        return awkward.util.numpy.dtype(object)
-
-    @property
-    def shape(self):
-        return self._content.shape
-
     def __len__(self):
         return len(self._content)
 
-    @property
-    def type(self):
-        return awkward.type.fromarray(*(self._content.shape + (self._generator,)))
+    def _gettype(self, seen):
+        if len(self._content.shape) == 1:
+            return self._generator
+        else:
+            return awkward.type.ArrayType(*(self._content.shape[1:] + (self._generator,)))
+
+    def _getshape(self):
+        return (len(self._content),)
 
     def _valid(self):
         pass
