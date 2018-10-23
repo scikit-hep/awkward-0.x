@@ -64,10 +64,12 @@ def json2dtype(obj):
             return obj
     return numpy.dtype(recurse(obj))
 
-def serialize(obj, sink, name="", compression=compression):
+def serialize(obj, storage, name="", compression=compression):
     import awkward.array.base
 
-    if isinstance(compression, tuple) and len(compression) == 2 and callable(compression[0]):
+    if compression is None:
+        compression = []
+    elif isinstance(compression, tuple) and len(compression) == 2 and callable(compression[0]):
         compression = [(0, (object,), "*", (zlib.compress, ("zlib", "decompress")))]
 
     seen = {}
@@ -87,24 +89,24 @@ def serialize(obj, sink, name="", compression=compression):
             for minsize, types, contexts, pair in compression:
                 if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(types)) and any(fnmatch.fnmatchcase(context, p) for p in contexts):
                     compress, decompress = pair
-                    sink[name + str(ident)] = compress(obj)
+                    storage[name + str(ident)] = compress(obj)
 
                     return {"id": ident,
-                            "gen": ["numpy", "frombuffer"],
-                            "args": [{"gen": decompress, "args": [{"read": str(ident)}]},
-                                     {"gen": ["awkward.persist", "json2dtype"], "args": [dtype]},
+                            "call": ["numpy", "frombuffer"],
+                            "args": [{"call": decompress, "args": [{"read": str(ident)}]},
+                                     {"call": ["awkward.persist", "json2dtype"], "args": [dtype]},
                                      len(obj)]}
 
             else:
-                sink[name + str(ident)] = obj.tostring()
+                storage[name + str(ident)] = obj.tostring()
                 return {"id": ident,
-                        "gen": ["numpy", "frombuffer"],
+                        "call": ["numpy", "frombuffer"],
                         "args": [{"read": str(ident)},
-                                 {"gen": ["awkward.persist", "json2dtype"], "args": [dtype]},
+                                 {"call": ["awkward.persist", "json2dtype"], "args": [dtype]},
                                  len(obj)]}
 
         elif hasattr(obj, "__awkward_persist__"):
-            return obj.__awkward_persist__(ident, fill, sink)
+            return obj.__awkward_persist__(ident, fill, storage)
 
         else:
             raise TypeError("cannot serialize {0} instance (has no __awkward_persist__ method)".format(type(obj)))
@@ -113,27 +115,28 @@ def serialize(obj, sink, name="", compression=compression):
               "prefix": name,
               "schema": fill(obj, "")}
 
-    sink[name] = json.dumps(schema).encode("ascii")
+    storage[name] = json.dumps(schema).encode("ascii")
+    return schema
 
-def deserialize(source, name="", whitelist=whitelist):
-    schema = json.loads(source[name])
+def deserialize(storage, name="", whitelist=whitelist):
+    schema = json.loads(storage[name])
     prefix = schema["prefix"]
     seen = {}
 
     def unfill(schema):
         if isinstance(schema, dict):
-            if "gen" in schema and isinstance(schema["gen"], list) and len(schema["gen"]) > 0:
+            if "call" in schema and isinstance(schema["call"], list) and len(schema["call"]) > 0:
                 for white in whitelist:
-                    for n, p in zip(schema["gen"], white):
+                    for n, p in zip(schema["call"], white):
                         if not fnmatch.fnmatchcase(n, p):
                             break
                     else:
-                        gen, genname = importlib.import_module(schema["gen"][0]), schema["gen"][1:]
+                        gen, genname = importlib.import_module(schema["call"][0]), schema["call"][1:]
                         while len(genname) > 0:
                             gen, genname = getattr(gen, genname[0]), genname[1:]
                         break
                 else:
-                    raise RuntimeError("callable {0} not in whitelist: {1}".format(schema["gen"], whitelist))
+                    raise RuntimeError("callable {0} not in whitelist: {1}".format(schema["call"], whitelist))
 
                 args = [unfill(x) for x in schema.get("args", [])]
 
@@ -144,9 +147,9 @@ def deserialize(source, name="", whitelist=whitelist):
                 
             elif "read" in schema:
                 if schema.get("absolute", False):
-                    return source[schema["read"]]
+                    return storage[schema["read"]]
                 else:
-                    return source[prefix + schema["read"]]
+                    return storage[prefix + schema["read"]]
                 
             elif "ref" in schema:
                 return seen[schema["ref"]]

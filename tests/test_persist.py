@@ -30,15 +30,29 @@
 
 import struct
 import unittest
+import zlib
 
 import numpy
 
 from awkward import *
-import awkward.type
+from awkward.persist import *
 
 class Test(unittest.TestCase):
     def runTest(self):
         pass
 
-    def test_plain(self):
-        pass
+    def test_uncompressed_numpy(self):
+        storage = {}
+        a = numpy.arange(100, dtype=">u2")
+        serialize(a, storage, compression=None)
+        b = deserialize(storage)
+        assert numpy.array_equal(a, b)
+        assert a.dtype == b.dtype
+
+    def test_compressed_numpy(self):
+        storage = {}
+        a = numpy.arange(100, dtype=">u2")
+        serialize(a, storage, compression=(zlib.compress, ("zlib", "decompress")))
+        b = deserialize(storage)
+        assert numpy.array_equal(a, b)
+        assert a.dtype == b.dtype
