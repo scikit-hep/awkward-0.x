@@ -40,225 +40,225 @@ class Test(unittest.TestCase):
 
     def test_indexed_get(self):
         a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4])
-        self.assertEqual([x for x in a], [3.3, 2.2, 4.4, 2.2, 2.2, 4.4, 0.0])
-        self.assertEqual([a[i] for i in range(len(a))], [3.3, 2.2, 4.4, 2.2, 2.2, 4.4, 0.0])
-        self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[3.3], [2.2], [4.4], [2.2], [2.2], [4.4], [0.0]])
-        self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[3.3, 2.2], [2.2, 4.4], [4.4, 2.2], [2.2, 2.2], [2.2, 4.4], [4.4, 0.0]])
-        self.assertEqual(a[:].tolist(), [3.3, 2.2, 4.4, 2.2, 2.2, 4.4, 0.0])
-        self.assertEqual(a[[6, 5, 4, 3, 2, 1, 0]].tolist(), [0.0, 4.4, 2.2, 2.2, 4.4, 2.2, 3.3])
-        self.assertEqual(a[[True, False, True, False, True, False, True]].tolist(), [3.3, 4.4, 2.2, 0.0])
-        self.assertEqual(a[[-1, -2, -3, -4, -5, -6, -7]].tolist(), [0.0, 4.4, 2.2, 2.2, 4.4, 2.2, 3.3])
+        assert [x for x in a] == [3.3, 2.2, 4.4, 2.2, 2.2, 4.4, 0.0]
+        assert [a[i] for i in range(len(a))] == [3.3, 2.2, 4.4, 2.2, 2.2, 4.4, 0.0]
+        assert [a[i : i + 1].tolist() for i in range(len(a))] == [[3.3], [2.2], [4.4], [2.2], [2.2], [4.4], [0.0]]
+        assert [a[i : i + 2].tolist() for i in range(len(a) - 1)] == [[3.3, 2.2], [2.2, 4.4], [4.4, 2.2], [2.2, 2.2], [2.2, 4.4], [4.4, 0.0]]
+        assert a[:].tolist() == [3.3, 2.2, 4.4, 2.2, 2.2, 4.4, 0.0]
+        assert a[[6, 5, 4, 3, 2, 1, 0]].tolist() == [0.0, 4.4, 2.2, 2.2, 4.4, 2.2, 3.3]
+        assert a[[True, False, True, False, True, False, True]].tolist() == [3.3, 4.4, 2.2, 0.0]
+        assert a[[-1, -2, -3, -4, -5, -6, -7]].tolist() == [0.0, 4.4, 2.2, 2.2, 4.4, 2.2, 3.3]
 
     def test_indexed_get2d_index(self):
         a = IndexedArray([[3, 2], [4, 2], [2, 0]], [0.0, 1.1, 2.2, 3.3, 4.4])
-        self.assertEqual([x.tolist() for x in a], [[3.3, 2.2], [4.4, 2.2], [2.2, 0.0]])
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[3.3, 2.2], [4.4, 2.2], [2.2, 0.0]])
-        self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[3.3, 2.2]], [[4.4, 2.2]], [[2.2, 0.0]]])
-        self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[3.3, 2.2], [4.4, 2.2]], [[4.4, 2.2], [2.2, 0.0]]])
-        self.assertEqual(a[:].tolist(), [[3.3, 2.2], [4.4, 2.2], [2.2, 0.0]])
-        self.assertEqual(a[[1, 1, 0]].tolist(), [[4.4, 2.2], [4.4, 2.2], [3.3, 2.2]])
-        self.assertEqual(a[[True, False, True]].tolist(), [[3.3, 2.2], [2.2, 0.0]])
-        self.assertEqual(a[[-2, -2, -3]].tolist(), [[4.4, 2.2], [4.4, 2.2], [3.3, 2.2]])
+        assert [x.tolist() for x in a] == [[3.3, 2.2], [4.4, 2.2], [2.2, 0.0]]
+        assert [a[i].tolist() for i in range(len(a))] == [[3.3, 2.2], [4.4, 2.2], [2.2, 0.0]]
+        assert [a[i : i + 1].tolist() for i in range(len(a))] == [[[3.3, 2.2]], [[4.4, 2.2]], [[2.2, 0.0]]]
+        assert [a[i : i + 2].tolist() for i in range(len(a) - 1)] == [[[3.3, 2.2], [4.4, 2.2]], [[4.4, 2.2], [2.2, 0.0]]]
+        assert a[:].tolist() == [[3.3, 2.2], [4.4, 2.2], [2.2, 0.0]]
+        assert a[[1, 1, 0]].tolist() == [[4.4, 2.2], [4.4, 2.2], [3.3, 2.2]]
+        assert a[[True, False, True]].tolist() == [[3.3, 2.2], [2.2, 0.0]]
+        assert a[[-2, -2, -3]].tolist() == [[4.4, 2.2], [4.4, 2.2], [3.3, 2.2]]
 
     def test_indexed_get2d_content(self):
         a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2], [3.3, 3.3], [4.4, 4.4]])
-        self.assertEqual([x.tolist() for x in a], [[3.3, 3.3], [2.2, 2.2], [4.4, 4.4], [2.2, 2.2], [2.2, 2.2], [4.4, 4.4], [0.0, 0.0]])
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[3.3, 3.3], [2.2, 2.2], [4.4, 4.4], [2.2, 2.2], [2.2, 2.2], [4.4, 4.4], [0.0, 0.0]])
-        self.assertEqual(a[:].tolist(), [[3.3, 3.3], [2.2, 2.2], [4.4, 4.4], [2.2, 2.2], [2.2, 2.2], [4.4, 4.4], [0.0, 0.0]])
-        self.assertEqual(a[[6, 5, 4, 3, 2, 1, 0]].tolist(), [[0.0, 0.0], [4.4, 4.4], [2.2, 2.2], [2.2, 2.2], [4.4, 4.4], [2.2, 2.2], [3.3, 3.3]])
-        self.assertEqual(a[[True, False, True, False, True, False, True]].tolist(), [[3.3, 3.3], [4.4, 4.4], [2.2, 2.2], [0.0, 0.0]])
+        assert [x.tolist() for x in a] == [[3.3, 3.3], [2.2, 2.2], [4.4, 4.4], [2.2, 2.2], [2.2, 2.2], [4.4, 4.4], [0.0, 0.0]]
+        assert [a[i].tolist() for i in range(len(a))] == [[3.3, 3.3], [2.2, 2.2], [4.4, 4.4], [2.2, 2.2], [2.2, 2.2], [4.4, 4.4], [0.0, 0.0]]
+        assert a[:].tolist() == [[3.3, 3.3], [2.2, 2.2], [4.4, 4.4], [2.2, 2.2], [2.2, 2.2], [4.4, 4.4], [0.0, 0.0]]
+        assert a[[6, 5, 4, 3, 2, 1, 0]].tolist() == [[0.0, 0.0], [4.4, 4.4], [2.2, 2.2], [2.2, 2.2], [4.4, 4.4], [2.2, 2.2], [3.3, 3.3]]
+        assert a[[True, False, True, False, True, False, True]].tolist() == [[3.3, 3.3], [4.4, 4.4], [2.2, 2.2], [0.0, 0.0]]
 
     def test_indexed_getstruct(self):
         a = IndexedArray([3, 2, 4, 2, 2, 4, 0], numpy.array([(0.0, 0.0), (1.1, 1.1), (2.2, 2.2), (3.3, 3.3), (4.4, 4.4)], dtype=[("a", float), ("b", float)]))
-        self.assertEqual([x.tolist() for x in a], [(3.3, 3.3), (2.2, 2.2), (4.4, 4.4), (2.2, 2.2), (2.2, 2.2), (4.4, 4.4), (0.0, 0.0)])
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [(3.3, 3.3), (2.2, 2.2), (4.4, 4.4), (2.2, 2.2), (2.2, 2.2), (4.4, 4.4), (0.0, 0.0)])
-        self.assertEqual(a[:].tolist(), [(3.3, 3.3), (2.2, 2.2), (4.4, 4.4), (2.2, 2.2), (2.2, 2.2), (4.4, 4.4), (0.0, 0.0)])
-        self.assertEqual(a[[6, 5, 4, 3, 2, 1, 0]].tolist(), [(0.0, 0.0), (4.4, 4.4), (2.2, 2.2), (2.2, 2.2), (4.4, 4.4), (2.2, 2.2), (3.3, 3.3)])
-        self.assertEqual(a[[True, False, True, False, True, False, True]].tolist(), [(3.3, 3.3), (4.4, 4.4), (2.2, 2.2), (0.0, 0.0)])
+        assert [x.tolist() for x in a] == [(3.3, 3.3), (2.2, 2.2), (4.4, 4.4), (2.2, 2.2), (2.2, 2.2), (4.4, 4.4), (0.0, 0.0)]
+        assert [a[i].tolist() for i in range(len(a))] == [(3.3, 3.3), (2.2, 2.2), (4.4, 4.4), (2.2, 2.2), (2.2, 2.2), (4.4, 4.4), (0.0, 0.0)]
+        assert a[:].tolist() == [(3.3, 3.3), (2.2, 2.2), (4.4, 4.4), (2.2, 2.2), (2.2, 2.2), (4.4, 4.4), (0.0, 0.0)]
+        assert a[[6, 5, 4, 3, 2, 1, 0]].tolist() == [(0.0, 0.0), (4.4, 4.4), (2.2, 2.2), (2.2, 2.2), (4.4, 4.4), (2.2, 2.2), (3.3, 3.3)]
+        assert a[[True, False, True, False, True, False, True]].tolist() == [(3.3, 3.3), (4.4, 4.4), (2.2, 2.2), (0.0, 0.0)]
 
     def test_indexed_getempty(self):
         a = IndexedArray([], [0.0, 1.1, 2.2, 3.3, 4.4])
-        self.assertEqual(a[:].tolist(), [])
+        assert a[:].tolist() == []
 
     def test_indexed_indexed(self):
         a = IndexedArray([6, 5, 4, 3, 2, 1, 0], IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4]))
-        self.assertEqual([x for x in a], [0.0, 4.4, 2.2, 2.2, 4.4, 2.2, 3.3])
-        self.assertEqual([a[i] for i in range(len(a))], [0.0, 4.4, 2.2, 2.2, 4.4, 2.2, 3.3])
-        self.assertEqual(a[:].tolist(), [0.0, 4.4, 2.2, 2.2, 4.4, 2.2, 3.3])
+        assert [x for x in a] == [0.0, 4.4, 2.2, 2.2, 4.4, 2.2, 3.3]
+        assert [a[i] for i in range(len(a))] == [0.0, 4.4, 2.2, 2.2, 4.4, 2.2, 3.3]
+        assert a[:].tolist() == [0.0, 4.4, 2.2, 2.2, 4.4, 2.2, 3.3]
 
         a = IndexedArray([6, 5, 4, 3, 6], IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4]))
-        self.assertEqual([x for x in a], [0.0, 4.4, 2.2, 2.2, 0.0])
-        self.assertEqual([a[i] for i in range(len(a))], [0.0, 4.4, 2.2, 2.2, 0.0])
-        self.assertEqual(a[:].tolist(), [0.0, 4.4, 2.2, 2.2, 0.0])
+        assert [x for x in a] == [0.0, 4.4, 2.2, 2.2, 0.0]
+        assert [a[i] for i in range(len(a))] == [0.0, 4.4, 2.2, 2.2, 0.0]
+        assert a[:].tolist() == [0.0, 4.4, 2.2, 2.2, 0.0]
 
     def test_indexed_ufunc(self):
         a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4])
-        self.assertEqual((a + 100).tolist(), [103.3, 102.2, 104.4, 102.2, 102.2, 104.4, 100.0])
+        assert (a + 100).tolist() == [103.3, 102.2, 104.4, 102.2, 102.2, 104.4, 100.0]
 
     def test_indexed_table(self):
         a = IndexedArray([3, 2, 4, 0], Table(a=[0.0, 1.1, 2.2, 3.3, 4.4], b=[0, 1, 2, 3, 4]))
         a["c"] = numpy.array(["a", "b", "c", "d"])
-        self.assertEqual(a["a"].tolist(), [3.3, 2.2, 4.4, 0.0])
-        self.assertEqual(a["b"].tolist(), [3, 2, 4, 0])
-        self.assertEqual(a["c"].tolist(), ["a", "b", "c", "d"])
+        assert a["a"].tolist() == [3.3, 2.2, 4.4, 0.0]
+        assert a["b"].tolist() == [3, 2, 4, 0]
+        assert a["c"].tolist() == ["a", "b", "c", "d"]
 
     def test_byteindexed_get(self):
         a = ByteIndexedArray([12, 8, 4, 0], b"\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00", numpy.int32)
-        self.assertEqual([x for x in a], [3, 2, 1, 0])
-        self.assertEqual([a[i] for i in range(len(a))], [3, 2, 1, 0])
-        self.assertEqual(a[:].tolist(), [3, 2, 1, 0])
-        self.assertEqual(a[[3, 2, 1, 0]].tolist(), [0, 1, 2, 3])
-        self.assertEqual(a[[True, False, True, False]].tolist(), [3, 1])
+        assert [x for x in a] == [3, 2, 1, 0]
+        assert [a[i] for i in range(len(a))] == [3, 2, 1, 0]
+        assert a[:].tolist() == [3, 2, 1, 0]
+        assert a[[3, 2, 1, 0]].tolist() == [0, 1, 2, 3]
+        assert a[[True, False, True, False]].tolist() == [3, 1]
 
     def test_byteindexed_get5byte(self):
         a = ByteIndexedArray([15, 10, 5, 1], b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x00\x03\x00\x00\x00\x00", numpy.int32)
-        self.assertEqual([x for x in a], [3, 2, 1, 0])
-        self.assertEqual([a[i] for i in range(len(a))], [3, 2, 1, 0])
-        self.assertEqual(a[:].tolist(), [3, 2, 1, 0])
-        self.assertEqual(a[[3, 2, 1, 0]].tolist(), [0, 1, 2, 3])
-        self.assertEqual(a[[True, False, True, False]].tolist(), [3, 1])
+        assert [x for x in a] == [3, 2, 1, 0]
+        assert [a[i] for i in range(len(a))] == [3, 2, 1, 0]
+        assert a[:].tolist() == [3, 2, 1, 0]
+        assert a[[3, 2, 1, 0]].tolist() == [0, 1, 2, 3]
+        assert a[[True, False, True, False]].tolist() == [3, 1]
 
     def test_byteindexed_ufunc(self):
         a = ByteIndexedArray([15, 10, 5, 1], b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x00\x03\x00\x00\x00\x00", numpy.int32)
-        self.assertEqual((a + 100).tolist(), [103, 102, 101, 100])
+        assert (a + 100).tolist() == [103, 102, 101, 100]
 
     def test_indexed_byteindexed(self):
         a = IndexedArray([1, 2, 3], ByteIndexedArray([12, 8, 4, 0], b"\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00", numpy.int32))
-        self.assertEqual([a[i] for i in range(len(a))], [2, 1, 0])
-        self.assertEqual(a[:].tolist(), [2, 1, 0])
+        assert [a[i] for i in range(len(a))] == [2, 1, 0]
+        assert a[:].tolist() == [2, 1, 0]
 
     def test_sparse_get(self):
         a = SparseArray(10, [1, 3, 5, 7, 9], [100, 101, 102, 103, 104])
 
-        self.assertEqual(a.tolist(), [0, 100, 0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [0, 100, 0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[0, 100], [100, 0], [0, 101], [101, 0], [0, 102], [102, 0], [0, 103], [103, 0], [0, 104]])
+        assert a.tolist() == [0, 100, 0, 101, 0, 102, 0, 103, 0, 104]
+        assert [a[i].tolist() for i in range(len(a))] == [0, 100, 0, 101, 0, 102, 0, 103, 0, 104]
+        assert [a[i : i + 1].tolist() for i in range(len(a))] == [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]]
+        assert [a[i : i + 2].tolist() for i in range(len(a) - 1)] == [[0, 100], [100, 0], [0, 101], [101, 0], [0, 102], [102, 0], [0, 103], [103, 0], [0, 104]]
 
-        self.assertEqual(a[:].tolist(), [0, 100, 0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual(a[1:].tolist(), [100, 0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual(a[2:].tolist(), [0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual(a[2:-1].tolist(), [0, 101, 0, 102, 0, 103, 0])
-        self.assertEqual(a[2:-2].tolist(), [0, 101, 0, 102, 0, 103])
-        self.assertEqual(a[:-2].tolist(), [0, 100, 0, 101, 0, 102, 0, 103])
-        self.assertEqual(a[::2].tolist(), [0, 0, 0, 0, 0])
-        self.assertEqual(a[1::2].tolist(), [100, 101, 102, 103, 104])
-        self.assertEqual(a[2::2].tolist(), [0, 0, 0, 0])
-        self.assertEqual(a[3::2].tolist(), [101, 102, 103, 104])
-        self.assertEqual(a[::-1].tolist(), [104, 0, 103, 0, 102, 0, 101, 0, 100, 0])
-        self.assertEqual(a[-2::-1].tolist(), [0, 103, 0, 102, 0, 101, 0, 100, 0])
-        self.assertEqual(a[-3::-1].tolist(), [103, 0, 102, 0, 101, 0, 100, 0])
-        self.assertEqual(a[-3:0:-1].tolist(), [103, 0, 102, 0, 101, 0, 100])
-        self.assertEqual(a[-3:1:-1].tolist(), [103, 0, 102, 0, 101, 0])
-        self.assertEqual(a[::-2].tolist(), [104, 103, 102, 101, 100])
-        self.assertEqual(a[-1::-2].tolist(), [104, 103, 102, 101, 100])
-        self.assertEqual(a[-2::-2].tolist(), [0, 0, 0, 0, 0])
-        self.assertEqual(a[-3::-2].tolist(), [103, 102, 101, 100])
-        self.assertEqual(a[[1, 3, 5, 7, 9]].tolist(), [100, 101, 102, 103, 104])
-        self.assertEqual(a[[1, 3, 5, 7, 8, 9]].tolist(), [100, 101, 102, 103, 0, 104])
-        self.assertEqual(a[[1, 3, 5, 9, 7]].tolist(), [100, 101, 102, 104, 103])
-        self.assertEqual(a[[1, 3, 5, 9, 8, 7]].tolist(), [100, 101, 102, 104, 0, 103])
-        self.assertEqual(a[[False, True, False, True, False, True, False, True, False, True]].tolist(), [100, 101, 102, 103, 104])
-        self.assertEqual(a[[True, True, False, True, False, True, False, True, False, True]].tolist(), [0, 100, 101, 102, 103, 104])
-        self.assertEqual(a[[True, True, True, True, False, True, False, True, False, True]].tolist(), [0, 100, 0, 101, 102, 103, 104])
+        assert a[:].tolist() == [0, 100, 0, 101, 0, 102, 0, 103, 0, 104]
+        assert a[1:].tolist() == [100, 0, 101, 0, 102, 0, 103, 0, 104]
+        assert a[2:].tolist() == [0, 101, 0, 102, 0, 103, 0, 104]
+        assert a[2:-1].tolist() == [0, 101, 0, 102, 0, 103, 0]
+        assert a[2:-2].tolist() == [0, 101, 0, 102, 0, 103]
+        assert a[:-2].tolist() == [0, 100, 0, 101, 0, 102, 0, 103]
+        assert a[::2].tolist() == [0, 0, 0, 0, 0]
+        assert a[1::2].tolist() == [100, 101, 102, 103, 104]
+        assert a[2::2].tolist() == [0, 0, 0, 0]
+        assert a[3::2].tolist() == [101, 102, 103, 104]
+        assert a[::-1].tolist() == [104, 0, 103, 0, 102, 0, 101, 0, 100, 0]
+        assert a[-2::-1].tolist() == [0, 103, 0, 102, 0, 101, 0, 100, 0]
+        assert a[-3::-1].tolist() == [103, 0, 102, 0, 101, 0, 100, 0]
+        assert a[-3:0:-1].tolist() == [103, 0, 102, 0, 101, 0, 100]
+        assert a[-3:1:-1].tolist() == [103, 0, 102, 0, 101, 0]
+        assert a[::-2].tolist() == [104, 103, 102, 101, 100]
+        assert a[-1::-2].tolist() == [104, 103, 102, 101, 100]
+        assert a[-2::-2].tolist() == [0, 0, 0, 0, 0]
+        assert a[-3::-2].tolist() == [103, 102, 101, 100]
+        assert a[[1, 3, 5, 7, 9]].tolist() == [100, 101, 102, 103, 104]
+        assert a[[1, 3, 5, 7, 8, 9]].tolist() == [100, 101, 102, 103, 0, 104]
+        assert a[[1, 3, 5, 9, 7]].tolist() == [100, 101, 102, 104, 103]
+        assert a[[1, 3, 5, 9, 8, 7]].tolist() == [100, 101, 102, 104, 0, 103]
+        assert a[[False, True, False, True, False, True, False, True, False, True]].tolist() == [100, 101, 102, 103, 104]
+        assert a[[True, True, False, True, False, True, False, True, False, True]].tolist() == [0, 100, 101, 102, 103, 104]
+        assert a[[True, True, True, True, False, True, False, True, False, True]].tolist() == [0, 100, 0, 101, 102, 103, 104]
 
-        self.assertEqual([a[1:][i].tolist() for i in range(9)], [100, 0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual([a[[1, 3, 5, 9, 8, 7]][i].tolist() for i in range(6)], [100, 101, 102, 104, 0, 103])
-        self.assertEqual([a[[True, True, True, True, False, True, False, True, False, True]][i].tolist() for i in range(7)], [0, 100, 0, 101, 102, 103, 104])
+        assert [a[1:][i].tolist() for i in range(9)] == [100, 0, 101, 0, 102, 0, 103, 0, 104]
+        assert [a[[1, 3, 5, 9, 8, 7]][i].tolist() for i in range(6)] == [100, 101, 102, 104, 0, 103]
+        assert [a[[True, True, True, True, False, True, False, True, False, True]][i].tolist() for i in range(7)] == [0, 100, 0, 101, 102, 103, 104]
 
-        self.assertEqual(a.dense.tolist(), [0, 100, 0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual([a.dense[i].tolist() for i in range(len(a))], [0, 100, 0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual([a.dense[i : i + 1].tolist() for i in range(len(a))], [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual([a.dense[i : i + 2].tolist() for i in range(len(a) - 1)], [[0, 100], [100, 0], [0, 101], [101, 0], [0, 102], [102, 0], [0, 103], [103, 0], [0, 104]])
+        assert a.dense.tolist() == [0, 100, 0, 101, 0, 102, 0, 103, 0, 104]
+        assert [a.dense[i].tolist() for i in range(len(a))] == [0, 100, 0, 101, 0, 102, 0, 103, 0, 104]
+        assert [a.dense[i : i + 1].tolist() for i in range(len(a))] == [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]]
+        assert [a.dense[i : i + 2].tolist() for i in range(len(a) - 1)] == [[0, 100], [100, 0], [0, 101], [101, 0], [0, 102], [102, 0], [0, 103], [103, 0], [0, 104]]
 
-        self.assertEqual(a[:].dense.tolist(), [0, 100, 0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual(a[1:].dense.tolist(), [100, 0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual(a[2:].dense.tolist(), [0, 101, 0, 102, 0, 103, 0, 104])
-        self.assertEqual(a[2:-1].dense.tolist(), [0, 101, 0, 102, 0, 103, 0])
-        self.assertEqual(a[2:-2].dense.tolist(), [0, 101, 0, 102, 0, 103])
-        self.assertEqual(a[:-2].dense.tolist(), [0, 100, 0, 101, 0, 102, 0, 103])
-        self.assertEqual(a[::2].dense.tolist(), [0, 0, 0, 0, 0])
-        self.assertEqual(a[1::2].dense.tolist(), [100, 101, 102, 103, 104])
-        self.assertEqual(a[2::2].dense.tolist(), [0, 0, 0, 0])
-        self.assertEqual(a[3::2].dense.tolist(), [101, 102, 103, 104])
-        self.assertEqual(a[::-1].dense.tolist(), [104, 0, 103, 0, 102, 0, 101, 0, 100, 0])
-        self.assertEqual(a[-2::-1].dense.tolist(), [0, 103, 0, 102, 0, 101, 0, 100, 0])
-        self.assertEqual(a[-3::-1].dense.tolist(), [103, 0, 102, 0, 101, 0, 100, 0])
-        self.assertEqual(a[-3:0:-1].dense.tolist(), [103, 0, 102, 0, 101, 0, 100])
-        self.assertEqual(a[-3:1:-1].dense.tolist(), [103, 0, 102, 0, 101, 0])
-        self.assertEqual(a[::-2].dense.tolist(), [104, 103, 102, 101, 100])
-        self.assertEqual(a[-1::-2].dense.tolist(), [104, 103, 102, 101, 100])
-        self.assertEqual(a[-2::-2].dense.tolist(), [0, 0, 0, 0, 0])
-        self.assertEqual(a[-3::-2].dense.tolist(), [103, 102, 101, 100])
+        assert a[:].dense.tolist() == [0, 100, 0, 101, 0, 102, 0, 103, 0, 104]
+        assert a[1:].dense.tolist() == [100, 0, 101, 0, 102, 0, 103, 0, 104]
+        assert a[2:].dense.tolist() == [0, 101, 0, 102, 0, 103, 0, 104]
+        assert a[2:-1].dense.tolist() == [0, 101, 0, 102, 0, 103, 0]
+        assert a[2:-2].dense.tolist() == [0, 101, 0, 102, 0, 103]
+        assert a[:-2].dense.tolist() == [0, 100, 0, 101, 0, 102, 0, 103]
+        assert a[::2].dense.tolist() == [0, 0, 0, 0, 0]
+        assert a[1::2].dense.tolist() == [100, 101, 102, 103, 104]
+        assert a[2::2].dense.tolist() == [0, 0, 0, 0]
+        assert a[3::2].dense.tolist() == [101, 102, 103, 104]
+        assert a[::-1].dense.tolist() == [104, 0, 103, 0, 102, 0, 101, 0, 100, 0]
+        assert a[-2::-1].dense.tolist() == [0, 103, 0, 102, 0, 101, 0, 100, 0]
+        assert a[-3::-1].dense.tolist() == [103, 0, 102, 0, 101, 0, 100, 0]
+        assert a[-3:0:-1].dense.tolist() == [103, 0, 102, 0, 101, 0, 100]
+        assert a[-3:1:-1].dense.tolist() == [103, 0, 102, 0, 101, 0]
+        assert a[::-2].dense.tolist() == [104, 103, 102, 101, 100]
+        assert a[-1::-2].dense.tolist() == [104, 103, 102, 101, 100]
+        assert a[-2::-2].dense.tolist() == [0, 0, 0, 0, 0]
+        assert a[-3::-2].dense.tolist() == [103, 102, 101, 100]
 
-        self.assertEqual([a[1:].dense[i].tolist() for i in range(9)], [100, 0, 101, 0, 102, 0, 103, 0, 104])
+        assert [a[1:].dense[i].tolist() for i in range(9)] == [100, 0, 101, 0, 102, 0, 103, 0, 104]
 
     def test_sparse_get2d_content(self):
         a = SparseArray(10, [1, 3, 5, 7, 9], [[100], [101], [102], [103], [104]])
 
-        self.assertEqual(a.tolist(), [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual([a[i].tolist() for i in range(len(a))], [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual([a[i : i + 1].tolist() for i in range(len(a))], [[[0]], [[100]], [[0]], [[101]], [[0]], [[102]], [[0]], [[103]], [[0]], [[104]]])
-        self.assertEqual([a[i : i + 2].tolist() for i in range(len(a) - 1)], [[[0], [100]], [[100], [0]], [[0], [101]], [[101], [0]], [[0], [102]], [[102], [0]], [[0], [103]], [[103], [0]], [[0], [104]]])
+        assert a.tolist() == [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]]
+        assert [a[i].tolist() for i in range(len(a))] == [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]]
+        assert [a[i : i + 1].tolist() for i in range(len(a))] == [[[0]], [[100]], [[0]], [[101]], [[0]], [[102]], [[0]], [[103]], [[0]], [[104]]]
+        assert [a[i : i + 2].tolist() for i in range(len(a) - 1)] == [[[0], [100]], [[100], [0]], [[0], [101]], [[101], [0]], [[0], [102]], [[102], [0]], [[0], [103]], [[103], [0]], [[0], [104]]]
 
-        self.assertEqual(a[:].tolist(), [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual(a[1:].tolist(), [[100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual(a[2:].tolist(), [[0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual(a[2:-1].tolist(), [[0], [101], [0], [102], [0], [103], [0]])
-        self.assertEqual(a[2:-2].tolist(), [[0], [101], [0], [102], [0], [103]])
-        self.assertEqual(a[:-2].tolist(), [[0], [100], [0], [101], [0], [102], [0], [103]])
-        self.assertEqual(a[::2].tolist(), [[0], [0], [0], [0], [0]])
-        self.assertEqual(a[1::2].tolist(), [[100], [101], [102], [103], [104]])
-        self.assertEqual(a[2::2].tolist(), [[0], [0], [0], [0]])
-        self.assertEqual(a[3::2].tolist(), [[101], [102], [103], [104]])
-        self.assertEqual(a[::-1].tolist(), [[104], [0], [103], [0], [102], [0], [101], [0], [100], [0]])
-        self.assertEqual(a[-2::-1].tolist(), [[0], [103], [0], [102], [0], [101], [0], [100], [0]])
-        self.assertEqual(a[-3::-1].tolist(), [[103], [0], [102], [0], [101], [0], [100], [0]])
-        self.assertEqual(a[-3:0:-1].tolist(), [[103], [0], [102], [0], [101], [0], [100]])
-        self.assertEqual(a[-3:1:-1].tolist(), [[103], [0], [102], [0], [101], [0]])
-        self.assertEqual(a[::-2].tolist(), [[104], [103], [102], [101], [100]])
-        self.assertEqual(a[-1::-2].tolist(), [[104], [103], [102], [101], [100]])
-        self.assertEqual(a[-2::-2].tolist(), [[0], [0], [0], [0], [0]])
-        self.assertEqual(a[-3::-2].tolist(), [[103], [102], [101], [100]])
-        self.assertEqual(a[[1, 3, 5, 7, 9]].tolist(), [[100], [101], [102], [103], [104]])
-        self.assertEqual(a[[1, 3, 5, 7, 8, 9]].tolist(), [[100], [101], [102], [103], [0], [104]])
-        self.assertEqual(a[[1, 3, 5, 9, 7]].tolist(), [[100], [101], [102], [104], [103]])
-        self.assertEqual(a[[1, 3, 5, 9, 8, 7]].tolist(), [[100], [101], [102], [104], [0], [103]])
-        self.assertEqual(a[[False, True, False, True, False, True, False, True, False, True]].tolist(), [[100], [101], [102], [103], [104]])
-        self.assertEqual(a[[True, True, False, True, False, True, False, True, False, True]].tolist(), [[0], [100], [101], [102], [103], [104]])
-        self.assertEqual(a[[True, True, True, True, False, True, False, True, False, True]].tolist(), [[0], [100], [0], [101], [102], [103], [104]])
+        assert a[:].tolist() == [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]]
+        assert a[1:].tolist() == [[100], [0], [101], [0], [102], [0], [103], [0], [104]]
+        assert a[2:].tolist() == [[0], [101], [0], [102], [0], [103], [0], [104]]
+        assert a[2:-1].tolist() == [[0], [101], [0], [102], [0], [103], [0]]
+        assert a[2:-2].tolist() == [[0], [101], [0], [102], [0], [103]]
+        assert a[:-2].tolist() == [[0], [100], [0], [101], [0], [102], [0], [103]]
+        assert a[::2].tolist() == [[0], [0], [0], [0], [0]]
+        assert a[1::2].tolist() == [[100], [101], [102], [103], [104]]
+        assert a[2::2].tolist() == [[0], [0], [0], [0]]
+        assert a[3::2].tolist() == [[101], [102], [103], [104]]
+        assert a[::-1].tolist() == [[104], [0], [103], [0], [102], [0], [101], [0], [100], [0]]
+        assert a[-2::-1].tolist() == [[0], [103], [0], [102], [0], [101], [0], [100], [0]]
+        assert a[-3::-1].tolist() == [[103], [0], [102], [0], [101], [0], [100], [0]]
+        assert a[-3:0:-1].tolist() == [[103], [0], [102], [0], [101], [0], [100]]
+        assert a[-3:1:-1].tolist() == [[103], [0], [102], [0], [101], [0]]
+        assert a[::-2].tolist() == [[104], [103], [102], [101], [100]]
+        assert a[-1::-2].tolist() == [[104], [103], [102], [101], [100]]
+        assert a[-2::-2].tolist() == [[0], [0], [0], [0], [0]]
+        assert a[-3::-2].tolist() == [[103], [102], [101], [100]]
+        assert a[[1, 3, 5, 7, 9]].tolist() == [[100], [101], [102], [103], [104]]
+        assert a[[1, 3, 5, 7, 8, 9]].tolist() == [[100], [101], [102], [103], [0], [104]]
+        assert a[[1, 3, 5, 9, 7]].tolist() == [[100], [101], [102], [104], [103]]
+        assert a[[1, 3, 5, 9, 8, 7]].tolist() == [[100], [101], [102], [104], [0], [103]]
+        assert a[[False, True, False, True, False, True, False, True, False, True]].tolist() == [[100], [101], [102], [103], [104]]
+        assert a[[True, True, False, True, False, True, False, True, False, True]].tolist() == [[0], [100], [101], [102], [103], [104]]
+        assert a[[True, True, True, True, False, True, False, True, False, True]].tolist() == [[0], [100], [0], [101], [102], [103], [104]]
 
-        self.assertEqual([a[1:][i].tolist() for i in range(9)], [[100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual([a[[1, 3, 5, 9, 8, 7]][i].tolist() for i in range(6)], [[100], [101], [102], [104], [0], [103]])
-        self.assertEqual([a[[True, True, True, True, False, True, False, True, False, True]][i].tolist() for i in range(7)], [[0], [100], [0], [101], [102], [103], [104]])
+        assert [a[1:][i].tolist() for i in range(9)] == [[100], [0], [101], [0], [102], [0], [103], [0], [104]]
+        assert [a[[1, 3, 5, 9, 8, 7]][i].tolist() for i in range(6)] == [[100], [101], [102], [104], [0], [103]]
+        assert [a[[True, True, True, True, False, True, False, True, False, True]][i].tolist() for i in range(7)] == [[0], [100], [0], [101], [102], [103], [104]]
 
-        self.assertEqual(a.dense.tolist(), [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual([a.dense[i].tolist() for i in range(len(a))], [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual([a.dense[i : i + 1].tolist() for i in range(len(a))], [[[0]], [[100]], [[0]], [[101]], [[0]], [[102]], [[0]], [[103]], [[0]], [[104]]])
-        self.assertEqual([a.dense[i : i + 2].tolist() for i in range(len(a) - 1)], [[[0], [100]], [[100], [0]], [[0], [101]], [[101], [0]], [[0], [102]], [[102], [0]], [[0], [103]], [[103], [0]], [[0], [104]]])
+        assert a.dense.tolist() == [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]]
+        assert [a.dense[i].tolist() for i in range(len(a))] == [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]]
+        assert [a.dense[i : i + 1].tolist() for i in range(len(a))] == [[[0]], [[100]], [[0]], [[101]], [[0]], [[102]], [[0]], [[103]], [[0]], [[104]]]
+        assert [a.dense[i : i + 2].tolist() for i in range(len(a) - 1)] == [[[0], [100]], [[100], [0]], [[0], [101]], [[101], [0]], [[0], [102]], [[102], [0]], [[0], [103]], [[103], [0]], [[0], [104]]]
 
-        self.assertEqual(a[:].dense.tolist(), [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual(a[1:].dense.tolist(), [[100], [0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual(a[2:].dense.tolist(), [[0], [101], [0], [102], [0], [103], [0], [104]])
-        self.assertEqual(a[2:-1].dense.tolist(), [[0], [101], [0], [102], [0], [103], [0]])
-        self.assertEqual(a[2:-2].dense.tolist(), [[0], [101], [0], [102], [0], [103]])
-        self.assertEqual(a[:-2].dense.tolist(), [[0], [100], [0], [101], [0], [102], [0], [103]])
-        self.assertEqual(a[::2].dense.tolist(), [[0], [0], [0], [0], [0]])
-        self.assertEqual(a[1::2].dense.tolist(), [[100], [101], [102], [103], [104]])
-        self.assertEqual(a[2::2].dense.tolist(), [[0], [0], [0], [0]])
-        self.assertEqual(a[3::2].dense.tolist(), [[101], [102], [103], [104]])
-        self.assertEqual(a[::-1].dense.tolist(), [[104], [0], [103], [0], [102], [0], [101], [0], [100], [0]])
-        self.assertEqual(a[-2::-1].dense.tolist(), [[0], [103], [0], [102], [0], [101], [0], [100], [0]])
-        self.assertEqual(a[-3::-1].dense.tolist(), [[103], [0], [102], [0], [101], [0], [100], [0]])
-        self.assertEqual(a[-3:0:-1].dense.tolist(), [[103], [0], [102], [0], [101], [0], [100]])
-        self.assertEqual(a[-3:1:-1].dense.tolist(), [[103], [0], [102], [0], [101], [0]])
-        self.assertEqual(a[::-2].dense.tolist(), [[104], [103], [102], [101], [100]])
-        self.assertEqual(a[-1::-2].dense.tolist(), [[104], [103], [102], [101], [100]])
-        self.assertEqual(a[-2::-2].dense.tolist(), [[0], [0], [0], [0], [0]])
-        self.assertEqual(a[-3::-2].dense.tolist(), [[103], [102], [101], [100]])
+        assert a[:].dense.tolist() == [[0], [100], [0], [101], [0], [102], [0], [103], [0], [104]]
+        assert a[1:].dense.tolist() == [[100], [0], [101], [0], [102], [0], [103], [0], [104]]
+        assert a[2:].dense.tolist() == [[0], [101], [0], [102], [0], [103], [0], [104]]
+        assert a[2:-1].dense.tolist() == [[0], [101], [0], [102], [0], [103], [0]]
+        assert a[2:-2].dense.tolist() == [[0], [101], [0], [102], [0], [103]]
+        assert a[:-2].dense.tolist() == [[0], [100], [0], [101], [0], [102], [0], [103]]
+        assert a[::2].dense.tolist() == [[0], [0], [0], [0], [0]]
+        assert a[1::2].dense.tolist() == [[100], [101], [102], [103], [104]]
+        assert a[2::2].dense.tolist() == [[0], [0], [0], [0]]
+        assert a[3::2].dense.tolist() == [[101], [102], [103], [104]]
+        assert a[::-1].dense.tolist() == [[104], [0], [103], [0], [102], [0], [101], [0], [100], [0]]
+        assert a[-2::-1].dense.tolist() == [[0], [103], [0], [102], [0], [101], [0], [100], [0]]
+        assert a[-3::-1].dense.tolist() == [[103], [0], [102], [0], [101], [0], [100], [0]]
+        assert a[-3:0:-1].dense.tolist() == [[103], [0], [102], [0], [101], [0], [100]]
+        assert a[-3:1:-1].dense.tolist() == [[103], [0], [102], [0], [101], [0]]
+        assert a[::-2].dense.tolist() == [[104], [103], [102], [101], [100]]
+        assert a[-1::-2].dense.tolist() == [[104], [103], [102], [101], [100]]
+        assert a[-2::-2].dense.tolist() == [[0], [0], [0], [0], [0]]
+        assert a[-3::-2].dense.tolist() == [[103], [102], [101], [100]]
 
-        self.assertEqual([a[1:].dense[i].tolist() for i in range(9)], [[100], [0], [101], [0], [102], [0], [103], [0], [104]])
+        assert [a[1:].dense[i].tolist() for i in range(9)] == [[100], [0], [101], [0], [102], [0], [103], [0], [104]]
 
     def test_indexed_ufunc(self):
         a = SparseArray(10, [1, 3, 5, 7, 9], [100, 101, 102, 103, 104])
-        self.assertEqual((a + 100).tolist(), [100, 200, 100, 201, 100, 202, 100, 203, 100, 204])
+        assert (a + 100).tolist() == [100, 200, 100, 201, 100, 202, 100, 203, 100, 204]
