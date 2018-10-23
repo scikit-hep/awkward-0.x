@@ -159,7 +159,11 @@ def serialize(obj, storage, name=None, delimiter="-", compression=compression):
 def deserialize(storage, name="", whitelist=whitelist):
     import awkward.array.virtual
 
-    schema = json.loads(storage[name])
+    schema = storage[name]
+    if isinstance(schema, bytes):
+        schema = schema.decode("ascii")
+    schema = json.loads(schema)
+
     prefix = schema.get("prefix", "")
     seen = {}
 
