@@ -141,14 +141,17 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         if self._type is None or self.ismaterialized:
             return awkward.type._fromarray(self.array, seen)
         else:
-            return self._type
+            return self._type.to
 
     def _getshape(self):
         return ()
 
     @property
     def type(self):
-        return self._gettype({})
+        if self._type is None or self.ismaterialized:
+            return awkward.type.ArrayType(len(self.array), awkward.type._resolve(awkward.type._fromarray(self.array, {}), {}))
+        else:
+            return self._type
 
     @type.setter
     def type(self, value):

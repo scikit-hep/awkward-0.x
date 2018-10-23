@@ -601,12 +601,17 @@ def _fromarray(array, seen):
     return seen[id(array)]
 
 class Placeholder(Type):
-    def __init__(self):
-        self.value = None
+    def __init__(self, value=None):
+        self.value = value
+
+    def _subrepr(self, labeled, seen):
+        return "Placeholder({0})".format(self.value._repr(labeled, seen) if isinstance(self.value, Type) else repr(self.value))
 
 def _resolve(tpe, seen):
-    if isinstance(tpe, Placeholder):
+    while isinstance(tpe, Placeholder):
         tpe = tpe.value
+
+    assert tpe is not None
 
     if id(tpe) not in seen:
         if isinstance(tpe, ArrayType):

@@ -157,6 +157,8 @@ def serialize(obj, storage, name=None, delimiter="-", compression=compression):
     return schema
 
 def deserialize(storage, name="", whitelist=whitelist):
+    import awkward.array.virtual
+
     schema = json.loads(storage[name])
     prefix = schema.get("prefix", "")
     seen = {}
@@ -190,8 +192,8 @@ def deserialize(storage, name="", whitelist=whitelist):
                     return storage[prefix + schema["read"]]
                 
             elif "ref" in schema:
-                return seen[schema["ref"]]
-
+                return awkward.array.virtual.VirtualArray(lambda: seen[schema["ref"]])
+                       
             else:
                 return schema
 
