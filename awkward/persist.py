@@ -40,10 +40,17 @@ import awkward.util
 import awkward.version
 
 compression = [
-    [8192, [numpy.bool_, numpy.bool, numpy.integer], "*", (zlib.compress, ("zlib", "decompress"))],
+    {"minsize": 8192, "types": [numpy.bool_, numpy.bool, numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
     ]
 
-whitelist = [["numpy", "frombuffer"], ["zlib", "decompress"], ["awkward", "*"], ["awkward.persist", "*"]]
+partner = {
+    zlib.compress: ("zlib", "decompress"),
+    }
+
+whitelist = [["numpy", "frombuffer"],
+             ["zlib", "decompress"],
+             ["awkward.persist", "*"],
+             ["awkward", "array", "*"]]
 
 def dtype2json(obj):
     if obj.subdtype is not None:
@@ -69,8 +76,30 @@ def serialize(obj, storage, name="", compression=compression):
 
     if compression is None:
         compression = []
-    elif isinstance(compression, tuple) and len(compression) == 2 and callable(compression[0]):
-        compression = [(0, (object,), "*", (zlib.compress, ("zlib", "decompress")))]
+    if isinstance(compression, dict) or callable(compression) or (len(compression) == 2 and callable(compression[0])):
+        compression = [compression]
+
+    normalized = []
+    for x in compression:
+        if isinstance(x, dict):
+            pass
+
+        elif callable(x):
+            if not x in partner:
+                raise ValueError("decompression partner for {0} not known".format(x))
+            x = {"pair": (x, partner[x])}
+
+        elif len(x) == 2 and callable(x[0]):
+            x = {"pair": x}
+
+        minsize = x.get("minsize", 0)
+        types = x.get("types", (object,))
+        if not isinstance(types, tuple):
+            types = (types,)
+        contexts = x.get("contexts", "*")
+        pair = x["pair"]
+
+        normalized.append({"minsize": minsize, "types": types, "contexts": contexts, "pair": pair})
 
     seen = {}
     def fill(obj, context):
@@ -86,7 +115,8 @@ def serialize(obj, storage, name="", compression=compression):
             else:
                 dtype = dtype2json(obj.dtype)
 
-            for minsize, types, contexts, pair in compression:
+            for policy in normalized:
+                minsize, types, contexts, pair = policy["minsize"], policy["types"], policy["contexts"], policy["pair"]
                 if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(types)) and any(fnmatch.fnmatchcase(context, p) for p in contexts):
                     compress, decompress = pair
                     storage[name + str(ident)] = compress(obj)

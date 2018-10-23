@@ -52,7 +52,7 @@ class Test(unittest.TestCase):
     def test_compressed_numpy(self):
         storage = {}
         a = numpy.arange(100, dtype=">u2")
-        serialize(a, storage, compression=(zlib.compress, ("zlib", "decompress")))
+        serialize(a, storage, compression=zlib.compress)
         b = deserialize(storage)
         assert numpy.array_equal(a, b)
         assert a.dtype == b.dtype
