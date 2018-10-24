@@ -36,6 +36,10 @@ import numpy
 
 from awkward import *
 from awkward.persist import *
+from awkward.type import *
+
+def generate():
+    return range(10)
 
 class Test(unittest.TestCase):
     def runTest(self):
@@ -140,4 +144,32 @@ class Test(unittest.TestCase):
         pass
 
     def test_VirtualArray(self):
-        pass
+        storage = {}
+        a = awkward.VirtualArray(generate)
+        serialize(a, storage)
+        cache = {}
+        b = deserialize(storage, cache=cache)
+        assert a.tolist() == b.tolist()
+        assert len(cache) == 1
+
+        storage = {}
+        a = awkward.VirtualArray(generate, persistentkey="find-me-again")
+        serialize(a, storage)
+        cache = {}
+        b = deserialize(storage, cache=cache)
+        assert a.persistentkey == b.persistentkey
+        assert a.tolist() == b.tolist()
+        assert list(cache.keys()) == ["find-me-again"]
+
+        storage = {}
+        a = awkward.VirtualArray(generate, type=ArrayType(10, numpy.dtype(int)))
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.type == b.type
+
+        storage = {}
+        a = awkward.VirtualArray(generate, persistvirtual=False)
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert isinstance(b, numpy.ndarray)
+        assert a.tolist() == b.tolist()

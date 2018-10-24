@@ -50,9 +50,8 @@ partner = {
 
 whitelist = [["numpy", "frombuffer"],
              ["zlib", "decompress"],
-             ["awkward", "*"],
-             ["awkward.persist", "*"],
-             ["awkward.array.*", "*"]]
+             ["awkward", "*Array"],
+             ["awkward.persist", "*"]]
 
 def dtype2json(obj):
     if obj.subdtype is not None:
@@ -273,7 +272,7 @@ def serialize(obj, storage, name=None, delimiter="-", compression=compression, *
     storage[name] = json.dumps(schema).encode("ascii")
     return schema
 
-def deserialize(storage, name="", whitelist=whitelist):
+def deserialize(storage, name="", whitelist=whitelist, cache=None):
     import awkward.array.virtual
 
     schema = storage[name]
@@ -300,15 +299,17 @@ def deserialize(storage, name="", whitelist=whitelist):
                     raise RuntimeError("callable {0} not in whitelist: {1}".format(schema["call"], whitelist))
 
                 args = [unfill(x) for x in schema.get("args", [])]
+
+                kwargs = {}
+                if schema.get("cacheable", False):
+                    kwargs["cache"] = cache
                 if "kwargs" in schema:
-                    kwargs = {n: unfill(x) for n, x in schema["kwargs"].items()}
-                else:
-                    kwargs = {}
+                    kwargs.update({n: unfill(x) for n, x in schema["kwargs"].items()})
 
                 if "*" in schema:
-                    args = args + list(unfill(schema["*"]))
+                    args = args + [unfill(x) for x in schema["*"]]
                 if "**" in schema:
-                    kwargs.update(unfill(schema["**"]))
+                    kwargs.update({n: unfill(x) for n, x in schema["**"].items()})
 
                 out = gen(*args, **kwargs)
                 if "id" in schema:

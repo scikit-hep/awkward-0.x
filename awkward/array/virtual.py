@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import importlib
+
 import awkward.array.base
 import awkward.persist
 import awkward.type
@@ -114,10 +116,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def __awkward_persist__(self, ident, fill, **kwargs):
         self._valid()
+        n = self.__class__.__name__
 
         if self._persistvirtual:
-            n = self.__class__.__name__
-
             if self._generator.__module__ == "__main__":
                 raise TypeError("cannot persist VirtualArray: its generator is defined in __main__, which won't be available in a subsequent session")
             if hasattr(self._generator, "__qualname__"):
@@ -131,16 +132,21 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             if gen is not self._generator:
                 raise TypeError("cannot persist VirtualArray: its generator cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
 
-            return {"id": ident,
-                    "call": ["awkward", n],
-                    "args": [{"function": spec},
-                             kwargs.get("cache", None),
-                             self._persistentkey,
-                             {"call": ["awkward.persist", "json2type"], "args": [awkward.persist.type2json(self._type)]},
-                             self._persistvirtual]}
+            out = {"id": ident,
+                   "call": ["awkward", n],
+                   "args": [{"function": spec}],
+                   "cacheable": True}
+            others = {}
+            if self._persistentkey is not None:
+                others["persistentkey"] = self._persistentkey
+            if self._type is not None:
+                others["type"] = {"call": ["awkward.persist", "json2type"], "args": [awkward.persist.type2json(self._type)]}
+            if len(others) > 0:
+                out["kwargs"] = others
+            return out
 
         else:
-            return self.array.__awkward_persist__(ident, fill, **kwargs)
+            return fill(self.array, n + ".array", **kwargs)
 
     @property
     def generator(self):
@@ -207,7 +213,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def __len__(self):
         return self.shape[0]
 
-    def _valid(self, seen):
+    def _valid(self):
         pass
 
     @property
