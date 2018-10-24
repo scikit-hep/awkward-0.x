@@ -32,6 +32,8 @@ import fnmatch
 import importlib
 import json
 import numbers
+import os
+import zipfile
 import zlib
 
 import numpy
@@ -199,15 +201,23 @@ def json2type(obj, whitelist=whitelist):
 
     return awkward.type._resolve(recurse(obj), {})
 
-def serialize(obj, storage, name=None, delimiter="-", compression=compression, **kwargs):
+def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=None, compression=compression, **kwargs):
     import awkward.array.base
 
     if name is None or name == "":
         name = ""
         prefix = ""
+    elif delimiter is None:
+        prefix = name
     else:
         prefix = name + delimiter
-        
+
+    if suffix is None:
+        suffix = ""
+
+    if schemasuffix is None:
+        schemasuffix = ""
+
     if compression is None:
         compression = []
     if isinstance(compression, dict) or callable(compression) or (len(compression) == 2 and callable(compression[0])):
@@ -253,19 +263,19 @@ def serialize(obj, storage, name=None, delimiter="-", compression=compression, *
                 minsize, types, contexts, pair = policy["minsize"], policy["types"], policy["contexts"], policy["pair"]
                 if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(types)) and any(fnmatch.fnmatchcase(context, p) for p in contexts):
                     compress, decompress = pair
-                    storage[prefix + str(ident)] = compress(obj)
+                    storage[prefix + str(ident) + suffix] = compress(obj)
 
                     return {"id": ident,
                             "call": ["numpy", "frombuffer"],
-                            "args": [{"call": decompress, "args": [{"read": str(ident)}]},
+                            "args": [{"call": decompress, "args": [{"read": str(ident) + suffix}]},
                                      {"call": ["awkward.persist", "json2dtype"], "args": [dtype]},
                                      len(obj)]}
 
             else:
-                storage[prefix + str(ident)] = obj.tostring()
+                storage[prefix + str(ident) + suffix] = obj.tostring()
                 return {"id": ident,
                         "call": ["numpy", "frombuffer"],
-                        "args": [{"read": str(ident)},
+                        "args": [{"read": str(ident) + suffix},
                                  {"call": ["awkward.persist", "json2dtype"], "args": [dtype]},
                                  len(obj)]}
 
@@ -280,7 +290,7 @@ def serialize(obj, storage, name=None, delimiter="-", compression=compression, *
     if prefix != "":
         schema["prefix"] = prefix
 
-    storage[name] = json.dumps(schema).encode("ascii")
+    storage[name + schemasuffix] = json.dumps(schema).encode("ascii")
     return schema
 
 def deserialize(storage, name="", whitelist=whitelist, cache=None):
@@ -354,3 +364,68 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
             return schema
 
     return unfill(schema["schema"])
+
+def save(file, mode="a", options=None, **arrays):
+    arraynames = list(arrays)
+    for i in range(len(arraynames)):
+        for j in range(i + 1, len(arraynames)):
+            if arraynames[i].startswith(arraynames[j]) or arraynames[j].startswith(arraynames[i]):
+                raise KeyError("cannot write both {0} and {1} to zipfile because one is a prefix of the other", repr(arraynames[i]), repr(arraynames[j]))
+
+    if isinstance(file, getattr(os, "PathLike", ())):
+        file = os.fspath(file)
+    elif hasattr(file, "__fspath__"):
+        file = file.__fspath__()
+    elif file.__class__.__module__ == "pathlib":
+        import pathlib
+        if isinstance(file, pathlib.Path):
+             file = str(file)
+
+    if isinstance(file, str) and not file.endswith(".akd"):
+        file = file + ".akd"
+
+    alloptions = {"delimiter": "-", "suffix": ".raw", "schemasuffix": ".json", "compression": compression}
+    if options is not None:
+        alloptions.update(options)
+    options = alloptions
+
+    class Wrap(object):
+        def __init__(self, f):
+            self.f = f
+        def __setitem__(self, where, what):
+            self.f.writestr(where, what, compress_type=zipfile.ZIP_STORED)
+
+    with zipfile.ZipFile(file, mode=mode, compression=zipfile.ZIP_STORED) as f:
+        namelist = f.namelist()
+        for name in arraynames:
+            if any(n.startswith(name) for n in namelist):
+                raise KeyError("cannot add {0} to zipfile because the following already exist: {1}".format(repr(name), ", ".join(repr(n) for n in namelist if n.startswith(name))))
+
+        wrapped = Wrap(f)
+        for name, array in arrays.items():
+            serialize(array, wrapped, name=name, **options)
+
+class load(object):
+    def __init__(self, file, options=None):
+        class Wrap(object):
+            def __init__(self):
+                self.f = zipfile.ZipFile(file, mode="r")
+            def __getitem__(self, where):
+                return self.f.read(where)
+            def close(self):
+                self.f.close()
+
+        alloptions = {"schemasuffix": ".json", "whitelist": whitelist, "cache": None}
+        if options is not None:
+            alloptions.update(options)
+        options = alloptions
+
+        self.file = Wrap()
+        self.schemasuffix = options.pop("schemasuffix")
+        self.options = options
+        
+    def __getitem__(self, where):
+        return deserialize(self.file, name=where + self.schemasuffix, **self.options)
+
+    def __del__(self):
+        self.file.close()
