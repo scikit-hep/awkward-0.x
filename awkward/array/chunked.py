@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.base
+import awkward.persist
 import awkward.type
 import awkward.util
 
@@ -638,7 +639,7 @@ class AppendableArray(ChunkedArray):
         return {"id": ident,
                 "call": ["awkward", n],
                 "args": [self._chunkshape,
-                         {"call": ["awkward.persist", "json2dtype"], "args": [self._dtype]},
+                         {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._dtype)]},
                          {"list": [fill(x, n + ".chunk", **kwargs) for c, x in zip(self._counts, self._chunks) if c > 0]}]}
 
     @property

@@ -36,6 +36,7 @@ import zlib
 
 import numpy
 
+import awkward.type
 import awkward.util
 import awkward.version
 
@@ -71,6 +72,74 @@ def json2dtype(obj):
         else:
             return obj
     return numpy.dtype(recurse(obj))
+
+def type2json(obj):
+    if isinstance(obj, awkward.type.Type):
+        labeled = obj._labeled()
+    else:
+        labeled = []
+
+    seen = set()
+
+    def takes(n):
+        if n == float("inf"):
+            return "inf"
+        else:
+            return int(n)
+
+    def recurse(obj):
+        if isinstance(obj, awkward.type.Type):
+            if id(obj) in seen:
+                for i, x in enumerate(labeled):
+                    if obj is x:
+                        return {"ref": "T{0}".format(i)}
+
+            else:
+                seen.add(id(obj))
+                if isinstance(obj, awkward.type.ArrayType):
+                    out = {"takes": takes(obj._takes), "to": recurse(obj._to)}
+
+                elif isinstance(obj, awkward.type.TableType):
+                    out = {"fields": [[n, recurse(x)] for n, x in obj._fields.items()]}
+
+                elif isinstance(obj, awkward.type.UnionType):
+                    out = {"possibilities": [recurse(x) for x in obj._possibilities]}
+
+                elif isinstance(obj, awkward.type.OptionType):
+                    out = {"type": recurse(obj._type)}
+
+                for i, x in enumerate(labeled):
+                    if obj is x:
+                        return {"set": "T{0}".format(i), "as": out}
+                else:
+                    return out
+
+        elif isinstance(obj, numpy.dtype):
+            return {"dtype": dtype2json(obj)}
+
+        elif callable(obj):
+            if obj.__module__ == "__main__":
+                raise TypeError("cannot persist object type: its generator is defined in __main__, which won't be available in a subsequent session")
+            if hasattr(obj, "__qualname__"):
+                spec = [obj.__module__] + obj.__qualname__.split(".")
+            else:
+                spec = [obj.__module__, obj.__name__]
+
+            gen, genname = importlib.import_module(spec[0]), spec[1:]
+            while len(genname) > 0:
+                gen, genname = getattr(gen, genname[0]), genname[1:]
+            if gen is not obj:
+                raise TypeError("cannot persist object type: its generator cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
+
+            return spec
+
+        else:
+            raise TypeError("only awkward.type.Type, numpy.dtype, and callables are types")
+
+    return recurse(obj)
+
+def json2type(obj):
+    raise NotImplementedError
 
 def serialize(obj, storage, name=None, delimiter="-", compression=compression, **kwargs):
     import awkward.array.base

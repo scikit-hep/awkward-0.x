@@ -32,6 +32,7 @@ import math
 import numbers
 
 import awkward.array.base
+import awkward.persist
 import awkward.type
 import awkward.util
 
@@ -1140,7 +1141,7 @@ class ByteJaggedArray(JaggedArray):
                     "call": ["awkward", n, "fromcounts"],
                     "args": [fill(self.counts, n + ".counts", **kwargs),
                              fill(content, n + ".content", **kwargs),
-                             {"call": ["awkward.persist", "json2dtype"], "args": [self._subdtype]}]}
+                             {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._subdtype)]}]}
 
         else:
             return {"id": ident,
@@ -1148,7 +1149,7 @@ class ByteJaggedArray(JaggedArray):
                     "args": [fill(self._starts, n + ".starts", **kwargs),
                              fill(self._stops, n + ".stops", **kwargs),
                              fill(self._content, n + ".content", **kwargs),
-                             {"call": ["awkward.persist", "json2dtype"], "args": [self._subdtype]}]}
+                             {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._subdtype)]}]}
 
     @property
     def content(self):

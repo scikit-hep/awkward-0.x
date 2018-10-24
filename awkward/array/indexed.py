@@ -32,6 +32,7 @@ import pickle
 import numbers
 
 import awkward.array.base
+import awkward.persist
 import awkward.type
 import awkward.util
 
@@ -264,7 +265,7 @@ class ByteIndexedArray(IndexedArray):
                 "call": ["awkward", n],
                 "args": [fill(self._index, n + ".index", **kwargs),
                          fill(self._content, n + ".content", **kwargs),
-                         {"call": ["awkward.persist", "json2dtype"], "args": [self._dtype]}]}
+                         {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._dtype)]}]}
 
     @property
     def content(self):
