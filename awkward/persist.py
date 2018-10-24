@@ -28,7 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import collections.abc
 import fnmatch
 import importlib
 import json
@@ -36,6 +35,10 @@ import numbers
 import os
 import zipfile
 import zlib
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 import numpy
 
@@ -408,7 +411,7 @@ def save(file, mode="a", options=None, **arrays):
         for name, array in arrays.items():
             serialize(array, wrapped, name=name, **options)
 
-class load(collections.abc.Mapping):
+class load(Mapping):
     def __init__(self, file, options=None):
         class Wrap(object):
             def __init__(self):
@@ -463,7 +466,7 @@ def tohdf5(group, options=None, **arrays):
         group.create_group(name)
         serialize(array, f, name=name, **options)
 
-class fromhdf5(collections.abc.Mapping):
+class fromhdf5(Mapping):
     def __init__(self, group, options=None):
         class Wrap(object):
             def __init__(self):
