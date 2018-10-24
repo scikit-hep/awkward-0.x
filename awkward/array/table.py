@@ -238,7 +238,7 @@ class Table(awkward.array.base.AwkwardArray):
         self._valid()
         return {"id": ident,
                 "call": ["awkward", self.__class__.__name__, "frompairs"],
-                "args": [{"list": [[n, fill(x, self.__class__.__name__ + ".content", **kwargs)] for n, x in self._content.items()]}]}
+                "args": [{"pairs": [[n, fill(x, self.__class__.__name__ + ".content", **kwargs)] for n, x in self._content.items()]}]}
 
     @property
     def base(self):

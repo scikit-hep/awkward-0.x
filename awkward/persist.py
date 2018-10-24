@@ -51,6 +51,7 @@ partner = {
 whitelist = [["numpy", "frombuffer"],
              ["zlib", "decompress"],
              ["awkward", "*Array"],
+             ["awkward", "Table"],
              ["awkward.persist", "*"]]
 
 def dtype2json(obj):
@@ -324,6 +325,9 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
 
             elif "list" in schema:
                 return [unfill(x) for x in schema["list"]]
+
+            elif "pairs" in schema:
+                return [(n, unfill(x)) for n, x in schema["pairs"]]
 
             elif "function" in schema:
                 gen, genname = importlib.import_module(schema["function"][0]), schema["function"][1:]
