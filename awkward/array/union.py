@@ -86,6 +86,31 @@ class UnionArray(awkward.array.base.AwkwardArray):
         return self.copy(contents=[awkward.util.numpy.ones_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.ones_like(**overrides) for x in self._contents])
 
     @property
+    def issequential(self):
+        self._valid()
+        for tag in awkward.util.numpy.unique(self._tags):
+            mask = self._tags == tag
+            if not awkward.util.numpy.array_equal(self._index[mask], awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(mask))):
+                return False
+        return True
+
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        if self.issequential:
+            return {"id": ident,
+                    "call": ["awkward", n, "fromtags"],
+                    "args": [fill(self._tags, n + ".tags", **kwargs),
+                             {"list": [fill(x, n + ".contents", **kwargs) for x in self._contents]}]}
+
+        else:
+            return {"id": ident,
+                    "call": ["awkward", n],
+                    "args": [fill(self._tags, n + ".tags", **kwargs),
+                             fill(self._index, n + ".index", **kwargs),
+                             {"list": [fill(x, n + ".contents", **kwargs) for x in self._contents]}]}
+
+    @property
     def tags(self):
         return self._tags
 
@@ -205,22 +230,23 @@ class UnionArray(awkward.array.base.AwkwardArray):
         return self._tags.shape
 
     def _valid(self):
-        if len(self._tags.shape) > len(self._index.shape):
-            raise ValueError("tags length ({0}) must be less than or equal to index length ({1})".format(len(self._tags.shape), len(self._index.shape)))
+        if not self._isvalid:
+            if len(self._tags.shape) > len(self._index.shape):
+                raise ValueError("tags length ({0}) must be less than or equal to index length ({1})".format(len(self._tags.shape), len(self._index.shape)))
 
-        if self._tags.shape[1:] != self._index.shape[1:]:
-            raise ValueError("tags dimensionality ({0}) must be equal to index dimensionality ({1})".format(self._tags.shape[1:], self._index.shape[1:]))
+            if self._tags.shape[1:] != self._index.shape[1:]:
+                raise ValueError("tags dimensionality ({0}) must be equal to index dimensionality ({1})".format(self._tags.shape[1:], self._index.shape[1:]))
 
-        if len(self._tags.reshape(-1)) > 0 and self._tags.reshape(-1).max() >= len(self._contents):
-            raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(self._tags.reshape(-1).max(), len(self._contents)))
+            if len(self._tags.reshape(-1)) > 0 and self._tags.reshape(-1).max() >= len(self._contents):
+                raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(self._tags.reshape(-1).max(), len(self._contents)))
 
-        index = self._index[:len(self._tags)]
-        for tag in awkward.util.numpy.unique(self._tags):
-            maxindex = index[self._tags == tag].reshape(-1).max()
-            if maxindex >= len(self._contents[tag]):
-                raise ValueError("maximum index ({0}) must be less than the length of all contents arrays ({1})".format(maxindex, len(self._contents[tag])))
+            index = self._index[:len(self._tags)]
+            for tag in awkward.util.numpy.unique(self._tags):
+                maxindex = index[self._tags == tag].reshape(-1).max()
+                if maxindex >= len(self._contents[tag]):
+                    raise ValueError("maximum index ({0}) must be less than the length of all contents arrays ({1})".format(maxindex, len(self._contents[tag])))
 
-        self._isvalid = True
+            self._isvalid = True
 
     def __iter__(self):
         self._valid()

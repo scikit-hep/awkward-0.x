@@ -214,6 +214,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=self._content.ones_like(**overrides))
 
     def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
         n = self.__class__.__name__
         if self._canuseoffset():
             if len(self._starts) > 0 and self._starts[0] != 0:
@@ -222,15 +223,15 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 content = self._content
             return {"id": ident,
                     "call": ["awkward", n, "fromcounts"],
-                    "args": [fill(self.counts, n + ".counts"),
-                             fill(content, n + ".content")]}
+                    "args": [fill(self.counts, n + ".counts", **kwargs),
+                             fill(content, n + ".content", **kwargs)]}
 
         else:
             return {"id": ident,
                     "call": ["awkward", n],
-                    "args": [fill(self._starts, n + ".starts"),
-                             fill(self._stops, n + ".stops"),
-                             fill(self._content, n + ".content")]}
+                    "args": [fill(self._starts, n + ".starts", **kwargs),
+                             fill(self._stops, n + ".stops", **kwargs),
+                             fill(self._content, n + ".content", **kwargs)]}
 
     @property
     def starts(self):
@@ -1126,6 +1127,28 @@ class ByteJaggedArray(JaggedArray):
         else:
             out.subdtype = subdtype
         return out
+
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        if self._canuseoffset():
+            if len(self._starts) > 0 and self._starts[0] != 0:
+                content = self._content[self._starts[0]:]
+            else:
+                content = self._content
+            return {"id": ident,
+                    "call": ["awkward", n, "fromcounts"],
+                    "args": [fill(self.counts, n + ".counts", **kwargs),
+                             fill(content, n + ".content", **kwargs),
+                             {"call": ["awkward.persist", "json2dtype"], "args": [self._subdtype]}]}
+
+        else:
+            return {"id": ident,
+                    "call": ["awkward", n],
+                    "args": [fill(self._starts, n + ".starts", **kwargs),
+                             fill(self._stops, n + ".stops", **kwargs),
+                             fill(self._content, n + ".content", **kwargs),
+                             {"call": ["awkward.persist", "json2dtype"], "args": [self._subdtype]}]}
 
     @property
     def content(self):

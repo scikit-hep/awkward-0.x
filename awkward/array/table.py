@@ -176,6 +176,13 @@ class Table(awkward.array.base.AwkwardArray):
             out[n] = recarray[n]
         return out
 
+    @classmethod
+    def frompairs(cls, pairs):
+        out = cls()
+        for n, x in pairs:
+            out[n] = x
+        return out
+
     def copy(self, content=None):
         out = self.__class__.__new__(self.__class__)
         out._view = self._view
@@ -226,6 +233,12 @@ class Table(awkward.array.base.AwkwardArray):
             else:
                 out[n] = x.ones_like(**overrides)
         return out
+
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        return {"id": ident,
+                "call": ["awkward", self.__class__.__name__, "frompairs"],
+                "args": [{"list": [[n, fill(x, self.__class__.__name__ + ".content", **kwargs)] for n, x in self._content.items()]}]}
 
     @property
     def base(self):

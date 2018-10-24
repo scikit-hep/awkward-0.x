@@ -28,6 +28,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import pickle
+import numbers
+
 import awkward.array.base
 import awkward.type
 import awkward.util
@@ -84,11 +87,12 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=self._content.ones_like(**overrides))
 
     def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
         n = self.__class__.__name__
         return {"id": ident,
                 "call": ["awkward", n],
-                "args": [fill(self._index, n + ".index"),
-                         fill(self._content, n + ".content")]}
+                "args": [fill(self._index, n + ".index", **kwargs),
+                         fill(self._content, n + ".content", **kwargs)]}
 
     @property
     def index(self):
@@ -253,6 +257,15 @@ class ByteIndexedArray(IndexedArray):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [fill(self._index, n + ".index", **kwargs),
+                         fill(self._content, n + ".content", **kwargs),
+                         {"call": ["awkward.persist", "json2dtype"], "args": [self._dtype]}]}
+
     @property
     def content(self):
         return self._content
@@ -408,6 +421,24 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
+
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        
+        if self._default is None or isinstance(self._default, (numbers.Real, awkward.util.numpy.integer, awkward.util.numpy.floating)):
+            default = self._default
+        elif isinstance(self._default, awkward.util.numpy.ndarray):
+            default = fill(self._default, n + ".default")
+        else:
+            default = {"call": ["pickle", "loads"], "args": pickle.dumps(self._default)}
+
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [self._length,
+                         fill(self._index, n + ".index", **kwargs),
+                         fill(self._content, n + ".content", **kwargs),
+                         default]}
 
     @property
     def length(self):

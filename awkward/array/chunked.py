@@ -78,11 +78,12 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     def __awkward_persist__(self, ident, fill, **kwargs):
         self.knowcounts()
+        self._valid()
         n = self.__class__.__name__
         return {"id": ident,
                 "call": ["awkward", n],
-                "args": [{"list": [fill(x, n + ".chunk") for c, x in zip(self._counts, self._chunks) if c > 0]},
-                         fill(awkward.util.numpy.array([c for c in self._counts if c > 0]), n + ".counts")]}
+                "args": [{"list": [fill(x, n + ".chunk", **kwargs) for c, x in zip(self._counts, self._chunks) if c > 0]},
+                         fill(awkward.util.numpy.array([c for c in self._counts if c > 0]), n + ".counts", **kwargs)]}
 
     @property
     def chunks(self):
@@ -630,6 +631,15 @@ class AppendableArray(ChunkedArray):
         mine["chunkshape"] = overrides.pop("chunkshape", self._chunkshape)
         mine["dtype"] = overrides.pop("dtype", self._dtype)
         return mine
+
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [self._chunkshape,
+                         {"call": ["awkward.persist", "json2dtype"], "args": [self._dtype]},
+                         {"list": [fill(x, n + ".chunk", **kwargs) for c, x in zip(self._counts, self._chunks) if c > 0]}]}
 
     @property
     def chunkshape(self):

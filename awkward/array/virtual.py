@@ -107,6 +107,30 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         else:
             return self.array.ones_like(**overrides)
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+
+        if self._generator.__module__ == "__main__":
+            raise TypeError("cannot persist VirtualArray: its generator is defined in __main__, which won't be available in a subsequent session")
+        if hasattr(self._generator, "__qualname__"):
+            spec = [self._generator.__module__] + self._generator.__qualname__.split(".")
+        else:
+            spec = [self._generator.__module__, self._generator.__name__]
+
+        gen, genname = importlib.import_module(spec[0]), spec[1:]
+        while len(genname) > 0:
+            gen, genname = getattr(gen, genname[0]), genname[1:]
+        if gen is not self._generator:
+            raise TypeError("cannot persist VirtualArray: its generator cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
+
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [{"function": spec},
+                         None,
+                         self._persistentkey,
+                         {"call": ["awkward.persist", "json2type"], "args": [self._type]}]}
+
     @property
     def generator(self):
         return self._generator

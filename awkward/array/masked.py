@@ -106,6 +106,15 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [fill(self._mask, n + ".mask", **kwargs),
+                         fill(self._content, n + ".content", **kwargs),
+                         self._maskedwhen]}
+
     @property
     def mask(self):
         return self._mask
@@ -290,6 +299,16 @@ class BitMaskedArray(MaskedArray):
         mine["maskedwhen"] = overrides.pop("maskedwhen", self._maskedwhen)
         mine["lsborder"] = overrides.pop("lsborder", self._lsborder)
         return mine
+
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [fill(self._mask, n + ".mask", **kwargs),
+                         fill(self._content, n + ".content", **kwargs),
+                         self._maskedwhen,
+                         self._lsborder]}
 
     @property
     def mask(self):
@@ -505,6 +524,15 @@ class IndexedMaskedArray(MaskedArray):
         if maskedwhen is not None:
             out._maskedwhen = maskedwhen
         return out
+
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [fill(self._mask, n + ".mask", **kwargs),
+                         fill(self._content, n + ".content", **kwargs),
+                         self._maskedwhen]}
 
     @property
     def mask(self):

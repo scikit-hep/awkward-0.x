@@ -183,21 +183,36 @@ def deserialize(storage, name="", whitelist=whitelist):
                     raise RuntimeError("callable {0} not in whitelist: {1}".format(schema["call"], whitelist))
 
                 args = [unfill(x) for x in schema.get("args", [])]
+                if "kwargs" in schema:
+                    kwargs = {n: unfill(x) for n, x in schema["kwargs"].items()}
+                else:
+                    kwargs = {}
 
-                out = gen(*args)
+                if "*" in schema:
+                    args = args + list(unfill(schema["*"]))
+                if "**" in schema:
+                    kwargs.update(unfill(schema["**"]))
+
+                out = gen(*args, **kwargs)
                 if "id" in schema:
                     seen[schema["id"]] = out
                 return out
-
-            elif "list" in schema:
-                return [unfill(x) for x in schema["list"]]
 
             elif "read" in schema:
                 if schema.get("absolute", False):
                     return storage[schema["read"]]
                 else:
                     return storage[prefix + schema["read"]]
-                
+
+            elif "list" in schema:
+                return [unfill(x) for x in schema["list"]]
+
+            elif "function" in schema:
+                gen, genname = importlib.import_module(schema["function"][0]), schema["function"][1:]
+                while len(genname) > 0:
+                    gen, genname = getattr(gen, genname[0]), genname[1:]
+                return gen
+
             elif "ref" in schema:
                 if schema["ref"] in seen:
                     return seen[schema["ref"]]
