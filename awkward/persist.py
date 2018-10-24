@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import collections.abc
 import fnmatch
 import importlib
 import json
@@ -297,6 +298,8 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
     import awkward.array.virtual
 
     schema = storage[name]
+    if isinstance(schema, numpy.ndarray):
+        schema = schema.tostring()
     if isinstance(schema, bytes):
         schema = schema.decode("ascii")
     schema = json.loads(schema)
@@ -405,7 +408,7 @@ def save(file, mode="a", options=None, **arrays):
         for name, array in arrays.items():
             serialize(array, wrapped, name=name, **options)
 
-class load(object):
+class load(collections.abc.Mapping):
     def __init__(self, file, options=None):
         class Wrap(object):
             def __init__(self):
@@ -415,17 +418,80 @@ class load(object):
             def close(self):
                 self.f.close()
 
+        self._file = Wrap()
+
         alloptions = {"schemasuffix": ".json", "whitelist": whitelist, "cache": None}
         if options is not None:
             alloptions.update(options)
-        options = alloptions
-
-        self.file = Wrap()
-        self.schemasuffix = options.pop("schemasuffix")
-        self.options = options
+        self.schemasuffix = alloptions.pop("schemasuffix")
+        self.options = alloptions
         
     def __getitem__(self, where):
-        return deserialize(self.file, name=where + self.schemasuffix, **self.options)
+        return deserialize(self._file, name=where + self.schemasuffix, **self.options)
+
+    def __iter__(self):
+        for n in self._file.f.namelist():
+            if n.endswith(".json"):
+                yield n[:-5]
+
+    def __len__(self):
+        count = 0
+        for n in self._file.f.namelist():
+            if n.endswith(".json"):
+                count += 1
+        return count
 
     def __del__(self):
-        self.file.close()
+        self._file.close()
+
+def tohdf5(group, options=None, **arrays):
+    alloptions = {"compression": compression}
+    if options is not None:
+        alloptions.update(options)
+    options = alloptions
+    options["delimiter"] = "/"
+    options["schemasuffix"] = "/schema.json"
+
+    class Wrap(object):
+        def __init__(self):
+            self.g = group
+        def __setitem__(self, where, what):
+            self.g[where] = numpy.frombuffer(what, dtype=numpy.uint8)
+
+    f = Wrap()
+    for name, array in arrays.items():
+        group.create_group(name)
+        serialize(array, f, name=name, **options)
+
+class fromhdf5(collections.abc.Mapping):
+    def __init__(self, group, options=None):
+        class Wrap(object):
+            def __init__(self):
+                self.g = group
+            def __getitem__(self, where):
+                return self.g[where].value
+
+        self._group = Wrap()
+
+        alloptions = {"whitelist": whitelist, "cache": None}
+        if options is not None:
+            alloptions.update(options)
+        self.options = alloptions
+
+    def __getitem__(self, where):
+        return deserialize(self._group, name=where + "/schema.json", **self.options)
+
+    def __iter__(self):
+        for subname in self._group.g:
+            if "schema.json" in self._group.g[subname]:
+                yield subname
+
+    def __len__(self):
+        count = 0
+        for subname in self._group.g:
+            if "schema.json" in self._group.g[subname]:
+                count += 0
+        return count
+
+    def __repr__(self):
+        return "<HDF5 group {0} of awkward arrays>".format(repr(self._group.g.name))
