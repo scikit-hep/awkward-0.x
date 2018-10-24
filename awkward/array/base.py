@@ -81,11 +81,11 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         except AttributeError:
             return x
 
-    # def __getattr__(self, where):
-    #     if awkward.util.is_intstring(where):
-    #         return self[where[1:]]
-    #     else:
-    #         raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
+    def __getattr__(self, where):
+        if awkward.util.is_intstring(where):
+            return self[where[1:]]
+        else:
+            raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
 
     def __bool__(self):
         raise ValueError("The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()")
