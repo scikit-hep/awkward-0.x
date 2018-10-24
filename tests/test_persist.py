@@ -38,8 +38,24 @@ from awkward import *
 from awkward.persist import *
 from awkward.type import *
 
-def generate():
+def makearray():
     return range(10)
+
+class FloatPoint(object):
+    def __init__(self, array):
+        self.x, self.y, self.z = array
+    def __repr__(self):
+        return "<FloatPoint {0} {1} {2}>".format(self.x, self.y, self.z)
+    def __eq__(self, other):
+        return isinstance(other, FloatPoint) and self.x == other.x and self.y == other.y and self.z == other.z
+
+class BytesPoint(object):
+    def __init__(self, bytes):
+        self.x, self.y, self.z = struct.unpack("ddd", bytes)
+    def __repr__(self):
+        return "<BytesPoint {0} {1} {2}>".format(self.x, self.y, self.z)
+    def __eq__(self, other):
+        return isinstance(other, BytesPoint) and self.x == other.x and self.y == other.y and self.z == other.z
 
 class Test(unittest.TestCase):
     def runTest(self):
@@ -135,8 +151,23 @@ class Test(unittest.TestCase):
         pass
 
     def test_ObjectArray(self):
-        pass
+        storage = {}
+        a = ObjectArray([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.9]], FloatPoint)
+        serialize(a, storage)
+        b = deserialize(storage, whitelist="*")
+        assert a.tolist() == b.tolist()
 
+        storage = {}
+        a = ObjectArray([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.9]], FloatPoint)
+        serialize(a, storage)
+        b = deserialize(storage, whitelist=whitelist + [["tests.test_persist", "FloatPoint"]])
+        assert a.tolist() == b.tolist()
+
+        a = ObjectArray(numpy.array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]).view("u1").reshape(-1, 24), BytesPoint)
+        serialize(a, storage)
+        b = deserialize(storage, whitelist="*")
+        assert a.tolist() == b.tolist()
+        
     def test_Table(self):
         storage = {}
         a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], stuff=[5, 4, 3, 2, 1])
@@ -159,31 +190,36 @@ class Test(unittest.TestCase):
 
     def test_VirtualArray(self):
         storage = {}
-        a = awkward.VirtualArray(generate)
+        a = awkward.VirtualArray(makearray)
         serialize(a, storage)
         cache = {}
-        b = deserialize(storage, cache=cache)
+        b = deserialize(storage, cache=cache, whitelist="*")
+        assert a.tolist() == b.tolist()
+        assert len(cache) == 1
+
+        cache = {}
+        b = deserialize(storage, cache=cache, whitelist=whitelist + [["tests.test_persist", "makearray"]])
         assert a.tolist() == b.tolist()
         assert len(cache) == 1
 
         storage = {}
-        a = awkward.VirtualArray(generate, persistentkey="find-me-again")
+        a = awkward.VirtualArray(makearray, persistentkey="find-me-again")
         serialize(a, storage)
         cache = {}
-        b = deserialize(storage, cache=cache)
+        b = deserialize(storage, cache=cache, whitelist="*")
         assert a.persistentkey == b.persistentkey
         assert a.tolist() == b.tolist()
         assert list(cache.keys()) == ["find-me-again"]
 
         storage = {}
-        a = awkward.VirtualArray(generate, type=ArrayType(10, numpy.dtype(int)))
+        a = awkward.VirtualArray(makearray, type=ArrayType(10, numpy.dtype(int)))
         serialize(a, storage)
-        b = deserialize(storage)
+        b = deserialize(storage, whitelist="*")
         assert a.type == b.type
 
         storage = {}
-        a = awkward.VirtualArray(generate, persistvirtual=False)
+        a = awkward.VirtualArray(makearray, persistvirtual=False)
         serialize(a, storage)
-        b = deserialize(storage)
+        b = deserialize(storage, whitelist="*")
         assert isinstance(b, numpy.ndarray)
         assert a.tolist() == b.tolist()

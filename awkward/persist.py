@@ -54,6 +54,20 @@ whitelist = [["numpy", "frombuffer"],
              ["awkward", "Table"],
              ["awkward.persist", "*"]]
 
+def spec2function(obj, whitelist=whitelist):
+    for white in whitelist:
+        for n, p in zip(obj, white):
+            if not fnmatch.fnmatchcase(n, p):
+                break
+        else:
+            gen, genname = importlib.import_module(obj[0]), obj[1:]
+            while len(genname) > 0:
+                gen, genname = getattr(gen, genname[0]), genname[1:]
+            break
+    else:
+        raise RuntimeError("callable not in whitelist; add it by passing a whitelist argument:\n\n    whitelist = awkward.persist.whitelist + [{0}]".format(obj))
+    return gen
+
 def dtype2json(obj):
     if obj.subdtype is not None:
         dt, sh = obj.subdtype
@@ -138,7 +152,7 @@ def type2json(obj):
 
     return recurse(obj)
 
-def json2type(obj):
+def json2type(obj, whitelist=whitelist):
     labels = {}
 
     def takes(n):
@@ -178,11 +192,7 @@ def json2type(obj):
             return json2dtype(obj["dtype"])
 
         elif "function" in obj:
-            spec = obj["function"]
-            gen, genname = importlib.import_module(spec[0]), spec[1:]
-            while len(genname) > 0:
-                gen, genname = getattr(gen, genname[0]), genname[1:]
-            return gen
+            return spec2function(obj["function"], whitelist=whitelist)
 
         else:
             raise ValueError("unexpected set of keys in JSON: {0}".format(", ".join(repr(x) for x in obj)))
@@ -284,26 +294,22 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
     prefix = schema.get("prefix", "")
     seen = {}
 
+    if isinstance(whitelist, str):
+        whitelist = [whitelist]
+    elif len(whitelist) > 0 and isinstance(whitelist[0], str):
+        whitelist = [whitelist]
+
     def unfill(schema):
         if isinstance(schema, dict):
             if "call" in schema and isinstance(schema["call"], list) and len(schema["call"]) > 0:
-                for white in whitelist:
-                    for n, p in zip(schema["call"], white):
-                        if not fnmatch.fnmatchcase(n, p):
-                            break
-                    else:
-                        gen, genname = importlib.import_module(schema["call"][0]), schema["call"][1:]
-                        while len(genname) > 0:
-                            gen, genname = getattr(gen, genname[0]), genname[1:]
-                        break
-                else:
-                    raise RuntimeError("callable {0} not in whitelist: {1}".format(schema["call"], whitelist))
-
+                gen = spec2function(schema["call"], whitelist=whitelist)
                 args = [unfill(x) for x in schema.get("args", [])]
 
                 kwargs = {}
                 if schema.get("cacheable", False):
                     kwargs["cache"] = cache
+                if schema.get("whitelistable", False):
+                    kwargs["whitelist"] = whitelist
                 if "kwargs" in schema:
                     kwargs.update({n: unfill(x) for n, x in schema["kwargs"].items()})
 
@@ -330,10 +336,7 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
                 return [(n, unfill(x)) for n, x in schema["pairs"]]
 
             elif "function" in schema:
-                gen, genname = importlib.import_module(schema["function"][0]), schema["function"][1:]
-                while len(genname) > 0:
-                    gen, genname = getattr(gen, genname[0]), genname[1:]
-                return gen
+                return spec2function(schema["function"], whitelist=whitelist)
 
             elif "ref" in schema:
                 if schema["ref"] in seen:

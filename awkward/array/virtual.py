@@ -140,7 +140,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             if self._persistentkey is not None:
                 others["persistentkey"] = self._persistentkey
             if self._type is not None:
-                others["type"] = {"call": ["awkward.persist", "json2type"], "args": [awkward.persist.type2json(self._type)]}
+                others["type"] = {"call": ["awkward.persist", "json2type"], "args": [awkward.persist.type2json(self._type)], "whitelistable": True}
             if len(others) > 0:
                 out["kwargs"] = others
             return out
