@@ -217,15 +217,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def __awkward_persist__(self, ident, fill, **kwargs):
         self._valid()
         n = self.__class__.__name__
-        if self._canuseoffset():
-            if len(self._starts) > 0 and self._starts[0] != 0:
-                content = self._content[self._starts[0]:]
-            else:
-                content = self._content
+        if offsetsaliased(self._starts, self._stops) and len(self._starts) > 0 and self._starts[0] == 0:
             return {"id": ident,
                     "call": ["awkward", n, "fromcounts"],
                     "args": [fill(self.counts, n + ".counts", **kwargs),
-                             fill(content, n + ".content", **kwargs)]}
+                             fill(self._content, n + ".content", **kwargs)]}
 
         else:
             return {"id": ident,
@@ -1132,15 +1128,11 @@ class ByteJaggedArray(JaggedArray):
     def __awkward_persist__(self, ident, fill, **kwargs):
         self._valid()
         n = self.__class__.__name__
-        if self._canuseoffset():
-            if len(self._starts) > 0 and self._starts[0] != 0:
-                content = self._content[self._starts[0]:]
-            else:
-                content = self._content
+        if offsetsaliased(self._starts, self._stops) and len(self._starts) > 0 and self._starts[0] == 0:
             return {"id": ident,
                     "call": ["awkward", n, "fromcounts"],
                     "args": [fill(self.counts, n + ".counts", **kwargs),
-                             fill(content, n + ".content", **kwargs),
+                             fill(self._content, n + ".content", **kwargs),
                              {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._subdtype)]}]}
 
         else:
