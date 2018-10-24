@@ -131,7 +131,7 @@ def type2json(obj):
             if gen is not obj:
                 raise TypeError("cannot persist object type: its generator cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
 
-            return spec
+            return {"function": spec}
 
         else:
             raise TypeError("only awkward.type.Type, numpy.dtype, and callables are types")
@@ -139,7 +139,55 @@ def type2json(obj):
     return recurse(obj)
 
 def json2type(obj):
-    raise NotImplementedError
+    labels = {}
+
+    def takes(n):
+        if n == "inf":
+            return float("inf")
+        else:
+            return n
+
+    def recurse(obj):
+        if not isinstance(obj, dict):
+            raise TypeError("json2type is expecting a JSON object, found: {0}".format(repr(obj)))
+
+        if "set" in obj:
+            placeholder = labels[obj["set"]] = awkward.type.Placeholder()
+            placeholder.value = recurse(obj["as"])
+            return placeholder
+
+        elif "ref" in obj:
+            return labels[obj["ref"]]
+
+        elif "takes" in obj and "to" in obj:
+            return awkward.type.ArrayType(takes(obj["takes"]), recurse(obj["to"]))
+
+        elif "fields" in obj:
+            out = awkward.type.TableType()
+            for n, x in obj["fields"]:
+                out[n] = recurse(x)
+            return out
+
+        elif "possibilities" in obj:
+            return awkward.type.UnionType(*[recurse(x) for x in obj["possibilities"]])
+
+        elif "type" in obj:
+            return awkward.type.OptionType(recurse(obj["type"]))
+
+        elif "dtype" in obj:
+            return json2dtype(obj["dtype"])
+
+        elif "function" in obj:
+            spec = obj["function"]
+            gen, genname = importlib.import_module(spec[0]), spec[1:]
+            while len(genname) > 0:
+                gen, genname = getattr(gen, genname[0]), genname[1:]
+            return gen
+
+        else:
+            raise ValueError("unexpected set of keys in JSON: {0}".format(", ".join(repr(x) for x in obj)))
+
+    return awkward.type._resolve(recurse(obj), {})
 
 def serialize(obj, storage, name=None, delimiter="-", compression=compression, **kwargs):
     import awkward.array.base
