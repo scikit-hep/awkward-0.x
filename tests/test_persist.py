@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import pickle
 import struct
 import unittest
 import zlib
@@ -60,6 +61,11 @@ class BytesPoint(object):
 class Test(unittest.TestCase):
     def runTest(self):
         pass
+
+    def test_pickle(self):
+        a = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        b = pickle.loads(pickle.dumps(a))
+        assert a.tolist() == b.tolist()
 
     def test_uncompressed_numpy(self):
         storage = {}
