@@ -28,6 +28,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import importlib
+import pickle
+
 import awkward.array.base
 import awkward.type
 import awkward.util
@@ -109,6 +112,33 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+
+        if self._generator.__module__ == "__main__":
+            raise TypeError("cannot persist ObjectArray: its generator is defined in __main__, which won't be available in a subsequent session")
+        if hasattr(self._generator, "__qualname__"):
+            spec = [self._generator.__module__] + self._generator.__qualname__.split(".")
+        else:
+            spec = [self._generator.__module__, self._generator.__name__]
+
+        gen, genname = importlib.import_module(spec[0]), spec[1:]
+        while len(genname) > 0:
+            gen, genname = getattr(gen, genname[0]), genname[1:]
+        if gen is not self._generator:
+            raise TypeError("cannot persist ObjectArray: its generator cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
+
+        n = self.__class__.__name__
+        out = {"id": ident,
+               "call": ["awkward", n],
+               "args": [fill(self._content, n + ".content", **kwargs), {"function": spec}]}
+        if len(self._args) > 0:
+            out["*"] = {"call": ["pickle", "loads"], "args": [pickle.dumps(self._args)]}
+        if len(self._kwargs) > 0:
+            out["**"] = {"call": ["pickle", "loads"], "args": [pickle.dumps(self._kwargs)]}
+
+        return out
+
     @property
     def content(self):
         return self._content
@@ -147,21 +177,21 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
             raise TypeError("kwargs must be a dict")
         self._kwargs = value
 
-    @property
-    def dtype(self):
-        return awkward.util.numpy.dtype(object)
-
-    @property
-    def shape(self):
-        return self._content.shape
-
     def __len__(self):
         return len(self._content)
 
-    @property
-    def type(self):
-        return awkward.type.fromarray(*(self._content.shape + (self._generator,)))
+    def _gettype(self, seen):
+        if len(self._content.shape) == 1:
+            return self._generator
+        else:
+            return awkward.type.ArrayType(*(self._content.shape[1:] + (self._generator,)))
 
+    def _getshape(self):
+        return (len(self._content),)
+
+    def _valid(self):
+        pass
+        
     def __iter__(self):
         for x in self._content:
             yield self.generator(x, *self._args, **self._kwargs)

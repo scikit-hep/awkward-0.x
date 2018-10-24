@@ -32,6 +32,7 @@ import math
 import numbers
 
 import awkward.array.base
+import awkward.persist
 import awkward.type
 import awkward.util
 
@@ -233,6 +234,22 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides))
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        if offsetsaliased(self._starts, self._stops) and len(self._starts) > 0 and self._starts[0] == 0:
+            return {"id": ident,
+                    "call": ["awkward", n, "fromcounts"],
+                    "args": [fill(self.counts, n + ".counts", **kwargs),
+                             fill(self._content, n + ".content", **kwargs)]}
+
+        else:
+            return {"id": ident,
+                    "call": ["awkward", n],
+                    "args": [fill(self._starts, n + ".starts", **kwargs),
+                             fill(self._stops, n + ".stops", **kwargs),
+                             fill(self._content, n + ".content", **kwargs)]}
+
     @property
     def starts(self):
         return self._starts
@@ -351,24 +368,16 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out = awkward.util.numpy.arange(len(self._content), dtype=awkward.util.INDEXTYPE)
         return self.copy(content=(out - out[self._starts[self.parents]]))
 
-    @property
-    def dtype(self):
-        return awkward.util.numpy.dtype(awkward.util.numpy.object)      # specifically, Numpy arrays
-
-    @property
-    def shape(self):
-        self._valid()
-        return self._starts.shape
-
     def __len__(self):
-        self._valid()
         return len(self._starts)
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(*(self._starts.shape + (awkward.type.ArrayType(awkward.util.numpy.inf, awkward.type.fromarray(self._content).to),)))
+    def _gettype(self, seen):
+        return awkward.type.ArrayType(awkward.util.numpy.inf, awkward.type._fromarray(self._content, seen))
 
-    def _valid(self, assign_isvalid=True):
+    def _getshape(self):
+        return self._starts.shape
+
+    def _valid(self):
         if not self._isvalid:
             self._validstartsstops(self._starts, self._stops)
 
@@ -382,8 +391,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             if len(stops) != 0 and stops.reshape(-1).max() > len(self._content):
                 raise ValueError("maximum stop ({0}) is beyond the length of the content ({1})".format(self._stops.reshape(-1).max(), len(self._content)))
 
-            if assign_isvalid:
-                self._isvalid = True
+            self._isvalid = True
 
     @staticmethod
     def _validstartsstops(starts, stops):
@@ -1068,7 +1076,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def pandas(self):
         import pandas
-
         self._valid()
 
         if isinstance(self._content, awkward.util.numpy.ndarray):
@@ -1138,6 +1145,24 @@ class ByteJaggedArray(JaggedArray):
             out.subdtype = subdtype
         return out
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        if offsetsaliased(self._starts, self._stops) and len(self._starts) > 0 and self._starts[0] == 0:
+            return {"id": ident,
+                    "call": ["awkward", n, "fromcounts"],
+                    "args": [fill(self.counts, n + ".counts", **kwargs),
+                             fill(self._content, n + ".content", **kwargs),
+                             {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._subdtype)]}]}
+
+        else:
+            return {"id": ident,
+                    "call": ["awkward", n],
+                    "args": [fill(self._starts, n + ".starts", **kwargs),
+                             fill(self._stops, n + ".stops", **kwargs),
+                             fill(self._content, n + ".content", **kwargs),
+                             {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._subdtype)]}]}
+
     @property
     def content(self):
         return self._content
@@ -1159,9 +1184,8 @@ class ByteJaggedArray(JaggedArray):
         self._subdtype = awkward.util.numpy.dtype(value)
         self._isvalid = False
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(*(self._starts.shape + (awkward.type.ArrayType(awkward.util.numpy.inf, self._subdtype),)))
+    def _gettype(self, seen):
+        return awkward.type.ArrayType(awkward.util.numpy.inf, self._subdtype)
 
     def __iter__(self):
         self._valid()
@@ -1188,7 +1212,17 @@ class ByteJaggedArray(JaggedArray):
 
     def _valid(self):
         if not self._isvalid:
-            super(ByteJaggedArray, self)._valid(assign_isvalid=False)
+            self._validstartsstops(self._starts, self._stops)
+
+            nonempty = (self._starts != self._stops)
+
+            starts = self._starts[nonempty].reshape(-1)
+            if len(starts) != 0 and starts.reshape(-1).max() >= len(self._content):
+                raise ValueError("maximum start ({0}) is at or beyond the length of the content ({1})".format(starts.reshape(-1).max(), len(self._content)))
+
+            stops = self._stops[nonempty].reshape(-1)
+            if len(stops) != 0 and stops.reshape(-1).max() > len(self._content):
+                raise ValueError("maximum stop ({0}) is beyond the length of the content ({1})".format(self._stops.reshape(-1).max(), len(self._content)))
 
             counts = self._stops - self._starts
             if (self._divitemsize(counts) * self._subdtype.itemsize != counts).any():

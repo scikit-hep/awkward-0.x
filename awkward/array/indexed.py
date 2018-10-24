@@ -28,7 +28,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import pickle
+import numbers
+
 import awkward.array.base
+import awkward.persist
 import awkward.type
 import awkward.util
 
@@ -83,6 +87,14 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides))
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [fill(self._index, n + ".index", **kwargs),
+                         fill(self._content, n + ".content", **kwargs)]}
+
     @property
     def index(self):
         return self._index
@@ -107,25 +119,20 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
         self._isvalid = False
 
-    @property
-    def dtype(self):
-        return self._content.dtype
-
-    @property
-    def shape(self):
-        return self._index.shape
-
     def __len__(self):
         return len(self._index)
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(*(self._index.shape + (awkward.type.fromarray(self._content).to,)))
+    def _gettype(self, seen):
+        return awkward.type._fromarray(self._content, seen)
+
+    def _getshape(self):
+        return self._index.shape
 
     def _valid(self):
         if not self._isvalid:
             if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
                 raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
+
             self._isvalid = True
 
     def __iter__(self):
@@ -190,7 +197,6 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def pandas(self):
         import pandas
-
         self._valid()
 
         if isinstance(self._content, awkward.util.numpy.ndarray):
@@ -252,6 +258,15 @@ class ByteIndexedArray(IndexedArray):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [fill(self._index, n + ".index", **kwargs),
+                         fill(self._content, n + ".content", **kwargs),
+                         {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._dtype)]}]}
+
     @property
     def content(self):
         return self._content
@@ -260,9 +275,11 @@ class ByteIndexedArray(IndexedArray):
     def content(self, value):
         self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, awkward.util.numpy.ndarray).view(awkward.util.CHARTYPE).reshape(-1)
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(*(self._index.shape + (self._dtype,)))
+    def _gettype(self, seen):
+        return self._dtype
+
+    def _getshape(self):
+        return self._index.shape
 
     @property
     def dtype(self):
@@ -276,6 +293,7 @@ class ByteIndexedArray(IndexedArray):
         if not self._isvalid:
             if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
                 raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
+
             self._isvalid = True
 
     def __iter__(self):
@@ -360,6 +378,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         out._content = self._content
         out._default = self._default
         out._inverse = self._inverse
+        out._isvalid = self._isvalid
         if length is not None:
             out.length = length
         if index is not None:
@@ -404,6 +423,24 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        
+        if self._default is None or isinstance(self._default, (numbers.Real, awkward.util.numpy.integer, awkward.util.numpy.floating)):
+            default = self._default
+        elif isinstance(self._default, awkward.util.numpy.ndarray):
+            default = fill(self._default, n + ".default")
+        else:
+            default = {"call": ["pickle", "loads"], "args": pickle.dumps(self._default)}
+
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [self._length,
+                         fill(self._index, n + ".index", **kwargs),
+                         fill(self._content, n + ".content", **kwargs),
+                         default]}
+
     @property
     def length(self):
         return self._length
@@ -433,6 +470,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             raise ValueError("index must be monatonically increasing")
         self._index = value
         self._inverse = None
+        self._isvalid = False
 
     @property
     def content(self):
@@ -441,6 +479,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     @content.setter
     def content(self, value):
         self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
+        self._isvalid = False
 
     @property
     def default(self):
@@ -457,28 +496,27 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self._default
 
+        self._isvalid = False
+
     @default.setter
     def default(self, value):
         self._default = value
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(self._length, awkward.type.fromarray(self._content).to)
-        
+    def _gettype(self, seen):
+        return awkward.type._fromarray(self._content, seen)
+
+    def _getshape(self):
+        return (self._length,)
+
     def __len__(self):
         return self._length
 
-    @property
-    def shape(self):
-        return (self._length,) + self._content.shape[1:]
-
-    @property
-    def dtype(self):
-        return self._content.dtype
-
     def _valid(self):
-        if len(self._index) > len(self._content):
-            raise ValueError("length of index ({0}) must not be greater than the length of content ({1})".format(len(self._index), len(self._content)))
+        if not self._isvalid:
+            if len(self._index) > len(self._content):
+                raise ValueError("length of index ({0}) must not be greater than the length of content ({1})".format(len(self._index), len(self._content)))
+
+            self._isvalid = True
 
     def __iter__(self):
         self._valid()

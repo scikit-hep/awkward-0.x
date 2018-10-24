@@ -32,38 +32,11 @@ import numbers
 
 import awkward.util
 
-def fromarray(array):
-    if isinstance(array, awkward.util.numpy.ndarray):
-        if array.dtype.names is None:
-            out = ArrayType(*(array.shape + (array.dtype,)))
-            if isinstance(array, awkward.util.numpy.ma.MaskedArray):
-                out = OptionType(out)
-            return out
-        else:
-            table = TableType.__new__(TableType)
-            table._fields = awkward.util.OrderedDict()
-            for n in array.dtype.names:
-                table[n] = array.dtype[n]
-            out = ArrayType(*(array.shape + (table,)))
-            if isinstance(array, awkward.util.numpy.ma.MaskedArray):
-                out = OptionType(out)
-            return out
+def _str(tpe, indent=""):
+    if isinstance(tpe, Type):
+        return tpe.__str__(indent=indent)
     else:
-        return array.type
-
-def fromnumpy(shape, dtype, masked=False):
-    if not isinstance(shape, tuple):
-        shape = (shape,)
-    if not isinstance(dtype, awkward.util.numpy.dtype):
-        dtype = awkward.util.numpy.dtype(dtype)
-
-    if masked:
-        return OptionType(fromnumpy(shape, dtype))
-    elif dtype.subdtype is not None:
-        dt, sh = dtype.subdtype
-        return fromnumpy(shape + sh, dt)
-    else:
-        return ArrayType(*(shape + (dtype,)))
+        return indent + str(tpe)
 
 class Type(object):
     def hascolumn(self, name):
@@ -249,12 +222,8 @@ class Type(object):
 
 class ArrayType(Type):
     def __init__(self, *args):
-        if len(args) == 0:
+        if len(args) < 2:
             raise ValueError("type specification missing")
-
-        elif len(args) == 1:
-            self.takes = None
-            self.to = args[0]
 
         elif isinstance(args[0], awkward.util.string):
             self.__class__ = TableType
@@ -297,13 +266,20 @@ class ArrayType(Type):
     def shape(self):
         if self._takes == awkward.util.numpy.inf:
             return ()
-        else:
+
+        elif isinstance(self._to, (Type, awkward.util.numpy.dtype)):
             return (self._takes,) + self._to.shape
+
+        else:
+            return (self._takes,)
 
     @property
     def dtype(self):
         if self._takes == awkward.util.numpy.inf:
             return awkward.util.numpy.dtype(object)
+
+        elif isinstance(self._to, Type):
+            return self._to.dtype
 
         elif isinstance(self._to, awkward.util.numpy.dtype):
             if self._to.subdtype is None:
@@ -312,7 +288,7 @@ class ArrayType(Type):
                 return self._to.subdtype[0]
 
         else:
-            return self._to.dtype
+            return awkward.util.numpy.dtype(object)
 
     def _isnumpy(self, seen):
         if id(self) in seen:
@@ -578,3 +554,88 @@ class OptionType(Type):
 
     def __hash__(self):
         return hash((OptionType, self._type))
+
+###############################################################################
+
+def fromnumpy(shape, dtype, masked=False):
+    if not isinstance(shape, tuple):
+        shape = (shape,)
+    if not isinstance(dtype, awkward.util.numpy.dtype):
+        dtype = awkward.util.numpy.dtype(dtype)
+
+    if masked:
+        return OptionType(fromnumpy(shape, dtype))
+    elif dtype.subdtype is not None:
+        dt, sh = dtype.subdtype
+        return fromnumpy(shape + sh, dt)
+    else:
+        return ArrayType(*(shape + (dtype,)))
+
+def fromarray(array):
+    return ArrayType(len(array), _resolve(_fromarray(array, {}), {}))
+
+def _fromarray(array, seen):
+    if id(array) not in seen:
+        seen[id(array)] = placeholder = Placeholder()
+
+        if isinstance(array, awkward.util.numpy.ndarray):
+            if array.dtype.names is None:
+                out = array.dtype
+
+            else:
+                out = TableType.__new__(TableType)
+                out._fields = awkward.util.OrderedDict()
+                for n in array.dtype.names:
+                    out[n] = array.dtype[n]
+
+            for x in array.shape[:0:-1]:
+                out = ArrayType(x, out)
+            if isinstance(array, awkward.util.numpy.ma.MaskedArray):
+                out = OptionType(out)
+
+            placeholder.value = out
+
+        else:
+            placeholder.value = array._gettype(seen)
+
+    return seen[id(array)]
+
+class Placeholder(Type):
+    def __init__(self, value=None):
+        self.value = value
+
+    def _subrepr(self, labeled, seen):
+        return "Placeholder({0})".format(self.value._repr(labeled, seen) if isinstance(self.value, Type) else repr(self.value))
+
+def _resolve(tpe, seen):
+    while isinstance(tpe, Placeholder):
+        tpe = tpe.value
+
+    assert tpe is not None
+
+    if id(tpe) not in seen:
+        if isinstance(tpe, ArrayType):
+            seen[id(tpe)] = ArrayType.__new__(ArrayType)
+            seen[id(tpe)]._takes = tpe.takes
+            seen[id(tpe)]._to = _resolve(tpe._to, seen)
+
+        elif isinstance(tpe, TableType):
+            seen[id(tpe)] = TableType.__new__(TableType)
+            seen[id(tpe)]._fields = awkward.util.OrderedDict()
+            for n, y in tpe._fields.items():
+                seen[id(tpe)]._fields[n] = _resolve(y, seen)
+
+        elif isinstance(tpe, UnionType):
+            seen[id(tpe)] = UnionType.__new__(UnionType)
+            seen[id(tpe)]._possibilities = []
+            for y in tpe._possibilities:
+                seen[id(tpe)]._possibilities.append(_resolve(y, seen))
+
+        elif isinstance(tpe, OptionType):
+            seen[id(tpe)] = OptionType.__new__(OptionType)
+            seen[id(tpe)]._type = _resolve(tpe._type, seen)
+
+        else:
+            seen[id(tpe)] = tpe
+
+    return seen[id(tpe)]

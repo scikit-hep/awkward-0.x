@@ -65,12 +65,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         out._mask = self._mask
         out._content = self._content
         out._maskedwhen = self._maskedwhen
+        out._isvalid = self._isvalid
         if mask is not None:
-            out._mask = mask
+            out.mask = mask
         if content is not None:
-            out._content = content
+            out.content = content
         if maskedwhen is not None:
-            out._maskedwhen = maskedwhen
+            out.maskedwhen = maskedwhen
         return out
 
     def deepcopy(self, mask=None, content=None):
@@ -105,6 +106,15 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [fill(self._mask, n + ".mask", **kwargs),
+                         fill(self._content, n + ".content", **kwargs),
+                         self._maskedwhen]}
+
     @property
     def mask(self):
         return self._mask
@@ -117,6 +127,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         if not issubclass(value.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
             value = (value != 0)
         self._mask = value
+        self._isvalid = False
 
     def boolmask(self, maskedwhen=True):
         if maskedwhen == self._maskedwhen:
@@ -131,6 +142,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     @content.setter
     def content(self, value):
         self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
+        self._isvalid = False
 
     @property
     def maskedwhen(self):
@@ -140,24 +152,21 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def maskedwhen(self, value):
         self._maskedwhen = bool(value)
 
-    @property
-    def dtype(self):
-        return self._content.dtype
-
     def __len__(self):
         return len(self._mask)
 
-    @property
-    def shape(self):
-        return (len(self._mask),) + self._content.shape[1:]
+    def _gettype(self, seen):
+        return awkward.type._fromarray(self._content, seen)
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(len(self._mask), awkward.type.fromarray(self._content).to)
+    def _getshape(self):
+        return (len(self._mask),)
 
     def _valid(self):
-        if len(self._mask) > len(self._content):
-            raise ValueError("mask length ({0}) must be the same as (or shorter than) the content length ({1})".format(len(self._mask), len(self._content)))
+        if not self._isvalid:
+            if len(self._mask) > len(self._content):
+                raise ValueError("mask length ({0}) must be the same as (or shorter than) the content length ({1})".format(len(self._mask), len(self._content)))
+
+            self._isvalid = True
 
     def __iter__(self):
         self._valid()
@@ -291,6 +300,16 @@ class BitMaskedArray(MaskedArray):
         mine["lsborder"] = overrides.pop("lsborder", self._lsborder)
         return mine
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [fill(self._mask, n + ".mask", **kwargs),
+                         fill(self._content, n + ".content", **kwargs),
+                         self._maskedwhen,
+                         self._lsborder]}
+
     @property
     def mask(self):
         return self._mask
@@ -301,12 +320,12 @@ class BitMaskedArray(MaskedArray):
         if len(value.shape) != 1:
             raise ValueError("mask must have 1-dimensional shape")
         self._mask = value.view(awkward.util.BITMASKTYPE)
+        self._isvalid = False
 
     def __len__(self):
         return len(self._content)
 
-    @property
-    def shape(self):
+    def _getshape(self):
         return self._content.shape
 
     @staticmethod
@@ -362,8 +381,11 @@ class BitMaskedArray(MaskedArray):
         self._lsborder = bool(value)
 
     def _valid(self):
-        if len(self._mask) != self._ceildiv8(len(self._content)):
-            raise ValueError("mask length ({0}) must be equal to ceil(content length / 8) ({1})".format(len(self._mask), self._ceildiv8(len(self._content))))
+        if not self._isvalid:
+            if len(self._mask) != self._ceildiv8(len(self._content)):
+                raise ValueError("mask length ({0}) must be equal to ceil(content length / 8) ({1})".format(len(self._mask), self._ceildiv8(len(self._content))))
+
+            self._isvalid = True
 
     def __iter__(self):
         self._valid()
@@ -503,6 +525,15 @@ class IndexedMaskedArray(MaskedArray):
             out._maskedwhen = maskedwhen
         return out
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        return {"id": ident,
+                "call": ["awkward", n],
+                "args": [fill(self._mask, n + ".mask", **kwargs),
+                         fill(self._content, n + ".content", **kwargs),
+                         self._maskedwhen]}
+
     @property
     def mask(self):
         return self._mask
@@ -549,6 +580,7 @@ class IndexedMaskedArray(MaskedArray):
                     raise ValueError("maximum mask-index ({0}) is beyond the length of the content ({1})".format(self._mask.max(), len(self._content)))
                 if (self._mask[self._mask != self._maskedwhen] < 0).any():
                     raise ValueError("mask-index has negative values (other than maskedwhen)")
+
             self._isvalid = True
 
     def __iter__(self):

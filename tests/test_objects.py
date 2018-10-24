@@ -49,13 +49,13 @@ class Test(unittest.TestCase):
                 return isinstance(other, Point) and self.x == other.x and self.y == other.y and self.z == other.z
 
         a = ObjectArray([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.9]], Point)
-        self.assertEqual(a[0], Point([1.1, 2.2, 3.3]))
-        self.assertEqual(a[1], Point([4.4, 5.5, 6.6]))
-        self.assertEqual(a[2], Point([7.7, 8.8, 9.9]))
-        self.assertEqual(a[:].tolist(), [Point([1.1, 2.2, 3.3]), Point([4.4, 5.5, 6.6]), Point([7.7, 8.8, 9.9])])
-        self.assertEqual(a[::2].tolist(), [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])])
-        self.assertEqual(a[[True, False, True]].tolist(), [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])])
-        self.assertEqual(a[[2, 0]].tolist(), [Point([7.7, 8.8, 9.9]), Point([1.1, 2.2, 3.3])])
+        assert a[0] == Point([1.1, 2.2, 3.3])
+        assert a[1] == Point([4.4, 5.5, 6.6])
+        assert a[2] == Point([7.7, 8.8, 9.9])
+        assert a[:].tolist() == [Point([1.1, 2.2, 3.3]), Point([4.4, 5.5, 6.6]), Point([7.7, 8.8, 9.9])]
+        assert a[::2].tolist() == [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])]
+        assert a[[True, False, True]].tolist() == [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])]
+        assert a[[2, 0]].tolist() == [Point([7.7, 8.8, 9.9]), Point([1.1, 2.2, 3.3])]
 
     def test_object_bytes(self):
         class Point(object):
@@ -67,13 +67,13 @@ class Test(unittest.TestCase):
                 return isinstance(other, Point) and self.x == other.x and self.y == other.y and self.z == other.z
 
         a = ObjectArray(numpy.array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]).view("u1").reshape(-1, 24), Point)
-        self.assertEqual(a[0], Point(numpy.array([1.1, 2.2, 3.3]).tobytes()))
-        self.assertEqual(a[1], Point(numpy.array([4.4, 5.5, 6.6]).tobytes()))
-        self.assertEqual(a[2], Point(numpy.array([7.7, 8.8, 9.9]).tobytes()))
-        self.assertEqual(a[:].tolist(), [Point(numpy.array([1.1, 2.2, 3.3]).tobytes()), Point(numpy.array([4.4, 5.5, 6.6]).tobytes()), Point(numpy.array([7.7, 8.8, 9.9]).tobytes())])
-        self.assertEqual(a[::2].tolist(), [Point(numpy.array([1.1, 2.2, 3.3]).tobytes()), Point(numpy.array([7.7, 8.8, 9.9]).tobytes())])
-        self.assertEqual(a[[True, False, True]].tolist(), [Point(numpy.array([1.1, 2.2, 3.3]).tobytes()), Point(numpy.array([7.7, 8.8, 9.9]).tobytes())])
-        self.assertEqual(a[[2, 0]].tolist(), [Point(numpy.array([7.7, 8.8, 9.9]).tobytes()), Point(numpy.array([1.1, 2.2, 3.3]).tobytes())])
+        assert a[0] == Point(numpy.array([1.1, 2.2, 3.3]).tobytes())
+        assert a[1] == Point(numpy.array([4.4, 5.5, 6.6]).tobytes())
+        assert a[2] == Point(numpy.array([7.7, 8.8, 9.9]).tobytes())
+        assert a[:].tolist() == [Point(numpy.array([1.1, 2.2, 3.3]).tobytes()), Point(numpy.array([4.4, 5.5, 6.6]).tobytes()), Point(numpy.array([7.7, 8.8, 9.9]).tobytes())]
+        assert a[::2].tolist() == [Point(numpy.array([1.1, 2.2, 3.3]).tobytes()), Point(numpy.array([7.7, 8.8, 9.9]).tobytes())]
+        assert a[[True, False, True]].tolist() == [Point(numpy.array([1.1, 2.2, 3.3]).tobytes()), Point(numpy.array([7.7, 8.8, 9.9]).tobytes())]
+        assert a[[2, 0]].tolist() == [Point(numpy.array([7.7, 8.8, 9.9]).tobytes()), Point(numpy.array([1.1, 2.2, 3.3]).tobytes())]
 
     def test_object_indexedbytes(self):
         class Point(object):
@@ -85,13 +85,13 @@ class Test(unittest.TestCase):
                 return isinstance(other, Point) and self.x == other.x and self.y == other.y and self.z == other.z
 
         a = ObjectArray(ByteIndexedArray([0, 24, 48], numpy.array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]).view("u1"), numpy.dtype((float, 3))), Point)
-        self.assertEqual(a[0], Point([1.1, 2.2, 3.3]))
-        self.assertEqual(a[1], Point([4.4, 5.5, 6.6]))
-        self.assertEqual(a[2], Point([7.7, 8.8, 9.9]))
-        self.assertEqual(a[:].tolist(), [Point([1.1, 2.2, 3.3]), Point([4.4, 5.5, 6.6]), Point([7.7, 8.8, 9.9])])
-        self.assertEqual(a[::2].tolist(), [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])])
-        self.assertEqual(a[[True, False, True]].tolist(), [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])])
-        self.assertEqual(a[[2, 0]].tolist(), [Point([7.7, 8.8, 9.9]), Point([1.1, 2.2, 3.3])])
+        assert a[0] == Point([1.1, 2.2, 3.3])
+        assert a[1] == Point([4.4, 5.5, 6.6])
+        assert a[2] == Point([7.7, 8.8, 9.9])
+        assert a[:].tolist() == [Point([1.1, 2.2, 3.3]), Point([4.4, 5.5, 6.6]), Point([7.7, 8.8, 9.9])]
+        assert a[::2].tolist() == [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])]
+        assert a[[True, False, True]].tolist() == [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])]
+        assert a[[2, 0]].tolist() == [Point([7.7, 8.8, 9.9]), Point([1.1, 2.2, 3.3])]
 
     def test_object_jaggedbytes(self):
         class Point(object):
@@ -103,10 +103,10 @@ class Test(unittest.TestCase):
                 return isinstance(other, Point) and self.x == other.x and self.y == other.y and self.z == other.z
 
         a = ObjectArray(ByteJaggedArray.fromoffsets([0, 24, 48, 72], numpy.array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]).view("u1"), float), Point)
-        self.assertEqual(a[0], Point([1.1, 2.2, 3.3]))
-        self.assertEqual(a[1], Point([4.4, 5.5, 6.6]))
-        self.assertEqual(a[2], Point([7.7, 8.8, 9.9]))
-        self.assertEqual(a[:].tolist(), [Point([1.1, 2.2, 3.3]), Point([4.4, 5.5, 6.6]), Point([7.7, 8.8, 9.9])])
-        self.assertEqual(a[::2].tolist(), [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])])
-        self.assertEqual(a[[True, False, True]].tolist(), [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])])
-        self.assertEqual(a[[2, 0]].tolist(), [Point([7.7, 8.8, 9.9]), Point([1.1, 2.2, 3.3])])
+        assert a[0] == Point([1.1, 2.2, 3.3])
+        assert a[1] == Point([4.4, 5.5, 6.6])
+        assert a[2] == Point([7.7, 8.8, 9.9])
+        assert a[:].tolist() == [Point([1.1, 2.2, 3.3]), Point([4.4, 5.5, 6.6]), Point([7.7, 8.8, 9.9])]
+        assert a[::2].tolist() == [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])]
+        assert a[[True, False, True]].tolist() == [Point([1.1, 2.2, 3.3]), Point([7.7, 8.8, 9.9])]
+        assert a[[2, 0]].tolist() == [Point([7.7, 8.8, 9.9]), Point([1.1, 2.2, 3.3])]

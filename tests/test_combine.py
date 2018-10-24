@@ -357,22 +357,22 @@ class Test(unittest.TestCase):
     
     # def test_JaggedArray_ChunkedArray(self):
     #     a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], ChunkedArray([[0.0, 1.1, 2.2, 3.3], [4.4, 5.5, 6.6, 7.7, 8.8, 9.9]]))
-    #     self.assertEqual(a.tolist(), [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
-    #     self.assertEqual(a[2].tolist(), [3.3, 4.4])
-    #     self.assertEqual(a[2:4].tolist(), [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
+    #     assert a.tolist() == [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
+    #     assert a[2].tolist() == [3.3, 4.4]
+    #     assert a[2:4].tolist() == [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
 
     # def test_JaggedArray_PartitionedArray(self):
     #     a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], PartitionedArray([0, 4, 10], [[0.0, 1.1, 2.2, 3.3], [4.4, 5.5, 6.6, 7.7, 8.8, 9.9]]))
-    #     self.assertEqual(a.tolist(), [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
-    #     self.assertEqual(a[2].tolist(), [3.3, 4.4])
-    #     self.assertEqual(a[2:4].tolist(), [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
+    #     assert a.tolist() == [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
+    #     assert a[2].tolist() == [3.3, 4.4]
+    #     assert a[2:4].tolist() == [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
 
     # def test_JaggedArray_AppendableArray(self):
     #     pass
 
     # def test_JaggedArray_IndexedArray(self):
     #     a = JaggedArray([0, 3, 3], [3, 3, 5], IndexedArray([9, 8, 7, 4, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
-    #     self.assertEqual(a.tolist(), [[9.9, 8.8, 7.7], [], [4.4, 4.4]])
+    #     assert a.tolist() == [[9.9, 8.8, 7.7], [], [4.4, 4.4]]
 
     # def test_JaggedArray_ByteIndexedArray(self):
     #     pass
@@ -385,14 +385,14 @@ class Test(unittest.TestCase):
 
     # def test_JaggedArray_JaggedArray(self):
     #     a = JaggedArray([0, 2, 2], [2, 2, 4], JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
-    #     self.assertEqual(a.tolist(), [[[0.0, 1.1, 2.2], []], [], [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]])
+    #     assert a.tolist() == [[[0.0, 1.1, 2.2], []], [], [[3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]]
 
     # def test_JaggedArray_ByteJaggedArray(self):
     #     pass
 
     # def test_JaggedArray_MaskedArray(self):
     #     a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], MaskedArray([False, False, True, True, False, False, False, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
-    #     self.assertEqual(a.tolist(), [[0.0, 1.1, None], [], [None, 4.4], [5.5, 6.6, 7.7, None, 9.9]])
+    #     assert a.tolist() == [[0.0, 1.1, None], [], [None, 4.4], [5.5, 6.6, 7.7, None, 9.9]]
 
     # def test_JaggedArray_BitMaskedArray(self):
     #     pass
@@ -402,17 +402,17 @@ class Test(unittest.TestCase):
 
     # def test_JaggedArray_Table(self):
     #     a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], Table(10, one=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], two=[0, 100, 200, 300, 400, 500, 600, 700, 800, 900]))
-    #     self.assertEqual(a.tolist(), [[{"one": 0.0, "two": 0}, {"one": 1.1, "two": 100}, {"one": 2.2, "two": 200}], [], [{"one": 3.3, "two": 300}, {"one": 4.4, "two": 400}], [{"one": 5.5, "two": 500}, {"one": 6.6, "two": 600}, {"one": 7.7, "two": 700}, {"one": 8.8, "two": 800}, {"one": 9.9, "two": 900}]])
-    #     self.assertEqual(a["one"].tolist(), [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
-    #     self.assertEqual(a["two"].tolist(), [[0, 100, 200], [], [300, 400], [500, 600, 700, 800, 900]])
+    #     assert a.tolist() == [[{"one": 0.0, "two": 0}, {"one": 1.1, "two": 100}, {"one": 2.2, "two": 200}], [], [{"one": 3.3, "two": 300}, {"one": 4.4, "two": 400}], [{"one": 5.5, "two": 500}, {"one": 6.6, "two": 600}, {"one": 7.7, "two": 700}, {"one": 8.8, "two": 800}, {"one": 9.9, "two": 900}]]
+    #     assert a["one"].tolist() == [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
+    #     assert a["two"].tolist() == [[0, 100, 200], [], [300, 400], [500, 600, 700, 800, 900]]
 
     # def test_JaggedArray_VirtualArray(self):
     #     a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], VirtualArray(lambda: [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
-    #     self.assertEqual(a.tolist(), [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]])
+    #     assert a.tolist() == [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
 
     # def test_JaggedArray_VirtualObjectArray(self):
     #     a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], VirtualObjectArray(str, [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
-    #     self.assertEqual(a.tolist(), [["0.0", "1.1", "2.2"], [], ["3.3", "4.4"], ["5.5", "6.6", "7.7", "8.8", "9.9"]])
+    #     assert a.tolist() == [["0.0", "1.1", "2.2"], [], ["3.3", "4.4"], ["5.5", "6.6", "7.7", "8.8", "9.9"]]
     
     # def test_ByteJaggedArray_ChunkedArray(self):
     #     pass
@@ -482,14 +482,14 @@ class Test(unittest.TestCase):
 
     # def test_MaskedArray_JaggedArray(self):
     #     a = MaskedArray([True, False, False, True], JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
-    #     self.assertEqual(a.tolist(), [None, [], [3.3, 4.4], None])
+    #     assert a.tolist() == [None, [], [3.3, 4.4], None]
 
     # def test_MaskedArray_ByteJaggedArray(self):
     #     pass
 
     # def test_MaskedArray_MaskedArray(self):
     #     a = MaskedArray([False, False, False, False, False, True, True, True, True, True], MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
-    #     self.assertEqual(a.tolist(), [0.0, None, 2.2, None, 4.4, None, None, None, None, None])
+    #     assert a.tolist() == [0.0, None, 2.2, None, 4.4, None, None, None, None, None]
 
     # def test_MaskedArray_BitMaskedArray(self):
     #     pass
@@ -499,9 +499,9 @@ class Test(unittest.TestCase):
 
     # def test_MaskedArray_Table(self):
     #     a = MaskedArray([False, True, False, True, False, True, False, True, False, True], Table(10, one=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], two=[0, 100, 200, 300, 400, 500, 600, 700, 800, 900]))
-    #     self.assertEqual(a[2]["one"], 2.2)
-    #     self.assertEqual(a[2]["two"], 200)
-    #     self.assertEqual(a.tolist(), [{"one": 0.0, "two": 0}, None, {"one": 2.2, "two": 200}, None, {"one": 4.4, "two": 400}, None, {"one": 6.6, "two": 600}, None, {"one": 8.8, "two": 800}, None])
+    #     assert a[2]["one"], 2 == 2
+    #     assert a[2]["two"] == 200
+    #     assert a.tolist() == [{"one": 0.0, "two": 0}, None, {"one": 2.2, "two": 200}, None, {"one": 4.4, "two": 400}, None, {"one": 6.6, "two": 600}, None, {"one": 8.8, "two": 800}, None]
 
     # def test_MaskedArray_VirtualArray(self):
     #     pass
@@ -601,18 +601,18 @@ class Test(unittest.TestCase):
     
     # def test_Table_ChunkedArray(self):
     #     a = Table(10, one=ChunkedArray([[0.0, 1.1, 2.2, 3.3], [4.4, 5.5, 6.6, 7.7, 8.8, 9.9]]), two=ChunkedArray([[0, 100, 200, 300, 400, 500, 600], [700, 800, 900]]))
-    #     self.assertEqual(a.tolist(), [{"one": 0.0, "two": 0}, {"one": 1.1, "two": 100}, {"one": 2.2, "two": 200}, {"one": 3.3, "two": 300}, {"one": 4.4, "two": 400}, {"one": 5.5, "two": 500}, {"one": 6.6, "two": 600}, {"one": 7.7, "two": 700}, {"one": 8.8, "two": 800}, {"one": 9.9, "two": 900}])
+    #     assert a.tolist() == [{"one": 0.0, "two": 0}, {"one": 1.1, "two": 100}, {"one": 2.2, "two": 200}, {"one": 3.3, "two": 300}, {"one": 4.4, "two": 400}, {"one": 5.5, "two": 500}, {"one": 6.6, "two": 600}, {"one": 7.7, "two": 700}, {"one": 8.8, "two": 800}, {"one": 9.9, "two": 900}]
 
     # def test_Table_PartitionedArray(self):
     #     a = Table(10, one=PartitionedArray([0, 4, 10], [[0.0, 1.1, 2.2, 3.3], [4.4, 5.5, 6.6, 7.7, 8.8, 9.9]]), two=PartitionedArray([0, 7, 10], [[0, 100, 200, 300, 400, 500, 600], [700, 800, 900]]))
-    #     self.assertEqual(a.tolist(), [{"one": 0.0, "two": 0}, {"one": 1.1, "two": 100}, {"one": 2.2, "two": 200}, {"one": 3.3, "two": 300}, {"one": 4.4, "two": 400}, {"one": 5.5, "two": 500}, {"one": 6.6, "two": 600}, {"one": 7.7, "two": 700}, {"one": 8.8, "two": 800}, {"one": 9.9, "two": 900}])
+    #     assert a.tolist() == [{"one": 0.0, "two": 0}, {"one": 1.1, "two": 100}, {"one": 2.2, "two": 200}, {"one": 3.3, "two": 300}, {"one": 4.4, "two": 400}, {"one": 5.5, "two": 500}, {"one": 6.6, "two": 600}, {"one": 7.7, "two": 700}, {"one": 8.8, "two": 800}, {"one": 9.9, "two": 900}]
 
     # def test_Table_AppendableArray(self):
     #     pass
 
     # def test_Table_IndexedArray(self):
     #     a = Table(5, one=IndexedArray([8, 6, 4, 2, 0], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]), two=IndexedArray([0, 1, 2, 2, 1], [0, 100, 200]))
-    #     self.assertEqual(a.tolist(), [{"one": 8.8, "two": 0}, {"one": 6.6, "two": 100}, {"one": 4.4, "two": 200}, {"one": 2.2, "two": 200}, {"one": 0.0, "two": 100}])
+    #     assert a.tolist() == [{"one": 8.8, "two": 0}, {"one": 6.6, "two": 100}, {"one": 4.4, "two": 200}, {"one": 2.2, "two": 200}, {"one": 0.0, "two": 100}]
 
     # def test_Table_ByteIndexedArray(self):
     #     pass
@@ -625,7 +625,7 @@ class Test(unittest.TestCase):
 
     # def test_Table_JaggedArray(self):
     #     a = Table(4, one=JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]), two=[0, 100, 200, 300])
-    #     self.assertEqual(a.tolist(), [{"one": [0.0, 1.1, 2.2], "two": 0}, {"one": [], "two": 100}, {"one": [3.3, 4.4], "two": 200}, {"one": [5.5, 6.6, 7.7, 8.8, 9.9], "two": 300}])
+    #     assert a.tolist() == [{"one": [0.0, 1.1, 2.2], "two": 0}, {"one": [], "two": 100}, {"one": [3.3, 4.4], "two": 200}, {"one": [5.5, 6.6, 7.7, 8.8, 9.9], "two": 300}]
 
     # def test_Table_ByteJaggedArray(self):
     #     pass
@@ -641,7 +641,7 @@ class Test(unittest.TestCase):
 
     # def test_Table_Table(self):
     #     a = Table(5, one=[0.0, 1.1, 2.2, 3.3, 4.4], two=Table(5, x=[0, 100, 200, 300, 400], y=[False, True, False, True, False]))
-    #     self.assertEqual(a.tolist(), [{"one": 0.0, "two": {"x": 0, "y": False}}, {"one": 1.1, "two": {"x": 100, "y": True}}, {"one": 2.2, "two": {"x": 200, "y": False}}, {"one": 3.3, "two": {"x": 300, "y": True}}, {"one": 4.4, "two": {"x": 400, "y": False}}])
+    #     assert a.tolist() == [{"one": 0.0, "two": {"x": 0, "y": False}}, {"one": 1.1, "two": {"x": 100, "y": True}}, {"one": 2.2, "two": {"x": 200, "y": False}}, {"one": 3.3, "two": {"x": 300, "y": True}}, {"one": 4.4, "two": {"x": 400, "y": False}}]
 
     # def test_Table_VirtualArray(self):
     #     pass

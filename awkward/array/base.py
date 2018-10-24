@@ -30,6 +30,8 @@
 
 import types
 
+import awkward.persist
+import awkward.type
 import awkward.util
 
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
@@ -37,6 +39,16 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         # hitting this function is usually undesirable; uncomment to search for performance bugs
         # raise Exception("{0} {1}".format(args, kwargs))
         return awkward.util.numpy.array(self, *args, **kwargs)
+
+    def __getstate__(self):
+        state = {}
+        awkward.persist.serialize(self, state)
+        return state
+
+    def __setstate__(self, state):
+        out = awkward.persist.deserialize(state)
+        self.__dict__.update(out.__dict__)
+        self.__class__ = out.__class__
 
     def __iter__(self):
         for i in range(len(self)):
@@ -50,6 +62,18 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     def __repr__(self):
         return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
+
+    @property
+    def type(self):
+        return awkward.type.ArrayType(*(self._getshape() + (awkward.type._resolve(self._gettype({}), {}),)))
+
+    @property
+    def dtype(self):
+        return self.type.dtype
+
+    @property
+    def shape(self):
+        return self.type.shape
 
     def _try_tolist(self, x):
         try:
@@ -83,9 +107,6 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             else:
                 out.append(self._try_tolist(x))
         return out
-
-    def _valid(self):
-        pass
 
     def valid(self):
         try:

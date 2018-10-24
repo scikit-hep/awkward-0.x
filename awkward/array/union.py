@@ -28,8 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import functools
-
 import awkward.array.base
 import awkward.type
 import awkward.util
@@ -87,6 +85,31 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     def ones_like(self, **overrides):
         return self.copy(contents=[awkward.util.numpy.ones_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.ones_like(**overrides) for x in self._contents])
+
+    @property
+    def issequential(self):
+        self._valid()
+        for tag in awkward.util.numpy.unique(self._tags):
+            mask = self._tags == tag
+            if not awkward.util.numpy.array_equal(self._index[mask], awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(mask))):
+                return False
+        return True
+
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        n = self.__class__.__name__
+        if self.issequential:
+            return {"id": ident,
+                    "call": ["awkward", n, "fromtags"],
+                    "args": [fill(self._tags, n + ".tags", **kwargs),
+                             {"list": [fill(x, n + ".contents", **kwargs) for x in self._contents]}]}
+
+        else:
+            return {"id": ident,
+                    "call": ["awkward", n],
+                    "args": [fill(self._tags, n + ".tags", **kwargs),
+                             fill(self._index, n + ".index", **kwargs),
+                             {"list": [fill(x, n + ".contents", **kwargs) for x in self._contents]}]}
 
     @property
     def tags(self):
@@ -195,20 +218,17 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
         return self._dtype
 
-    @property
-    def shape(self):
-        first = self._contents[0].shape
-        if self.dtype.kind == "O" or not all(x.shape == first for x in self._contents[1:]):
-            return self._tags.shape
-        else:
-            return self._tags.shape + first
-
     def __len__(self):
         return len(self._tags)
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(*(self._tags.shape + (functools.reduce(lambda a, b: a | b, [awkward.type.fromarray(x).to for x in self._contents]),)))
+    def _gettype(self, seen):
+        out = awkward.type.UnionType()
+        for x in self._contents:
+            out.possibilities.append(awkward.type._fromarray(x, seen))
+        return out
+
+    def _getshape(self):
+        return self._tags.shape
 
     def _valid(self):
         if not self._isvalid:

@@ -28,7 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import functools
 import types
 
 import awkward.array.base
@@ -177,6 +176,13 @@ class Table(awkward.array.base.AwkwardArray):
             out[n] = recarray[n]
         return out
 
+    @classmethod
+    def frompairs(cls, pairs):
+        out = cls()
+        for n, x in pairs:
+            out[n] = x
+        return out
+
     def copy(self, content=None):
         out = self.__class__.__new__(self.__class__)
         out._view = self._view
@@ -228,6 +234,12 @@ class Table(awkward.array.base.AwkwardArray):
                 out[n] = x.ones_like(**overrides)
         return out
 
+    def __awkward_persist__(self, ident, fill, **kwargs):
+        self._valid()
+        return {"id": ident,
+                "call": ["awkward", self.__class__.__name__, "frompairs"],
+                "args": [{"pairs": [[n, fill(x, self.__class__.__name__ + ".content", **kwargs)] for n, x in self._content.items()]}]}
+
     @property
     def base(self):
         return self._base
@@ -244,20 +256,17 @@ class Table(awkward.array.base.AwkwardArray):
             value[n] = awkward.util.toarray(value[n], awkward.util.DEFAULTTYPE)
         self._content = value
 
-    @property
-    def dtype(self):
-        return awkward.util.numpy.dtype([(n, x.dtype) for n, x in self._content.items()])
-
-    @property
-    def shape(self):
-        return (self._length(),)
-
     def __len__(self):
         return self._length()
 
-    @property
-    def type(self):
-        return awkward.type.ArrayType(self._length(), functools.reduce(lambda a, b: a & b, [awkward.type.ArrayType(n, awkward.type.fromarray(x).to) for n, x in self._content.items()]))
+    def _gettype(self, seen):
+        out = awkward.type.TableType()
+        for n, x in self._content.items():
+            out[n] = awkward.type._fromarray(x, seen)
+        return out
+
+    def _getshape(self):
+        return (self._length(),)
 
     def _length(self):
         if self._view is None:
@@ -377,6 +386,9 @@ class Table(awkward.array.base.AwkwardArray):
 
             else:
                 raise TypeError("cannot interpret dtype {0} as a fancy index or mask".format(head.dtype))
+
+    def _valid(self):
+        pass
 
     def __iter__(self):
         if self._view is None:
