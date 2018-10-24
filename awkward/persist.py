@@ -72,7 +72,7 @@ def json2dtype(obj):
             return obj
     return numpy.dtype(recurse(obj))
 
-def serialize(obj, storage, name=None, delimiter="-", compression=compression):
+def serialize(obj, storage, name=None, delimiter="-", compression=compression, **kwargs):
     import awkward.array.base
 
     if name is None or name == "":
@@ -109,7 +109,7 @@ def serialize(obj, storage, name=None, delimiter="-", compression=compression):
         normalized.append({"minsize": minsize, "types": types, "contexts": contexts, "pair": pair})
 
     seen = {}
-    def fill(obj, context):
+    def fill(obj, context, **kwargs):
         if id(obj) in seen:
             return {"ref": seen[id(obj)]}
 
@@ -143,13 +143,13 @@ def serialize(obj, storage, name=None, delimiter="-", compression=compression):
                                  len(obj)]}
 
         elif hasattr(obj, "__awkward_persist__"):
-            return obj.__awkward_persist__(ident, fill)
+            return obj.__awkward_persist__(ident, fill, **kwargs)
 
         else:
             raise TypeError("cannot serialize {0} instance (has no __awkward_persist__ method)".format(type(obj)))
 
     schema = {"awkward": awkward.version.__version__,
-              "schema": fill(obj, "")}
+              "schema": fill(obj, "", **kwargs)}
     if prefix != "":
         schema["prefix"] = prefix
 
