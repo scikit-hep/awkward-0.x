@@ -42,16 +42,17 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def fromtags(cls, tags, contents):
         out = cls.__new__(cls)
         out.tags = tags
-        out.index = awkward.util.numpy.empty(out._tags.shape, dtype=awkward.util.INDEXTYPE)
         out.contents = contents
 
         if len(out._tags.reshape(-1)) > 0 and out._tags.reshape(-1).max() >= len(out._contents):
             raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(out._tags.reshape(-1).max(), len(out._contents)))
 
+        index = awkward.util.numpy.full(out._tags.shape, -1, dtype=awkward.util.INDEXTYPE)
         for tag, content in enumerate(out._contents):
             mask = (out._tags == tag)
-            out._index[mask] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(mask))
+            index[mask] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(mask))
 
+        out.index = index
         return out
 
     def copy(self, tags=None, index=None, contents=None):

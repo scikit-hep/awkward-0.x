@@ -69,6 +69,12 @@ class Test(unittest.TestCase):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
         assert a.type == ArrayType(4, numpy.inf, 1, float)
 
+    def test_jagged_fromindex(self):
+        a = JaggedArray.fromindex([0, 1, 0, 0, 0, 1, 2, 0, 1, 0], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        self.assertEqual(a.tolist(), [[0.0, 1.1], [2.2], [3.3], [4.4, 5.5, 6.6], [7.7, 8.8], [9.9]])
+        self.assertEqual(a.starts.tolist(), [0, 2, 3, 4, 7, 9])
+        self.assertEqual(a.stops.tolist(), [2, 3, 4, 7, 9, 10])
+
     def test_jagged_str(self):
         pass
 
