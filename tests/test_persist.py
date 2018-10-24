@@ -59,38 +59,6 @@ class Test(unittest.TestCase):
         assert a.dtype == b.dtype
         assert a.shape == b.shape
 
-    def test_jagged_1(self):
-        storage = {}
-        a = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-        serialize(a, storage)
-        b = deserialize(storage)
-        assert a.tolist() == b.tolist()
-
-    def test_jagged_2(self):
-        storage = {}
-        a = awkward.JaggedArray([2, 1], [5, 2], [1.1, 2.2, 3.3, 4.4, 5.5])
-        serialize(a, storage)
-        b = deserialize(storage)
-        assert a.tolist() == b.tolist()
-
-    def test_jagged_two(self):
-        storage = {}
-        a1 = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-        a2 = awkward.JaggedArray.fromiter([[], [1, 2], [3], []])
-        serialize(a1, storage, "one")
-        serialize(a2, storage, "two")
-        b1 = deserialize(storage, "one")
-        b2 = deserialize(storage, "two")
-        assert a1.tolist() == b1.tolist()
-        assert a2.tolist() == b2.tolist()
-
-    def test_indexed(self):
-        storage = {}
-        a = awkward.IndexedArray([2, 3, 6, 3, 2, 2, 7], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        serialize(a, storage)
-        b = deserialize(storage)
-        assert a.tolist() == b.tolist()
-
     def test_crossref(self):
         starts = [1, 0, 4, 0, 0]
         stops  = [4, 0, 5, 0, 0]
@@ -102,10 +70,74 @@ class Test(unittest.TestCase):
         b = deserialize(storage)
         assert a.tolist() == b.tolist()
 
-    def test_chunked(self):
-        print()
+    def test_two_in_one(self):
+        storage = {}
+        a1 = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = awkward.JaggedArray.fromiter([[], [1, 2], [3], []])
+        serialize(a1, storage, "one")
+        serialize(a2, storage, "two")
+        b1 = deserialize(storage, "one")
+        b2 = deserialize(storage, "two")
+        assert a1.tolist() == b1.tolist()
+        assert a2.tolist() == b2.tolist()
+
+    def test_ChunkedArray(self):
         storage = {}
         a = awkward.ChunkedArray([[0.0, 1.1, 2.2], [], [3.3, 4.4]])
         serialize(a, storage)
         b = deserialize(storage)
         assert a.tolist() == b.tolist()
+
+    def test_AppendableArray(self):
+        pass
+
+    def test_IndexedArray(self):
+        storage = {}
+        a = awkward.IndexedArray([2, 3, 6, 3, 2, 2, 7], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
+
+    def test_ByteIndexedArray(self):
+        pass
+
+    def test_SparseArray(self):
+        pass
+
+    def test_JaggedArray(self):
+        storage = {}
+        a = awkward.JaggedArray([2, 1], [5, 2], [1.1, 2.2, 3.3, 4.4, 5.5])
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
+
+    def test_JaggedArray_fromcounts(self):
+        storage = {}
+        a = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
+
+    def test_ByteJaggedArray(self):
+        pass
+
+    def test_MaskedArray(self):
+        pass
+
+    def test_BitMaskedArray(self):
+        pass
+
+    def test_IndexedMaskedArray(self):
+        pass
+
+    def test_ObjectArray(self):
+        pass
+
+    def test_Table(self):
+        pass
+
+    def test_UnionArray(self):
+        pass
+
+    def test_VirtualArray(self):
+        pass
