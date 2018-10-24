@@ -332,6 +332,9 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
             elif "list" in schema:
                 return [unfill(x) for x in schema["list"]]
 
+            elif "tuple" in schema:
+                return tuple(unfill(x) for x in schema["tuple"])
+
             elif "pairs" in schema:
                 return [(n, unfill(x)) for n, x in schema["pairs"]]
 

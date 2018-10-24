@@ -109,7 +109,21 @@ class Test(unittest.TestCase):
         assert a.tolist() == b.tolist()
 
     def test_AppendableArray(self):
-        pass
+        storage = {}
+        a = AppendableArray(3, numpy.float64)
+        a.append(0.0)
+        a.append(1.1)
+        a.append(2.2)
+        a.append(3.3)
+        a.append(4.4)
+        a.append(5.5)
+        a.append(6.6)
+        a.append(7.7)
+        a.append(8.8)
+        a.append(9.9)
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
 
     def test_IndexedArray(self):
         storage = {}
@@ -119,10 +133,18 @@ class Test(unittest.TestCase):
         assert a.tolist() == b.tolist()
 
     def test_ByteIndexedArray(self):
-        pass
+        storage = {}
+        a = ByteIndexedArray([12, 8, 4, 0], b"\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00", numpy.int32)
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
 
     def test_SparseArray(self):
-        pass
+        storage = {}
+        a = SparseArray(10, [1, 3, 5, 7, 9], [100, 101, 102, 103, 104])
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
 
     def test_JaggedArray(self):
         storage = {}
@@ -139,16 +161,32 @@ class Test(unittest.TestCase):
         assert a.tolist() == b.tolist()
 
     def test_ByteJaggedArray(self):
-        pass
+        storage = {}
+        a = ByteJaggedArray.fromoffsets([5, 17, 17, 25], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00\xff\xff", numpy.int32)
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
 
     def test_MaskedArray(self):
-        pass
+        storage = {}
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True)
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
 
     def test_BitMaskedArray(self):
-        pass
-
+        storage = {}
+        a = BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True, lsborder=True)
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
+        
     def test_IndexedMaskedArray(self):
-        pass
+        storage = {}
+        a = IndexedMaskedArray([-1, 0, -1, 1, -1, 2, -1, 4, -1, 3], [0.0, 1.1, 2.2, 3.3, 4.4])
+        serialize(a, storage)
+        b = deserialize(storage)
+        assert a.tolist() == b.tolist()
 
     def test_ObjectArray(self):
         storage = {}

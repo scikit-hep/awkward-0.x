@@ -636,11 +636,19 @@ class AppendableArray(ChunkedArray):
     def __awkward_persist__(self, ident, fill, **kwargs):
         self._valid()
         n = self.__class__.__name__
+
+        chunks = []
+        for c, x in zip(self._counts, self._chunks):
+            if 0 < c < len(x):
+                chunks.append(x[:c])
+            elif 0 < c:
+                chunks.append(x)
+
         return {"id": ident,
                 "call": ["awkward", n],
-                "args": [self._chunkshape,
+                "args": [{"tuple": list(self._chunkshape)},
                          {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._dtype)]},
-                         {"list": [fill(x, n + ".chunk", **kwargs) for c, x in zip(self._counts, self._chunks) if c > 0]}]}
+                         {"list": [fill(x, n + ".chunk", **kwargs) for x in chunks]}]}
 
     @property
     def chunkshape(self):
@@ -653,7 +661,7 @@ class AppendableArray(ChunkedArray):
         else:
             try:
                 for x in value:
-                    assert isinstance(x, awkward.util.integer) and value > 0
+                    assert isinstance(x, awkward.util.integer) and x > 0
             except TypeError:
                 raise TypeError("chunkshape must be an integer or a tuple of integers")
             except AssertionError:
