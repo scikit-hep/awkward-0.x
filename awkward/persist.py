@@ -439,7 +439,7 @@ def save(file, array, name=None, mode="a", **options):
         arrays = {"": array}
 
     if name is not None:
-        arrays = {prefix + n: x for n, x in arrays.items()}
+        arrays = {name + n: x for n, x in arrays.items()}
 
     arraynames = list(arrays)
     for i in range(len(arraynames)):
