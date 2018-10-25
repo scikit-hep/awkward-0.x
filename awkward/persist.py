@@ -579,7 +579,7 @@ class hdf5(MutableMapping):
         count = 0
         for subname in self._group.g:
             if schemaname in self._group.g[subname]:
-                count += 0
+                count += 1
         return count
 
     def __repr__(self):
