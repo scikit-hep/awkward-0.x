@@ -50,6 +50,18 @@ class Test(unittest.TestCase):
         if pyarrow is not None:
             arr = pyarrow.array([1.1, 2.2, 3.3, None, 4.4, 5.5])
 
+    def test_nested_array(self):
+        if pyarrow is not None:
+            arr = pyarrow.array([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+
+    def test_nested_array_null(self):
+        if pyarrow is not None:
+            arr = pyarrow.array([[1.1, 2.2, None], [], [4.4, 5.5]])
+
+    def test_null_nested_array_null(self):
+        if pyarrow is not None:
+            arr = pyarrow.array([[1.1, 2.2, None], [], None, [4.4, 5.5]])
+
     def test_chunked_array(self):
         if pyarrow is not None:
             arr = pyarrow.chunked_array([pyarrow.array([1.1, 2.2, 3.3, 4.4, 5.5]), pyarrow.array([]), pyarrow.array([6.6, 7.7, 8.8])])
