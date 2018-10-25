@@ -77,14 +77,14 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         mine = self._mine(overrides)
         return self.copy([awkward.util.numpy.ones_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.ones_like(**overrides) for x in self._chunks], counts=list(self._counts), **mine)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self.knowcounts()
         self._valid()
         n = self.__class__.__name__
         return {"id": ident,
                 "call": ["awkward", n],
-                "args": [{"list": [fill(x, n + ".chunk", **kwargs) for c, x in zip(self._counts, self._chunks) if c > 0]},
-                         fill(awkward.util.numpy.array([c for c in self._counts if c > 0]), n + ".counts", **kwargs)]}
+                "args": [{"list": [fill(x, n + ".chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for c, x in zip(self._counts, self._chunks) if c > 0]},
+                         fill(awkward.util.numpy.array([c for c in self._counts if c > 0]), n + ".counts", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
 
     @property
     def chunks(self):
@@ -633,7 +633,7 @@ class AppendableArray(ChunkedArray):
         mine["dtype"] = overrides.pop("dtype", self._dtype)
         return mine
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         n = self.__class__.__name__
 
@@ -648,7 +648,7 @@ class AppendableArray(ChunkedArray):
                 "call": ["awkward", n],
                 "args": [{"tuple": list(self._chunkshape)},
                          {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._dtype)]},
-                         {"list": [fill(x, n + ".chunk", **kwargs) for x in chunks]}]}
+                         {"list": [fill(x, n + ".chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in chunks]}]}
 
     @property
     def chunkshape(self):

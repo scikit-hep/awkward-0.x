@@ -250,7 +250,7 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
         normalized.append({"minsize": minsize, "types": types, "contexts": contexts, "pair": pair})
 
     seen = {}
-    def fill(obj, context, **kwargs):
+    def fill(obj, context, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         if id(obj) in seen:
             return {"ref": seen[id(obj)]}
 
@@ -284,13 +284,13 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
                                  len(obj)]}
 
         elif hasattr(obj, "__awkward_persist__"):
-            return obj.__awkward_persist__(ident, fill, **kwargs)
+            return obj.__awkward_persist__(ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
         else:
             raise TypeError("cannot serialize {0} instance (has no __awkward_persist__ method)".format(type(obj)))
 
     schema = {"awkward": awkward.version.__version__,
-              "schema": fill(obj, "", **kwargs)}
+              "schema": fill(obj, "", prefix, suffix, schemasuffix, storage, compression, **kwargs)}
     if prefix != "":
         schema["prefix"] = prefix
 

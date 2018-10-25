@@ -87,13 +87,13 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides))
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         n = self.__class__.__name__
         return {"id": ident,
                 "call": ["awkward", n],
-                "args": [fill(self._index, n + ".index", **kwargs),
-                         fill(self._content, n + ".content", **kwargs)]}
+                "args": [fill(self._index, n + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
 
     @property
     def index(self):
@@ -258,13 +258,13 @@ class ByteIndexedArray(IndexedArray):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         n = self.__class__.__name__
         return {"id": ident,
                 "call": ["awkward", n],
-                "args": [fill(self._index, n + ".index", **kwargs),
-                         fill(self._content, n + ".content", **kwargs),
+                "args": [fill(self._index, n + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._dtype)]}]}
 
     @property
@@ -423,22 +423,22 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         n = self.__class__.__name__
         
         if self._default is None or isinstance(self._default, (numbers.Real, awkward.util.numpy.integer, awkward.util.numpy.floating)):
             default = self._default
         elif isinstance(self._default, awkward.util.numpy.ndarray):
-            default = fill(self._default, n + ".default")
+            default = fill(self._default, n + ".default", prefix, suffix, schemasuffix, storage, compression, **kwargs)
         else:
             default = {"call": ["pickle", "loads"], "args": pickle.dumps(self._default)}
 
         return {"id": ident,
                 "call": ["awkward", n],
                 "args": [self._length,
-                         fill(self._index, n + ".index", **kwargs),
-                         fill(self._content, n + ".content", **kwargs),
+                         fill(self._index, n + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          default]}
 
     @property

@@ -119,7 +119,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
 
         if self._generator.__module__ == "__main__":
@@ -138,7 +138,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         n = self.__class__.__name__
         out = {"id": ident,
                "call": ["awkward", n],
-               "args": [fill(self._content, n + ".content", **kwargs), {"function": spec}]}
+               "args": [fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs), {"function": spec}]}
         if len(self._args) > 0:
             out["*"] = {"call": ["awkward.array.objects", "topython"], "args": [frompython(self._args)]}
         if len(self._kwargs) > 0:

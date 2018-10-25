@@ -249,21 +249,21 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
         jagged = self._content.ones_like(**overrides)
         return self.copy(jagged.starts, jagged.stops, jagged.content, **mine)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         n = self.__class__.__name__
         if awkward.array.jagged.offsetsaliased(self.starts, self.stops) and len(self.starts) > 0 and self.starts[0] == 0:
             return {"id": ident,
                     "call": ["awkward", n, "fromcounts"],
-                    "args": [fill(self.counts, n + ".counts", **kwargs),
-                             fill(self.content, n + ".content", **kwargs),
+                    "args": [fill(self.counts, n + ".counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self.content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                              self._encoding]}
         else:
             return {"id": ident,
                     "call": ["awkward", n],
-                    "args": [fill(self.starts, n + ".starts", **kwargs),
-                             fill(self.stops, n + ".stops", **kwargs),
-                             fill(self.content, n + ".content", **kwargs),
+                    "args": [fill(self.starts, n + ".starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self.stops, n + ".stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self.content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                              self._encoding]}
 
     @property

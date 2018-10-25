@@ -106,13 +106,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         n = self.__class__.__name__
         return {"id": ident,
                 "call": ["awkward", n],
-                "args": [fill(self._mask, n + ".mask", **kwargs),
-                         fill(self._content, n + ".content", **kwargs),
+                "args": [fill(self._mask, n + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          self._maskedwhen]}
 
     @property
@@ -300,13 +300,13 @@ class BitMaskedArray(MaskedArray):
         mine["lsborder"] = overrides.pop("lsborder", self._lsborder)
         return mine
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         n = self.__class__.__name__
         return {"id": ident,
                 "call": ["awkward", n],
-                "args": [fill(self._mask, n + ".mask", **kwargs),
-                         fill(self._content, n + ".content", **kwargs),
+                "args": [fill(self._mask, n + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          self._maskedwhen,
                          self._lsborder]}
 
@@ -525,13 +525,13 @@ class IndexedMaskedArray(MaskedArray):
             out._maskedwhen = maskedwhen
         return out
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         n = self.__class__.__name__
         return {"id": ident,
                 "call": ["awkward", n],
-                "args": [fill(self._mask, n + ".mask", **kwargs),
-                         fill(self._content, n + ".content", **kwargs),
+                "args": [fill(self._mask, n + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          self._maskedwhen]}
 
     @property

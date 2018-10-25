@@ -114,7 +114,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         else:
             return self.array.ones_like(**overrides)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         n = self.__class__.__name__
 
@@ -146,7 +146,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             return out
 
         else:
-            return fill(self.array, n + ".array", **kwargs)
+            return fill(self.array, n + ".array", prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
     @property
     def generator(self):
