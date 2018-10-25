@@ -46,6 +46,10 @@ class Test(unittest.TestCase):
         if pyarrow is not None:
             arr = pyarrow.array([1.1, 2.2, 3.3, 4.4, 5.5])
 
+    def test_boolean(self):
+        if pyarrow is not None:
+            arr = pyarrow.array([True, True, False, False, True])
+
     def test_array_null(self):
         if pyarrow is not None:
             arr = pyarrow.array([1.1, 2.2, 3.3, None, 4.4, 5.5])
@@ -120,11 +124,19 @@ class Test(unittest.TestCase):
 
     def test_strings(self):
         if pyarrow is not None:
-            arr = pyarrow.array(["one", "two", "three", "four", "five"])
+            arr = pyarrow.array(["one", "two", "three", u"fo\u2014ur", "five"])
 
     def test_strings_null(self):
         if pyarrow is not None:
-            arr = pyarrow.array(["one", "two", None, "four", "five"])
+            arr = pyarrow.array(["one", "two", None, u"fo\u2014ur", "five"])
+
+    def test_binary(self):
+        if pyarrow is not None:
+            arr = pyarrow.array([b"one", b"two", b"three", b"four", b"five"])
+
+    def test_binary_null(self):
+        if pyarrow is not None:
+            arr = pyarrow.array([b"one", b"two", None, b"four", b"five"])
 
     def test_chunked_strings(self):
         if pyarrow is not None:
@@ -156,15 +168,15 @@ class Test(unittest.TestCase):
 
     def test_union_dense(self):
         if pyarrow is not None:
-            pyarrow.UnionArray.from_dense(pyarrow.array([0, 1, 0, 0, 0, 1, 1], type=pyarrow.int8()), pyarrow.array([0, 0, 1, 2, 3, 1, 2], type=pyarrow.int32()), [pyarrow.array([0.0, 1.1, 2.2, 3.3]), pyarrow.array([True, True, False])])
+            arr = pyarrow.UnionArray.from_dense(pyarrow.array([0, 1, 0, 0, 0, 1, 1], type=pyarrow.int8()), pyarrow.array([0, 0, 1, 2, 3, 1, 2], type=pyarrow.int32()), [pyarrow.array([0.0, 1.1, 2.2, 3.3]), pyarrow.array([True, True, False])])
 
     def test_union_dense_null(self):
         if pyarrow is not None:
-            pyarrow.UnionArray.from_dense(pyarrow.array([0, 1, 0, 0, 0, 1, 1], type=pyarrow.int8()), pyarrow.array([0, 0, 1, 2, 3, 1, 2], type=pyarrow.int32()), [pyarrow.array([0.0, 1.1, None, 3.3]), pyarrow.array([True, True, False])])
+            arr = pyarrow.UnionArray.from_dense(pyarrow.array([0, 1, 0, 0, 0, 1, 1], type=pyarrow.int8()), pyarrow.array([0, 0, 1, 2, 3, 1, 2], type=pyarrow.int32()), [pyarrow.array([0.0, 1.1, None, 3.3]), pyarrow.array([True, True, False])])
 
     def test_union_dense_null_null(self):
         if pyarrow is not None:
-            pyarrow.UnionArray.from_dense(pyarrow.array([0, 1, 0, 0, 0, 1, 1], type=pyarrow.int8()), pyarrow.array([0, 0, 1, 2, 3, 1, 2], type=pyarrow.int32()), [pyarrow.array([0.0, 1.1, None, 3.3]), pyarrow.array([True, None, False])])
+            arr = pyarrow.UnionArray.from_dense(pyarrow.array([0, 1, 0, 0, 0, 1, 1], type=pyarrow.int8()), pyarrow.array([0, 0, 1, 2, 3, 1, 2], type=pyarrow.int32()), [pyarrow.array([0.0, 1.1, None, 3.3]), pyarrow.array([True, None, False])])
 
     def test_dictarray(self):
         if pyarrow is not None:

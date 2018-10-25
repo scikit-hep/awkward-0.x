@@ -327,3 +327,9 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
     def index(self):
         return self._content.index
 
+    def __getitem__(self, where):
+        if isinstance(where, awkward.util.integer):
+            return super(StringArray, self).__getitem__(where)
+        else:
+            out = self._content[where]
+            return self.__class__(out.starts, out.stops, out.content, self.encoding)
