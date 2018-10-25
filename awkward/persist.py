@@ -208,6 +208,10 @@ def json2type(obj, whitelist=whitelist):
 def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=None, compression=compression, **kwargs):
     import awkward.array.base
 
+    for n in kwargs:
+        if n not in ():
+            raise TypeError("unrecognized serialization option: {0}".format(repr(n)))
+
     if name is None or name == "":
         name = ""
         prefix = ""
