@@ -663,18 +663,19 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         for i in range(len(inputs)):
             if isinstance(inputs[i], JaggedArray):
                 if good is None:
-                    inputs[i] = inputs[i].content
+                    inputs[i] = inputs[i].flatten()
                 else:
-                    inputs[i] = inputs[i].content[good]
+                    inputs[i] = inputs[i].flatten()[good]
 
         result = getattr(ufunc, method)(*inputs, **kwargs)
 
+        counts = stops - starts
         if isinstance(result, tuple):
-            return tuple(awkward.array.objects.Methods.maybemixin(type(x), JaggedArray)(starts, stops, x) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+            return tuple(awkward.array.objects.Methods.maybemixin(type(x), JaggedArray).fromcounts(counts, x) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
         elif method == "at":
             return None
         else:
-            return awkward.array.objects.Methods.maybemixin(type(result), JaggedArray)(starts, stops, result)
+            return awkward.array.objects.Methods.maybemixin(type(result), JaggedArray).fromcounts(counts, result)
 
     @staticmethod
     def aligned(*jaggedarrays):

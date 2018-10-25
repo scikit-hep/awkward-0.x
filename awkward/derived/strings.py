@@ -62,14 +62,15 @@ class StringMethods(object):
             elif not isinstance(right, StringMethods):
                 return awkward.util.numpy.zeros(len(left), dtype=awkward.util.BOOLTYPE)
 
-            left = awkward.array.jagged.JaggedArray(left._starts, left._stops, left._content)
-            right = awkward.array.jagged.JaggedArray(right._starts, right._stops, right._content)
+            left = awkward.array.jagged.JaggedArray(left.starts, left.stops, left.content)
+            right = awkward.array.jagged.JaggedArray(right.starts, right.stops, right.content)
 
             maybeequal = (left.counts == right.counts)
 
             leftmask = left[maybeequal]
             rightmask = right[maybeequal]
-            reallyequal = (leftmask == rightmask).count_nonzero() == leftmask.counts()
+
+            reallyequal = (leftmask == rightmask).count_nonzero() == leftmask.counts
 
             out = awkward.util.numpy.zeros(len(left), dtype=awkward.util.BOOLTYPE)
             out[maybeequal] = reallyequal
@@ -99,7 +100,7 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
     def fromstr(cls, length, string, encoding="utf-8"):
         if encoding is not None:
             encoder = codecs.getencoder(encoding)
-            string = encoder(string, errors="replace")[0]
+            string = encoder(string)[0]
         content = awkward.util.numpy.empty(length * len(string), dtype=awkward.util.CHARTYPE)
         for i, x in string:
             content[0::length] = ord(x)
@@ -150,9 +151,13 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
             encoded = iterable
         else:
             encoder = codecs.getencoder(encoding)
-            encoded = [encoder(x, errors="replace")[0] for x in iterable]
+            encoded = [encoder(x)[0] for x in iterable]
         counts = [len(x) for x in encoded]
         content = awkward.util.numpy.empty(sum(counts), dtype=awkward.util.CHARTYPE)
+        i = 0
+        for x in encoded:
+            content[i : i + len(x)] = awkward.util.numpy.frombuffer(x, dtype=awkward.util.CHARTYPE)
+            i += len(x)
         return cls.fromcounts(counts, content, encoding)
 
     @classmethod
@@ -202,56 +207,47 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
         out.encoding = encoding
         return out
 
-    # def copy(self, content=None, generator=None, args=None, kwargs=None):
-    #     out = self.__class__.__new__(self.__class__)
-    #     out._content = self._content
-    #     out._generator = self._generator
-    #     out._args = self._args
-    #     out._kwargs = self._kwargs
-    #     if content is not None:
-    #         out.content = content
-    #     if generator is not None:
-    #         out.generator = generator
-    #     if args is not None:
-    #         out.args = args
-    #     if kwargs is not None:
-    #         out.kwargs = kwargs
-    #     return out
+    def copy(self, starts=None, stops=None, content=None, encoding=None):
+        out = self.__class__.__new__(self.__class__)
+        out._content = awkward.array.jagged.ByteJaggedArray(self.starts, self.stops, self.content, awkward.util.CHARTYPE)
+        out._generator = self._generator
+        out._args = self._args
+        out._kwargs = self._kwargs
+        out._encoding = self._encoding
+        if starts is not None:
+            out.starts = starts
+        if stops is not None:
+            out.stops = stops
+        if content is not None:
+            out.content = content
+        if encoding is not None:
+            out.encoding = encoding
+        return out
 
-    # def deepcopy(self, content=None, generator=None, args=None, kwargs=None):
-    #     out = self.copy(content=content, generator=generator, args=args, kwargs=kwargs)
-    #     out._content = awkward.util.deepcopy(out._content)
-    #     return out
+    def deepcopy(self, starts=None, stops=None, content=None, encoding=None):
+        out = self.copy(starts=starts, stops=stops, content=content, encoding=encoding)
+        out._content._starts = awkward.util.deepcopy(out._content._starts)
+        out._content._stops = awkward.util.deepcopy(out._content._stops)
+        out._content._content = awkward.util.deepcopy(out._content._content)
+        return out
 
-    # def empty_like(self, **overrides):
-    #     mine = {}
-    #     mine["generator"] = overrides.pop("generator", self._generator)
-    #     mine["args"] = overrides.pop("args", self._args)
-    #     mine["kwargs"] = overrides.pop("kwargs", self._kwargs)
-    #     if isinstance(self._content, awkward.util.numpy.ndarray):
-    #         return self.copy(content=awkward.util.numpy.empty_like(self._content), **mine)
-    #     else:
-    #         return self.copy(content=self._content.empty_like(**overrides), **mine)
+    def empty_like(self, **overrides):
+        mine = {}
+        mine["encoding"] = overrides.pop("encoding", self._encoding)
+        jagged = self._content.empty_like(**overrides)
+        return self.copy(jagged.starts, jagged.stops, jagged.content, **mine)
 
-    # def zeros_like(self, **overrides):
-    #     mine = {}
-    #     mine["generator"] = overrides.pop("generator", self._generator)
-    #     mine["args"] = overrides.pop("args", self._args)
-    #     mine["kwargs"] = overrides.pop("kwargs", self._kwargs)
-    #     if isinstance(self._content, awkward.util.numpy.ndarray):
-    #         return self.copy(content=awkward.util.numpy.zeros_like(self._content), **mine)
-    #     else:
-    #         return self.copy(content=self._content.zeros_like(**overrides), **mine)
+    def zeros_like(self, **overrides):
+        mine = {}
+        mine["encoding"] = overrides.pop("encoding", self._encoding)
+        jagged = self._content.zeros_like(**overrides)
+        return self.copy(jagged.starts, jagged.stops, jagged.content, **mine)
 
-    # def ones_like(self, **overrides):
-    #     mine = {}
-    #     mine["generator"] = overrides.pop("generator", self._generator)
-    #     mine["args"] = overrides.pop("args", self._args)
-    #     mine["kwargs"] = overrides.pop("kwargs", self._kwargs)
-    #     if isinstance(self._content, awkward.util.numpy.ndarray):
-    #         return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
-    #     else:
-    #         return self.copy(content=self._content.ones_like(**overrides), **mine)
+    def ones_like(self, **overrides):
+        mine = {}
+        mine["encoding"] = overrides.pop("encoding", self._encoding)
+        jagged = self._content.ones_like(**overrides)
+        return self.copy(jagged.starts, jagged.stops, jagged.content, **mine)
 
     def __awkward_persist__(self, ident, fill, **kwargs):
         self._valid()
