@@ -30,6 +30,7 @@
 
 import importlib
 import pickle
+import base64
 
 import awkward.array.base
 import awkward.type
@@ -53,6 +54,12 @@ class Methods(object):
             return type(awkwardtype.__name__ + "Methods", allbases, {})
         else:
             return awkwardtype
+
+def frompython(obj):
+    return base64.b64encode(pickle.dumps(obj)).decode("ascii")
+
+def topython(string):
+    return pickle.loads(base64.b64decode(string.encode("ascii")))
 
 class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def __init__(self, content, generator, *args, **kwargs):
@@ -133,9 +140,9 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
                "call": ["awkward", n],
                "args": [fill(self._content, n + ".content", **kwargs), {"function": spec}]}
         if len(self._args) > 0:
-            out["*"] = {"call": ["pickle", "loads"], "args": [pickle.dumps(self._args)]}
+            out["*"] = {"call": ["awkward.array.objects", "topython"], "args": [frompython(self._args)]}
         if len(self._kwargs) > 0:
-            out["**"] = {"call": ["pickle", "loads"], "args": [pickle.dumps(self._kwargs)]}
+            out["**"] = {"call": ["awkward.array.objects", "topython"], "args": [frompython(self._kwargs)]}
 
         return out
 
