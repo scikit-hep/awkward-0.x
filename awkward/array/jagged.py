@@ -662,10 +662,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         for i in range(len(inputs)):
             if isinstance(inputs[i], JaggedArray):
-                if good is None:
-                    inputs[i] = inputs[i].flatten()
-                else:
-                    inputs[i] = inputs[i].flatten()[good]
+                inputs[i] = inputs[i].flatten()
 
         result = getattr(ufunc, method)(*inputs, **kwargs)
 
