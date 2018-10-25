@@ -328,8 +328,22 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
         return self._content.index
 
     def __getitem__(self, where):
-        if isinstance(where, awkward.util.integer):
+        if awkward.util.isstringslice(where):
+            raise IndexError("cannot index StringArray with string or sequence of strings")
+
+        if isinstance(where, tuple) and len(where) == 0:
+            return self
+        if not isinstance(where, tuple):
+            where = (where,)
+        head, tail = where[0], where[1:]
+
+        if isinstance(head, awkward.util.integer):
             return super(StringArray, self).__getitem__(where)
+
+        elif tail == ():
+            out = self._content[where]
+            return self.__class__(out.starts, out.stops, out.content, self.encoding)
+
         else:
             out = self._content[where]
             return self.__class__(out.starts, out.stops, out.content, self.encoding)

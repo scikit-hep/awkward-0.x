@@ -186,6 +186,10 @@ class Test(unittest.TestCase):
         if pyarrow is not None:
             arr = pyarrow.DictionaryArray.from_arrays(pyarrow.array([0, 0, 2, None, 1, None, 2, 1, 1]), pyarrow.array(["one", "two", "three"]))
 
+    def test_null_dictarray(self):
+        if pyarrow is not None:
+            arr = pyarrow.DictionaryArray.from_arrays(pyarrow.array([0, 0, 2, 2, 1, 0, 2, 1, 1]), pyarrow.array(["one", None, "three"]))
+
     def test_batch(self):
         if pyarrow is not None:
             arr = pyarrow.RecordBatch.from_arrays(
@@ -196,7 +200,7 @@ class Test(unittest.TestCase):
                  pyarrow.array([[{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}], [], [{"x": 4, "y": None}, {"x": 5, "y": 5.5}], [None], [{"x": 6, "y": 6.6}]])],
                 ["a", "b", "c", "d", "e"])
 
-    def test_batch(self):
+    def test_table(self):
         if pyarrow is not None:
             arr = pyarrow.Table.from_batches([
                 pyarrow.RecordBatch.from_arrays(
