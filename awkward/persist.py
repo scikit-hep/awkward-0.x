@@ -555,8 +555,13 @@ class hdf5(MutableMapping):
         return deserialize(self._group, name=where + self.options["schemasuffix"], whitelist=self.options["whitelist"], cache=self.options["cache"])
 
     def __setitem__(self, where, what):
+        options = dict(self.options)
+        if "whitelist" in options:
+            del options["whitelist"]
+        if "cache" in options:
+            del options["cache"]
         self._group.g.create_group(where)
-        serialize(what, self._group, name=where, **self.options)
+        serialize(what, self._group, name=where, **options)
 
     def __delitem__(self, where):
         for subname in keys(self._group, name=where + self.options["schemasuffix"]):
