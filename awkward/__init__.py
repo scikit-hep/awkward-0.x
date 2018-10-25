@@ -41,9 +41,9 @@ from awkward.derived.strings import StringArray
 
 from awkward.generate import fromiter
 
-from awkward.persist import serialize, deserialize, save, load, tohdf5, fromhdf5
+from awkward.persist import serialize, deserialize, save, load, hdf5
 
 # convenient access to the version number
 from awkward.version import __version__
 
-__all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "ByteIndexedArray", "SparseArray", "JaggedArray", "ByteJaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "serialize", "deserialize", "save", "load", "tohdf5", "fromhdf5", "__version__"]
+__all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "ByteIndexedArray", "SparseArray", "JaggedArray", "ByteJaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]

@@ -84,7 +84,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         return {"id": ident,
                 "call": ["awkward", n],
                 "args": [{"list": [fill(x, n + ".chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for c, x in zip(self._counts, self._chunks) if c > 0]},
-                         fill(awkward.util.numpy.array([c for c in self._counts if c > 0]), n + ".counts", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
+                         [c for c in self._counts if c > 0]]}
 
     @property
     def chunks(self):

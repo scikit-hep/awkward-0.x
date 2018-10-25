@@ -36,9 +36,9 @@ import os
 import zipfile
 import zlib
 try:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, MutableMapping
 except ImportError:
-    from collections import Mapping
+    from collections import Mapping, MutableMapping
 
 import numpy
 
@@ -371,7 +371,72 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
 
     return unfill(schema["schema"])
 
-def save(file, mode="a", options=None, **arrays):
+def keys(storage, name="", subschemas=True):
+    schema = storage[name]
+    if isinstance(schema, numpy.ndarray):
+        schema = schema.tostring()
+    if isinstance(schema, bytes):
+        schema = schema.decode("ascii")
+    schema = json.loads(schema)
+
+    prefix = schema.get("prefix", "")
+
+    def recurse(schema):
+        if isinstance(schema, dict):
+            if "call" in schema and isinstance(schema["call"], list) and len(schema["call"]) > 0:
+                for x in schema.get("args", []):
+                    for y in recurse(x):
+                        yield y
+                for x in schema.get("kwargs", {}).values():
+                    for y in recurse(x):
+                        yield y
+                for x in schema.get("*", []):
+                    for y in recurse(x):
+                        yield y
+                for x in schema.get("**", {}).values():
+                    for y in recurse(x):
+                        yield y
+
+            elif "read" in schema:
+                if schema.get("absolute", False):
+                    yield schema["read"]
+                else:
+                    yield prefix + schema["read"]
+
+            elif "list" in schema:
+                for x in schema["list"]:
+                    for y in recurse(x):
+                        yield y
+
+            elif "tuple" in schema:
+                for x in schema["tuple"]:
+                    for y in recurse(x):
+                        yield y
+
+            elif "pairs" in schema:
+                for n, x in schema["pairs"]:
+                    for y in recurse(x):
+                        yield y
+
+            elif "function" in schema:
+                pass
+
+            elif "ref" in schema:
+                pass
+
+    yield name
+    for x in recurse(schema["schema"]):
+        yield x
+
+def save(file, array, name=None, mode="a", **options):
+    if isinstance(array, dict):
+        arrays = array
+    else:
+        arrays = {"": array}
+
+    if name is not None:
+        arrays = {prefix + n: x for n, x in arrays.items()}
+
     arraynames = list(arrays)
     for i in range(len(arraynames)):
         for j in range(i + 1, len(arraynames)):
@@ -391,8 +456,7 @@ def save(file, mode="a", options=None, **arrays):
         file = file + ".akd"
 
     alloptions = {"delimiter": "-", "suffix": ".raw", "schemasuffix": ".json", "compression": compression}
-    if options is not None:
-        alloptions.update(options)
+    alloptions.update(options)
     options = alloptions
 
     class Wrap(object):
@@ -411,26 +475,32 @@ def save(file, mode="a", options=None, **arrays):
         for name, array in arrays.items():
             serialize(array, wrapped, name=name, **options)
 
-class load(Mapping):
-    def __init__(self, file, options=None):
+def load(file, **options):
+    f = Load(file, **options)
+    if list(f) == [""]:
+        out = f[""]
+        f.close()
+        return out
+    else:
+        return f
+
+class Load(Mapping):
+    def __init__(self, file, **options):
         class Wrap(object):
             def __init__(self):
                 self.f = zipfile.ZipFile(file, mode="r")
             def __getitem__(self, where):
                 return self.f.read(where)
-            def close(self):
-                self.f.close()
 
         self._file = Wrap()
 
         alloptions = {"schemasuffix": ".json", "whitelist": whitelist, "cache": None}
-        if options is not None:
-            alloptions.update(options)
+        alloptions.update(options)
         self.schemasuffix = alloptions.pop("schemasuffix")
         self.options = alloptions
         
     def __getitem__(self, where):
-        return deserialize(self._file, name=where + self.schemasuffix, **self.options)
+        return deserialize(self._file, name=where + self.schemasuffix, whitelist=self.options["whitelist"], cache=self.options["cache"])
 
     def __iter__(self):
         for n in self._file.f.namelist():
@@ -444,57 +514,64 @@ class load(Mapping):
                 count += 1
         return count
 
+    def __repr__(self):
+        return "<awkward.load ({0} members)>".format(len(self))
+
+    def close(self):
+        self._file.f.close()
+        
     def __del__(self):
-        self._file.close()
+        self.close()
 
-def tohdf5(group, options=None, **arrays):
-    alloptions = {"compression": compression}
-    if options is not None:
+    def __enter__(self, *args, **kwds):
+        return self
+
+    def __exit__(self, *args, **kwds):
+        self.close()
+
+class hdf5(MutableMapping):
+    def __init__(self, group, **options):
+        alloptions = {"compression": compression, "whitelist": whitelist, "cache": None}
         alloptions.update(options)
-    options = alloptions
-    options["delimiter"] = "/"
-    options["schemasuffix"] = "/schema.json"
+        self.options = alloptions
+        self.options["delimiter"] = "/"
+        self.options["schemasuffix"] = "/schema.json"
 
-    class Wrap(object):
-        def __init__(self):
-            self.g = group
-        def __setitem__(self, where, what):
-            self.g[where] = numpy.frombuffer(what, dtype=numpy.uint8)
-
-    f = Wrap()
-    for name, array in arrays.items():
-        group.create_group(name)
-        serialize(array, f, name=name, **options)
-
-class fromhdf5(Mapping):
-    def __init__(self, group, options=None):
         class Wrap(object):
             def __init__(self):
                 self.g = group
             def __getitem__(self, where):
                 return self.g[where].value
+            def __setitem__(self, where, what):
+                self.g[where] = numpy.frombuffer(what, dtype=numpy.uint8)
 
         self._group = Wrap()
 
-        alloptions = {"whitelist": whitelist, "cache": None}
-        if options is not None:
-            alloptions.update(options)
-        self.options = alloptions
-
     def __getitem__(self, where):
-        return deserialize(self._group, name=where + "/schema.json", **self.options)
+        return deserialize(self._group, name=where + self.options["schemasuffix"], whitelist=self.options["whitelist"], cache=self.options["cache"])
+
+    def __setitem__(self, where, what):
+        self._group.g.create_group(where)
+        serialize(what, self._group, name=where, **self.options)
+
+    def __delitem__(self, where):
+        for subname in keys(self._group, name=where + self.options["schemasuffix"]):
+            del self._group.g[subname]
+        del self._group.g[where]
 
     def __iter__(self):
+        schemaname = self.options["schemasuffix"].split("/")[-1]
         for subname in self._group.g:
-            if "schema.json" in self._group.g[subname]:
+            if schemaname in self._group.g[subname]:
                 yield subname
 
     def __len__(self):
+        schemaname = self.options["schemasuffix"].split("/")[-1]
         count = 0
         for subname in self._group.g:
-            if "schema.json" in self._group.g[subname]:
+            if schemaname in self._group.g[subname]:
                 count += 0
         return count
 
     def __repr__(self):
-        return "<HDF5 group {0} of awkward arrays>".format(repr(self._group.g.name))
+        return "<awkward.hdf5 {0} ({1} members)>".format(repr(self._group.g.name), len(self))
