@@ -64,6 +64,11 @@ class Test(unittest.TestCase):
             a = pyarrow.array([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
             assert awkward.arrow.view(a).tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
 
+    def test_arrow_nested_nested_array(self):
+        if pyarrow is not None:
+            a = pyarrow.array([[[1.1, 2.2], [3.3], []], [], [[4.4, 5.5]]])
+            assert awkward.arrow.view(a).tolist() == [[[1.1, 2.2], [3.3], []], [], [[4.4, 5.5]]]
+
     def test_arrow_nested_array_null(self):
         if pyarrow is not None:
             a = pyarrow.array([[1.1, 2.2, None], [], [4.4, 5.5]])
@@ -269,14 +274,22 @@ class Test(unittest.TestCase):
 
     # def test_arrow_writeparquet(self):
     #     if pyarrow is not None:
-    #         a = pyarrow.array([True, True, None, False, True])
-    #         b = pyarrow.array([0.0, 1.1, None, 3.3, 4.4])
-    #         c = pyarrow.array([None, [1.1, 2.2, None], [], None, [4.4, 5.5]])
-
-
-
-    #         table = pyarrow.Table.from_arrays
-
-    #         writer = pyarrow.parquet.ParquetWriter("tests/samples/features-0_11_1.parquet", table.schema)
-    #         writer.write_table(table)
+    #         a = pyarrow.Table.from_batches([
+    #             pyarrow.RecordBatch.from_arrays(
+    #             [pyarrow.array([1.1, 2.2, 3.3, None, 5.5]),
+    #              pyarrow.array([[1, 2, 3], [], [None], None, [4, 5, 6]]),
+    #              pyarrow.array([[[1.1, 2.2]], None, [[3.3, None], []], [], [None, [4.4, 5.5]]])],
+    #             ["a", "b", "c"]),
+    #             pyarrow.RecordBatch.from_arrays(
+    #             [pyarrow.array([2.2, 1.1, 3.3, None, 5.5]),
+    #              pyarrow.array([[2, 1, 3], [], [None], None, [4, 5, 6]]),
+    #              pyarrow.array([[[2.2, 1.1]], None, [[3.3, None], []], [], [None, [4.4, 5.5]]])],
+    #             ["a", "b", "c"])])
+    #         writer = pyarrow.parquet.ParquetWriter("tests/samples/features-0_11_1.parquet", a.schema)
+    #         writer.write_table(a)
     #         writer.close()
+
+    def test_arrow_readparquet(self):
+        if pyarrow is not None:
+            a = pyarrow.parquet.read_table("tests/samples/features-0_11_1.parquet")
+            print(a)
