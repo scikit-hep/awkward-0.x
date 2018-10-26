@@ -126,22 +126,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         self._valid()
         
         if self._persistvirtual:
-            if self._generator.__module__ == "__main__":
-                raise TypeError("cannot persist VirtualArray: its generator is defined in __main__, which won't be available in a subsequent session")
-            if hasattr(self._generator, "__qualname__"):
-                spec = [self._generator.__module__] + self._generator.__qualname__.split(".")
-            else:
-                spec = [self._generator.__module__, self._generator.__name__]
-
-            gen, genname = importlib.import_module(spec[0]), spec[1:]
-            while len(genname) > 0:
-                gen, genname = getattr(gen, genname[0]), genname[1:]
-            if gen is not self._generator:
-                raise TypeError("cannot persist VirtualArray: its generator cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
-
             out = {"id": ident,
                    "call": ["awkward", self.__class__.__name__],
-                   "args": [{"function": spec},
+                   "args": [fill(self._generator, self.__class__.__name__ + ".generator", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                             {"tuple": [fill(x, self.__class__.__name__ + ".args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
                             {"dict": {n: fill(x, self.__class__.__name__ + ".kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}],
                    "cacheable": True}

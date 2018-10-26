@@ -35,6 +35,7 @@ import json
 import numbers
 import os
 import pickle
+import types
 import zipfile
 import zlib
 try:
@@ -277,13 +278,13 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
             x = {"pair": x}
 
         minsize = x.get("minsize", 0)
-        types = x.get("types", (object,))
-        if not isinstance(types, tuple):
-            types = (types,)
+        tpes = x.get("types", (object,))
+        if not isinstance(tpes, tuple):
+            tpes = (tpes,)
         contexts = x.get("contexts", "*")
         pair = x["pair"]
 
-        normalized.append({"minsize": minsize, "types": types, "contexts": contexts, "pair": pair})
+        normalized.append({"minsize": minsize, "types": tpes, "contexts": contexts, "pair": pair})
 
     seen = {}
     def fill(obj, context, prefix, suffix, schemasuffix, storage, compression, **kwargs):
@@ -303,8 +304,8 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
                 dtype = obj.dtype
 
             for policy in normalized:
-                minsize, types, contexts, pair = policy["minsize"], policy["types"], policy["contexts"], policy["pair"]
-                if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(types)) and any(fnmatch.fnmatchcase(context, p) for p in contexts):
+                minsize, tpes, contexts, pair = policy["minsize"], policy["types"], policy["contexts"], policy["pair"]
+                if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(tpes)) and any(fnmatch.fnmatchcase(context, p) for p in contexts):
                     compress, decompress = pair
                     storage[prefix + str(ident) + suffix] = compress(obj)
 
@@ -324,6 +325,22 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
 
         elif hasattr(obj, "__awkward_persist__"):
             return obj.__awkward_persist__(ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs)
+
+        elif isinstance(obj, (types.FunctionType, type)):
+            if obj.__module__ == "__main__":
+                raise TypeError("cannot persist an object containing functions defined on the console (__main__)")
+            if hasattr(obj, "__qualname__"):
+                spec = [obj.__module__] + obj.__qualname__.split(".")
+            else:
+                spec = [obj.__module__, obj.__name__]
+
+            gen, genname = importlib.import_module(spec[0]), spec[1:]
+            while len(genname) > 0:
+                gen, genname = getattr(gen, genname[0]), genname[1:]
+            if gen is not obj:
+                raise TypeError("cannot persist a function or class that cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
+
+            return {"function": spec}
 
         else:
             try:
