@@ -35,7 +35,6 @@ import json
 import numbers
 import os
 import pickle
-import types
 import zipfile
 import zlib
 try:
@@ -326,29 +325,29 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
         elif hasattr(obj, "__awkward_persist__"):
             return obj.__awkward_persist__(ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
-        elif isinstance(obj, (types.FunctionType, type)):
-            if obj.__module__ == "__main__":
-                raise TypeError("cannot persist an object containing functions defined on the console (__main__)")
-            if hasattr(obj, "__qualname__"):
-                spec = [obj.__module__] + obj.__qualname__.split(".")
-            else:
-                spec = [obj.__module__, obj.__name__]
-
-            gen, genname = importlib.import_module(spec[0]), spec[1:]
-            while len(genname) > 0:
-                gen, genname = getattr(gen, genname[0]), genname[1:]
-            if gen is not obj:
-                raise TypeError("cannot persist a function or class that cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
-
-            return {"function": spec}
-
         else:
+            if hasattr(obj, "__module__") and (hasattr(obj, "__qualname__") or hasattr(obj, "__name__")) and obj.__module__ != "__main__":
+                if hasattr(obj, "__qualname__"):
+                    spec = [obj.__module__] + obj.__qualname__.split(".")
+                else:
+                    spec = [obj.__module__, obj.__name__]
+
+                gen, genname = importlib.import_module(spec[0]), spec[1:]
+                while len(genname) > 0:
+                    gen, genname = getattr(gen, genname[0]), genname[1:]
+
+                if gen is obj:
+                    return {"id": ident, "function": spec}
+
             try:
                 obj = jsonable(obj)
             except TypeError:
-                return {"call": ["awkward.persist", "topython"], "args": [awkward.persist.frompython(obj)]}
+                try:
+                    return {"id": ident, "call": ["awkward.persist", "topython"], "args": [awkward.persist.frompython(obj)]}
+                except Exception as err:
+                    raise TypeError("could not persist component as an array, awkward-array, importable function/class, JSON, or pickle; pickle error is\n\n    {0}: {1}".format(err.__class__.__name__, str(err)))
             else:
-                return {"json": obj}
+                return {"id": ident, "json": obj}
 
     schema = {"awkward": awkward.version.__version__,
               "schema": fill(obj, "", prefix, suffix, schemasuffix, storage, compression, **kwargs)}
@@ -396,45 +395,46 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
                     kwargs.update({n: unfill(x) for n, x in schema["**"].items()})
 
                 out = gen(*args, **kwargs)
-                if "id" in schema:
-                    seen[schema["id"]] = out
-                return out
 
             elif "read" in schema:
                 if schema.get("absolute", False):
-                    return storage[schema["read"]]
+                    out = storage[schema["read"]]
                 else:
-                    return storage[prefix + schema["read"]]
+                    out = storage[prefix + schema["read"]]
 
             elif "list" in schema:
-                return [unfill(x) for x in schema["list"]]
+                out = [unfill(x) for x in schema["list"]]
 
             elif "tuple" in schema:
-                return tuple(unfill(x) for x in schema["tuple"])
+                out = tuple(unfill(x) for x in schema["tuple"])
 
             elif "pairs" in schema:
-                return [(n, unfill(x)) for n, x in schema["pairs"]]
+                out = [(n, unfill(x)) for n, x in schema["pairs"]]
 
             elif "dict" in schema:
-                return {n: unfill(x) for n, x in schema["dict"].items()}
+                out = {n: unfill(x) for n, x in schema["dict"].items()}
 
             elif "dtype" in schema:
-                return json2dtype(schema["dtype"])
+                out = json2dtype(schema["dtype"])
 
             elif "function" in schema:
-                return spec2function(schema["function"], whitelist=whitelist)
+                out = spec2function(schema["function"], whitelist=whitelist)
 
             elif "json" in schema:
-                return schema["json"]
+                out = schema["json"]
 
             elif "ref" in schema:
                 if schema["ref"] in seen:
-                    return seen[schema["ref"]]
+                    out = seen[schema["ref"]]
                 else:
-                    return awkward.array.virtual.VirtualArray(lambda: seen[schema["ref"]])
+                    out = awkward.array.virtual.VirtualArray(lambda: seen[schema["ref"]])
             
             else:
                 raise ValueError("unrecognized JSON object with fields {0}".format(", ".join(repr(x) for x in schema)))
+
+            if "id" in schema:
+                seen[schema["id"]] = out
+            return out
 
         elif isinstance(schema, list):
             raise ValueError("unrecognized JSON list with length {0}".format(len(schema)))
