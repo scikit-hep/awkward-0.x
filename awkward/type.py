@@ -206,7 +206,7 @@ class Type(object):
         else:
             one = Type._canonical(Type._copy(self, {}), set())
             two = Type._canonical(Type._copy(other, {}), set())
-            return one._eq(two, set())
+            return one._eq(two, set(), ignoremask=False)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -329,15 +329,23 @@ class ArrayType(Type):
             to = str(self._to)
         return takes + to
 
-    def _eq(self, other, seen):
+    def _eq(self, other, seen, ignoremask=False):
         if self is other:
             return True
         elif id(self) in seen:
             return False
         else:
             seen.add(id(self))
-            return isinstance(other, ArrayType) and self._takes == other._takes and self._to == other._to
-
+            if isinstance(other, ArrayType) and self._takes == other._takes:
+                if isinstance(self._to, Type) and isinstance(other._to, Type):
+                    return self._to._eq(other._to, seen, ignoremask=ignoremask)
+                elif not isinstance(self._to, Type) and not isinstance(other._to, Type):
+                    return self._to == other._to
+                else:
+                    return False
+            else:
+                return False
+            
     def __hash__(self):
         return hash((ArrayType, self._takes, self._to))
 
@@ -417,14 +425,27 @@ class TableType(Type):
             out.append(("{0}{1:%ds} -> {2}" % width).format(indent, repr(n), to))
         return "\n".join(out).lstrip(" ")
 
-    def _eq(self, other, seen):
+    def _eq(self, other, seen, ignoremask=False):
         if self is other:
             return True
         elif id(self) in seen:
             return False
         else:
             seen.add(id(self))
-            return isinstance(other, TableType) and [(n, self._fields[n]) for n in sorted(self._fields)] == [(n, other._fields[n]) for n in sorted(other._fields)]
+            if isinstance(other, TableType) and sorted(self._fields) == sorted(other._fields):
+                for n in self._fields:
+                    if isinstance(self._fields[n], Type) and isinstance(other._fields[n], Type):
+                        if not self._fields[n]._eq(other._fields[n], seen, ignoremask=ignoremask):
+                            return False
+                    elif not isinstance(self._fields[n], Type) and not isinstance(other._fields[n], Type):
+                        if not self._fields[n] == other._fields[n]:
+                            return False
+                    else:
+                        return False
+                else:
+                    return True    # nothing failed in the loop over fields
+            else:
+                return False
 
     def __hash__(self):
         return hash((TableType, tuple((n, self._fields[n]) for n in sorted(self._fields))))
@@ -487,14 +508,27 @@ class UnionType(Type):
         out = [x + " " * (width - len(lstrip(x.split("\n")[-1]))) for x in subs]
         return "(" + (" |\n" + indent + " ").join(out) + " )"
 
-    def _eq(self, other, seen):
+    def _eq(self, other, seen, ignoremask=False):
         if self is other:
             return True
         elif id(self) in seen:
             return False
         else:
             seen.add(id(self))
-            return isinstance(other, UnionType) and set(self._possibilities) == set(other._possibilities)
+            if isinstance(other, UnionType) and len(self._possibilities) == len(other._possibilities):
+                for x, y in zip(sorted(self._possibilities), sorted(self._possibilities)):
+                    if isinstance(x, Type) and isinstance(y, Type):
+                        if not x._eq(y, seen, ignoremask=ignoremask):
+                            return False
+                    elif not isinstance(x, Type) and not isinstance(y, Type):
+                        if not x == y:
+                            return False
+                    else:
+                        return False
+                else:
+                    return True    # nothing failed in the loop over possibilities
+            else:
+                return False
 
     def __hash__(self):
         return hash((UnionType, tuple(self._possibilities)))
@@ -512,7 +546,7 @@ class OptionType(Type):
         if isinstance(value, Type):
             self._type = value
         else:
-            self._type = self._finaltype(self._type)
+            self._type = self._finaltype(value)
 
     @property
     def shape(self):
@@ -547,14 +581,22 @@ class OptionType(Type):
             type = str(self._type)
         return "?({0})".format(type)
 
-    def _eq(self, other, seen):
+    def _eq(self, other, seen, ignoremask=False):
         if self is other:
             return True
         elif id(self) in seen:
             return False
         else:
             seen.add(id(self))
-            return isinstance(other, OptionType) and self._type == other._type
+            if isinstance(other, OptionType) and self._type._eq(other._type, seen, ignoremask=ignoremask):
+                return True
+            if ignoremask:    # applied asymmetrically; only the left can ignore mask
+                if isinstance(other, Type):
+                    return self._type._eq(other, seen, ignoremask=ignoremask)
+                else:
+                    return self._type == other
+            else:
+                return False
 
     def __hash__(self):
         return hash((OptionType, self._type))

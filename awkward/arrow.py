@@ -33,6 +33,7 @@ import awkward.array.indexed
 import awkward.array.jagged
 import awkward.array.masked
 import awkward.array.table
+import awkward.array.virtual
 import awkward.derived.strings
 import awkward.type
 import awkward.util
@@ -43,6 +44,8 @@ ARROW_TAGTYPE = awkward.util.numpy.uint8
 ARROW_CHARTYPE = awkward.util.numpy.uint8
 
 def schema2type(schema):
+    import pyarrow
+
     def recurse(tpe, nullable):
         if isinstance(tpe, pyarrow.lib.DictionaryType):
             out = recurse(tpe.dictionary.type, nullable)
@@ -266,21 +269,46 @@ def view(obj):
     else:
         raise NotImplementedError(type(obj))
 
+class ParquetFile(object):
+    def __init__(self, file, cache=None, metadata=None, common_metadata=None):
+        self.file = file
+        self.cache = cache
+        self.metadata = metadata
+        self.common_metadata = common_metadata
+        self._init()
 
+    def _init(self):
+        import pyarrow.parquet
+        self.parquetfile = pyarrow.parquet.ParquetFile(self.file, metadata=self.metadata, common_metadata=self.common_metadata)
+        self.type = schema2type(self.parquetfile.schema.to_arrow_schema())
 
-def fromparquet(file, cache=None, metadata=None, common_metadata=None):
-    import pyarrow.parquet
+    def __getstate__(self):
+        return {"file": self.file, "metadata": self.metadata, "common_metadata": self.common_metadata}
 
-    pqfile = pyarrow.parquet.ParquetFile(file, metadata=metadata, common_metadata=common_metadata)
-    tpe = schema2type(pqfile.schema.to_arrow_schema())
-    names = tpe.columns
+    def __setstate__(self, state):
+        self.file = state["file"]
+        self.cache = None
+        self.metadata = state["metadata"]
+        self.common_metadata = state["common_metadata"]
+        self._init()
+
+    def __call__(self, rowgroup, column):
+        print("read", rowgroup, column)
+        return view(self.parquetfile.read_row_group(rowgroup, columns=[column]))[column]
+
+def fromparquet(file, cache=None, persistvirtual=False, metadata=None, common_metadata=None):
+    parquetfile = ParquetFile(file, cache=cache, metadata=metadata, common_metadata=common_metadata)
+    columns = parquetfile.type.columns
 
     chunks = []
     counts = []
-    for i in range(pqfile.num_row_groups):
-        numrows = pqfile.metadata.row_group(i).num_rows
-        
+    for i in range(parquetfile.parquetfile.num_row_groups):
+        numrows = parquetfile.parquetfile.metadata.row_group(i).num_rows
+        if numrows > 0:
+            chunk = awkward.array.table.Table()
+            for n in columns:
+                chunk[n] = awkward.array.virtual.VirtualArray(parquetfile, (i, n), type=awkward.type.ArrayType(numrows, parquetfile.type[n]))
+            chunks.append(chunk)
+            counts.append(numrows)
 
-
-        
     return awkward.array.chunked.ChunkedArray(chunks, counts)
