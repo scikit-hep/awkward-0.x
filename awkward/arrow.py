@@ -293,7 +293,6 @@ class ParquetFile(object):
         self._init()
 
     def __call__(self, rowgroup, column):
-        print("read", rowgroup, column)
         return view(self.parquetfile.read_row_group(rowgroup, columns=[column]))[column]
 
 def fromparquet(file, cache=None, persistvirtual=False, metadata=None, common_metadata=None):

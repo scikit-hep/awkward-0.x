@@ -337,15 +337,13 @@ class ArrayType(Type):
         else:
             seen.add(id(self))
             if isinstance(other, ArrayType) and self._takes == other._takes:
-                if isinstance(self._to, Type) and isinstance(other._to, Type):
+                if isinstance(self._to, Type):
                     return self._to._eq(other._to, seen, ignoremask=ignoremask)
-                elif not isinstance(self._to, Type) and not isinstance(other._to, Type):
-                    return self._to == other._to
                 else:
-                    return False
+                    return self._to == other._to
             else:
                 return False
-            
+
     def __hash__(self):
         return hash((ArrayType, self._takes, self._to))
 
@@ -434,14 +432,12 @@ class TableType(Type):
             seen.add(id(self))
             if isinstance(other, TableType) and sorted(self._fields) == sorted(other._fields):
                 for n in self._fields:
-                    if isinstance(self._fields[n], Type) and isinstance(other._fields[n], Type):
+                    if isinstance(self._fields[n], Type):
                         if not self._fields[n]._eq(other._fields[n], seen, ignoremask=ignoremask):
                             return False
-                    elif not isinstance(self._fields[n], Type) and not isinstance(other._fields[n], Type):
+                    else:
                         if not self._fields[n] == other._fields[n]:
                             return False
-                    else:
-                        return False
                 else:
                     return True    # nothing failed in the loop over fields
             else:
@@ -517,14 +513,12 @@ class UnionType(Type):
             seen.add(id(self))
             if isinstance(other, UnionType) and len(self._possibilities) == len(other._possibilities):
                 for x, y in zip(sorted(self._possibilities), sorted(self._possibilities)):
-                    if isinstance(x, Type) and isinstance(y, Type):
+                    if isinstance(x, Type):
                         if not x._eq(y, seen, ignoremask=ignoremask):
                             return False
-                    elif not isinstance(x, Type) and not isinstance(y, Type):
+                    else:
                         if not x == y:
                             return False
-                    else:
-                        return False
                 else:
                     return True    # nothing failed in the loop over possibilities
             else:
@@ -591,7 +585,7 @@ class OptionType(Type):
             if isinstance(other, OptionType) and self._type._eq(other._type, seen, ignoremask=ignoremask):
                 return True
             if ignoremask:    # applied asymmetrically; only the left can ignore mask
-                if isinstance(other, Type):
+                if isinstance(self._type, Type):
                     return self._type._eq(other, seen, ignoremask=ignoremask)
                 else:
                     return self._type == other
