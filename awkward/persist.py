@@ -28,11 +28,13 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import base64
 import fnmatch
 import importlib
 import json
 import numbers
 import os
+import pickle
 import zipfile
 import zlib
 try:
@@ -40,14 +42,12 @@ try:
 except ImportError:
     from collections import Mapping, MutableMapping
 
-import numpy
-
 import awkward.type
 import awkward.util
 import awkward.version
 
 compression = [
-    {"minsize": 8192, "types": [numpy.bool_, numpy.bool, numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
+    {"minsize": 8192, "types": [awkward.util.numpy.bool_, awkward.util.numpy.bool, awkward.util.numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
     ]
 
 partner = {
@@ -59,6 +59,12 @@ whitelist = [["numpy", "frombuffer"],
              ["awkward", "*Array"],
              ["awkward", "Table"],
              ["awkward.persist", "*"]]
+
+def frompython(obj):
+    return base64.b64encode(pickle.dumps(obj)).decode("ascii")
+
+def topython(string):
+    return pickle.loads(base64.b64decode(string.encode("ascii")))
 
 def spec2function(obj, whitelist=whitelist):
     for white in whitelist:
@@ -91,7 +97,7 @@ def json2dtype(obj):
             return [recurse(x) for x in obj]
         else:
             return obj
-    return numpy.dtype(recurse(obj))
+    return awkward.util.numpy.dtype(recurse(obj))
 
 def type2json(obj):
     if isinstance(obj, awkward.type.Type):
@@ -134,7 +140,7 @@ def type2json(obj):
                 else:
                     return out
 
-        elif isinstance(obj, numpy.dtype):
+        elif isinstance(obj, awkward.util.numpy.dtype):
             return {"dtype": dtype2json(obj)}
 
         elif callable(obj):
@@ -205,8 +211,34 @@ def json2type(obj, whitelist=whitelist):
 
     return awkward.type._resolve(recurse(obj), {})
 
+def jsonable(obj):
+    if obj is None:
+        return obj
+
+    elif isinstance(obj, dict) and all(isinstance(n, str) for n in obj):
+        return {n: jsonable(x) for n, x in obj.items()}
+
+    elif isinstance(obj, list):
+        return [jsonable(x) for x in obj]
+
+    elif isinstance(obj, str):
+        return str(obj)
+
+    elif isinstance(obj, (bool, awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+        return bool(obj)      # policy: eliminate Numpy types
+
+    elif isinstance(obj, (numbers.Integral, awkward.util.numpy.integer)):
+        return int(obj)       # policy: eliminate Numpy types
+
+    elif isinstance(obj, (numbers.Real, awkward.util.numpy.floating)) and awkward.util.numpy.finite(obj):
+        return float(obj)     # policy: eliminate Numpy types
+
+    else:
+        raise TypeError("object cannot be losslessly serialized as JSON")
+
 def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=None, compression=compression, **kwargs):
     import awkward.array.base
+    import awkward.array.virtual
 
     for n in kwargs:
         if n not in ():
@@ -261,11 +293,14 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
         ident = len(seen)
         seen[id(obj)] = ident
 
-        if type(obj) is numpy.ndarray and len(obj.shape) != 0:
+        if type(obj) is awkward.util.numpy.dtype:
+            return {"dtype": dtype2json(obj)}
+
+        elif type(obj) is awkward.util.numpy.ndarray and len(obj.shape) != 0:
             if len(obj.shape) > 1:
-                dtype = dtype2json(numpy.dtype((obj.dtype, obj.shape[1:])))
+                dtype = awkward.util.numpy.dtype((obj.dtype, obj.shape[1:]))
             else:
-                dtype = dtype2json(obj.dtype)
+                dtype = obj.dtype
 
             for policy in normalized:
                 minsize, types, contexts, pair = policy["minsize"], policy["types"], policy["contexts"], policy["pair"]
@@ -276,22 +311,27 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
                     return {"id": ident,
                             "call": ["numpy", "frombuffer"],
                             "args": [{"call": decompress, "args": [{"read": str(ident) + suffix}]},
-                                     {"call": ["awkward.persist", "json2dtype"], "args": [dtype]},
-                                     len(obj)]}
+                                     {"dtype": dtype2json(dtype)},
+                                     {"json": len(obj)}]}
 
             else:
                 storage[prefix + str(ident) + suffix] = obj.tostring()
                 return {"id": ident,
                         "call": ["numpy", "frombuffer"],
                         "args": [{"read": str(ident) + suffix},
-                                 {"call": ["awkward.persist", "json2dtype"], "args": [dtype]},
-                                 len(obj)]}
+                                 {"dtype": dtype2json(dtype)},
+                                 {"json": len(obj)}]}
 
         elif hasattr(obj, "__awkward_persist__"):
             return obj.__awkward_persist__(ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
         else:
-            raise TypeError("cannot serialize {0} instance (has no __awkward_persist__ method)".format(type(obj)))
+            try:
+                obj = jsonable(obj)
+            except TypeError:
+                return {"call": ["awkward.persist", "topython"], "args": [awkward.persist.frompython(obj)]}
+            else:
+                return {"json": obj}
 
     schema = {"awkward": awkward.version.__version__,
               "schema": fill(obj, "", prefix, suffix, schemasuffix, storage, compression, **kwargs)}
@@ -305,7 +345,7 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
     import awkward.array.virtual
 
     schema = storage[name]
-    if isinstance(schema, numpy.ndarray):
+    if isinstance(schema, awkward.util.numpy.ndarray):
         schema = schema.tostring()
     if isinstance(schema, bytes):
         schema = schema.decode("ascii")
@@ -358,26 +398,38 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
             elif "pairs" in schema:
                 return [(n, unfill(x)) for n, x in schema["pairs"]]
 
+            elif "dict" in schema:
+                return {n: unfill(x) for n, x in schema["dict"].items()}
+
+            elif "dtype" in schema:
+                return json2dtype(schema["dtype"])
+
             elif "function" in schema:
                 return spec2function(schema["function"], whitelist=whitelist)
+
+            elif "json" in schema:
+                return schema["json"]
 
             elif "ref" in schema:
                 if schema["ref"] in seen:
                     return seen[schema["ref"]]
                 else:
                     return awkward.array.virtual.VirtualArray(lambda: seen[schema["ref"]])
-                       
+            
             else:
-                return schema
+                raise ValueError("unrecognized JSON object with fields {0}".format(", ".join(repr(x) for x in schema)))
+
+        elif isinstance(schema, list):
+            raise ValueError("unrecognized JSON list with length {0}".format(len(schema)))
 
         else:
-            return schema
+            raise ValueError("unrecognized JSON object: {0}".format(repr(schema)))
 
     return unfill(schema["schema"])
 
 def keys(storage, name="", subschemas=True):
     schema = storage[name]
-    if isinstance(schema, numpy.ndarray):
+    if isinstance(schema, awkward.util.numpy.ndarray):
         schema = schema.tostring()
     if isinstance(schema, bytes):
         schema = schema.decode("ascii")
@@ -422,7 +474,18 @@ def keys(storage, name="", subschemas=True):
                     for y in recurse(x):
                         yield y
 
+            elif "dict" in schema:
+                for x in schema["dict"].values():
+                    for y in recurse(x):
+                        yield y
+
+            elif "dtype" in schema:
+                pass
+
             elif "function" in schema:
+                pass
+
+            elif "json" in schema:
                 pass
 
             elif "ref" in schema:
@@ -547,7 +610,7 @@ class hdf5(MutableMapping):
             def __getitem__(self, where):
                 return self.g[where].value
             def __setitem__(self, where, what):
-                self.g[where] = numpy.frombuffer(what, dtype=numpy.uint8)
+                self.g[where] = awkward.util.numpy.frombuffer(what, dtype=awkward.util.numpy.uint8)
 
         self._group = Wrap()
 

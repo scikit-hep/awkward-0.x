@@ -265,7 +265,7 @@ class ByteIndexedArray(IndexedArray):
                 "call": ["awkward", n],
                 "args": [fill(self._index, n + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._dtype)]}]}
+                         {"dtype": awkward.persist.dtype2json(self._dtype)}]}
 
     @property
     def content(self):
@@ -427,16 +427,18 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
         n = self.__class__.__name__
         
-        if self._default is None or isinstance(self._default, (numbers.Real, awkward.util.numpy.integer, awkward.util.numpy.floating)):
-            default = self._default
-        elif isinstance(self._default, awkward.util.numpy.ndarray):
-            default = fill(self._default, n + ".default", prefix, suffix, schemasuffix, storage, compression, **kwargs)
+        if self._default is None:
+            default = {"json": self._default}
+        elif isinstance(self._default, (numbers.Integral, awkward.util.numpy.integer)):
+            default = {"json": int(self._default)}
+        elif isinstance(self._default, (numbers.Real, awkward.util.numpy.floating)) and awkward.util.numpy.isfinite(self._default):
+            default = {"json": float(self._default)}
         else:
-            default = {"call": ["pickle", "loads"], "args": pickle.dumps(self._default)}
+            default = fill(self._default, n + ".default", prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
         return {"id": ident,
                 "call": ["awkward", n],
-                "args": [self._length,
+                "args": [{"json": int(self._length)},
                          fill(self._index, n + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          default]}

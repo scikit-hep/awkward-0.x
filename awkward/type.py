@@ -363,6 +363,10 @@ class TableType(Type):
                 out.append((n, x.dtype))
         return awkward.util.numpy.dtype(out)
 
+    @property
+    def columns(self):
+        return list(self._fields)
+
     def _isnumpy(self, seen):
         if id(self) in seen:
             return False

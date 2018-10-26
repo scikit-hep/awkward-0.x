@@ -1150,14 +1150,14 @@ class ByteJaggedArray(JaggedArray):
                     "call": ["awkward", n, "fromcounts"],
                     "args": [fill(self.counts, n + ".counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                              fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._subdtype)]}]}
+                             {"dtype": awkward.persist.dtype2json(self._subdtype)}]}
         else:
             return {"id": ident,
                     "call": ["awkward", n],
                     "args": [fill(self._starts, n + ".starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                              fill(self._stops, n + ".stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                              fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._subdtype)]}]}
+                             {"dtype": awkward.persist.dtype2json(self._subdtype)}]}
 
     @property
     def content(self):

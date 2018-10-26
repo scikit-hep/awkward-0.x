@@ -43,54 +43,85 @@ ARROW_TAGTYPE = awkward.util.numpy.uint8
 ARROW_CHARTYPE = awkward.util.numpy.uint8
 
 def schema2type(schema):
-
-
-    def recurse(tpe):
+    def recurse(tpe, nullable):
         if isinstance(tpe, pyarrow.lib.DictionaryType):
-            return recurse(tpe.dictionary.type)
+            out = recurse(tpe.dictionary.type, nullable)
+            if nullable:
+                return awkward.type.OptionType(out)
+            else:
+                return out
 
         elif isinstance(tpe, pyarrow.lib.StructType):
             out = None
             for i in range(tpe.num_children):
-                x = awkward.type.ArrayType(tpe[i].name, recurse(tpe[i].type))
+                x = awkward.type.ArrayType(tpe[i].name, recurse(tpe[i].type, tpe[i].nullable))
                 if out is None:
                     out = x
                 else:
                     out = out & x
-            return out
+            if nullable:
+                return awkward.type.OptionType(out)
+            else:
+                return out
 
         elif isinstance(tpe, pyarrow.lib.ListType):
-            return awkward.type.ArrayType(float("inf"), recurse(tpe.value_type))
+            out = awkward.type.ArrayType(float("inf"), recurse(tpe.value_type, nullable))
+            if nullable:
+                return awkward.type.OptionType(out)
+            else:
+                return out
 
         elif isinstance(tpe, pyarrow.lib.UnionType):
             out = None
             for i in range(tpe.num_children):
-                x = recurse(tpe[i].type)
+                x = recurse(tpe[i].type, nullable)
                 if out is None:
                     out = x
                 else:
                     out = out | x
-            return out
+            if nullable:
+                return awkward.type.OptionType(out)
+            else:
+                return out
 
         elif tpe == pyarrow.string():
-            raise NotImplementedError
+            if nullable:
+                return awkward.type.OptionType(str)
+            else:
+                return str
 
         elif tpe == pyarrow.binary():
-            raise NotImplementedError
+            if nullable:
+                return awkward.type.OptionType(bytes)
+            else:
+                return bytes
 
         elif tpe == pyarrow.bool_():
-            raise NotImplementedError
-
+            out = awkward.util.numpy.dtype(bool)
+            if nullable:
+                return awkward.type.OptionType(out)
+            else:
+                return out
+            
         elif isinstance(tpe, pyarrow.lib.DataType):
-            tpe.to_pandas_dtype()
-            raise NotImplementedError
+            if nullable:
+                return awkward.type.OptionType(tpe.to_pandas_dtype())
+            else:
+                return tpe.to_pandas_dtype()
 
         else:
             raise NotImplementedError(repr(tpe))
 
+    out = None
+    for name in schema.names:
+        field = schema.field_by_name(name)
+        mytype = awkward.type.ArrayType(name, recurse(field.type, field.nullable))
+        if out is None:
+            out = mytype
+        else:
+            out = out & mytype
 
-
-
+    return out
 
 def view(obj):
     import pyarrow
@@ -234,3 +265,22 @@ def view(obj):
 
     else:
         raise NotImplementedError(type(obj))
+
+
+
+def fromparquet(file, cache=None, metadata=None, common_metadata=None):
+    import pyarrow.parquet
+
+    pqfile = pyarrow.parquet.ParquetFile(file, metadata=metadata, common_metadata=common_metadata)
+    tpe = schema2type(pqfile.schema.to_arrow_schema())
+    names = tpe.columns
+
+    chunks = []
+    counts = []
+    for i in range(pqfile.num_row_groups):
+        numrows = pqfile.metadata.row_group(i).num_rows
+        
+
+
+        
+    return awkward.array.chunked.ChunkedArray(chunks, counts)

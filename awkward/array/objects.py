@@ -29,10 +29,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import importlib
-import pickle
-import base64
 
 import awkward.array.base
+import awkward.persist
 import awkward.type
 import awkward.util
 
@@ -55,14 +54,8 @@ class Methods(object):
         else:
             return awkwardtype
 
-def frompython(obj):
-    return base64.b64encode(pickle.dumps(obj)).decode("ascii")
-
-def topython(string):
-    return pickle.loads(base64.b64decode(string.encode("ascii")))
-
 class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
-    def __init__(self, content, generator, *args, **kwargs):
+    def __init__(self, content, generator, args=(), kwargs={}):
         self.content = content
         self.generator = generator
         self.args = args
@@ -135,15 +128,14 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         if gen is not self._generator:
             raise TypeError("cannot persist ObjectArray: its generator cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
 
-        n = self.__class__.__name__
+        name = self.__class__.__name__
         out = {"id": ident,
-               "call": ["awkward", n],
-               "args": [fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs), {"function": spec}]}
-        if len(self._args) > 0:
-            out["*"] = {"call": ["awkward.array.objects", "topython"], "args": [frompython(self._args)]}
-        if len(self._kwargs) > 0:
-            out["**"] = {"call": ["awkward.array.objects", "topython"], "args": [frompython(self._kwargs)]}
-
+               "call": ["awkward", name],
+               "args": [fill(self._content, name + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                        {"function": spec},
+                        {"tuple": [fill(x, name + ".args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
+                        {"dict": {n: fill(x, name + ".kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}]}
+                        
         return out
 
     @property
@@ -182,16 +174,13 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def kwargs(self, value):
         if not isinstance(value, dict):
             raise TypeError("kwargs must be a dict")
-        self._kwargs = value
+        self._kwargs = dict(value)
 
     def __len__(self):
         return len(self._content)
 
     def _gettype(self, seen):
-        if len(self._content.shape) == 1:
-            return self._generator
-        else:
-            return awkward.type.ArrayType(*(self._content.shape[1:] + (self._generator,)))
+        return self._generator
 
     def _getshape(self):
         return (len(self._content),)

@@ -113,7 +113,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
                 "call": ["awkward", n],
                 "args": [fill(self._mask, n + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         self._maskedwhen]}
+                         {"json": bool(self._maskedwhen)}]}
 
     @property
     def mask(self):
@@ -307,8 +307,8 @@ class BitMaskedArray(MaskedArray):
                 "call": ["awkward", n],
                 "args": [fill(self._mask, n + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         self._maskedwhen,
-                         self._lsborder]}
+                         {"json": bool(self._maskedwhen)},
+                         {"json": bool(self._lsborder)}]}
 
     @property
     def mask(self):
@@ -532,7 +532,7 @@ class IndexedMaskedArray(MaskedArray):
                 "call": ["awkward", n],
                 "args": [fill(self._mask, n + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         self._maskedwhen]}
+                         {"json": int(self._maskedwhen)}]}
 
     @property
     def mask(self):

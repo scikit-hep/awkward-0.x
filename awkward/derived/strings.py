@@ -327,6 +327,12 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
     def index(self):
         return self._content.index
 
+    def _gettype(self, seen):
+        if self._encoding is None:
+            return bytes
+        else:
+            return str
+
     def __getitem__(self, where):
         if awkward.util.isstringslice(where):
             raise IndexError("cannot index StringArray with string or sequence of strings")
