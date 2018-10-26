@@ -36,6 +36,10 @@ import awkward.type
 import awkward.util
 
 class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
+    """
+    MaskedArray
+    """
+
     ### WTF were the designers of numpy.ma thinking?
     # @staticmethod
     # def is_masked(x):
@@ -106,14 +110,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         return {"id": ident,
-                "call": ["awkward", n],
-                "args": [fill(self._mask, n + ".mask", **kwargs),
-                         fill(self._content, n + ".content", **kwargs),
-                         self._maskedwhen]}
+                "call": ["awkward", self.__class__.__name__],
+                "args": [fill(self._mask, self.__class__.__name__ + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         {"json": bool(self._maskedwhen)}]}
 
     @property
     def mask(self):
@@ -279,6 +282,10 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         raise NotImplementedError
 
 class BitMaskedArray(MaskedArray):
+    """
+    BitMaskedArray
+    """
+
     def __init__(self, mask, content, maskedwhen=True, lsborder=False):
         super(BitMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
         self.lsborder = lsborder
@@ -300,15 +307,14 @@ class BitMaskedArray(MaskedArray):
         mine["lsborder"] = overrides.pop("lsborder", self._lsborder)
         return mine
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         return {"id": ident,
-                "call": ["awkward", n],
-                "args": [fill(self._mask, n + ".mask", **kwargs),
-                         fill(self._content, n + ".content", **kwargs),
-                         self._maskedwhen,
-                         self._lsborder]}
+                "call": ["awkward", self.__class__.__name__],
+                "args": [fill(self._mask, self.__class__.__name__ + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         {"json": bool(self._maskedwhen)},
+                         {"json": bool(self._lsborder)}]}
 
     @property
     def mask(self):
@@ -507,6 +513,10 @@ class BitMaskedArray(MaskedArray):
         raise NotImplementedError
 
 class IndexedMaskedArray(MaskedArray):
+    """
+    IndexedMaskedArray
+    """
+
     def __init__(self, mask, content, maskedwhen=-1):
         super(IndexedMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
         self._isvalid = False
@@ -525,14 +535,13 @@ class IndexedMaskedArray(MaskedArray):
             out._maskedwhen = maskedwhen
         return out
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         return {"id": ident,
-                "call": ["awkward", n],
-                "args": [fill(self._mask, n + ".mask", **kwargs),
-                         fill(self._content, n + ".content", **kwargs),
-                         self._maskedwhen]}
+                "call": ["awkward", self.__class__.__name__],
+                "args": [fill(self._mask, self.__class__.__name__ + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         {"json": int(self._maskedwhen)}]}
 
     @property
     def mask(self):

@@ -29,13 +29,17 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import importlib
-import pickle
 
 import awkward.array.base
+import awkward.persist
 import awkward.type
 import awkward.util
 
 class Methods(object):
+    """
+    Methods: abstract mix-in
+    """
+
     @staticmethod
     def mixin(methods, awkwardtype):
         assert issubclass(methods, Methods)
@@ -55,7 +59,11 @@ class Methods(object):
             return awkwardtype
 
 class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
-    def __init__(self, content, generator, *args, **kwargs):
+    """
+    ObjectArray
+    """
+
+    def __init__(self, content, generator, args=(), kwargs={}):
         self.content = content
         self.generator = generator
         self.args = args
@@ -112,32 +120,14 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-
-        if self._generator.__module__ == "__main__":
-            raise TypeError("cannot persist ObjectArray: its generator is defined in __main__, which won't be available in a subsequent session")
-        if hasattr(self._generator, "__qualname__"):
-            spec = [self._generator.__module__] + self._generator.__qualname__.split(".")
-        else:
-            spec = [self._generator.__module__, self._generator.__name__]
-
-        gen, genname = importlib.import_module(spec[0]), spec[1:]
-        while len(genname) > 0:
-            gen, genname = getattr(gen, genname[0]), genname[1:]
-        if gen is not self._generator:
-            raise TypeError("cannot persist ObjectArray: its generator cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
-
-        n = self.__class__.__name__
-        out = {"id": ident,
-               "call": ["awkward", n],
-               "args": [fill(self._content, n + ".content", **kwargs), {"function": spec}]}
-        if len(self._args) > 0:
-            out["*"] = {"call": ["pickle", "loads"], "args": [pickle.dumps(self._args)]}
-        if len(self._kwargs) > 0:
-            out["**"] = {"call": ["pickle", "loads"], "args": [pickle.dumps(self._kwargs)]}
-
-        return out
+        return {"id": ident,
+                "call": ["awkward", self.__class__.__name__],
+                "args": [fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._generator, self.__class__.__name__ + ".generator", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         {"tuple": [fill(x, self.__class__.__name__ + ".args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
+                         {"dict": {n: fill(x, self.__class__.__name__ + ".kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}]}
 
     @property
     def content(self):
@@ -175,16 +165,13 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def kwargs(self, value):
         if not isinstance(value, dict):
             raise TypeError("kwargs must be a dict")
-        self._kwargs = value
+        self._kwargs = dict(value)
 
     def __len__(self):
         return len(self._content)
 
     def _gettype(self, seen):
-        if len(self._content.shape) == 1:
-            return self._generator
-        else:
-            return awkward.type.ArrayType(*(self._content.shape[1:] + (self._generator,)))
+        return self._generator
 
     def _getshape(self):
         return (len(self._content),)

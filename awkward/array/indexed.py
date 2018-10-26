@@ -46,6 +46,10 @@ def invert(permutation):
     return out
 
 class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
+    """
+    IndexedArray
+    """
+
     def __init__(self, index, content):
         self.index = index
         self.content = content
@@ -87,13 +91,12 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides))
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         return {"id": ident,
-                "call": ["awkward", n],
-                "args": [fill(self._index, n + ".index", **kwargs),
-                         fill(self._content, n + ".content", **kwargs)]}
+                "call": ["awkward", self.__class__.__name__],
+                "args": [fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
 
     @property
     def index(self):
@@ -205,6 +208,10 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             return self._content[self._index].pandas()
 
 class ByteIndexedArray(IndexedArray):
+    """
+    ByteIndexedArray
+    """
+
     def __init__(self, index, content, dtype):
         super(ByteIndexedArray, self).__init__(index, content)
         self.dtype = dtype
@@ -258,14 +265,13 @@ class ByteIndexedArray(IndexedArray):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         return {"id": ident,
-                "call": ["awkward", n],
-                "args": [fill(self._index, n + ".index", **kwargs),
-                         fill(self._content, n + ".content", **kwargs),
-                         {"call": ["awkward.persist", "json2dtype"], "args": [awkward.persist.dtype2json(self._dtype)]}]}
+                "call": ["awkward", self.__class__.__name__],
+                "args": [fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         {"dtype": awkward.persist.dtype2json(self._dtype)}]}
 
     @property
     def content(self):
@@ -365,6 +371,10 @@ class ByteIndexedArray(IndexedArray):
         raise NotImplementedError
 
 class SparseArray(awkward.array.base.AwkwardArrayWithContent):
+    """
+    SparseArray
+    """
+
     def __init__(self, length, index, content, default=None):
         self.length = length
         self.index = index
@@ -423,22 +433,23 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         
-        if self._default is None or isinstance(self._default, (numbers.Real, awkward.util.numpy.integer, awkward.util.numpy.floating)):
-            default = self._default
-        elif isinstance(self._default, awkward.util.numpy.ndarray):
-            default = fill(self._default, n + ".default")
+        if self._default is None:
+            default = {"json": self._default}
+        elif isinstance(self._default, (numbers.Integral, awkward.util.numpy.integer)):
+            default = {"json": int(self._default)}
+        elif isinstance(self._default, (numbers.Real, awkward.util.numpy.floating)) and awkward.util.numpy.isfinite(self._default):
+            default = {"json": float(self._default)}
         else:
-            default = {"call": ["pickle", "loads"], "args": pickle.dumps(self._default)}
+            default = fill(self._default, self.__class__.__name__ + ".default", prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
         return {"id": ident,
-                "call": ["awkward", n],
-                "args": [self._length,
-                         fill(self._index, n + ".index", **kwargs),
-                         fill(self._content, n + ".content", **kwargs),
+                "call": ["awkward", self.__class__.__name__],
+                "args": [{"json": int(self._length)},
+                         fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          default]}
 
     @property

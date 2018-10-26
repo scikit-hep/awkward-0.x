@@ -36,6 +36,10 @@ import awkward.type
 import awkward.util
 
 class VirtualArray(awkward.array.base.AwkwardArray):
+    """
+    VirtualArray
+    """
+
     class TransientKey(object):
         def __init__(self, id):
             self._id = id
@@ -50,8 +54,10 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         def __getstate__(self):
             raise RuntimeError("VirtualArray.TransientKeys are not unique across processes, and hence should not be serialized")
 
-    def __init__(self, generator, cache=None, persistentkey=None, type=None, persistvirtual=True):
+    def __init__(self, generator, args=(), kwargs={}, cache=None, persistentkey=None, type=None, persistvirtual=True):
         self.generator = generator
+        self.args = args
+        self.kwargs = kwargs
         self.cache = cache
         self.persistentkey = persistentkey
         self.type = type
@@ -60,9 +66,11 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         self._setitem = None
         self._delitem = None
 
-    def copy(self, generator=None, cache=None, persistentkey=None, type=None, persistvirtual=None):
+    def copy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, persistvirtual=None):
         out = self.__class__.__new__(self.__class__)
         out._generator = self._generator
+        out._args = self._args
+        out._kwargs = self._kwargs
         out._cache = self._cache
         out._persistentkey = self._persistentkey
         out._type = self._type
@@ -78,6 +86,10 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             out._delitem = list(self._delitem)
         if generator is not None:
             out.generator = generator
+        if args is not None:
+            out.args = args
+        if kwargs is not None:
+            out.kwargs = kwargs
         if cache is not None:
             out.cache = cache
         if persistentkey is not None:
@@ -88,8 +100,8 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             out.persistvirtual = persistvirtual
         return out
 
-    def deepcopy(self, generator=None, cache=None, persistentkey=None, type=None, persistvirtual=None):
-        out = self.copy(generator=generator, cache=cache, persistentkey=persistentkey, type=type, persistvirtual=persistvirtual)
+    def deepcopy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, persistvirtual=None):
+        out = self.copy(generator=generator, args=arge, kwargs=kwargs, cache=cache, persistentkey=persistentkey, type=type, persistvirtual=persistvirtual)
         out._array = awkward.util.deepcopy(out._array)
         if out._setitem is not None:
             for n in list(out._setitem):
@@ -114,39 +126,31 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         else:
             return self.array.ones_like(**overrides)
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
-
+        
         if self._persistvirtual:
-            if self._generator.__module__ == "__main__":
-                raise TypeError("cannot persist VirtualArray: its generator is defined in __main__, which won't be available in a subsequent session")
-            if hasattr(self._generator, "__qualname__"):
-                spec = [self._generator.__module__] + self._generator.__qualname__.split(".")
-            else:
-                spec = [self._generator.__module__, self._generator.__name__]
-
-            gen, genname = importlib.import_module(spec[0]), spec[1:]
-            while len(genname) > 0:
-                gen, genname = getattr(gen, genname[0]), genname[1:]
-            if gen is not self._generator:
-                raise TypeError("cannot persist VirtualArray: its generator cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
-
             out = {"id": ident,
-                   "call": ["awkward", n],
-                   "args": [{"function": spec}],
+                   "call": ["awkward", self.__class__.__name__],
+                   "args": [fill(self._generator, self.__class__.__name__ + ".generator", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                            {"tuple": [fill(x, self.__class__.__name__ + ".args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
+                            {"dict": {n: fill(x, self.__class__.__name__ + ".kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}],
                    "cacheable": True}
             others = {}
             if self._persistentkey is not None:
-                others["persistentkey"] = self._persistentkey
+                try:
+                    others["persistentkey"] = {"json": awkward.persist.jsonable(self._persistentkey)}
+                except TypeError:
+                    others["persistentkey"] = {"python": awkward.persist.frompython(self._persistentkey)}
+
             if self._type is not None:
-                others["type"] = {"call": ["awkward.persist", "json2type"], "args": [awkward.persist.type2json(self._type)], "whitelistable": True}
+                others["type"] = {"call": ["awkward.persist", "json2type"], "args": [{"json": awkward.persist.type2json(self._type)}], "whitelistable": True}
             if len(others) > 0:
                 out["kwargs"] = others
             return out
 
         else:
-            return fill(self.array, n + ".array", **kwargs)
+            return fill(self.array, self.__class__.__name__ + ".array", prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
     @property
     def generator(self):
@@ -155,8 +159,29 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     @generator.setter
     def generator(self, value):
         if not callable(value):
-            raise TypeError("generator must be a callable (of zero arguments)")
+            raise TypeError("generator must be a callable")
         self._generator = value
+
+
+    @property
+    def args(self):
+        return self._args
+
+    @args.setter
+    def args(self, value):
+        if not isinstance(value, tuple):
+            value = (value,)
+        self._args = value
+
+    @property
+    def kwargs(self):
+        return self._kwargs
+
+    @kwargs.setter
+    def kwargs(self, value):
+        if not isinstance(value, dict):
+            raise TypeError("kwargs must be a dict")
+        self._kwargs = dict(value)
 
     @property
     def cache(self):
@@ -269,7 +294,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             return self._array is not None and self._array in self._cache
 
     def materialize(self):
-        array = awkward.util.toarray(self._generator(), awkward.util.DEFAULTTYPE)
+        array = awkward.util.toarray(self._generator(*self._args, **self._kwargs), awkward.util.DEFAULTTYPE)
         if self._setitem is not None:
             for n, x in self._setitem.items():
                 array[n] = x
@@ -277,8 +302,11 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             for n in self._delitem:
                 del array[n]
 
-        if self._type is not None and self._type != awkward.type.fromarray(array):
-            raise TypeError("materialized array has type\n\n{0}\n\nexpected type\n\n{1}".format(awkward.type._str(awkward.type.fromarray(array), indent="    "), awkward.type._str(self._type, indent="    ")))
+        if self._type is not None:
+            materializedtype = awkward.type.fromarray(array)
+            if ((isinstance(self._type, awkward.type.Type) and not self._type._eq(materializedtype, set(), ignoremask=True)) or
+                (not isinstance(self._type, awkward.type.Type) and not self._type == materializedtype)):
+                raise TypeError("materialized array has type\n\n{0}\n\nexpected type\n\n{1}".format(awkward.type._str(awkward.type.fromarray(array), indent="    "), awkward.type._str(self._type, indent="    ")))
 
         if self._cache is None:
             # states (1), (2), and (6)

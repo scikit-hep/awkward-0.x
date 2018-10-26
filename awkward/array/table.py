@@ -35,9 +35,17 @@ import awkward.type
 import awkward.util
 
 class Table(awkward.array.base.AwkwardArray):
+    """
+    Table
+    """
+
     ##################### class Row
 
     class Row(object):
+        """
+        Table.Row
+        """
+
         __slots__ = ["_table", "_index"]
 
         def __init__(self, table, index):
@@ -234,11 +242,11 @@ class Table(awkward.array.base.AwkwardArray):
                 out[n] = x.ones_like(**overrides)
         return out
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         return {"id": ident,
                 "call": ["awkward", self.__class__.__name__, "frompairs"],
-                "args": [{"pairs": [[n, fill(x, self.__class__.__name__ + ".content", **kwargs)] for n, x in self._content.items()]}]}
+                "args": [{"pairs": [[n, fill(x, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)] for n, x in self._content.items()]}]}
 
     @property
     def base(self):

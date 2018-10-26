@@ -27,23 +27,3 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-from awkward.array.chunked import ChunkedArray, AppendableArray
-from awkward.array.indexed import IndexedArray, ByteIndexedArray, SparseArray
-from awkward.array.jagged import JaggedArray, ByteJaggedArray
-from awkward.array.masked import MaskedArray, BitMaskedArray, IndexedMaskedArray
-from awkward.array.objects import Methods, ObjectArray
-from awkward.array.table import Table
-from awkward.array.union import UnionArray
-from awkward.array.virtual import VirtualArray
-
-from awkward.derived.strings import StringArray
-
-from awkward.generate import fromiter
-
-from awkward.persist import serialize, deserialize, save, load, hdf5
-
-# convenient access to the version number
-from awkward.version import __version__
-
-__all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "ByteIndexedArray", "SparseArray", "JaggedArray", "ByteJaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]

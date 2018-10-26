@@ -33,6 +33,10 @@ import awkward.type
 import awkward.util
 
 class UnionArray(awkward.array.base.AwkwardArray):
+    """
+    UnionArray
+    """
+
     def __init__(self, tags, index, contents):
         self.tags = tags
         self.index = index
@@ -95,21 +99,20 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 return False
         return True
 
-    def __awkward_persist__(self, ident, fill, **kwargs):
+    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         if self.issequential:
             return {"id": ident,
-                    "call": ["awkward", n, "fromtags"],
-                    "args": [fill(self._tags, n + ".tags", **kwargs),
-                             {"list": [fill(x, n + ".contents", **kwargs) for x in self._contents]}]}
+                    "call": ["awkward", self.__class__.__name__, "fromtags"],
+                    "args": [fill(self._tags, self.__class__.__name__ + ".tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             {"list": [fill(x, self.__class__.__name__ + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
 
         else:
             return {"id": ident,
-                    "call": ["awkward", n],
-                    "args": [fill(self._tags, n + ".tags", **kwargs),
-                             fill(self._index, n + ".index", **kwargs),
-                             {"list": [fill(x, n + ".contents", **kwargs) for x in self._contents]}]}
+                    "call": ["awkward", self.__class__.__name__],
+                    "args": [fill(self._tags, self.__class__.__name__ + ".tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             {"list": [fill(x, self.__class__.__name__ + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
 
     @property
     def tags(self):
