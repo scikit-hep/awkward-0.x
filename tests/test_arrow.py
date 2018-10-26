@@ -287,9 +287,10 @@ class Test(unittest.TestCase):
     #             ["a", "b", "c"])])
     #         writer = pyarrow.parquet.ParquetWriter("tests/samples/features-0_11_1.parquet", a.schema)
     #         writer.write_table(a)
+    #         writer.write_table(a)
     #         writer.close()
 
     def test_arrow_readparquet(self):
         if pyarrow is not None:
-            a = pyarrow.parquet.read_table("tests/samples/features-0_11_1.parquet")
-            print(a)
+            file = pyarrow.parquet.ParquetFile("tests/samples/features-0_11_1.parquet")
+

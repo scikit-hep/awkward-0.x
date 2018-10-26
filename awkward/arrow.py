@@ -34,12 +34,63 @@ import awkward.array.jagged
 import awkward.array.masked
 import awkward.array.table
 import awkward.derived.strings
+import awkward.type
 import awkward.util
 
 ARROW_BITMASKTYPE = awkward.util.numpy.uint8
 ARROW_INDEXTYPE = awkward.util.numpy.int32
 ARROW_TAGTYPE = awkward.util.numpy.uint8
 ARROW_CHARTYPE = awkward.util.numpy.uint8
+
+def schema2type(schema):
+
+
+    def recurse(tpe):
+        if isinstance(tpe, pyarrow.lib.DictionaryType):
+            return recurse(tpe.dictionary.type)
+
+        elif isinstance(tpe, pyarrow.lib.StructType):
+            out = None
+            for i in range(tpe.num_children):
+                x = awkward.type.ArrayType(tpe[i].name, recurse(tpe[i].type))
+                if out is None:
+                    out = x
+                else:
+                    out = out & x
+            return out
+
+        elif isinstance(tpe, pyarrow.lib.ListType):
+            return awkward.type.ArrayType(float("inf"), recurse(tpe.value_type))
+
+        elif isinstance(tpe, pyarrow.lib.UnionType):
+            out = None
+            for i in range(tpe.num_children):
+                x = recurse(tpe[i].type)
+                if out is None:
+                    out = x
+                else:
+                    out = out | x
+            return out
+
+        elif tpe == pyarrow.string():
+            raise NotImplementedError
+
+        elif tpe == pyarrow.binary():
+            raise NotImplementedError
+
+        elif tpe == pyarrow.bool_():
+            raise NotImplementedError
+
+        elif isinstance(tpe, pyarrow.lib.DataType):
+            tpe.to_pandas_dtype()
+            raise NotImplementedError
+
+        else:
+            raise NotImplementedError(repr(tpe))
+
+
+
+
 
 def view(obj):
     import pyarrow
@@ -157,7 +208,10 @@ def view(obj):
 
     elif isinstance(obj, pyarrow.lib.ChunkedArray):
         chunks = [x for x in obj.chunks if len(x) > 0]
-        return awkward.array.chunked.ChunkedArray([view(x) for x in chunks], counts=[len(x) for x in chunks])
+        if len(chunks) == 1:
+            return chunks[0]
+        else:
+            return awkward.array.chunked.ChunkedArray([view(x) for x in chunks], counts=[len(x) for x in chunks])
 
     elif isinstance(obj, pyarrow.lib.RecordBatch):
         out = awkward.array.table.Table()
@@ -173,7 +227,10 @@ def view(obj):
             if len(chunk) > 0:
                 chunks.append(chunk)
                 counts.append(len(chunk))
-        return awkward.array.chunked.ChunkedArray(chunks, counts=counts)
+        if len(chunks) == 1:
+            return chunks[0]
+        else:
+            return awkward.array.chunked.ChunkedArray(chunks, counts=counts)
 
     else:
         raise NotImplementedError(type(obj))
