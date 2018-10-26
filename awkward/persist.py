@@ -343,7 +343,8 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
                 obj = jsonable(obj)
             except TypeError:
                 try:
-                    return {"id": ident, "call": ["awkward.persist", "topython"], "args": [awkward.persist.frompython(obj)]}
+                    return {"id": ident, "python": awkward.persist.frompython(obj)}
+
                 except Exception as err:
                     raise TypeError("could not persist component as an array, awkward-array, importable function/class, JSON, or pickle; pickle error is\n\n    {0}: {1}".format(err.__class__.__name__, str(err)))
             else:
@@ -422,6 +423,9 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
 
             elif "json" in schema:
                 out = schema["json"]
+
+            elif "python" in schema:
+                out = topython(schema["python"])
 
             elif "ref" in schema:
                 if schema["ref"] in seen:
@@ -503,6 +507,9 @@ def keys(storage, name="", subschemas=True):
                 pass
 
             elif "json" in schema:
+                pass
+
+            elif "python" in schema:
                 pass
 
             elif "ref" in schema:

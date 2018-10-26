@@ -137,7 +137,8 @@ class VirtualArray(awkward.array.base.AwkwardArray):
                 try:
                     others["persistentkey"] = {"json": awkward.persist.jsonable(self._persistentkey)}
                 except TypeError:
-                    others["persistentkey"] = {"call": ["awkward.persist", "topython"], "args": [awkward.persist.frompython(self._persistentkey)]}
+                    others["persistentkey"] = {"python": awkward.persist.frompython(self._persistentkey)}
+
             if self._type is not None:
                 others["type"] = {"call": ["awkward.persist", "json2type"], "args": [{"json": awkward.persist.type2json(self._type)}], "whitelistable": True}
             if len(others) > 0:

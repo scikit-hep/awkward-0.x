@@ -306,7 +306,7 @@ def fromparquet(file, cache=None, persistvirtual=False, metadata=None, common_me
         if numrows > 0:
             chunk = awkward.array.table.Table()
             for n in columns:
-                chunk[n] = awkward.array.virtual.VirtualArray(parquetfile, (i, n), type=awkward.type.ArrayType(numrows, parquetfile.type[n]))
+                chunk[n] = awkward.array.virtual.VirtualArray(parquetfile, (i, n), cache=cache, type=awkward.type.ArrayType(numrows, parquetfile.type[n]), persistvirtual=persistvirtual)
             chunks.append(chunk)
             counts.append(numrows)
 
