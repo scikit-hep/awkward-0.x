@@ -89,11 +89,10 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         return {"id": ident,
-                "call": ["awkward", n],
-                "args": [fill(self._index, n + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
+                "call": ["awkward", self.__class__.__name__],
+                "args": [fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
 
     @property
     def index(self):
@@ -260,11 +259,10 @@ class ByteIndexedArray(IndexedArray):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         return {"id": ident,
-                "call": ["awkward", n],
-                "args": [fill(self._index, n + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                "call": ["awkward", self.__class__.__name__],
+                "args": [fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          {"dtype": awkward.persist.dtype2json(self._dtype)}]}
 
     @property
@@ -425,7 +423,6 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         
         if self._default is None:
             default = {"json": self._default}
@@ -434,13 +431,13 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         elif isinstance(self._default, (numbers.Real, awkward.util.numpy.floating)) and awkward.util.numpy.isfinite(self._default):
             default = {"json": float(self._default)}
         else:
-            default = fill(self._default, n + ".default", prefix, suffix, schemasuffix, storage, compression, **kwargs)
+            default = fill(self._default, self.__class__.__name__ + ".default", prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
         return {"id": ident,
-                "call": ["awkward", n],
+                "call": ["awkward", self.__class__.__name__],
                 "args": [{"json": int(self._length)},
-                         fill(self._index, n + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          default]}
 
     @property

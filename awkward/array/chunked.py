@@ -80,10 +80,9 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self.knowcounts()
         self._valid()
-        n = self.__class__.__name__
         return {"id": ident,
-                "call": ["awkward", n],
-                "args": [{"list": [fill(x, n + ".chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for c, x in zip(self._counts, self._chunks) if c > 0]},
+                "call": ["awkward", self.__class__.__name__],
+                "args": [{"list": [fill(x, self.__class__.__name__ + ".chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for c, x in zip(self._counts, self._chunks) if c > 0]},
                          {"json": [int(c) for c in self._counts if c > 0]}]}
 
     @property
@@ -635,8 +634,7 @@ class AppendableArray(ChunkedArray):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
-
+        
         chunks = []
         for c, x in zip(self._counts, self._chunks):
             if 0 < c < len(x):
@@ -645,10 +643,10 @@ class AppendableArray(ChunkedArray):
                 chunks.append(x)
 
         return {"id": ident,
-                "call": ["awkward", n],
+                "call": ["awkward", self.__class__.__name__],
                 "args": [{"tuple": [{"json": int(x)} for x in self._chunkshape]},
                          {"dtype": awkward.persist.dtype2json(self._dtype)},
-                         {"list": [fill(x, n + ".chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in chunks]}]}
+                         {"list": [fill(x, self.__class__.__name__ + ".chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in chunks]}]}
 
     @property
     def chunkshape(self):

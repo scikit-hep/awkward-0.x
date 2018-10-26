@@ -127,14 +127,13 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
             gen, genname = getattr(gen, genname[0]), genname[1:]
         if gen is not self._generator:
             raise TypeError("cannot persist ObjectArray: its generator cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
-
-        name = self.__class__.__name__
+        
         out = {"id": ident,
-               "call": ["awkward", name],
-               "args": [fill(self._content, name + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+               "call": ["awkward", self.__class__.__name__],
+               "args": [fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                         {"function": spec},
-                        {"tuple": [fill(x, name + ".args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
-                        {"dict": {n: fill(x, name + ".kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}]}
+                        {"tuple": [fill(x, self.__class__.__name__ + ".args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
+                        {"dict": {n: fill(x, self.__class__.__name__ + ".kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}]}
                         
         return out
 

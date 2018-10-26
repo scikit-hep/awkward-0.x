@@ -124,8 +124,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        name = self.__class__.__name__
-
+        
         if self._persistvirtual:
             if self._generator.__module__ == "__main__":
                 raise TypeError("cannot persist VirtualArray: its generator is defined in __main__, which won't be available in a subsequent session")
@@ -141,10 +140,10 @@ class VirtualArray(awkward.array.base.AwkwardArray):
                 raise TypeError("cannot persist VirtualArray: its generator cannot be found via its __name__ (Python 2) or __qualname__ (Python 3)")
 
             out = {"id": ident,
-                   "call": ["awkward", name],
+                   "call": ["awkward", self.__class__.__name__],
                    "args": [{"function": spec},
-                            {"tuple": [fill(x, name + ".args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
-                            {"dict": {n: fill(x, name + ".kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}],
+                            {"tuple": [fill(x, self.__class__.__name__ + ".args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
+                            {"dict": {n: fill(x, self.__class__.__name__ + ".kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}],
                    "cacheable": True}
             others = {}
             if self._persistentkey is not None:
@@ -159,7 +158,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             return out
 
         else:
-            return fill(self.array, name + ".array", prefix, suffix, schemasuffix, storage, compression, **kwargs)
+            return fill(self.array, self.__class__.__name__ + ".array", prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
     @property
     def generator(self):

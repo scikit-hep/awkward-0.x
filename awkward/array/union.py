@@ -97,19 +97,18 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         if self.issequential:
             return {"id": ident,
-                    "call": ["awkward", n, "fromtags"],
-                    "args": [fill(self._tags, n + ".tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"list": [fill(x, n + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
+                    "call": ["awkward", self.__class__.__name__, "fromtags"],
+                    "args": [fill(self._tags, self.__class__.__name__ + ".tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             {"list": [fill(x, self.__class__.__name__ + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
 
         else:
             return {"id": ident,
-                    "call": ["awkward", n],
-                    "args": [fill(self._tags, n + ".tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._index, n + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"list": [fill(x, n + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
+                    "call": ["awkward", self.__class__.__name__],
+                    "args": [fill(self._tags, self.__class__.__name__ + ".tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             {"list": [fill(x, self.__class__.__name__ + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
 
     @property
     def tags(self):

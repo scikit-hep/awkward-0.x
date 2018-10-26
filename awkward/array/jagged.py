@@ -236,18 +236,17 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         if offsetsaliased(self._starts, self._stops) and len(self._starts) > 0 and self._starts[0] == 0:
             return {"id": ident,
-                    "call": ["awkward", n, "fromcounts"],
-                    "args": [fill(self.counts, n + ".counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
+                    "call": ["awkward", self.__class__.__name__, "fromcounts"],
+                    "args": [fill(self.counts, self.__class__.__name__ + ".counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
         else:
             return {"id": ident,
-                    "call": ["awkward", n],
-                    "args": [fill(self._starts, n + ".starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._stops, n + ".stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
+                    "call": ["awkward", self.__class__.__name__],
+                    "args": [fill(self._starts, self.__class__.__name__ + ".starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._stops, self.__class__.__name__ + ".stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
 
     @property
     def starts(self):
@@ -1144,19 +1143,18 @@ class ByteJaggedArray(JaggedArray):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         if offsetsaliased(self._starts, self._stops) and len(self._starts) > 0 and self._starts[0] == 0:
             return {"id": ident,
-                    "call": ["awkward", n, "fromcounts"],
-                    "args": [fill(self.counts, n + ".counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                    "call": ["awkward", self.__class__.__name__, "fromcounts"],
+                    "args": [fill(self.counts, self.__class__.__name__ + ".counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                              {"dtype": awkward.persist.dtype2json(self._subdtype)}]}
         else:
             return {"id": ident,
-                    "call": ["awkward", n],
-                    "args": [fill(self._starts, n + ".starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._stops, n + ".stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                    "call": ["awkward", self.__class__.__name__],
+                    "args": [fill(self._starts, self.__class__.__name__ + ".starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._stops, self.__class__.__name__ + ".stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                              {"dtype": awkward.persist.dtype2json(self._subdtype)}]}
 
     @property
