@@ -36,6 +36,10 @@ import awkward.type
 import awkward.util
 
 class Methods(object):
+    """
+    Methods: abstract mix-in
+    """
+
     @staticmethod
     def mixin(methods, awkwardtype):
         assert issubclass(methods, Methods)
@@ -55,6 +59,10 @@ class Methods(object):
             return awkwardtype
 
 class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
+    """
+    ObjectArray
+    """
+
     def __init__(self, content, generator, args=(), kwargs={}):
         self.content = content
         self.generator = generator

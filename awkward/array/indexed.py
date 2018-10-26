@@ -46,6 +46,10 @@ def invert(permutation):
     return out
 
 class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
+    """
+    IndexedArray
+    """
+
     def __init__(self, index, content):
         self.index = index
         self.content = content
@@ -204,6 +208,10 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             return self._content[self._index].pandas()
 
 class ByteIndexedArray(IndexedArray):
+    """
+    ByteIndexedArray
+    """
+
     def __init__(self, index, content, dtype):
         super(ByteIndexedArray, self).__init__(index, content)
         self.dtype = dtype
@@ -363,6 +371,10 @@ class ByteIndexedArray(IndexedArray):
         raise NotImplementedError
 
 class SparseArray(awkward.array.base.AwkwardArrayWithContent):
+    """
+    SparseArray
+    """
+
     def __init__(self, length, index, content, default=None):
         self.length = length
         self.index = index

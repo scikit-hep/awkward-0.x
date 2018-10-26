@@ -35,6 +35,10 @@ import awkward.type
 import awkward.util
 
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
+    """
+    AwkwardArray: abstract base class
+    """
+
     def __array__(self, *args, **kwargs):
         # hitting this function is usually undesirable; uncomment to search for performance bugs
         # raise Exception("{0} {1}".format(args, kwargs))
@@ -187,6 +191,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return self[function(*args, **kwargs).argmin()]
 
 class AwkwardArrayWithContent(AwkwardArray):
+    """
+    AwkwardArrayWithContent: abstract base class
+    """
+
     def __setitem__(self, where, what):
         if isinstance(where, awkward.util.string):
             self._content[where] = what

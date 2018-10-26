@@ -36,6 +36,10 @@ import awkward.type
 import awkward.util
 
 class VirtualArray(awkward.array.base.AwkwardArray):
+    """
+    VirtualArray
+    """
+
     class TransientKey(object):
         def __init__(self, id):
             self._id = id

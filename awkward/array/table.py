@@ -35,9 +35,17 @@ import awkward.type
 import awkward.util
 
 class Table(awkward.array.base.AwkwardArray):
+    """
+    Table
+    """
+
     ##################### class Row
 
     class Row(object):
+        """
+        Table.Row
+        """
+
         __slots__ = ["_table", "_index"]
 
         def __init__(self, table, index):

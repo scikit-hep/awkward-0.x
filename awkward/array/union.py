@@ -33,6 +33,10 @@ import awkward.type
 import awkward.util
 
 class UnionArray(awkward.array.base.AwkwardArray):
+    """
+    UnionArray
+    """
+
     def __init__(self, tags, index, contents):
         self.tags = tags
         self.index = index

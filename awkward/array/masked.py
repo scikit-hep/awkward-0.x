@@ -36,6 +36,10 @@ import awkward.type
 import awkward.util
 
 class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
+    """
+    MaskedArray
+    """
+
     ### WTF were the designers of numpy.ma thinking?
     # @staticmethod
     # def is_masked(x):
@@ -278,6 +282,10 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         raise NotImplementedError
 
 class BitMaskedArray(MaskedArray):
+    """
+    BitMaskedArray
+    """
+
     def __init__(self, mask, content, maskedwhen=True, lsborder=False):
         super(BitMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
         self.lsborder = lsborder
@@ -505,6 +513,10 @@ class BitMaskedArray(MaskedArray):
         raise NotImplementedError
 
 class IndexedMaskedArray(MaskedArray):
+    """
+    IndexedMaskedArray
+    """
+
     def __init__(self, mask, content, maskedwhen=-1):
         super(IndexedMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
         self._isvalid = False

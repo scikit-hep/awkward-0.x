@@ -34,6 +34,10 @@ import awkward.type
 import awkward.util
 
 class ChunkedArray(awkward.array.base.AwkwardArray):
+    """
+    ChunkedArray
+    """
+
     def __init__(self, chunks, counts=[]):
         self.chunks = chunks
         self.counts = counts
@@ -610,6 +614,10 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         raise NotImplementedError
 
 class AppendableArray(ChunkedArray):
+    """
+    AppendableArray
+    """
+
     def __init__(self, chunkshape, dtype, chunks=[]):
         self.chunkshape = chunkshape
         self.dtype = dtype

@@ -35,6 +35,10 @@ import awkward.array.jagged
 import awkward.array.objects
 
 class StringMethods(object):
+    """
+    StringMethods
+    """
+
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         if method != "__call__":
             raise NotImplemented
@@ -90,6 +94,10 @@ def tostring(x, decoder):
         return decoder(x, errors="replace")[0]
 
 class StringArray(StringMethods, awkward.array.objects.ObjectArray):
+    """
+    StringArray
+    """
+
     def __init__(self, starts, stops, content, encoding="utf-8"):
         self._content = awkward.array.jagged.ByteJaggedArray(starts, stops, content, awkward.util.CHARTYPE)
         self._generator = tostring

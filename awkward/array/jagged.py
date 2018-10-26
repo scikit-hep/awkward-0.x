@@ -102,6 +102,10 @@ def uniques2offsetsparents(uniques):
     return offsets, parents
 
 class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
+    """
+    JaggedArray
+    """
+
     def __init__(self, starts, stops, content):
         self.starts = starts
         self.stops = stops
@@ -1089,6 +1093,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return out
 
 class ByteJaggedArray(JaggedArray):
+    """
+    ByteJaggedArray
+    """
+
     def __init__(self, starts, stops, content, subdtype):
         super(ByteJaggedArray, self).__init__(starts, stops, content)
         self.subdtype = subdtype
