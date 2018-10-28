@@ -2,21 +2,21 @@
 
 # Copyright (c) 2018, DIANA-HEP
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 # * Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
-# 
+#
 # * Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
-# 
+#
 # * Neither the name of the copyright holder nor the names of its
 #   contributors may be used to endorse or promote products derived from
 #   this software without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -38,9 +38,9 @@ import pickle
 import zipfile
 import zlib
 try:
-    from collections.abc import Mapping, MutableMapping
+    from collections.abc import Mapping, MutableMapping, Iterable
 except ImportError:
-    from collections import Mapping, MutableMapping
+    from collections import Mapping, MutableMapping, Iterable
 
 import awkward.type
 import awkward.util
@@ -278,7 +278,7 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
 
         minsize = x.get("minsize", 0)
         tpes = x.get("types", (object,))
-        if not isinstance(tpes, tuple):
+        if not isinstance(tpes, Iterable):
             tpes = (tpes,)
         contexts = x.get("contexts", "*")
         pair = x["pair"]
@@ -432,7 +432,7 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
                     out = seen[schema["ref"]]
                 else:
                     out = awkward.array.virtual.VirtualArray(lambda: seen[schema["ref"]])
-            
+
             else:
                 raise ValueError("unrecognized JSON object with fields {0}".format(", ".join(repr(x) for x in schema)))
 
@@ -589,7 +589,7 @@ class Load(Mapping):
         alloptions.update(options)
         self.schemasuffix = alloptions.pop("schemasuffix")
         self.options = alloptions
-        
+
     def __getitem__(self, where):
         return deserialize(self._file, name=where + self.schemasuffix, whitelist=self.options["whitelist"], cache=self.options["cache"])
 
@@ -610,7 +610,7 @@ class Load(Mapping):
 
     def close(self):
         self._file.f.close()
-        
+
     def __del__(self):
         self.close()
 
