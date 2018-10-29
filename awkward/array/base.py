@@ -39,10 +39,17 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     AwkwardArray: abstract base class
     """
 
-    def __array__(self, *args, **kwargs):
+    def __array__(self, dtype=None):
         # hitting this function is usually undesirable; uncomment to search for performance bugs
         # raise Exception("{0} {1}".format(args, kwargs))
-        return awkward.util.numpy.array(self, *args, **kwargs)
+
+        if dtype is None:
+            dtype = self.dtype
+        
+        if dtype == awkward.util.numpy.dtype(object):
+            return awkward.util.numpy.array(list(self), dtype=dtype)
+        else:
+            return awkward.util.numpy.fromiter(self, dtype=dtype, count=len(self))
 
     def __getstate__(self):
         state = {}
