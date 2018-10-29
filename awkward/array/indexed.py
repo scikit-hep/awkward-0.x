@@ -573,7 +573,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
             match = awkward.util.numpy.searchsorted(self._index, head, side="left")
 
-            if self._index[match] == head:
+            if match < len(self._index) and self._index[match] == head:
                 return self._content[(match,) + tail]
             elif tail == ():
                 return self.default
@@ -630,6 +630,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
             # find the mask's sparse elements in my sparse elements
             match2 = awkward.util.numpy.searchsorted(self._index, head._index, side="left")
+            match2[match2 >= len(head._index)] = len(head._index) - 1
             index = index[awkward.util.numpy.logical_and(self._index[match2] == head._index, head._content)]
 
             return self.copy(length=length, index=index, content=content)
@@ -650,6 +651,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
                     raise IndexError("indexes out of bounds for size {0}".format(self._length))
                 
                 match = awkward.util.numpy.searchsorted(self._index, head, side="left")
+                match[match >= len(self._index)] = len(self._index) - 1
                 explicit = (self._index[match] == head)
 
                 tags = awkward.util.numpy.zeros(len(head), dtype=awkward.util.TAGTYPE)
