@@ -292,5 +292,10 @@ class Test(unittest.TestCase):
 
     def test_arrow_readparquet(self):
         if pyarrow is not None:
-            file = pyarrow.parquet.ParquetFile("tests/samples/features-0_11_1.parquet")
-
+            a = awkward.arrow.fromparquet("tests/samples/features-0_11_1.parquet", persistvirtual=True)
+            assert a["a"].tolist() == [1.1, 2.2, 3.3, None, 5.5, 2.2, 1.1, 3.3, None, 5.5, 1.1, 2.2, 3.3, None, 5.5, 2.2, 1.1, 3.3, None, 5.5]
+            storage = {}
+            awkward.serialize(a, storage)
+            b = awkward.deserialize(storage)
+            assert b["b"].tolist() == [[1, 2, 3], [], [None], None, [4, 5, 6], [2, 1, 3], [], [None], None, [4, 5, 6], [1, 2, 3], [], [None], None, [4, 5, 6], [2, 1, 3], [], [None], None, [4, 5, 6]] 
+            assert a["c"].tolist() == [[[1.1, 2.2]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[2.2, 1.1]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[1.1, 2.2]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[2.2 , 1.1]], None, [[3.3, None], []], [], [None, [4.4, 5.5]]]
