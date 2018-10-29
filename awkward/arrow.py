@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import json
+
 import awkward.array.chunked
 import awkward.array.indexed
 import awkward.array.jagged
@@ -281,7 +283,7 @@ class ParquetFile(object):
         import pyarrow.parquet
         self.parquetfile = pyarrow.parquet.ParquetFile(self.file, metadata=self.metadata, common_metadata=self.common_metadata)
         self.type = schema2type(self.parquetfile.schema.to_arrow_schema())
-
+        
     def __getstate__(self):
         return {"file": self.file, "metadata": self.metadata, "common_metadata": self.common_metadata}
 
@@ -295,6 +297,14 @@ class ParquetFile(object):
     def __call__(self, rowgroup, column):
         return view(self.parquetfile.read_row_group(rowgroup, columns=[column]))[column]
 
+    def tojson(self):
+        json.dumps([self.file, self.metadata, self.common_metadata])
+        return {"file": self.file, "metadata": self.metadata, "common_metadata": self.common_metadata}
+
+    @classmethod
+    def fromjson(cls, state):
+        return cls(state["file"], cache=None, metadata=state["metadata"], common_metadata=state["common_metadata"])
+        
 def fromparquet(file, cache=None, persistvirtual=False, metadata=None, common_metadata=None):
     parquetfile = ParquetFile(file, cache=cache, metadata=metadata, common_metadata=common_metadata)
     columns = parquetfile.type.columns

@@ -58,7 +58,8 @@ whitelist = [["numpy", "frombuffer"],
              ["zlib", "decompress"],
              ["awkward", "*Array"],
              ["awkward", "Table"],
-             ["awkward.persist", "*"]]
+             ["awkward.persist", "*"],
+             ["awkward.arrow", "ParquetFile", "fromjson"]]
 
 def frompython(obj):
     return base64.b64encode(pickle.dumps(obj)).decode("ascii")
@@ -341,6 +342,12 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
 
                 if gen is obj:
                     return {"id": ident, "function": spec}
+
+            if hasattr(obj, "tojson") and hasattr(type(obj), "fromjson") and getattr(importlib.import_module(type(obj).__module__), type(obj).__name__) is type(obj):
+                try:
+                    return {"id": ident, "call": [type(obj).__module__, type(obj).__name__, "fromjson"], "args": [{"json": obj.tojson()}]}
+                except:
+                    pass
 
             try:
                 obj = jsonable(obj)
