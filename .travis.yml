@@ -33,12 +33,14 @@ addons:
       - python-setuptools
 
 script:
-  python setup.py test
+  python setup.py pytest
 
 install:
   - pip install --upgrade setuptools_scm
   - pip install $NUMPY
   - python -c 'import numpy; print(numpy.__version__)'
+  - pip install pytest pytest-runner
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install h5py ; fi
 
 notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
