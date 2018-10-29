@@ -360,7 +360,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
             outtags[mask] = outtag
             outindex[mask] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(mask))
 
-            result = getattr(ufunc, method)(*[x[mask] for x in inputs], **kwargs)
+            result = getattr(ufunc, method)(*[x[mask] if isinstance(x, UnionArray) else x for x in inputs], **kwargs)
 
             if isinstance(result, tuple):
                 if out is None:
