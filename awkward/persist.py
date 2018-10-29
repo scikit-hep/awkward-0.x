@@ -38,9 +38,9 @@ import pickle
 import zipfile
 import zlib
 try:
-    from collections.abc import Mapping, MutableMapping, Iterable
+    from collections.abc import Mapping, MutableMapping
 except ImportError:
-    from collections import Mapping, MutableMapping, Iterable
+    from collections import Mapping, MutableMapping
 
 import awkward.type
 import awkward.util
@@ -278,8 +278,11 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
 
         minsize = x.get("minsize", 0)
         tpes = x.get("types", (object,))
-        if not isinstance(tpes, Iterable):
-            tpes = (tpes,)
+        if not isinstance(tpes, tuple):
+            try:
+                tpes = tuple(tpes)
+            except TypeError:
+                tpes = (tpes,)
         contexts = x.get("contexts", "*")
         pair = x["pair"]
 
