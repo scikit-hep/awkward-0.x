@@ -553,8 +553,8 @@ def save(file, array, name=None, mode="a", **options):
         if isinstance(file, pathlib.Path):
              file = str(file)
 
-    if isinstance(file, str) and not file.endswith(".akd"):
-        file = file + ".akd"
+    if isinstance(file, str) and not file.endswith(".awkd"):
+        file = file + ".awkd"
 
     alloptions = {"delimiter": "-", "suffix": ".raw", "schemasuffix": ".json", "compression": compression}
     alloptions.update(options)
