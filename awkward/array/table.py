@@ -191,6 +191,27 @@ class Table(awkward.array.base.AwkwardArray):
             out[n] = x
         return out
 
+    @classmethod
+    def fromview(cls, view, base):
+        if view is None:
+            return base
+
+        elif isinstance(view, tuple) and len(view) == 3 and all(isinstance(x, awkward.util.integer) for x in view):
+            start, step, length = view
+            out = base.copy()
+            out._view = int(start), int(step), int(length)
+            out._base = base
+            return out
+
+        elif isinstance(view, awkward.util.numpy.ndarray) and issubclass(view.dtype.type, awkward.util.integer):
+            out = base.copy()
+            out._view = view
+            out._base = base
+            return out
+            
+        else:
+            raise TypeError("view must be None, a 3-tuple of integers, or a Numpy array of integers")
+
     def copy(self, content=None):
         out = self.__class__.__new__(self.__class__)
         out._view = self._view
@@ -244,9 +265,19 @@ class Table(awkward.array.base.AwkwardArray):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        return {"id": ident,
-                "call": ["awkward", self.__class__.__name__, "frompairs"],
-                "args": [{"pairs": [[n, fill(x, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)] for n, x in self._content.items()]}]}
+        out = {"call": ["awkward", self.__class__.__name__, "frompairs"],
+               "args": [{"pairs": [[n, fill(x, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)] for n, x in self._content.items()]}]}
+        if isinstance(self._view, tuple):
+            start, step, length = self._view
+            out = {"call": ["awkward", self.__class__.__name__, "fromview"],
+                   "args": [{"tuple": [{"json": start}, {"json": step}, {"json": length}]}, out]}
+
+        elif isinstance(self._view, awkward.util.numpy.ndarray):
+            out = {"call": ["awkward", self.__class__.__name__, "fromview"],
+                   "args": [fill(self._view, self.__class__.__name__ + ".view", prefix, suffix, schemasuffix, storage, compression, **kwargs), out]}
+
+        out["id"] = ident
+        return out
 
     @property
     def base(self):
