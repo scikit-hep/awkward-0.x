@@ -176,7 +176,7 @@ class Table(awkward.array.base.AwkwardArray):
         self._rowname = value
 
     @classmethod
-    def fromrec(cls, recarray, ):
+    def fromrec(cls, recarray):
         if not isinstance(recarray, awkward.util.numpy.ndarray) or recarray.dtype.names is None:
             raise TypeError("recarray must be a Numpy structured array")
         out = cls()
@@ -268,9 +268,9 @@ class Table(awkward.array.base.AwkwardArray):
         out = {"call": ["awkward", self.__class__.__name__, "frompairs"],
                "args": [{"pairs": [[n, fill(x, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)] for n, x in self._content.items()]}]}
         if isinstance(self._view, tuple):
-            start, step, length = view
+            start, step, length = self._view
             out = {"call": ["awkward", self.__class__.__name__, "fromview"],
-                   "args": [{"tuple": {"json": [start, step, length]}}, out]}
+                   "args": [{"tuple": [{"json": start}, {"json": step}, {"json": length}]}, out]}
 
         elif isinstance(self._view, awkward.util.numpy.ndarray):
             out = {"call": ["awkward", self.__class__.__name__, "fromview"],
