@@ -132,7 +132,7 @@ def concatenate(arrays):
     if all(isinstance(x, numpy.ndarray) for x in arrays):
         return numpy.concatenate(arrays)
     else:
-        return arrays[0].concat(*arrays[1:])
+        return arrays[0].concat(arrays[1:])
 
 def isstringslice(where):
     import awkward.array.base

@@ -1021,14 +1021,15 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             offsets[-1] = len(content)
         return cls.fromoffsets(offsets, content)
 
-    @classmethod
-    def concat(cls, first, *rest):    # all elements of first followed by all elements of second
-        arrays = (first,) + rest
+    def concat(self, others):    # all elements of self followed by all elements of others
+        if not isinstance(others, list):
+            others = (others)
+        if not all(isinstance(x, JaggedArray) for x in others):
+            raise TypeError("cannot concat JaggedArrays with non-JaggedArrays")
+
+        arrays = (self,) + tuple(others)
         for x in arrays:
             x._valid()
-
-        if not all(isinstance(x, JaggedArray) for x in arrays):
-            raise TypeError("cannot concat JaggedArrays with non-JaggedArrays")
 
         starts = awkward.util.numpy.concatenate([x._starts for x in arrays])
         stops = awkward.util.numpy.concatenate([x._stops for x in arrays])
@@ -1044,7 +1045,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             startsi += len(array._starts)
             contenti += len(array._content)
 
-        return cls(starts, stops, content)
+        return JaggedArray(starts, stops, content)
 
     @classmethod
     def allconcat(cls, first, *rest):    # each item in first followed by second, etc.
