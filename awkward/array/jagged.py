@@ -193,6 +193,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         jagged = jagged._tojagged(copy=False)
         return cls(jagged._starts, jagged._stops, jagged._content)
 
+    @classmethod
+    def fromregular(cls, content, size=1):
+        quotient = -(-len(content) // size)
+        offsets = awkward.util.numpy.arange(0, quotient * size + 1, size, dtype=awkward.util.INDEXTYPE)
+        if len(offsets) > 0:
+            offsets[-1] = len(content)
+        return cls.fromoffsets(offsets, content)
+
     def copy(self, starts=None, stops=None, content=None):
         out = self.__class__.__new__(self.__class__)
         out._starts  = self._starts
@@ -493,6 +501,74 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 if not awkward.util.numpy.bitwise_and(0 <= head, head < counts).all():
                     raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
                 node = node._content[node._starts + head]
+
+            elif isinstance(head, slice):
+                counts = node._stops - node._starts
+                step = 1 if head.step is None else head.step
+
+                if step == 0:
+                    raise ValueError("slice step cannot be zero")
+
+                elif step > 0:
+                    if head.start is None:
+                        starts = awkward.util.numpy.zeros(counts.shape, dtype=awkward.util.INDEXTYPE)
+                    elif head.start >= 0:
+                        starts = awkward.util.numpy.minimum(counts, head.start)
+                    else:
+                        starts = awkward.util.numpy.maximum(0, awkward.util.numpy.minimum(counts, counts + head.start))
+
+                    if head.stop is None:
+                        stops = counts
+                    elif head.stop >= 0:
+                        stops = awkward.util.numpy.minimum(counts, head.stop)
+                    else:
+                        stops = awkward.util.numpy.maximum(0, awkward.util.numpy.minimum(counts, counts + head.stop))
+
+                    stops = awkward.util.numpy.maximum(starts, stops)
+
+                    start = starts.min()
+                    stop = stops.max()
+                    indexes = awkward.util.numpy.empty((len(node), abs(stop - start)), dtype=awkward.util.INDEXTYPE)
+                    indexes[:, :] = awkward.util.numpy.arange(start, stop)
+
+                    mask = indexes >= starts.reshape((len(node), 1))
+                    awkward.util.numpy.bitwise_and(mask, indexes < stops.reshape((len(node), 1)), out=mask)
+                    if step != 1:
+                        awkward.util.numpy.bitwise_and(mask, awkward.util.numpy.remainder(indexes - starts.reshape((len(node), 1)), step) == 0, out=mask)
+
+                else:
+                    if head.start is None:
+                        starts = counts - 1
+                    elif head.start >= 0:
+                        starts = awkward.util.numpy.minimum(counts - 1, head.start)
+                    else:
+                        starts = awkward.util.numpy.maximum(-1, awkward.util.numpy.minimum(counts - 1, counts + head.start))
+                    
+                    if head.stop is None:
+                        stops = awkward.util.numpy.full(counts.shape, -1, dtype=awkward.util.INDEXTYPE)
+                    elif head.stop >= 0:
+                        stops = awkward.util.numpy.minimum(counts - 1, head.stop)
+                    else:
+                        stops = awkward.util.numpy.maximum(-1, awkward.util.numpy.minimum(counts - 1, counts + head.stop))
+
+                    stops = awkward.util.numpy.minimum(starts, stops)
+
+                    start = starts.max()
+                    stop = stops.min()
+                    indexes = awkward.util.numpy.empty((len(node), abs(stop - start)), dtype=awkward.util.INDEXTYPE)
+                    indexes[:, :] = awkward.util.numpy.arange(start, stop, -1)
+
+                    mask = indexes <= starts.reshape((len(node), 1))
+                    awkward.util.numpy.bitwise_and(mask, indexes > stops.reshape((len(node), 1)), out=mask)
+                    if step != -1:
+                        awkward.util.numpy.bitwise_and(mask, awkward.util.numpy.remainder(indexes - starts.reshape((len(node), 1)), step) == 0, out=mask)
+
+                newcounts = awkward.util.numpy.count_nonzero(mask, axis=1)
+                newoffsets = counts2offsets(newcounts.reshape(-1))
+                newcontent = node.content[(indexes + node._starts.reshape((len(node), 1)))[mask]]
+
+                node = node.copy(starts=newoffsets[:-1], stops=newoffsets[1:], content=newcontent)
+
             else:
                 # the other cases are possible, but complicated; the first sets the form
                 raise NotImplementedError("jagged second dimension index type: {0}".format(original_head))
@@ -676,6 +752,20 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return None
         else:
             return awkward.array.objects.Methods.maybemixin(type(result), JaggedArray).fromcounts(counts, result)
+
+    def regular(self):
+        if len(self) > 0 and not (self.counts.reshape(-1)[0] == self.counts).all():
+            raise ValueError("jagged array is not regular: different elements have different counts")
+        count = self.counts.reshape(-1)[0]
+        
+        if self._canuseoffset():
+            out = self._content[self._starts[0]:self._stops[-1]]
+            return out.reshape(self._starts.shape + (count,) + self._content.shape[1:])
+
+        else:
+            indexes = awkward.util.numpy.repeat(self._starts, count).reshape(self._starts.shape + (count,))
+            indexes += awkward.util.numpy.arange(count)
+            return self._content[indexes]
 
     @staticmethod
     def aligned(*jaggedarrays):
