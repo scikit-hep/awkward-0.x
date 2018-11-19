@@ -1108,12 +1108,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if isclassmethod: 
             cls = cls_or_self
             if not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concat non-JaggedArrays with JaggedArray.concat")
+                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
         else:
             self = cls_or_self
             cls = self.__class__
             if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concat non-JaggedArrays with JaggedArray.concat")
+                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
             arrays = (self,) + tuple(arrays)
 
         for x in arrays:
