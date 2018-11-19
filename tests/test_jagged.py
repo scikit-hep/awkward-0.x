@@ -224,7 +224,45 @@ class Test(unittest.TestCase):
         assert a.regular().tolist() == [[[[0.0], [1.1], [2.2]], [[3.3], [4.4], [5.5]]], [[[6.6], [7.7], [8.8]], [[9.9], [10.0], [11.0]]]]
 
     def test_jagged_cross(self):
-        pass
+        for i in range(10):
+            for j in range(5):
+                a = JaggedArray.fromiter([[], [123], list(range(i)), []])
+                b = JaggedArray.fromiter([[], [456], list(range(j)), [999]])
+                c = a.cross(b)
+                assert len(c) == 4
+                assert len(c[0]) == 0
+                assert len(c[1]) == 1
+                assert len(c[2]) == i * j
+                assert len(c[3]) == 0
+                assert c[2]["0"].tolist() == numpy.repeat(range(i), j).tolist()
+                assert c[2]["1"].tolist() == numpy.tile(range(j), i).tolist()
+
+    def test_jagged_pairs(self):
+        for i in range(50):
+            a = JaggedArray.fromiter([[], [123], list(range(i)), []])
+            c = a.pairs()
+            assert len(c) == 4
+            assert len(c[0]) == 0
+            assert len(c[1]) == 1
+            assert len(c[2]) == i * (i + 1) // 2
+            assert len(c[3]) == 0
+            assert c[2]["0"].tolist() == sum([[x] * (i - x) for x in range(i)], [])
+            assert c[2]["1"].tolist() == sum([list(range(x, i)) for x in range(i)], [])
+        
+    def test_jagged_distincts(self):
+        print()
+        for i in range(50):
+            a = JaggedArray.fromiter([[], [123], list(range(i)), []])
+            c = a.distincts()
+            assert len(c) == 4
+            assert len(c[0]) == 0
+            assert len(c[1]) == 0
+            assert len(c[2]) == i * (i - 1) // 2
+            assert len(c[3]) == 0
+            left = sum([[x] * (i - x) for x in range(i)], [])
+            right = sum([list(range(x, i)) for x in range(i)], [])
+            assert c[2]["0"].tolist() == [x for x, y in zip(left, right) if x != y]
+            assert c[2]["1"].tolist() == [y for x, y in zip(left, right) if x != y]
 
     def test_jagged_sum(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
