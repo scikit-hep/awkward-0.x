@@ -224,7 +224,16 @@ class Test(unittest.TestCase):
         assert a.regular().tolist() == [[[[0.0], [1.1], [2.2]], [[3.3], [4.4], [5.5]]], [[[6.6], [7.7], [8.8]], [[9.9], [10.0], [11.0]]]]
 
     def test_jagged_cross(self):
-        pass
+        for i in range(10):
+            for j in range(5):
+                a = JaggedArray.fromiter([[], [123], [8] * i, []])
+                b = JaggedArray.fromiter([[], [456], [1] * j, [999]])
+                c = a.cross(b).tolist()
+                assert len(c) == 4
+                assert len(c[0]) == 0
+                assert len(c[1]) == 1
+                assert len(c[2]) == i * j
+                assert len(c[3]) == 0
 
     def test_jagged_sum(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
