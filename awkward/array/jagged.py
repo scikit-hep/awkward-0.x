@@ -1104,16 +1104,24 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self._minmax_general(False, False)
 
     @awkward.util.bothmethod
-    def concat(cls, *arrays):
-        if not all(isinstance(x, JaggedArray) for x in arrays):
-            raise TypeError("cannot concat non-JaggedArrays with JaggedArray.concat")
+    def concatenate(isclassmethod, cls_or_self, arrays):
+        if isclassmethod: 
+            cls = cls_or_self
+            if not all(isinstance(x, JaggedArray) for x in arrays):
+                raise TypeError("cannot concat non-JaggedArrays with JaggedArray.concat")
+        else:
+            self = cls_or_self
+            cls = self.__class__
+            if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
+                raise TypeError("cannot concat non-JaggedArrays with JaggedArray.concat")
+            arrays = (self,) + tuple(arrays)
 
         for x in arrays:
             x._valid()
 
         starts = awkward.util.numpy.concatenate([x._starts for x in arrays])
         stops = awkward.util.numpy.concatenate([x._stops for x in arrays])
-        content = awkward.util.concat([x._content for x in arrays])
+        content = awkward.util.concatenate([x._content for x in arrays])
 
         startsi = 0
         contenti = 0

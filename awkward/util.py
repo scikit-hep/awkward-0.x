@@ -73,9 +73,9 @@ class bothmethod(object):
         self.fcn = fcn
     def __get__(self, ins, typ):
         if ins is None:
-            return lambda *args, **kwargs: self.fcn(typ, *args, **kwargs)
+            return lambda *args, **kwargs: self.fcn(True, typ, *args, **kwargs)
         else:
-            return lambda *args, **kwargs: self.fcn(typ, ins, *args, **kwargs)
+            return lambda *args, **kwargs: self.fcn(False, ins, *args, **kwargs)
 
 ################################################################ array helpers
 
@@ -137,11 +137,11 @@ def _valid(array, seen):
     if isinstance(array, awkward.array.base.AwkwardArray):
         array._valid(seen)
 
-def concat(arrays):
+def concatenate(arrays):
     if all(isinstance(x, numpy.ndarray) for x in arrays):
         return numpy.concatenate(arrays)
     else:
-        return arrays[0].concat(arrays[1:])
+        return arrays[0].concatenate(arrays[1:])
 
 def isstringslice(where):
     import awkward.array.base
