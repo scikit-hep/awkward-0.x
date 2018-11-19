@@ -141,6 +141,13 @@ class Test(unittest.TestCase):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
         assert a[[1, 2]].tolist() == [[], [[3.3], [4.4]]]
 
+    def test_jagged_subslice(self):
+        a = JaggedArray.fromiter([[], [100, 101, 102], [200, 201, 202, 203], [300, 301, 302, 303, 304], [], [500, 501], [600], []])
+        for start in None, 0, 1, 2, 3, 4, 5, -1, -2, -3, -4, -5, -6:
+            for stop in None, 0, 1, 2, 3, 4, 5, -1, -2, -3, -4, -5, -6:
+                for step in None, 1, 2, 3, 4, 5, -1, -2, -3, -4, -5:
+                    assert a[:, start:stop:step].tolist() == [x.tolist()[start:stop:step] for x in a]
+
     def test_jagged_jagged(self):
         a = JaggedArray.fromoffsets([0, 3, 3, 5], JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
         assert [a[i].tolist() for i in range(len(a))] == [[[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7]], [], [[8.8, 9.9], []]]
