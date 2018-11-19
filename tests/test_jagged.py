@@ -261,23 +261,17 @@ class Test(unittest.TestCase):
         assert a.max().tolist() == [[2.2, 2.2], [-numpy.inf, -numpy.inf], [4.4, 4.4], [9.9, 9.9]]
 
     def test_jagged_concat(self):
-        l = [[ 1, 2, 3], [], [ 4, 5], [6, 7], [8], [], [9], [10, 11], [12]]
+        lst = [[1, 2, 3], [], [4, 5], [6, 7], [8], [], [9], [10, 11], [12]]
+        a_orig = JaggedArray.fromiter(lst)
+        a1 = JaggedArray.fromiter(lst[:3])
+        a2 = JaggedArray.fromiter(lst[3:6])
+        a3 = JaggedArray.fromiter(lst[6:])
 
-        a_orig = JaggedArray.fromiter(l)
-        a1 = JaggedArray.fromiter(l[:3])
-        a2 = JaggedArray.fromiter(l[3:6])
-        a3 = JaggedArray.fromiter(l[6:])
+        a_instance_concat = a1.concat(a2, a3)
+        assert a_instance_concat.tolist() == a_orig.tolist()
 
-        a_concat = a1.concat([a2, a3])
-
-        assert (a_concat._starts  == a_orig._starts ).all()
-        assert (a_concat._stops   == a_orig._stops  ).all()
-        assert (a_concat._content == a_orig._content).all()
-
-        a_util_concatenate = awkward.util.concatenate([a1, a2, a3])
-        assert (a_util_concatenate._starts  == a_orig._starts ).all()
-        assert (a_util_concatenate._stops   == a_orig._stops  ).all()
-        assert (a_util_concatenate._content == a_orig._content).all()
+        a_class_concat = JaggedArray.concat(a1, a2, a3)
+        assert a_class_concat.tolist() == a_orig.tolist()
 
     def test_jagged_get(self):
         a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
