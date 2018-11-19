@@ -193,6 +193,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         jagged = jagged._tojagged(copy=False)
         return cls(jagged._starts, jagged._stops, jagged._content)
 
+    @classmethod
+    def fromregular(cls, content, size=1):
+        quotient = -(-len(content) // size)
+        offsets = awkward.util.numpy.arange(0, quotient * size + 1, size, dtype=awkward.util.INDEXTYPE)
+        if len(offsets) > 0:
+            offsets[-1] = len(content)
+        return cls.fromoffsets(offsets, content)
+
     def copy(self, starts=None, stops=None, content=None):
         out = self.__class__.__new__(self.__class__)
         out._starts  = self._starts
@@ -745,6 +753,20 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return awkward.array.objects.Methods.maybemixin(type(result), JaggedArray).fromcounts(counts, result)
 
+    def regular(self):
+        if len(self) > 0 and not (self.counts.reshape(-1)[0] == self.counts).all():
+            raise ValueError("jagged array is not regular: different elements have different counts")
+        count = self.counts.reshape(-1)[0]
+        
+        if self._canuseoffset():
+            out = self._content[self._starts[0]:self._stops[-1]]
+            return out.reshape(self._starts.shape + (count,) + self._content.shape[1:])
+
+        else:
+            indexes = awkward.util.numpy.repeat(self._starts, count).reshape(self._starts.shape + (count,))
+            indexes += awkward.util.numpy.arange(count)
+            return self._content[indexes]
+
     @staticmethod
     def aligned(*jaggedarrays):
         if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
@@ -1080,14 +1102,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self._minmax_offset(False)
         else:
             return self._minmax_general(False, False)
-
-    @classmethod
-    def regular(cls, content, size=1):
-        quotient = -(-len(content) // size)
-        offsets = awkward.util.numpy.arange(0, quotient * size + 1, size, dtype=awkward.util.INDEXTYPE)
-        if len(offsets) > 0:
-            offsets[-1] = len(content)
-        return cls.fromoffsets(offsets, content)
 
     @classmethod
     def concat(cls, first, *rest):    # all elements of first followed by all elements of second
