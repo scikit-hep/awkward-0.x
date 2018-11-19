@@ -68,6 +68,15 @@ def is_intstring(x):
     return isinstance(x, string) and is_intstring._pattern.match(x) is not None
 is_intstring._pattern = re.compile("^_(0|[1-9]+[0-9]*)$")
 
+class bothmethod(object):
+    def __init__(self, fcn):
+        self.fcn = fcn
+    def __get__(self, ins, typ):
+        if ins is None:
+            return lambda *args, **kwargs: self.fcn(True, typ, *args, **kwargs)
+        else:
+            return lambda *args, **kwargs: self.fcn(False, ins, *args, **kwargs)
+
 ################################################################ array helpers
 
 import distutils.version
@@ -84,7 +93,7 @@ TAGTYPE = numpy.dtype(numpy.uint8)
 MASKTYPE = numpy.dtype(numpy.bool_)
 BITMASKTYPE = numpy.dtype(numpy.uint8)
 BOOLTYPE = numpy.dtype(numpy.bool_)
-        
+
 def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
     if passthrough is None:
@@ -132,7 +141,7 @@ def concatenate(arrays):
     if all(isinstance(x, numpy.ndarray) for x in arrays):
         return numpy.concatenate(arrays)
     else:
-        return arrays[0].concat(*arrays[1:])
+        return arrays[0].concatenate(arrays[1:])
 
 def isstringslice(where):
     import awkward.array.base

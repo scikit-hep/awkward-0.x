@@ -1103,14 +1103,21 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self._minmax_general(False, False)
 
-    @classmethod
-    def concat(cls, first, *rest):    # all elements of first followed by all elements of second
-        arrays = (first,) + rest
+    @awkward.util.bothmethod
+    def concatenate(isclassmethod, cls_or_self, arrays):
+        if isclassmethod: 
+            cls = cls_or_self
+            if not all(isinstance(x, JaggedArray) for x in arrays):
+                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
+        else:
+            self = cls_or_self
+            cls = self.__class__
+            if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
+                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
+            arrays = (self,) + tuple(arrays)
+
         for x in arrays:
             x._valid()
-
-        if not all(isinstance(x, JaggedArray) for x in arrays):
-            raise TypeError("cannot concat JaggedArrays with non-JaggedArrays")
 
         starts = awkward.util.numpy.concatenate([x._starts for x in arrays])
         stops = awkward.util.numpy.concatenate([x._stops for x in arrays])
@@ -1214,6 +1221,14 @@ class ByteJaggedArray(JaggedArray):
     def fromuniques(cls, uniques, content, subdtype):
         tmp = ByteJaggedArray.__bases__[0].fromuniques(uniques, awkward.util.numpy.array([]))
         return cls(tmp._starts, tmp._stops, content, subdtype=subdtype)
+
+    @classmethod
+    def fromregular(cls, content, size=1):
+        quotient = -(-len(content) // size)
+        offsets = awkward.util.numpy.arange(0, quotient * size + 1, size, dtype=awkward.util.INDEXTYPE)
+        if len(offsets) > 0:
+            offsets[-1] = len(content)
+        return cls.fromoffsets(offsets, content)
 
     def copy(self, starts=None, stops=None, content=None, subdtype=None):
         out = super(ByteJaggedArray, self).copy(starts=starts, stops=stops, content=content)
