@@ -469,7 +469,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                     thyself._stops.shape = self._stops.shape
 
                 head = head._tojagged(thyself._starts, thyself._stops, copy=False)
-                inthead = head.copy(content=head._content.view(awkward.util.numpy.uint8))
+                inthead = head.copy(content=head._content.astype(awkward.util.INDEXTYPE))
                 intheadsum = inthead.sum()
 
                 offsets = counts2offsets(intheadsum)
@@ -797,6 +797,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                     return False
 
         return True
+
+    def argdistincts(self):
+        return self.argpairs(same=False)
+
+    def distincts(self):
+        return self.pairs(same=False)
 
     def argpairs(self, same=True):
         import awkward.array.table
