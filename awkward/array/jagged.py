@@ -30,6 +30,7 @@
 
 import math
 import numbers
+import os
 
 import awkward.array.base
 import awkward.persist
@@ -905,7 +906,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 content = self._content != 0
 
             out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]].astype(awkward.util.numpy.int32)
+            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
+                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
             out[:len(nonterminal)] = awkward.util.numpy.logical_or.reduceat(content[self._starts[0]:self._stops[-1]], nonterminal)
             out[self.offsets[1:] == self.offsets[:-1]] = False
             return out
@@ -921,7 +924,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 content = self._content != 0
 
             out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]].astype(awkward.util.numpy.int32)
+            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
+                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
             out[:len(nonterminal)] = awkward.util.numpy.logical_and.reduceat(content[self._starts[0]:self._stops[-1]], nonterminal)
             out[self.offsets[1:] == self.offsets[:-1]] = True
             return out
@@ -943,7 +948,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if self._canuseoffset():
             out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]].astype(awkward.util.numpy.int32)
+            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
+                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
             out[:len(nonterminal)] = awkward.util.numpy.add.reduceat(content[self._starts[0]:self._stops[-1]], nonterminal)
             out[self.offsets[1:] == self.offsets[:-1]] = 0
             return out
@@ -967,7 +974,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if self._canuseoffset():
             out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]].astype(awkward.util.numpy.int32)
+            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
+                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
             out[:len(nonterminal)] = awkward.util.numpy.multiply.reduceat(content[self._starts[0]:self._stops[-1]], nonterminal)
             out[self.offsets[1:] == self.offsets[:-1]] = 1
             return out
@@ -1026,7 +1035,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _minmax_offset(self, ismin):
         out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self._content.dtype)
-        nonterminal = self.offsets[self.offsets != self.offsets[-1]].astype(awkward.util.numpy.int32)
+        nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+        if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
+            nonterminal = nonterminal.astype(awkward.util.numpy.int32)
 
         if ismin:
             out[:len(nonterminal)] = awkward.util.numpy.minimum.reduceat(self._content[self._starts[0]:self._stops[-1]], nonterminal)
