@@ -29,11 +29,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import division
-
 import unittest
-
+import numbers
+import operator
 import numpy as np
-
 import awkward
 
 class Test(unittest.TestCase):
@@ -66,6 +65,34 @@ class Test(unittest.TestCase):
             def x(self, value):
                 self._x = value
 
+            def _number_op(self, operator, scalar, reverse=False):
+                if not isinstance(scalar, (numbers.Number, awkward.util.numpy.number)):
+                    raise TypeError("cannot {0} a Type with a {1}".format(operator.__name__, type(scalar).__name__))
+                if reverse:
+                    return Type(operator(scalar, self.x))
+                else:
+                    return Type(operator(self.x, scalar))
+        
+            def _type_op(self, operator, other, reverse=False):
+                if not isinstance(other, (self.__class__, self._arraymethods)):
+                    raise TypeError("cannot {0} a Type with a {1}".format(operator.__name__, type(other).__name__))
+                if reverse:
+                    return Type(operator(other.x, self.x))
+                else:
+                    return Type(operator(self.x, other.x))
+
+            def __mul__(self, other):
+                return self._number_op(operator.mul, other)
+
+            def __rmul__(self, other):
+                return self._number_op(operator.mul, other, True)
+
+            def __add__(self, other):
+                return self._type_op(operator.add, other)
+
+            def __radd__(self, other):
+                return self._type_op(operator.add, other, True)
+
 
         class TypeArray(TypeArrayMethods, awkward.ObjectArray):
             def __init__(self, x):
@@ -82,6 +109,17 @@ class Test(unittest.TestCase):
         x = np.arange(np.sum(counts))
         array = TypeArray(x)
         assert np.all(array.x == x)
+
+        # TODO proper group operators
+        # assert type(3.*array) is type(array)
+        # assert type(array*3.) is type(array)
+        # assert np.all(3.*array == 3.*x)
+        # assert np.all(array*3. == x*3.)
+        # scalar = Type(3.)
+        # assert type(array+scalar) is type(array)
+        # assert type(scalar+array) is type(array)
+        # assert np.all((array+scalar).x == x+3.)
+        # assert np.all((scalar+array).x == 3.+x)
 
         JaggedTypeArray = awkward.Methods.mixin(TypeArrayMethods, awkward.JaggedArray)
         jagged_array = JaggedTypeArray.fromcounts(counts, array)
