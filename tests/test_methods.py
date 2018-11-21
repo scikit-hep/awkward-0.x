@@ -53,6 +53,26 @@ class Test(unittest.TestCase):
             def x(self, value):
                 self["x"] = value
 
+            def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+                if method != "__call__":
+                    raise NotImplemented
+
+                inputs = list(inputs)
+                for i in range(len(inputs)):
+                    if isinstance(inputs[i], awkward.util.numpy.ndarray) and inputs[i].dtype == awkward.util.numpy.dtype(object) and len(inputs[i]) > 0:
+                        idarray = awkward.util.numpy.frombuffer(inputs[i], dtype=awkward.util.numpy.uintp)
+                        if (idarray == idarray[0]).all():
+                            inputs[i] = inputs[i][0]
+
+                if ufunc is awkward.util.numpy.add or ufunc is awkward.util.numpy.subtract:
+                    if not all(isinstance(x, (TypeArrayMethods, TypeMethods)) for x in inputs):
+                        raise TypeError("(arrays of) Type can only be added to/subtracted from other (arrays of) Type")
+                    out = self.empty_like()
+                    out["x"] = getattr(ufunc, method)(*[x.x for x in inputs], **kwargs)
+                    return out
+
+                else:
+                    return super(TypeArrayMethods, self).__array_ufunc__(ufunc, method, *inputs, **kwargs)
 
         class TypeMethods(awkward.Methods):
             _arraymethods = TypeArrayMethods
@@ -74,7 +94,10 @@ class Test(unittest.TestCase):
                     return Type(operator(self.x, scalar))
         
             def _type_op(self, operator, other, reverse=False):
-                if not isinstance(other, (self.__class__, self._arraymethods)):
+                if isinstance(other, self._arraymethods):
+                    # Give precedence to reverse op, implemented using self._arraymethods.__array_ufunc__
+                    return NotImplemented
+                if not isinstance(other, self.__class__):
                     raise TypeError("cannot {0} a Type with a {1}".format(operator.__name__, type(other).__name__))
                 if reverse:
                     return Type(operator(other.x, self.x))
@@ -110,16 +133,19 @@ class Test(unittest.TestCase):
         array = TypeArray(x)
         assert np.all(array.x == x)
 
-        # TODO proper group operators
-        # assert type(3.*array) is type(array)
-        # assert type(array*3.) is type(array)
-        # assert np.all(3.*array == 3.*x)
-        # assert np.all(array*3. == x*3.)
-        # scalar = Type(3.)
-        # assert type(array+scalar) is type(array)
-        # assert type(scalar+array) is type(array)
-        # assert np.all((array+scalar).x == x+3.)
-        # assert np.all((scalar+array).x == 3.+x)
+        assert type(3.*array) is type(array)
+        assert type(array*3.) is type(array)
+        assert np.all(3.*array == 3.*x)
+        assert np.all(array*3. == x*3.)
+
+        scalar = Type(3.)
+        assert type(array+scalar) is type(array)
+        assert type(scalar+array) is type(array)
+        assert np.all((array+scalar).x == x+3.)
+        assert np.all((scalar+array).x == 3.+x)
+
+        scalar2 = Type(4.)
+        assert (scalar+scalar2).x == 7.
 
         JaggedTypeArray = awkward.Methods.mixin(TypeArrayMethods, awkward.JaggedArray)
         jagged_array = JaggedTypeArray.fromcounts(counts, array)
