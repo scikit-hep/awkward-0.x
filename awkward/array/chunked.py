@@ -284,7 +284,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 return super(ChunkedArray, self).__str__()
             else:
                 return "[{0} ...]".format(" ".join(strs))
-            
+
     def __iter__(self):
         for i, chunk in enumerate(self._chunks):
             if i >= len(self._counts):
@@ -610,6 +610,16 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         else:
             return self._chunks[0].allcolumns
 
+    def astype(self, dtype):
+        chunks = []
+        counts = []
+        for i, chunk in enumerate(self._chunks):
+            if i >= len(self._counts):
+                self._counts.append(len(chunk))
+            chunks.append(chunk.astype(dtype))
+            counts.append(self._counts[i])
+        return self.copy(chunks=chunks, counts=counts)
+
     def pandas(self):
         raise NotImplementedError
 
@@ -625,13 +635,17 @@ class AppendableArray(ChunkedArray):
 
     def copy(self, chunkshape=None, dtype=None, chunks=None):
         out = self.__class__.__new__(self.__class__)
-        out._chunkshape = chunkshape
-        out._dtype = dtype
+        out._chunkshape = self._chunkshape
+        out._dtype = self._dtype
         out._chunks = list(self._chunks)
-        out._counts = list(self._counts)
-        out._types = list(self._types)
+        if chunkshape is not None:
+            out._chunkshape = chunkshape
+        if dtype is not None:
+            out._dtype = dtype
         if chunks is not None:
             out.chunks = chunks
+        out._counts = list(self._counts)
+        out._types = list(self._types)
         return out
 
     def _mine(self, overrides):
@@ -754,3 +768,9 @@ class AppendableArray(ChunkedArray):
             self._chunks[-1][self._counts[-1] : self._counts[-1] + howmany] = values[:howmany]
             self._counts[-1] += howmany
             values = values[howmany:]
+
+    def astype(self, dtype):
+        chunks = []
+        for chunk in self._chunks:
+            chunks.append(chunk.astype(dtype))
+        return self.copy(dtype=awkward.util.numpy.dtype(dtype), chunks=chunks)

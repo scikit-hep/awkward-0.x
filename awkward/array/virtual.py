@@ -389,5 +389,8 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def allcolumns(self):
         return self.array.allcolumns
 
+    def astype(self, dtype):
+        return self.array.astype(dtype)
+
     def pandas(self):
         raise NotImplementedError

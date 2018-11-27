@@ -243,3 +243,6 @@ class AwkwardArrayWithContent(AwkwardArray):
             return []
         else:
             return self._content.allcolumns
+
+    def astype(self, dtype):
+        return self.copy(content=self._content.astype(dtype))

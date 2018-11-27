@@ -610,6 +610,12 @@ class Table(awkward.array.base.AwkwardArray):
     def allcolumns(self):
         return list(self._content)
 
+    def astype(self, dtype):
+        out = self.copy(content={})
+        for n, x in self._content.items():
+            out[n] = x.astype(dtype)
+        return out
+
     def pandas(self):
         import pandas
         return pandas.DataFrame(self._content)
