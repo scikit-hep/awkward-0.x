@@ -437,5 +437,8 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 out = [x for x in content.allcolumns if x in out]
         return out
 
+    def astype(self, dtype):
+        return self.copy(contents=[x.astype(dtype) for x in self._contents])
+
     def pandas(self):
         raise NotImplementedError
