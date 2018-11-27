@@ -431,7 +431,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
 
         if awkward.util.isstringslice(where):
-            return awkward.array.objects.Methods.maybemixin(type(self._content[where]), JaggedArray)(self._starts, self._stops, self._content[where])
+            content = self._content[where]
+            return awkward.array.objects.Methods.maybemixin(type(content), self.__class__)(self._starts, self._stops, content)
 
         if isinstance(where, tuple) and len(where) == 0:
             return self

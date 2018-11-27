@@ -321,7 +321,10 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             for chunk in self._chunks:
                 chunks.append(chunk[where])
                 counts.append(len(chunks[-1]))
-            return ChunkedArray(chunks, counts=counts)
+            if len(chunks) == 0:
+                return self.copy(chunks=chunks, counts=counts)
+            else:
+                return awkward.array.objects.Methods.maybemixin(type(chunks[0]), self.__class__)(chunks, counts=counts)
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
