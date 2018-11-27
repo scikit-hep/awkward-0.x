@@ -272,6 +272,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
             contents = []
             for tag in awkward.util.numpy.unique(self._tags):
                 contents.append(self._contents[tag][where])
+            # TODO: think about inheriting methods from contents[where]; all satisfying tags would have to have the same methods before promoting the output (generalized maybemixin?)
             if len(contents) == 0:
                 return self.copy(contents=[self._contents[0][where]])
             else:
