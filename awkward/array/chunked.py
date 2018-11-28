@@ -324,7 +324,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             if len(chunks) == 0:
                 return self.copy(chunks=chunks, counts=counts)
             else:
-                return awkward.array.objects.Methods.maybemixin(type(chunks[0]), self.__class__)(chunks, counts=counts)
+                return awkward.array.objects.Methods.maybemixin(type(chunks[0]), ChunkedArray)(chunks, counts=counts)
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
