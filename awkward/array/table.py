@@ -55,21 +55,15 @@ class Table(awkward.array.base.AwkwardArray):
         def __repr__(self):
             return "<{0} {1}>".format(self._table.rowname, self._index)
 
-        def __hasattr__(self, name):
-            return name in self._table._content or "_" + name in self._table._content
+        @property
+        def at(self):
+            return awkward.array.base.At(self)
 
         def __contains__(self, name):
             return name in self._table._content
 
         def tolist(self):
             return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._content.items())
-
-        def __getattr__(self, name):
-            content = self._table._content.get("_" + name, None)
-            if content is not None:
-                return content[self._index]
-
-            raise AttributeError("{0} is not a column in this {1}".format(repr(name), self._table.rowname))
 
         def __getitem__(self, where):
             if isinstance(where, awkward.util.string):
@@ -344,7 +338,7 @@ class Table(awkward.array.base.AwkwardArray):
                 if head < 0:
                     head += length
                 if not 0 <= head < length:
-                    IndexError("index {0} out of bounds for length {1}".format(original_head, length))
+                    raise IndexError("index {0} out of bounds for length {1}".format(original_head, length))
                 return head
 
             elif isinstance(self._view, tuple):
@@ -352,7 +346,7 @@ class Table(awkward.array.base.AwkwardArray):
                 if head < 0:
                     head += mylength
                 if not 0 <= head < mylength:
-                    IndexError("index {0} out of bounds for length {1}".format(original_head, mylength))
+                    raise IndexError("index {0} out of bounds for length {1}".format(original_head, mylength))
                 return mystart + mystep*head
 
             else:
@@ -360,7 +354,7 @@ class Table(awkward.array.base.AwkwardArray):
                 if head < 0:
                     head += length
                 if not 0 <= head < length:
-                    IndexError("index {0} out of bounds for length {1}".format(original_head, length))
+                    raise IndexError("index {0} out of bounds for length {1}".format(original_head, length))
                 return self._view[head]
 
         elif isinstance(head, slice):
