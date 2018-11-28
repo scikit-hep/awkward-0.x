@@ -895,7 +895,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and awkward.util.numpy.array_equal(self._starts[1:], self._stops[:-1]))
 
     def flatten(self):
-        if self._canuseoffset():
+        if len(self) == 0:
+            return self._content[0:0]
+        elif self._canuseoffset():
             return self._content[self._starts[0]:self._stops[-1]]
         else:
             offsets = counts2offsets(self.counts.reshape(-1))
