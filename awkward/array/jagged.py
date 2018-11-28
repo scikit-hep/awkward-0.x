@@ -811,7 +811,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def distincts(self):
         return self.pairs(same=False)
 
-    def argpairs(self, same=True):
+    def _argpairs(self, same=True):
         import awkward.array.table
         self._valid()
         
@@ -839,8 +839,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         return out
 
+    def argpairs(self, same=True):
+        return self._argpairs(same=same) - self._starts
+
     def pairs(self, same=True):
-        argpairs = self.argpairs(same=same)
+        argpairs = self._argpairs(same=same)
         left = argpairs._content["0"]
         right = argpairs._content["1"]
 
@@ -848,7 +851,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out._parents = argpairs._parents
         return out
 
-    def argcross(self, other):
+    def _argcross(self, other):
         import awkward.array.table
         self._valid()
 
@@ -873,10 +876,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out._parents = parents
         return out
 
+    def argcross(self, other):
+        return self._argcross(other) - self._starts
+
     def cross(self, other):
         import awkward.array.table
 
-        argcross = self.argcross(other)
+        argcross = self._argcross(other)
         left, right = argcross._content._content.values()
 
         fields = [other._content[right]]
