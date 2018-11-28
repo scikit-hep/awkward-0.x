@@ -58,7 +58,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     def __array__(self, dtype=None):
         # hitting this function is usually undesirable; uncomment to search for performance bugs
-        # raise Exception("{0} {1}".format(args, kwargs))
+        # raise Exception
 
         if dtype is None:
             dtype = self.dtype

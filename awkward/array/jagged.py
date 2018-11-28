@@ -922,7 +922,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 content = self._content != 0
 
-            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
+            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=awkward.BOOLTYPE)
             nonterminal = self.offsets[self.offsets != self.offsets[-1]]
             if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
                 nonterminal = nonterminal.astype(awkward.util.numpy.int32)
@@ -943,7 +943,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 content = self._content != 0
 
-            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
+            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=awkward.BOOLTYPE)
             nonterminal = self.offsets[self.offsets != self.offsets[-1]]
             if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
                 nonterminal = nonterminal.astype(awkward.util.numpy.int32)
