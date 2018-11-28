@@ -585,15 +585,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                     if (index < 0).any() or (index.reshape(-1, len(head)) >= node.counts.reshape(-1, 1)).any():
                         raise IndexError("index in jagged subdimension is out of bounds")
                     index = (index.reshape(-1, len(head)) + self._starts.reshape(-1, 1)).reshape(-1)
-                    return node._content[index].reshape(-1, len(head))
+                    node = node._content[index].reshape(-1, len(head))
 
                 elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-                    # if len(self) != len(head):
-                    #     raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(len(self), len(head)))
-                    raise NotImplementedError
+                    node = node.regular()[:, head]
 
-                # the other cases are possible, but complicated; the first sets the form
-                raise NotImplementedError("jagged second dimension index type: {0}".format(original_head))
+                else:
+                    raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
 
         return node[tail]
 
