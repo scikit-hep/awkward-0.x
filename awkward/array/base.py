@@ -34,10 +34,27 @@ import awkward.persist
 import awkward.type
 import awkward.util
 
+class At(object):
+    def __init__(self, array):
+        self._array = array
+
+    def __repr__(self):
+        return "<at accessor for {0}".format(repr(self._array)[1:])
+
+    def __getattr__(self, where):
+        return self._array[where]
+
+    def __call__(self, where):
+        return self._array[str(where)]
+
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     """
     AwkwardArray: abstract base class
     """
+
+    @property
+    def at(self):
+        return At(self)
 
     def __array__(self, dtype=None):
         # hitting this function is usually undesirable; uncomment to search for performance bugs
@@ -91,12 +108,6 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return x.tolist()
         except AttributeError:
             return x
-
-    def __getattr__(self, where):
-        if awkward.util.is_intstring(where):
-            return self[where[1:]]
-        else:
-            raise AttributeError("'{0}' object has no attribute '{1}'".format(self.__class__.__name__, where))
 
     def __bool__(self):
         raise ValueError("The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()")
