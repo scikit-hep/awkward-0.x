@@ -116,17 +116,14 @@ class Test(unittest.TestCase):
             def __radd__(self, other):
                 return self._type_op(operator.add, other, True)
 
-
         class TypeArray(TypeArrayMethods, awkward.ObjectArray):
             def __init__(self, x):
                 self._initObjectArray(awkward.Table())
                 self["x"] = x
-                
 
         class Type(TypeMethods):
             def __init__(self, x):
                 self._x = x
-            
 
         counts = np.array([1, 4, 2, 0, 15])
         x = np.arange(np.sum(counts))
@@ -150,5 +147,4 @@ class Test(unittest.TestCase):
         JaggedTypeArray = awkward.Methods.mixin(TypeArrayMethods, awkward.JaggedArray)
         jagged_array = JaggedTypeArray.fromcounts(counts, array)
         assert np.all(jagged_array.x.flatten() == x)
-        assert np.all(jagged_array.pairs()._0.x.counts == counts*(counts+1)//2)
-
+        assert np.all(jagged_array.pairs().at(0).x.counts == counts*(counts+1)//2)
