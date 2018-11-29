@@ -1,4 +1,4 @@
-= Awkward Array Specification
+= Awkward Array Specification (1.0-pre1)
 :Author: Jim Pivarski
 :Email: pivarski@princeton.edu
 :Date: 1.0 expected early 2019
@@ -11,14 +11,18 @@ Array programming is a general programming paradigm, similar to functional progr
 
 Array programming is mostly used on problems with regular, rectangular grids. It is possible to represent and operate on more complex data types, but it is considerably more awkward to do so in current frameworks. Fortunately, this awkwardness may be hidden in a suite of higher-level array classes that present modest extensions of the array programming paradigm to the user.
 
-https://github.com/scikit-hep/awkward-array[awkward-array] (https://pypi.org/project/awkward[awkward] on PyPI) is an implementation of complex data types and operations in Python, depending only on Numpy. Drop-in replacements, optimized with compiled code or leveraging GPUs, are foreseen, though they would present the same user interface. Extensions for using awkward-array as Pandas columns, in Numba-compiled functions, and in distributed calculations with Dask are also foreseen. Awkward arrays may already be persisted and reconstituted in any data format supporting Numpy arrays, such as HDF5.
+https://github.com/scikit-hep/awkward-array[awkward-array] (https://pypi.org/project/awkward[awkward] on PyPI) is an implementation of complex data types and operations in Python, depending only on Numpy. Drop-in replacements, optimized with compiled code or leveraging GPUs, are foreseen, though they would present the same user interface. Extensions for using awkward-array as Pandas columns, in Numba-compiled functions, and in distributed calculations with Dask are also foreseen. These arrays may already be persisted and reconstituted in any data format supporting Numpy arrays, such as HDF5, or named binary blobs, such as ZIP.
 
-Despite awkward-array's focus on Python and Numpy, the data model it represents may be expressed more generally. This document describes awkward-array as a protocol for generalizing array programming in any environment. It is a normative document in the sense that it describes what awkward-array in Python _should_ do; discrepancies between this document and the Python implementation would usually be decided in favor of the document (though the document itself may have "bugs" to be fixed in a future revision). It is also normative in the sense that other implementations, in C++ or MATLAB for instance, that claim to "adhere to the awkward-array specification" _should_ also behave as described here.
+Despite awkward-array's focus on Python and Numpy, the data model it represents is language-agnostic. This document describes awkward-array as a protocol for generalizing array programming to complex structures in any environment. It is a normative document in the sense that it describes what awkward-array in Python _should_ do; discrepancies between this document and the Python implementation would usually be decided in favor of the document (though the document itself may have "bugs" to be fixed in a future revision). It is also normative in the sense that other implementations, in C++ or MATLAB for instance, that claim to "adhere to the awkward-array specification" _should_ also behave as described here.
+
+== Basic array model assumed by this document
+
+For simplicity, this document uses Python and Numpy syntax, and it assumes a reasonably capable library of basic arrays for awkward-array to generalize. In this section, we describe that syntax and assumed features of the underlying array library so that substitutions may be made for other languages and other array libraries. 
+
+The basic array library must
 
 
 
-
-== Flat array model assumed by this document
 
 
 == High-level types
