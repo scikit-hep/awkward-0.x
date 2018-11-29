@@ -1,10 +1,92 @@
 = Awkward Array Specification
 :Author: Jim Pivarski
 :Email: pivarski@princeton.edu
-:Date: December 2018
-:Revision: 0.1
+:Date: 1.0 expected early 2019
+:Revision: 1.0-pre1
 :toc:
 
 == Introduction
 
-asdf
+
+== Array notation in this document
+
+
+== High-level types
+
+
+== Properties of all arrays
+
+
+== Jaggedness
+
+
+=== JaggedArray
+
+
+=== ByteJaggedArray
+
+
+== Product types
+
+
+=== Table
+
+
+== Sum types
+
+
+=== UnionArray
+
+
+== Objects
+
+
+=== Mix-in Methods
+
+
+=== ObjectArray
+
+
+=== StringArray
+
+
+== Masking
+
+
+=== MaskedArray
+
+
+=== BitMaskedArray
+
+
+=== IndexedMaskedArray
+
+
+== Indirection
+
+
+=== IndexedArray
+
+
+=== ByteIndexedArray
+
+
+=== SparseArray
+
+
+== Non-contiguousness
+
+
+=== ChunkedArray
+
+
+=== AppendableArray
+
+
+== Lazy-loading
+
+
+=== VirtualArray
+
+
+== Serialization
