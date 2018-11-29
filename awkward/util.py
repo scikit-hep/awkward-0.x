@@ -152,11 +152,11 @@ def isstringslice(where):
     elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)) and issubclass(where.dtype.type, (numpy.str, numpy.str_)):
         return True
     elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)) and issubclass(where.dtype.type, (numpy.object, numpy.object_)) and not issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
-        return all(isinstance(x, string) for x in where)
+        return len(where) > 0 and all(isinstance(x, string) for x in where)
     elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)):
         return False
     try:
-        assert all(isinstance(x, string) for x in where)
+        assert len(where) > 0 and all(isinstance(x, string) for x in where)
     except (TypeError, AssertionError):
         return False
     else:
