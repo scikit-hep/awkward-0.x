@@ -13,7 +13,7 @@ Array programming is mostly used on problems with regular, rectangular grids. It
 
 https://github.com/scikit-hep/awkward-array[awkward-array] (https://pypi.org/project/awkward[awkward] on PyPI) is an implementation of complex data structures and operations in Python, depending only on https://pandas.pydata.org[Numpy]. Drop-in replacements optimized with compiled code or leveraging GPUs are foreseen, though they would present the same user interface. Extensions for using awkward-array as https://pandas.pydata.org[Pandas] columns, in https://pandas.pydata.org[Numba]-compiled functions, and in distributed calculations with https://pandas.pydata.org[Dask] are also foreseen. These arrays can already be persisted and reconstituted in any data format supporting Numpy arrays, such as HDF5, or named binary blobs, such as ZIP.
 
-== This specification
+=== This specification
 
 Despite awkward-array's focus on Python and Numpy, the data model it represents is language-agnostic. This document describes awkward-array as a protocol for generalizing array programming to complex structures in any environment. It is a normative document in the sense that it describes what awkward-array in Python _should_ do; discrepancies between this document and the Python implementation would usually be decided in favor of the document (though the document itself may have "`bugs`" to be fixed in a later version). It is also normative in the sense that other implementations, in C++ or MATLAB for instance, that claim to "`adhere to the awkward-array specification`" _should_ also behave as described here.
 
@@ -25,22 +25,22 @@ Documentation is not an explicit goal of this specification, though it may be re
 
 The major and minor version number of this document, `xx.yy`, correspond to the major and minor version number of the Numpy-only awkward-array library: `xx.yy` in `xx.yy.zz`. The implementation's revision number, `zz`, increases as it strives toward compliance with the specification.
 
-== Least common denominator array protocol
+=== Least common denominator array protocol
 
 
 
 
 
+== Features provided by an awkward-array library
 
 
-
-== High-level types
-
-
-== Low-level structures
+=== High-level types
 
 
-== General properties of all arrays
+=== Low-level structures
+
+
+== General properties of all array classes
 
 
 == Jaggedness
