@@ -17,9 +17,11 @@ Despite awkward-array's focus on Python and Numpy, the data model it represents 
 
 The goal of this document is to describe an extended array programming interface in terms of a common ("`least common denominator`") array programming interface. For simplicity, we will use Python syntax and Numpy function names, but a library in a different language or based on a different array library may still adhere to the awkward-array specification by providing a translation of the idioms.
 
-It is not a goal of this document to explain how these features are implemented. Drop-in replacements for the Numpy-only awkward-array library and libraries for other environments are free to implement the specification differently. They will thus have different performance characteristics.
+It is not a goal of this document to explain how these features are implemented. Drop-in replacements for the Numpy-only awkward-array library and libraries in other environments are free to implement the specification differently. They will thus have different performance characteristics. This specification also cannot provide any performance hints.
 
-Documentation is not an explicit goal of this specification, but it may be used as such.
+Documentation is not an explicit goal of this specification, though it may be read to learn the library. Unlike documentation, however, this document describes what an awkward-array library should do, not necessarily what it does. Users are encouraged to file issues if a discrepancy is found.
+
+The major and minor version number of this document, `xx.yy`, correspond to the major and minor version number of the Numpy-only awkward-array library: `xx.yy` in `xx.yy.zz`. The implementation's revision number, `zz`, increases as it strives toward compliance with the specification.
 
 == Basic array model assumed by this document
 
