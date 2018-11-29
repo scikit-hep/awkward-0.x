@@ -1,0 +1,11 @@
+Awkward Array Specification
+===========================
+:Author: Jim Pivarski
+:Email: pivarski@princeton.edu
+:Date: December 2018
+:Revision: 0.1
+
+Introduction
+------------
+
+asdf
