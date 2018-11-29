@@ -4,6 +4,7 @@ Awkward Array Specification
 :Email: pivarski@princeton.edu
 :Date: December 2018
 :Revision: 0.1
+:toc:
 
 Introduction
 ------------
