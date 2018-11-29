@@ -33,10 +33,13 @@ Necessary features of the underlying array library are described in this section
 
 The underlying array library must have the following features.
 
-  * It must be able to represent sequences of primitive values, known as arrays. An array is homogeneous: all values in an array have the same type. Primitive types include integers, floating point numbers, and boolean (true/false) values. An awkward-array library inherits the primitives of the underlying library -- if a base array library doesn't support complex numbers, then neither does its awkward-array extension. Arrays need not be contiguous in memory, though this is the simplest case.
-  * Arrays may be _N_-dimensional.
+  * It must be able to represent sequences of primitive values, known as *arrays*. An array is homogeneous: all values in an array have the same type. Primitive types include integers, floating point numbers, and boolean (true/false) values. An awkward-array library inherits the primitives of the underlying library -- if a base array library doesn't support complex numbers, then neither does its awkward-array extension. Arrays need not be contiguous in memory, though this is the simplest case.
+  * Arrays may be _N_-dimensional, though this is not required. We will refer to an array's dimensions as its *shape*, a tuple of positive integers whose product is the total number of elements in the array.
+  * It must be possible to *extract* an array element by integer index or a tuple of _N_ integer indexes for an _N_-dimensional array. In this document, we will use 0-indexing: `0` extracts the first element, `1` extracts the second, etc. An array library with 1-indexing (`1` extracts the first element) would correspondingly have 1-indexing in its awkward-array extensions.
+  * It must be possible to *slice* an array element
 
 
+, at least from at *start* index to a *stop* index, and possibly also strided by a *step*. In this document, the *start* is inclusive
 
 
 
