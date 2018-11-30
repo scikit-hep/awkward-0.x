@@ -418,11 +418,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if starts.shape[1:] != stops.shape[1:]:
             raise ValueError("starts and stops must have the same dimensionality (shape[1:])")
 
-    def __iter__(self):
-        self._checkiter()
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
         self._valid()
         if len(self._starts.shape) != 1:
-            for x in super(JaggedArray, self).__iter__():
+            for x in super(JaggedArray, self).__iter__(checkiter=checkiter):
                 yield x
         else:
             stops = self._stops
@@ -1354,11 +1355,12 @@ class ByteJaggedArray(JaggedArray):
     def _gettype(self, seen):
         return awkward.type.ArrayType(awkward.util.numpy.inf, self._subdtype)
 
-    def __iter__(self):
-        self._checkiter()
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
         self._valid()
         if len(self._starts.shape) != 1:
-            for x in super(JaggedArray, self).__iter__():
+            for x in super(JaggedArray, self).__iter__(checkiter=checkiter):
                 yield x.view(self._subdtype)
         else:
             stops = self._stops

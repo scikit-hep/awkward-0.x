@@ -327,8 +327,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             except:
                 pass
 
-    def __iter__(self):
-        self._checkiter()
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
         return iter(self.array)
 
     def __array__(self, *args, **kwargs):

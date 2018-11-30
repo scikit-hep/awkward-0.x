@@ -279,14 +279,15 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         if self.countsknown:
             return super(ChunkedArray, self).__str__()
         else:
-            strs = [awkward.util.array_str(x) for x in self[:7]]
+            strs = [awkward.util.array_str(x) for x in self[:7].__iter__(checkiter=False)]
             if len(strs) < 7:
                 return super(ChunkedArray, self).__str__()
             else:
                 return "[{0} ...]".format(" ".join(strs))
 
-    def __iter__(self):
-        self._checkiter()
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
         for i, chunk in enumerate(self._chunks):
             if i >= len(self._counts):
                 self._counts.append(len(chunk))
