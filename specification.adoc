@@ -23,7 +23,7 @@ It is not a goal of this document to explain how the awkward-array features are 
 
 Documentation is not an explicit goal of this specification, though users may read it to learn how to use any compliant implementation. Unlike documentation, however, this document describes what an awkward-array library should do, not necessarily what it does. Users are encouraged to file https://github.com/scikit-hep/awkward-array/issues[issues here] if a discrepancy is found in the Numpy-only implementation.
 
-The major and minor version numbers of this specification, `xx.yy`, correspond to the major and minor version numbers of the Numpy-only implementation: `xx.yy` in `xx.yy.zz`. The revision number, `zz`, increases as it strives toward compliance with the specification. This particular version of the document is a pre-release; compliance is only required for released specifications.
+The major and minor version numbers of this specification, `xx.yy`, correspond to the major and minor version numbers of the Numpy-only implementation: `xx.yy` in `xx.yy.zz`. The revision number, `zz`, increases as the implementation strives toward compliance with the specification. This particular version of the specification is a pre-release; compliance is only required for released specifications.
 
 A library may implement more features than those described in this specification without affecting its compliance. If it implements fewer classes or fewer methods, it can only be said to be "`partially compliant,`" and would have to enumerate the missing classes or methods.
 
