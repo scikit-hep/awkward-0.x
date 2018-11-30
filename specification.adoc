@@ -29,7 +29,7 @@ A library may implement more features than those described in this specification
 
 === Basic array protocol
 
-Necessary features of the underlying array library are described in this section (a) to establish a syntax used in the rest of this document and (b) as a basis for translating idioms of non-Numpy libraries into the language of this document. For instance, another language may use a function to extract slices of an array, rather than Python's `array[start:stop:step]` syntax. If so, the awkward-array idiom in that language would use the same function name and arguments, rather than the Python ones.
+Necessary features of the underlying array library are described in this section for two reasons: (a) to establish a syntax used in the rest of this document and (b) as a basis for translating idioms of non-Numpy libraries into the language of this document. For instance, another language may use a function to extract slices of an array, rather than Python's `array[start:stop:step]` syntax. If so, the awkward-array idiom in that language would use the same function name and arguments, rather than the Python ones.
 
 The underlying array library must have the following features.
 
