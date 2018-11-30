@@ -139,6 +139,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             self._isvalid = True
 
     def __iter__(self):
+        self._checkiter()
         self._valid()
         for i in self._index:
             yield self._content[i]
@@ -304,6 +305,7 @@ class ByteIndexedArray(IndexedArray):
             self._isvalid = True
 
     def __iter__(self):
+        self._checkiter()
         self._valid()
         itemsize = self._dtype.itemsize
         for i in self._index:
@@ -531,6 +533,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             self._isvalid = True
 
     def __iter__(self):
+        self._checkiter()
         self._valid()
 
         length = self._length

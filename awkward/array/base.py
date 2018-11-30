@@ -56,9 +56,15 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def at(self):
         return At(self)
 
+    allow_tonumpy = True
+    allow_iter = True
+
+    def _checktonumpy(self):
+        if not self.allow_tonumpy:
+            raise RuntimeError("awkward.array.base.AwkwardArray.allow_tonumpy is False; refusing to convert to Numpy")
+
     def __array__(self, dtype=None):
-        # hitting this function is usually undesirable; uncomment to search for performance bugs
-        # raise Exception
+        self._checktonumpy()
 
         if dtype is None:
             dtype = self.dtype
@@ -78,7 +84,12 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         self.__dict__.update(out.__dict__)
         self.__class__ = out.__class__
 
+    def _checkiter(self):
+        if not self.allow_iter:
+            raise RuntimeError("awkward.array.base.AwkwardArray.allow_iter is False; refusing to iterate")
+
     def __iter__(self):
+        self._checkiter()
         for i in range(len(self)):
             yield self[i]
 

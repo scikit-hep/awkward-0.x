@@ -286,6 +286,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 return "[{0} ...]".format(" ".join(strs))
 
     def __iter__(self):
+        self._checkiter()
         for i, chunk in enumerate(self._chunks):
             if i >= len(self._counts):
                 self._counts.append(len(chunk))
@@ -293,6 +294,8 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 yield x
 
     def __array__(self, *args, **kwargs):
+        self._checktonumpy()
+
         if isinstance(self.type.to, awkward.util.numpy.dtype):
             if len(self) == 0:
                 return awkward.util.numpy.empty(0, dtype=awkward.util.DEFAULTTYPE)

@@ -177,6 +177,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         pass
         
     def __iter__(self):
+        self._checkiter()
         for x in self._content:
             yield self.generator(x, *self._args, **self._kwargs)
 

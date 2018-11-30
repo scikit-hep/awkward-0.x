@@ -419,6 +419,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             raise ValueError("starts and stops must have the same dimensionality (shape[1:])")
 
     def __iter__(self):
+        self._checkiter()
         self._valid()
         if len(self._starts.shape) != 1:
             for x in super(JaggedArray, self).__iter__():
@@ -1354,6 +1355,7 @@ class ByteJaggedArray(JaggedArray):
         return awkward.type.ArrayType(awkward.util.numpy.inf, self._subdtype)
 
     def __iter__(self):
+        self._checkiter()
         self._valid()
         if len(self._starts.shape) != 1:
             for x in super(JaggedArray, self).__iter__():
