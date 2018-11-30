@@ -7,7 +7,7 @@
 
 == Introduction
 
-Array programming is a general programming paradigm, similar to functional programming or object-oriented programming in its scope. Pioneered by APL in 1962, this paradigm has appeared primarily in interactive data processing languages aimed at data analysts and statisticians: S (1976), MATLAB (1984), S-PLUS (1988), R (1993), and Numpy (2005). Unlike its predecessors, Numpy is not a language in itself, but a foundational library for science and statistics in Python.
+Array programming is a general programming paradigm, similar to functional programming or object-oriented programming in its scope. Pioneered by APL in 1962, this paradigm has appeared primarily in interactive data processing languages aimed at data analysts and statisticians: S (1976), MATLAB (1984), S-PLUS (1988), R (1993), and Numpy (2005). Numpy, unlike its predecessors, is not a language in itself, but a foundational library for science and statistics in Python.
 
 Array programming is mostly used on problems with regular, rectangular grids. It is possible to represent and operate on more complex data structures, but it is considerably more awkward to do so in current frameworks. Fortunately, this awkwardness may be hidden in a suite of higher-level array classes that present modest extensions of the array programming paradigm to the user.
 
