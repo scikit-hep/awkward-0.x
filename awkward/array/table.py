@@ -93,7 +93,9 @@ class Table(awkward.array.base.AwkwardArray):
         def __dir__(self):
             return ["_" + x for x in self._table._content if x.isnumeric() or x.isidentifier()] + ["tolist"]
 
-        def __iter__(self):
+        def __iter__(self, checkiter=True):
+            if checkiter:
+                self._checkiter()
             i = 0
             while str(i) in self._table._content:
                 yield self._table._content[str(i)]
@@ -423,7 +425,10 @@ class Table(awkward.array.base.AwkwardArray):
     def _valid(self):
         pass
 
-    def __iter__(self):
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
+
         if self._view is None:
             length = self._length()
             i = 0

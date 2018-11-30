@@ -42,9 +42,7 @@ class Methods(object):
 
     @staticmethod
     def mixin(methods, awkwardtype):
-        assert issubclass(methods, Methods)
         assert not issubclass(methods, awkward.array.base.AwkwardArray)
-        assert issubclass(awkwardtype, awkward.array.base.AwkwardArray)
         assert not issubclass(awkwardtype, Methods)
         return type(awkwardtype.__name__ + "Methods", (methods, awkwardtype), {})
 
@@ -52,7 +50,6 @@ class Methods(object):
     def maybemixin(sample, awkwardtype):
         if issubclass(sample, Methods):
             assert issubclass(sample, awkward.array.base.AwkwardArray)
-            assert issubclass(awkwardtype, awkward.array.base.AwkwardArray)
             allbases = tuple(x for x in sample.__bases__ if not issubclass(x, awkward.array.base.AwkwardArray)) + (awkwardtype,)
             return type(awkwardtype.__name__ + "Methods", allbases, {})
         else:
@@ -179,7 +176,9 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def _valid(self):
         pass
         
-    def __iter__(self):
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
         for x in self._content:
             yield self.generator(x, *self._args, **self._kwargs)
 

@@ -327,10 +327,13 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             except:
                 pass
 
-    def __iter__(self):
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
         return iter(self.array)
 
     def __array__(self, *args, **kwargs):
+        self._checktonumpy()
         return awkward.util.numpy.array(self.array, *args, **kwargs)
 
     def __getitem__(self, where):

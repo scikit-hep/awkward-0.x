@@ -252,7 +252,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
             self._isvalid = True
 
-    def __iter__(self):
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
         self._valid()
 
         tags = self._tags

@@ -28,10 +28,18 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
+import unittest
 
-__version__ = "0.5.2"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+import numpy
 
-del re
+from awkward import *
+from awkward.type import *
+
+class Test(unittest.TestCase):
+    def runTest(self):
+        pass
+
+    def test_issue49(self):
+        a = JaggedArray([2], [5], [1, 2, 3, 4, 5])
+        m = JaggedArray([0], [3], [False, False, True])
+        assert a[m].tolist() == [[5]]

@@ -171,7 +171,9 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
             self._isvalid = True
 
-    def __iter__(self):
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
         self._valid()
 
         mask = self._mask
@@ -394,7 +396,9 @@ class BitMaskedArray(MaskedArray):
 
             self._isvalid = True
 
-    def __iter__(self):
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
         self._valid()
 
         one = awkward.util.numpy.uint8(1)
@@ -594,7 +598,9 @@ class IndexedMaskedArray(MaskedArray):
 
             self._isvalid = True
 
-    def __iter__(self):
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
         self._valid()
 
         mask = self._mask

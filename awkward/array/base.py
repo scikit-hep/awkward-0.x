@@ -56,9 +56,15 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def at(self):
         return At(self)
 
+    allow_tonumpy = True
+    allow_iter = True
+
+    def _checktonumpy(self):
+        if not self.allow_tonumpy:
+            raise RuntimeError("awkward.array.base.AwkwardArray.allow_tonumpy is False; refusing to convert to Numpy")
+
     def __array__(self, dtype=None):
-        # hitting this function is usually undesirable; uncomment to search for performance bugs
-        # raise Exception
+        self._checktonumpy()
 
         if dtype is None:
             dtype = self.dtype
@@ -78,15 +84,21 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         self.__dict__.update(out.__dict__)
         self.__class__ = out.__class__
 
-    def __iter__(self):
+    def _checkiter(self):
+        if not self.allow_iter:
+            raise RuntimeError("awkward.array.base.AwkwardArray.allow_iter is False; refusing to iterate")
+
+    def __iter__(self, checkiter=True):
+        if checkiter:
+            self._checkiter()
         for i in range(len(self)):
             yield self[i]
 
     def __str__(self):
         if len(self) <= 6:
-            return "[{0}]".format(" ".join(awkward.util.array_str(x) for x in self))
+            return "[{0}]".format(" ".join(awkward.util.array_str(x) for x in self.__iter__(checkiter=False)))
         else:
-            return "[{0} ... {1}]".format(" ".join(awkward.util.array_str(x) for x in self[:3]), " ".join(awkward.util.array_str(x) for x in self[-3:]))
+            return "[{0} ... {1}]".format(" ".join(awkward.util.array_str(x) for x in self[:3].__iter__(checkiter=False)), " ".join(awkward.util.array_str(x) for x in self[-3:].__iter__(checkiter=False)))
 
     def __repr__(self):
         return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
