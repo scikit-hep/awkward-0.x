@@ -71,7 +71,7 @@ An awkward-array library provides the above features in the following new contex
    * *Non-contiguousness:* allows arrays to be non-contiguous in memory by mapping indexes.
    * *Laziness:* allows arrays to be generated on demand.
 
-Jaggedness, product types, sum types, masking, and references extend the capacity of basic arrays to a complete, hierarchical data model. General data containers like https://developers.google.com/protocol-buffers[Protocol buffers], https://thrift.apache.org[Thrift], https://avro.apache.org[Avro], and https://parquet.apache.org[Parquet] present this data model, with the exception of references.
+Jaggedness, product types, sum types, masking, and references extend the expressivity of basic arrays to a complete, hierarchical data model. General data containers like https://developers.google.com/protocol-buffers[Protocol buffers], https://thrift.apache.org[Thrift], https://avro.apache.org[Avro], and https://parquet.apache.org[Parquet] present this data model, with the exception of references.
 
 Object types and methods generalize it further, allowing any type permitted by a programming language such as Python, with a loss of cross-language compatibility.
 
