@@ -65,7 +65,7 @@ An awkward-array library provides the above features in the following new contex
    * *Product types:* extend a primitive type system with record structures -- objects with named, typed fields.
    * *Sum types:* extend a primitive type system with tagged unions -- values that may have one of a set of enumerated types. This permits arrays to be heterogeneous in a controlled way.
    * *Masking:* extend a primitive type system with a nullable type -- values that may be "`missing.`"
-   * *Cross-references and cyclic references:* extend a primitive type system with values that may be references to another array, including a parent of the array in which they reside.
+   * *Cross-references and cyclic references:* extend a primitive type system with values that may be references to another array, including a parent of the array in which they reside. This adds "`pointers`" to the type system in a controlled way: references must point to members of a specified array.
    * *Object types:* allow array elements to hold user-defined types by construction via primitive elements.
    * *Object methods:* apply user-defined methods to whole arrays.
    * *Non-contiguousness:* allows arrays to be non-contiguous in memory by mapping indexes.
