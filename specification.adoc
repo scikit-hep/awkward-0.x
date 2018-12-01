@@ -59,6 +59,27 @@ Any array library supporting these basic features may be extended as specified i
 
 == Features provided by an awkward-array library
 
+An awkward-array library provides the above features in the following new contexts.
+
+   * *Jaggedness:* multidimensional arrays with a non-constant shape. A jagged array is an array of arbitrary-length lists.
+   * *Product types:* extend a primitive type system with record structures -- objects with named, typed fields.
+   * *Sum types:* extend a primitive type system with tagged unions -- values that may have one of a set of enumerated types. This permits arrays to be heterogeneous in a controlled way.
+   * *Masking:* extend a primitive type system with a nullable type -- values that may be "`missing.`"
+   * *Cross-references and cyclic references:* extend a primitive type system with values that may be references to another array, including a parent of the array in which they reside.
+   * *Object types:* allow array elements to hold user-defined types by construction via primitive elements.
+   * *Object methods:* apply user-defined methods to whole arrays.
+   * *Non-contiguousness:* allows arrays to be non-contiguous in memory by mapping indexes.
+   * *Laziness:* allows arrays to be generated on demand.
+
+Jaggedness, product types, sum types, masking, and references extend the capacity of basic arrays to a complete, hierarchical data model. General data containers like https://developers.google.com/protocol-buffers[Protocol buffers], https://thrift.apache.org[Thrift], https://avro.apache.org[Avro], and https://parquet.apache.org[Parquet] present this data model, with the exception of references.
+
+Object types and methods generalize it further, allowing any type permitted by a programming language such as Python, with a loss of cross-language compatibility.
+
+Non-contiguousness does not affect data type, but it virtually concatenates data from different sources or in chunks to form a single, logical array without copying.
+
+Laziness does not affect data type, but it allows arrays that may be remote or not loaded into memory to be treated on the same footing as arrays that have.
+
+Taken together, these features promote array programming to a wider set of applications.
 
 === High-level types
 
@@ -90,18 +111,6 @@ Any array library supporting these basic features may be extended as specified i
 === UnionArray
 
 
-== Objects
-
-
-=== Mix-in Methods
-
-
-=== ObjectArray
-
-
-=== StringArray
-
-
 == Masking
 
 
@@ -116,6 +125,8 @@ Any array library supporting these basic features may be extended as specified i
 
 == Indirection
 
+_(pointers go here)_
+
 
 === IndexedArray
 
@@ -124,6 +135,18 @@ Any array library supporting these basic features may be extended as specified i
 
 
 === SparseArray
+
+
+== Objects
+
+
+=== Mix-in Methods
+
+
+=== ObjectArray
+
+
+=== StringArray
 
 
 == Non-contiguousness
@@ -135,7 +158,7 @@ Any array library supporting these basic features may be extended as specified i
 === AppendableArray
 
 
-== Lazy-loading
+== Laziness
 
 
 === VirtualArray
