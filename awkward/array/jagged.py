@@ -110,9 +110,22 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     """
 
     def __init__(self, starts, stops, content):
-        self.starts = starts
-        self.stops = stops
-        self.content = content
+        if offsetsaliased(starts, stops):
+            self.content = content
+            self._starts, self._stops = starts, stops
+            self._offsets = starts.base
+            self._counts, self._parents = None, None
+            self._isvalid = False
+
+            if not issubclass(self._offsets.dtype.type, awkward.util.numpy.integer):
+                raise TypeError("offsets must have integer dtype")
+            if len(self._offsets.shape) != 1 or (self._offsets < 0).any():
+                raise ValueError("offsets must be a one-dimensional, non-negative array")
+
+        else:
+            self.starts = starts
+            self.stops = stops
+            self.content = content
 
     @classmethod
     def fromiter(cls, iterable):
@@ -126,13 +139,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @classmethod
     def fromoffsets(cls, offsets, content):
         offsets = awkward.util.toarray(offsets, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
-        if not issubclass(offsets.dtype.type, awkward.util.numpy.integer):
-            raise TypeError("offsets must have integer dtype")
-        if len(offsets.shape) != 1 or (offsets < 0).any():
-            raise ValueError("offsets must be a one-dimensional, non-negative array")
-        out = cls(offsets[:-1], offsets[1:], content)
-        out._offsets = offsets
-        return out
+        return cls(offsets[:-1], offsets[1:], content)
 
     @classmethod
     def fromcounts(cls, counts, content):
@@ -397,17 +404,22 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _valid(self):
         if not self._isvalid:
-            self._validstartsstops(self._starts, self._stops)
+            if offsetsaliased(self._starts, self._stops):
+                self._offsets = self._starts.base
+                if not (self._offsets[1:] >= self._offsets[:-1]).all():
+                    raise ValueError("offsets must be monatonically increasing")
+                if self._offsets.max() > len(self._content):
+                    raise ValueError("maximum offset {0} is beyond the length of the content ({1})".format(self._offsets.max(), len(self._content)))
 
-            nonempty = (self._starts != self._stops)
-
-            starts = self._starts[nonempty].reshape(-1)
-            if len(starts) != 0 and starts.reshape(-1).max() >= len(self._content):
-                raise ValueError("maximum start ({0}) is at or beyond the length of the content ({1})".format(starts.reshape(-1).max(), len(self._content)))
-
-            stops = self._stops[nonempty].reshape(-1)
-            if len(stops) != 0 and stops.reshape(-1).max() > len(self._content):
-                raise ValueError("maximum stop ({0}) is beyond the length of the content ({1})".format(self._stops.reshape(-1).max(), len(self._content)))
+            else:
+                self._validstartsstops(self._starts, self._stops)
+                nonempty = (self._starts != self._stops)
+                starts = self._starts[nonempty].reshape(-1)
+                if len(starts) != 0 and starts.reshape(-1).max() >= len(self._content):
+                    raise ValueError("maximum start ({0}) is at or beyond the length of the content ({1})".format(starts.reshape(-1).max(), len(self._content)))
+                stops = self._stops[nonempty].reshape(-1)
+                if len(stops) != 0 and stops.reshape(-1).max() > len(self._content):
+                    raise ValueError("maximum stop ({0}) is beyond the length of the content ({1})".format(self._stops.reshape(-1).max(), len(self._content)))
 
             self._isvalid = True
 
@@ -417,6 +429,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             raise ValueError("starts must have the same (or shorter) length than stops")
         if starts.shape[1:] != stops.shape[1:]:
             raise ValueError("starts and stops must have the same dimensionality (shape[1:])")
+        if not (stops >= starts).all():
+            raise ValueError("stops must be greater than or equal to starts")
 
     def __iter__(self, checkiter=True):
         if checkiter:
@@ -436,7 +450,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if awkward.util.isstringslice(where):
             content = self._content[where]
-            return awkward.array.objects.Methods.maybemixin(type(content), JaggedArray)(self._starts, self._stops, content)
+            cls = awkward.array.objects.Methods.maybemixin(type(content), JaggedArray)
+            out = cls.__new__(cls)
+            out.__dict__.update(self.__dict__)
+            out._content = content
+            return out
 
         if isinstance(where, tuple) and len(where) == 0:
             return self

@@ -231,7 +231,7 @@ def jsonable(obj):
     elif isinstance(obj, (numbers.Integral, awkward.util.numpy.integer)):
         return int(obj)       # policy: eliminate Numpy types
 
-    elif isinstance(obj, (numbers.Real, awkward.util.numpy.floating)) and awkward.util.numpy.finite(obj):
+    elif isinstance(obj, (numbers.Real, awkward.util.numpy.floating)) and awkward.util.numpy.isfinite(obj):
         return float(obj)     # policy: eliminate Numpy types
 
     else:
