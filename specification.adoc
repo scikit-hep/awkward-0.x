@@ -372,11 +372,12 @@ Opaque objects cannot be shared across platforms the way that pure constructions
 
 In awkward-array, the above types are represented by the following classes in `awkward.type`:
 
-   * `ArrayType(n, m, ..., to)` constructs a linear sequence like `[0, n) -> [0, m) -> ... -> to`.
-
-
-
-
+   * `Type` is an abstract base class for type objects. Types may be `Types`, Numpy dtypes, or Python callables.
+   * `ArrayType(n, m, ..., to)` constructs a linear sequence like `[0, n) -> [0, m) -> ... -> to`. At least two arguments are required, and all arguments but the last must be positive integers or infinity (which is floating point) or a string, to make a single-field table. The last argument must be a basic array dtype (for a primitive type) or a Python callable (for an opaque type). `ArrayType` objects are recursively linked lists: each instance has two members, `takes` and `to`, where `takes` is a single number and `to` is the rest of the sequence.
+   * `TableType(**fields)` constructs a product type from a mapping of field names to field types. The preferred way to construct a `TableType` is through the `&` operator, which glues single-field tables into a multi-field table. The `TableType` has get-item and set-item methods for manipulation as a Python dict.
+   * `UnionType(*possibilities)` constructs a sum type from a sequence of types. The preferred way to construct a `UnionType` is through the `|` operator. The `UnionType` has get-item and set-item methods, as well as `append`, for manipulation as a list.
+   * `OptionType(type)` constructs an option type from a type parameter. It has a `type` attribute.
+   * There are no special classes for cross-references and cyclic references. Build an internally referenced type object to represent an internally referenced type. All `Type` methods except for those that attempt to yield equivalent Numpy types (`dtype` and `shape`) should be recursion-safe.
 
 === Low-level features
 
