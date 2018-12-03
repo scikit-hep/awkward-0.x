@@ -139,13 +139,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @classmethod
     def fromoffsets(cls, offsets, content):
         offsets = awkward.util.toarray(offsets, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
-        if not issubclass(offsets.dtype.type, awkward.util.numpy.integer):
-            raise TypeError("offsets must have integer dtype")
-        if len(offsets.shape) != 1 or (offsets < 0).any():
-            raise ValueError("offsets must be a one-dimensional, non-negative array")
-        out = cls(offsets[:-1], offsets[1:], content)
-        out._offsets = offsets
-        return out
+        return cls(offsets[:-1], offsets[1:], content)
 
     @classmethod
     def fromcounts(cls, counts, content):
