@@ -13,6 +13,8 @@ Array programming is mostly used to solve problems with regular, rectangular gri
 
 https://github.com/scikit-hep/awkward-array[awkward-array] (https://pypi.org/project/awkward[awkward] on PyPI) is an implementation of complex data structures and operations in Python, depending only on https://pandas.pydata.org[Numpy]. Drop-in replacements optimized with compiled code or leveraging GPUs are foreseen, though they would present the same user interface as the Numpy-only implementation. Extensions for using awkward-array as https://pandas.pydata.org[Pandas] columns, in https://pandas.pydata.org[Numba]-compiled functions, and in distributed calculations with https://pandas.pydata.org[Dask] are also foreseen. These arrays can already be used to view https://arrow.apache.org[Arrow] data and can be persisted and reconstituted in any data format supporting Numpy arrays, such as HDF5, or named binary blobs, such as ZIP or key-value stores.
 
+As an array programming environment for general data structures, awkward-array represents arbitrary data in a https://en.wikipedia.org/wiki/Column-oriented_DBMS[columnar] form (compatible with and a generalization of Arrow). Most operations are vectorized or vectorizable because they are applied to flat, homogeneous arrays in memory masquerading as the nested and variable-length data structures that are presented to the user. This allows for memory and computational efficiency that are hard to match with implementations on traditional "`row-wise`" data, as well as automatic porting to pure vector coprocessors, such as GPUs. The key is a random access, composable representation of https://en.wikipedia.org/wiki/Jagged_array[jagged arrays] in terms of unstructured Numpy arrays.
+
 === This specification
 
 Despite awkward-array's focus on Python and Numpy, the data model it represents is language-agnostic. This document describes awkward-array as a protocol for generalizing array programming to complex structures in any environment. It is a normative document in the sense that it describes what awkward-array in Python _should_ do; discrepancies between this document and the Python implementation would usually be decided in favor of the document (though the document itself may have "`bugs`" to be fixed in a later version). It is also normative in the sense that other implementations, in C++ or MATLAB for instance, that claim to "`adhere to the awkward-array specification`" _should_ also behave as described here.
@@ -403,7 +405,17 @@ Array classes are defined in the `awkward.array` submodule but are all accessibl
    * The `tolist()` method returns a Pythonic representation of the data (also valid JSON, if all floating point values are finite). Nested arrays become nested Python lists and `Table.Rows` become dicts of name, field value pairs.
    * The `valid()` method tests whole-array validity without raising an exception.
 
+The `awkward.array.base.AwkwardArray` abstract base class has switches to control global behavior. They may be set at any level: on the base class to affect all awkward-array types, all instances, or on a concrete class for all instances of that class, or on a single instance. In languages other than Python, an alternative mechanism may be substituted.
+
+   * `allow_tonumpy` _default:_ `True`, if `False`, any operation that would convert an awkward-array type into a basic (Numpy) array instead raises a `RuntimeError`.
+   * `allow_iter` _default:_ `True`, if `False`, any attempt to iterate over an awkward-array in Python (except via `str` or `repr`) would raise a `RuntimeError`.
+   * `check_prop_valid` _default:_ `True`, if `False`, skip single-property validity checks.
+   * `check_valid` _default:_ `True`, if `False`, skip whole-array validity checks.
+
 == Jaggedness
+
+
+
 
 
 
