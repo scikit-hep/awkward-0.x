@@ -383,28 +383,25 @@ This module has two functions:
    * `fromarray(array)` returns the type specification of any array, whether an awkward-array or a basic (Numpy) array.
    * `fromnumpy(shape, dtype, masked=False)` returns the type specification of a basic (Numpy) array directly from shape, dtype, and masked parameters.
 
-=== Low-level features
-
-Some awkward-array structures differ from each other in ways that are intentionally not reflected by high-level type. Their purpose is to deal with awkward data sources.
-
-The following purely low-level features 
-
-
-
-
-
-The high-level types intentionally hide certain features. The most prominent of these are non-contiguousness, which presents a sequence of arrays as though they were concatenated, and laziness, which presents an unloaded or ungenerated array as though it were already materialized. These two features deal with memory-location awkwardness and load-time awkwardness but not type manipulation. These are *purely low-level* features.
-
-Some features modify the type but also have a low-level component. These are:
-
-   * `JaggedArray`, which indexes content by element index, and `ByteJaggedArray`, which indexes content by bytes. Both present a jagged array type.
-   * `MaskedArray`, which uses 1-byte booleans as a mask, and `BitMaskedArray`, which uses 1-bit booleans as a mask. `IndexedMaskedArray` uses negative indexes as a mask; the positive indexes 
-
-
-
-
 == General properties of all array classes
 
+Array classes are defined in the `awkward.array` submodule but are all accessible directly from the top-level `awkward` module. They all have the following properties.
+
+   * They have primary constructors that define the array in terms of the most general components; for example, `starts`, `stops`, and `content` for `JaggedArray` and `tags`, `offsets`, and `contents` for `UnionArray`.
+   * They have class-method constructors with more convenient constructors, such as `JaggedArray.fromoffsets(offsets, content)` and `UnionArray.fromtags(tags, contents)`.
+   * Primary constructor arguments are read-write properties of the array object.
+   * *Single-property validity* tests, which verify conditions that are a function of only one property, are performed in the constructor and upon assignment. Errors raise exceptions.
+   * *Whole-array validity* tests, which verify conditions that are relationships among properties in an array, are performed just before array evaluation. Errors raise exceptions.
+   * All arrays have get-item methods that perform extraction, slicing, masking, and gathering. If the array contains a product type, a string selects a column and a sequence of strings selects multiple columns.
+   * String indexes commute with extraction/slicing/masking/gathering, but they can't be used in the same set of square brackets, the way extraction/slicing/masking/gathering can.
+   * All arrays have a set-item method to add columns to a `Table` (product type), but _only_ for this purpose. Elements of an awkward-array cannot be changed in place without digging down to the basic array (and that can have hard-to-predict consequences).
+   * All arrays have a length (for `len`) and Pythonic iteration (for `for` loops).
+   * String representations (`str` and `repr` in Python) show logical content in square brackets without commas (spaces only), limited to 6 elements at each level of depth (filling in missing with three dots: `...`). In Python, the `repr` representation includes the top-most class name but `str` does not. String representations trigger whole-array validity tests.
+   * The `type` read-only property returns a representation of the array type.
+   * The `dtype` and `shape` read-only properties attempt to express the array as a basic (Numpy) array, which can involve information loss.
+   * The `columns` read-only property returns a list of field names for the shallowest `Table` within the array that are valid Python identifiers. The `allcolumns` read-only property is not restricted to valid Python identifiers.
+   * The `tolist()` method returns a Pythonic representation of the data (also valid JSON, if all floating point values are finite). Nested arrays become nested Python lists and `Table.Rows` become dicts of name, field value pairs.
+   * The `valid()` method tests whole-array validity without raising an exception.
 
 == Jaggedness
 
@@ -478,9 +475,6 @@ _(pointers go here)_
 
 
 === VirtualArray
-
-
-== Cross-references and cyclic references
 
 
 == Methods defined on all arrays
