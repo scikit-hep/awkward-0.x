@@ -3,6 +3,7 @@
 :Email: pivarski@princeton.edu
 :Date: 1.0 expected early 2019
 :Revision: 1.0-pre1
+:stem: latexmath
 :toc:
 
 == Introduction
@@ -75,13 +76,18 @@ Jaggedness, product types, sum types, masking, and references extend the express
 
 Object types and methods generalize it further, allowing any type permitted by a programming language such as Python, with a loss of cross-language compatibility.
 
-Non-contiguousness does not affect data type, but it virtually concatenates data from different sources or in chunks to form a single, logical array without copying.
+Non-contiguousness does not affect data type, but it virtually concatenates data from separate chunks into a single, logical array without copying.
 
 Laziness does not affect data type, but it allows arrays that may be remote or not loaded into memory to be treated on the same footing as arrays that have.
 
 Taken together, these features promote array programming to a wider set of applications.
 
 === High-level types
+
+[stem]
+++++
+\sqrt{4} = 2
+++++
 
 
 === Low-level structures
