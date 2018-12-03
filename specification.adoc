@@ -159,6 +159,16 @@ The names are enumerated because there is a fixed set of choices, and each choic
 
 In general, the form is a sequence of name, type specification pairs called *fields* that can be embedded in a type specification. Product types with the same set of fields, in any order, are equivalent, though an awkward-array library should maintain the user-specified order for readability.
 
+Jagged arrays, basic arrays, and record structure may be freely intermixed. An awkward-array type with these elements is, in general, a tree:
+
+[source]
+----
+[0, n) -> [0, inf) -> 'one'   -> bool
+                      'two'   -> int64
+                      'three' -> 'x' -> [0, inf) -> float64
+                                 'y' -> complex128
+----
+
 ==== Sum types
 
 https://en.wikipedia.org/wiki/Tagged_union[Sum types] are known as "`tagged unions`" in programming languages that support them. They are values that may be any one of an enumerated set of types. They are "`sums`" in the sense that they are dual to product types: if a record type with two fields of types _T~1~_ and _T~2~_ is denoted _T~1~ * T~2~_, a union type that can be  _T~1~_ or _T~2~_ is _T~1~ + T~2~_, obeying a distributive law. Unions are useful for building heterogeneous arrays in a controlled way. Class inheritance in object-oriented programming is a limited case of sum typing.
@@ -201,6 +211,8 @@ for unions of _x, y, z_ records with jagged arrays of booleans, and
 ----
 
 for unions of _x, y, z_ floating point records with _x, y_ integer records.
+
+Sum types with the same set of enumerated types, in any order, are equivalent, though an awkward-array library should maintain the user-specified order for readability and an unambiguous type resolution order. (A value may be a member of more than one of the enumerated types.)
 
 === Low-level structures
 
