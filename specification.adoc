@@ -64,14 +64,14 @@ An awkward-array library provides the above features in the following new contex
    * *Jaggedness:* multidimensional arrays with a non-constant shape. A jagged array is an array of arbitrary-length lists.
    * *Product types:* extend a primitive type system with record structures -- objects with named, typed fields.
    * *Sum types:* extend a primitive type system with tagged unions -- values that may have one of a set of enumerated types. This permits arrays to be heterogeneous in a controlled way.
-   * *Masking:* extend a primitive type system with a nullable type -- values that may be "`missing.`"
+   * *Option types:* extend a primitive type system with a nullable type -- values that may be "`missing.`"
    * *Cross-references and cyclic references:* extend a primitive type system with values that may be references to another array, including a parent of the array in which they reside. This adds "`pointers`" to the type system in a controlled way: references must point to elements of a specified array.
    * *Object types:* allow array elements to virtually contain instances of any type expressible in a programming language, provided that it can be constructed strictly from elements of the array.
    * *Object methods:* adds user-defined methods to arrays, usually to emulate object methods as mapped kernels.
    * *Non-contiguousness:* allows arrays to be non-contiguous in memory by mapping indexes.
    * *Laziness:* allows arrays to be generated on demand.
 
-Jaggedness, product types, sum types, masking, and references extend the expressivity of basic arrays to a complete, hierarchical data model. General data containers like https://developers.google.com/protocol-buffers[Protocol buffers], https://thrift.apache.org[Thrift], https://avro.apache.org[Avro], and https://parquet.apache.org[Parquet] present this data model, with the exception of references.
+Jaggedness, product types, sum types, option types, and references extend the expressivity of basic arrays to a complete, hierarchical data model. General data containers like https://developers.google.com/protocol-buffers[Protocol buffers], https://thrift.apache.org[Thrift], https://avro.apache.org[Avro], and https://parquet.apache.org[Parquet] present this data model, with the exception of references.
 
 Object types and methods generalize it further, allowing any type permitted by a programming language such as Python, with a loss of cross-language compatibility.
 
@@ -123,6 +123,8 @@ because the second argument may be any non-negative integer. Unlike a basic arra
 
 would accept only `[0, 3)` as a second argument if the first argument is `0`, would accept nothing (empty domain) if the first argument is `1`, and would accept only `[0, 2)` if the first argument is `2`. We have a choice between expressing the type signature fully, such that any arguments satisfying that signature would never fail to return a primitive value, and underexpressing it with `[0, inf)`, which has the advantage that the length of the type signature does not scale with the length of the array itself. Brevity is more useful for our purposes.
 
+In this document, we refer to a full listing of the sizes of subarrays as a jagged array's *jagged structure*. Some operations on two or more jagged arrays can only be performed if they have the same jagged structure.
+
 Continuing this line of reasoning, a doubly jagged array, such as
 
 [source, python]
@@ -168,6 +170,44 @@ Jagged arrays, basic arrays, and record structure may be freely intermixed. An a
                       'three' -> 'x' -> [0, inf) -> float64
                                  'y' -> complex128
 ----
+
+Extraction indexes (integers) and field names (strings) are commutative. Extraction indexes do not commute with other extraction indexes, as this would violate dimension order, and field names do not commute with other field names, as this would violate records of different nesting depths, but extraction indexes commute with field names. Reversing an integer index and a string name amounts to selecting column before row or row before column in a table.
+
+Ignoring this distinction hides the distinction between https://en.wikipedia.org/wiki/AOS_and_SOA[an array of structs and a struct of arrays], so that array manipulation code does not depend on this difference (just as Numpy hides C vs. Fortran order as an internal array flag). For instance,
+
+[source]
+----
+[0, n) -> 'x' -> [0, m) -> T1
+          'y' -> [0, m) -> T2
+----
+
+is equivalent to
+
+[source]
+----
+[0, n) -> [0, m) -> 'x' -> T1
+                    'y' -> T2
+----
+
+because all fields in the record have the same array dimension `m`, this array dimension can be commuted toward the root. The second form is considered canonical: extraction indexes should be commuted toward the root to reduce redundancy.
+
+The same commutation is possible for jagged dimensions (perhaps surprisingly). A jagged array of records is equivalent to a record of jagged arrays, all with the same jagged structure. If we had a detailed type schema that encoded this jagged structure, rather than hiding it under the symbol `[0, inf)`, we could perform the same commutation on jagged arrays as on regular arrays. However, as a limitation of this notation,
+
+[source]
+----
+[0, n) -> 'x' -> [0, inf) -> T1
+          'y' -> [0, inf) -> T2
+----
+
+can't be commuted to
+
+[source]
+----
+[0, n) -> [0, inf) -> 'x' -> T1
+                      'y' -> T2
+----
+
+because we do not know if fields `x` and `y` have the same jagged structure. (A record with a single field can be commuted.)
 
 ==== Sum types
 
@@ -246,6 +286,11 @@ Note that Numpy has a `numpy.ma.MaskedArray` type, but awkward-array has its own
 
 
 
+
+==== HERE
+
+
+
 === Low-level structures
 
 
@@ -273,7 +318,7 @@ Note that Numpy has a `numpy.ma.MaskedArray` type, but awkward-array has its own
 === UnionArray
 
 
-== Masking
+== Option types
 
 
 === MaskedArray
