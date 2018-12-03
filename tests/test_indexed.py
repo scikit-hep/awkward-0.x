@@ -262,3 +262,8 @@ class Test(unittest.TestCase):
     def test_indexed_ufunc(self):
         a = SparseArray(10, [1, 3, 5, 7, 9], [100, 101, 102, 103, 104])
         assert (a + 100).tolist() == [100, 200, 100, 201, 100, 202, 100, 203, 100, 204]
+
+    def test_crossref(self):
+        a = IndexedArray([0], UnionArray.fromtags([1, 0, 1, 0, 1, 0, 0, 1], [numpy.array([1.1, 2.2, 3.3, 4.4]), JaggedArray([1, 3, 5, 8], [3, 5, 8, 8], [])]))
+        a.content.contents[1].content = a.content
+        assert a.tolist() == [[1.1, [2.2, [3.3, 4.4, []]]]]

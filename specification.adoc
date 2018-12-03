@@ -66,7 +66,7 @@ An awkward-array library provides the above features in the following new contex
    * *Sum types:* extend a primitive type system with tagged unions -- values that may have one of a set of enumerated types. This permits arrays to be heterogeneous in a controlled way.
    * *Option types:* extend a primitive type system with a nullable type -- values that may be "`missing.`"
    * *Cross-references and cyclic references:* extend a primitive type system with values that may be references to another array, including a parent of the array in which they reside. This adds "`pointers`" to the type system in a controlled way: references must point to elements of a specified array.
-   * *Object types:* allow array elements to virtually contain instances of any type expressible in a programming language, provided that it can be constructed strictly from elements of the array.
+   * *Opaque object types:* allow array elements to virtually contain instances of any type expressible in a programming language, provided that it can be constructed strictly from elements of the array.
    * *Object methods:* adds user-defined methods to arrays, usually to emulate object methods as mapped kernels.
    * *Non-contiguousness:* allows arrays to be non-contiguous in memory by mapping indexes.
    * *Laziness:* allows arrays to be generated on demand.
@@ -316,16 +316,64 @@ is equivalent to
 
 Note that Numpy has a `numpy.ma.MaskedArray` type, but awkward-array has its own `awkward.MaskedArray`. The awkward-array masked type can contain non-basic arrays (jagged arrays, tables, etc.) and uses `None` to represent missing values, rather than `numpy.ma.masked`, an object with surprising properties.
 
-==== Cross-references
+==== Cross-references and cyclic references
+
+As described above, an awkward-array type can be a tree of primitive types, basic arrays, jagged arrays, product types, sum types, and option types. An arbitrary tree of types is powerful (see https://developers.google.com/protocol-buffers[Protocol buffers], https://thrift.apache.org[Thrift], https://avro.apache.org[Avro], and https://parquet.apache.org[Parquet]), but a given type tree sets an upper limit on the depth of values that are members of that type. There would be, for instance, no type specification for JSON, or even the subset of JSON corresponding to "`lists that contain numbers or other lists.`"
+
+This constraint can be lifted by allowing the type specification to contain references to other parts of itself. We represent these references by assigning a subexpression with `:=` and then referring to that subexpression by name, rather than rewriting the subexpression. If the reference is not contained within the subexpression it references, it is a *cross-reference* and this notation reduces verbosity.
+
+In the following example of a cross-reference, a dataset contains _x, y, z_ data points and moving windows representing contiguous ranges of these data points. The window has access to data beyond its own array element, but it does not have access to anything beyond the `data` field.
+
+[source]
+----
+[0, n) -> 'data'   -> T0 := 'x' -> float64
+                            'y' -> float64
+                            'z' -> float64
+          'window' -> [0, inf) -> T0
+----
+
+If the reference is contained within the subexpression it references, it is a *cyclic reference* and the assignment notation avoids infinite recursion.
+
+For example, consider lists that contain numbers or other lists, such as the value below.
+
+[source, python]
+----
+[[1.1, [2.2, [3.3, 4.4, []]]]]
+----
+
+Lists with this depth and no greater could be expressed as belonging to a sum type of jagged arrays nested four levels deep. Lists like the above at any depth can be expressed as belonging to
+
+[source]
+----
+[0, n) -> T0 := (float64        |
+                 [0, inf) -> T0 )
+----
+
+The subexpression `T0` represents floating point numbers or jagged arrays of `T0`. Trees of any depth belong to this type, as do cyclic graphs. With these elements, we can represent a wide variety of data structures, as general as most programming languages.
+
+==== Opaque object types
+
+Data constructed from primitives, basic arrays, jagged arrays, product types, sum types, option types, cross-references, and cyclic references are called *pure constructions*. They are entirely expressible in terms of basic arrays, which are themselves portable across environments. However, if a programming task requires special types, such as instances with particular methods or inheritance from a third-party interface, then pure constructions would have to be wrapped.
+
+Wrapped data are represented in the type system as *opaque types*, types outside of awkward-array's system. For instance, we may emulate an array of opaque objects by constructing these objects from an awkward-array upon extraction. This opaque constructor, which may be a helper function rather than a class's built-in constructor, is included in the type specification to represent such a case.
+
+For example, an array of Python strings would be
+
+[source]
+----
+[0, n) -> <class 'str'>
+----
+
+with a jagged array of character primitives hidden behind the string constructor.
+
+Opaque objects cannot be shared across platforms the way that pure constructions can. Gaining flexibility in one way diminishes it in another.
+
+==== Type representation
 
 
 
 
-==== HERE
-
-
-
-=== Low-level structures
+=== Low-level features
 
 
 == General properties of all array classes
@@ -378,7 +426,7 @@ _(pointers go here)_
 === SparseArray
 
 
-== Objects
+== Opaque objects
 
 
 === Mix-in Methods
@@ -403,6 +451,9 @@ _(pointers go here)_
 
 
 === VirtualArray
+
+
+== Cross-references and cyclic references
 
 
 == Methods defined on all arrays
