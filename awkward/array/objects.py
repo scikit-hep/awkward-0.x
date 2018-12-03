@@ -170,9 +170,6 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def _gettype(self, seen):
         return self._generator
 
-    def _getshape(self):
-        return (len(self._content),)
-
     def _valid(self):
         pass
         

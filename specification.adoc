@@ -161,11 +161,46 @@ In general, the form is a sequence of name, type specification pairs called *fie
 
 ==== Sum types
 
+https://en.wikipedia.org/wiki/Tagged_union[Sum types] are known as "`tagged unions`" in programming languages that support them. They are values that may be any one of an enumerated set of types. They are "`sums`" in the sense that they are dual to product types: if a record type with two fields of types _T~1~_ and _T~2~_ is denoted _T~1~ * T~2~_, a union type that can be  _T~1~_ or _T~2~_ is _T~1~ + T~2~_, obeying a distributive law. Unions are useful for building heterogeneous arrays in a controlled way. Class inheritance in object-oriented programming is a limited case of sum typing.
 
+We delimit the enumerated types in a sum type with a vertical bar. Consider, for instance, a value that may be a floating point number or a jagged list of booleans.
 
+[source]
+----
+float64          |
+[0, inf) -> bool
+----
 
+These may be embedded in any type specification.
 
+[source]
+----
+[0, n) -> (float64          |
+           [0, inf) -> bool )
+----
 
+Parentheses are required because the fields of a product type (denoted by adjacency) have higher operator precedence than the enumerations of a sum type. For instance,
+
+[source]
+----
+[0, n) -> ('x' -> float64
+           'y' -> float64
+           'z' -> float64   |
+           [0, inf) -> bool )
+----
+
+for unions of _x, y, z_ records with jagged arrays of booleans, and
+
+[source]
+----
+[0, n) -> ('x' -> float64
+           'y' -> float64
+           'z' -> float64 |
+           'x' -> int64
+           'y' -> int64   )
+----
+
+for unions of _x, y, z_ floating point records with _x, y_ integer records.
 
 === Low-level structures
 

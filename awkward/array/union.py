@@ -227,11 +227,10 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def _gettype(self, seen):
         out = awkward.type.UnionType()
         for x in self._contents:
-            out.possibilities.append(awkward.type._fromarray(x, seen))
+            out.append(awkward.type._fromarray(x, seen))
+        for x in self._tags.shape[:0:-1]:
+            out = awkward.type.ArrayType(x, out)
         return out
-
-    def _getshape(self):
-        return self._tags.shape
 
     def _valid(self):
         if not self._isvalid:

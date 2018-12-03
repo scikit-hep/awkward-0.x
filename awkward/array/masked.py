@@ -159,10 +159,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         return len(self._mask)
 
     def _gettype(self, seen):
-        return awkward.type._fromarray(self._content, seen)
-
-    def _getshape(self):
-        return (len(self._mask),)
+        return awkward.type.OptionType(awkward.type._fromarray(self._content, seen))
 
     def _valid(self):
         if not self._isvalid:
@@ -337,9 +334,6 @@ class BitMaskedArray(MaskedArray):
 
     def __len__(self):
         return len(self._content)
-
-    def _getshape(self):
-        return self._content.shape
 
     @staticmethod
     def _ceildiv8(x):

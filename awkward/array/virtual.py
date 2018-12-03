@@ -219,9 +219,6 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         else:
             return self._type.to
 
-    def _getshape(self):
-        return ()
-
     @property
     def type(self):
         if self._type is None or self.ismaterialized:

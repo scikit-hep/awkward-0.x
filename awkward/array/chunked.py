@@ -254,9 +254,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
         return tpe
 
-    def _getshape(self):
-        return (len(self),)
-
     def __len__(self):
         self.knowcounts()
         return self.offsets[-1]
@@ -743,7 +740,7 @@ class AppendableArray(ChunkedArray):
     def _gettype(self, seen):
         return self._dtype
 
-    def _getshape(self):
+    def __len__(self):
         return sum(self._counts)
 
     def _valid(self):

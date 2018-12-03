@@ -250,7 +250,6 @@ class Test(unittest.TestCase):
             assert c[2]["1"].tolist() == sum([list(range(x, i)) for x in range(i)], [])
         
     def test_jagged_distincts(self):
-        print()
         for i in range(50):
             a = JaggedArray.fromiter([[], [123], list(range(i)), []])
             c = a.distincts()

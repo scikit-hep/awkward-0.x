@@ -397,10 +397,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return len(self._starts)
 
     def _gettype(self, seen):
-        return awkward.type.ArrayType(awkward.util.numpy.inf, awkward.type._fromarray(self._content, seen))
-
-    def _getshape(self):
-        return self._starts.shape
+        return awkward.type.ArrayType(*(self._starts.shape[1:] + (awkward.util.numpy.inf, awkward.type._fromarray(self._content, seen))))
 
     def _valid(self):
         if not self._isvalid:

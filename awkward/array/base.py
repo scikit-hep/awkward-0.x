@@ -105,7 +105,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     @property
     def type(self):
-        return awkward.type.ArrayType(*(self._getshape() + (awkward.type._resolve(self._gettype({}), {}),)))
+        return awkward.type.ArrayType(len(self), awkward.type._resolve(self._gettype({}), {}))
 
     @property
     def dtype(self):

@@ -582,8 +582,12 @@ class OptionType(Type):
             return False
         else:
             seen.add(id(self))
-            if isinstance(other, OptionType) and self._type._eq(other._type, seen, ignoremask=ignoremask):
-                return True
+            if isinstance(other, OptionType):
+                if isinstance(self._type, Type) and self._type._eq(other._type, seen, ignoremask=ignoremask):
+                    return True
+                elif not isinstance(self._type, Type) and self._type == other._type:
+                    return True
+
             if ignoremask:    # applied asymmetrically; only the left can ignore mask
                 if isinstance(self._type, Type):
                     return self._type._eq(other, seen, ignoremask=ignoremask)

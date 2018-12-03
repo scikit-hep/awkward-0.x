@@ -126,10 +126,10 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         return len(self._index)
 
     def _gettype(self, seen):
-        return awkward.type._fromarray(self._content, seen)
-
-    def _getshape(self):
-        return self._index.shape
+        out = awkward.type._fromarray(self._content, seen)
+        for x in self._index.shape[:0:-1]:
+            out = awkward.type.ArrayType(x, out)
+        return out
 
     def _valid(self):
         if not self._isvalid:
@@ -289,10 +289,10 @@ class ByteIndexedArray(IndexedArray):
         self._content = awkward.util.toarray(value, awkward.util.CHARTYPE, awkward.util.numpy.ndarray).view(awkward.util.CHARTYPE).reshape(-1)
 
     def _gettype(self, seen):
-        return self._dtype
-
-    def _getshape(self):
-        return self._index.shape
+        out = self._dtype
+        for x in self._index.shape[:0:-1]:
+            out = awkward.type.ArrayType(x, out)
+        return out
 
     @property
     def dtype(self):
@@ -524,9 +524,6 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _gettype(self, seen):
         return awkward.type._fromarray(self._content, seen)
-
-    def _getshape(self):
-        return (self._length,)
 
     def __len__(self):
         return self._length

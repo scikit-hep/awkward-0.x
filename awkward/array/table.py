@@ -300,9 +300,6 @@ class Table(awkward.array.base.AwkwardArray):
             out[n] = awkward.type._fromarray(x, seen)
         return out
 
-    def _getshape(self):
-        return (self._length(),)
-
     def _length(self):
         if self._view is None:
             if len(self._content) == 0:
