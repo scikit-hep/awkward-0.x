@@ -3,7 +3,7 @@
 :Email: pivarski@princeton.edu
 :Date: 1.0 expected early 2019
 :Revision: 1.0-pre1
-:stem: latexmath
+:stem:
 :toc:
 
 == Introduction
@@ -86,7 +86,7 @@ Taken together, these features promote array programming to a wider set of appli
 
 [stem]
 ++++
-\sqrt{4} = 2
+sqrt(4) = 2
 ++++
 
 
