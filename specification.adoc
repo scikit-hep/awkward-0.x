@@ -84,10 +84,8 @@ Taken together, these features promote array programming to a wider set of appli
 
 === High-level types
 
-[stem]
-++++
-sqrt(4) = 2
-++++
+latexmath:[C = \alpha + \beta Y^{\gamma} + \epsilon]
+
 
 
 === Low-level structures
