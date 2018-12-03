@@ -83,7 +83,7 @@ Taken together, these features promote array programming to a wider set of appli
 
 === High-level types
 
-To describe how awkward-array extends basic array types, we start by defining a notation that encompasses both. Basic arrays can be fully described by their dtype and shape. These parameters are not sufficient for awkward-array, so we change to a new notation.
+To describe how awkward-array extends basic array types, we start by defining a notation that encompasses both. Basic arrays can be fully described by their dtype and shape. These parameters are not sufficient for awkward-array.
 
 Any array, including those in awkward-array, can be thought of as a function that maps extraction indexes to values. The functional type of a basic, 1-dimensional array of dtype `D` and length `n` could be written as
 
