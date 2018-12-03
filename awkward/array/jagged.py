@@ -110,9 +110,23 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     """
 
     def __init__(self, starts, stops, content):
-        self.starts = starts
-        self.stops = stops
-        self.content = content
+        if offsetsaliased(starts, stops):
+            self.content = content
+            self._starts, self._stops = starts, stops
+            self._offsets = starts.base
+            self._counts, self._parents = None, None
+
+            if not issubclass(self._offsets.dtype.type, awkward.util.numpy.integer):
+                raise TypeError("offsets must have integer dtype")
+            if len(self._offsets.shape) != 1 or (self._offsets < 0).any():
+                raise ValueError("offsets must be a one-dimensional, non-negative array")
+
+            self._isvalid = (self._offsets[1:] >= self._offsets[:-1]).all() and self._offsets.max() <= len(content)
+
+        else:
+            self.starts = starts
+            self.stops = stops
+            self.content = content
 
     @classmethod
     def fromiter(cls, iterable):
@@ -436,7 +450,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if awkward.util.isstringslice(where):
             content = self._content[where]
-            return awkward.array.objects.Methods.maybemixin(type(content), JaggedArray)(self._starts, self._stops, content)
+            cls = awkward.array.objects.Methods.maybemixin(type(content), JaggedArray)
+            out = cls.__new__(cls)
+            out.__dict__.update(self.__dict__)
+            out._content = content
+            return out
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
