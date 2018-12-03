@@ -3,7 +3,6 @@
 :Email: pivarski@princeton.edu
 :Date: 1.0 expected early 2019
 :Revision: 1.0-pre1
-:stem:
 :toc:
 
 == Introduction
@@ -84,7 +83,40 @@ Taken together, these features promote array programming to a wider set of appli
 
 === High-level types
 
-latexmath:[C = \alpha + \beta Y^{\gamma} + \epsilon]
+To describe how awkward-array extends basic array types, we start by defining a notation that encompasses both. Basic arrays can be fully described by their dtype and shape. These parameters are not sufficient for awkward-array, so we change to a new notation.
+
+Any array, including those in awkward-array, can be thought of as a function that maps extraction indexes to values. The functional type of a basic, 1-dimensional array of dtype `D` and length `n` could be written as
+
+[source]
+----
+[0, n) -> D
+----
+
+That is, the array is a function that takes an integer greater than or equal to `0` and less than `n` as its only argument, and returns a value of type `D`. The possible dtypes are the primitive types of the basic array library. Knowing the array's type signature as an extraction function is enough to deduce its behavior in slicing, masking, and gathering.
+
+A 2-dimensional array with shape `(n, m)` is a function that returns a function.
+
+[source]
+----
+[0, n) -> [0, m) -> D
+----
+
+That is, if we pass an integer `[0, n)` to the 2-dimensional array, we get a 1-dimensional array; if we pass an integer `[0, m)` to that 1-dimensional array, we get a primitive value of type `D`. This https://en.wikipedia.org/wiki/Currying[currying] can be applied indefinitely to describe arrays of any dimensionality. The shape as a tuple syntax is more concise, but we will need the longer form.
+
+Jagged arrays are like multidimensional arrays in the number of integer arguments that must be passed before obtaining a scalar primitive type, but not all of the arguments have precise domains. A simple jagged array of length `n`, only one level of jaggedness, and primitive type `D` would be expressed as
+
+[source]
+----
+[0, n) -> [0, inf) -> D
+----
+
+because the second argument may be any non-negative integer. Unlike a basic array, some values for this second parameter, allowed by the above expression, would be rejected in practice. For example, the array
+
+[source, python]
+----
+[[1, 2, 3], [], [4, 5]]
+----
+
 
 
 
