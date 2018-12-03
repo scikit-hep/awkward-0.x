@@ -412,10 +412,27 @@ The `awkward.array.base.AwkwardArray` abstract base class has switches to contro
    * `check_prop_valid` _default:_ `True`, if `False`, skip single-property validity checks.
    * `check_valid` _default:_ `True`, if `False`, skip whole-array validity checks.
 
+The default primitive types for various roles are given below.
+
+|===
+| Awkward type | Numpy dtype
+
+| `DEFAULTTYPE` | `float64`
+| `CHARTYPE` | `uint8`
+| `INDEXTYPE` | `int64`
+| `TAGTYPE` | `uint8`
+| `MASKTYPE` | `bool_`
+| `BITMASKTYPE` | `uint8`
+| `BOOLTYPE` | `bool_`
+|===
+
 == Jaggedness
 
+There are many ways to represent a https://en.wikipedia.org/wiki/Jagged_array[jagged array]. One natural way is to introduce markers in the byte stream where each variable-length nested list begins or ends, or to introduce nested list sizes to avoid having to distinguish values from markers (as in the https://avro.apache.org[Avro] protocol). However, this "`row-wise`" representation interrupts vectorized processing of the content. Another natural way is to create an array of pointers to nested lists, like Numpy's object array, but this is even worse because it also adds memory latency.
 
+Columnar solutions keep the contents of the nested lists in a single, contiguous array (a "`column`"). The https://root.cern[ROOT] file format was an early solution (1995). Although the intention was for more efficient packing and compression on disk, this format can be transplanted into memory for efficient access in computation. The https://parquet.apache.org[Parquet] file format is another, though it modifies ("`https://github.com/julienledem/redelm/wiki/The-striping-and-assembly-algorithms-from-the-Dremel-paper[shreds]`") the data in a way that is hard to use without restructuring it. The https://arrow.apache.org[Arrow] in-memory format is an excellent solution, and will be described below.
 
+The simplest way to represent a jagged array with columnar arrays is to store flattened *content* in one array and *counts* of the number of elements in each list in another array. 
 
 
 
