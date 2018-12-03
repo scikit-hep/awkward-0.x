@@ -171,7 +171,7 @@ Jagged arrays, basic arrays, and record structure may be freely intermixed. An a
                                  'y' -> complex128
 ----
 
-Extraction indexes (integers) and field names (strings) are commutative. Extraction indexes do not commute with other extraction indexes, as this would violate dimension order, and field names do not commute with other field names, as this would violate records of different nesting depths, but extraction indexes commute with field names. Reversing an integer index and a string name amounts to selecting column before row or row before column in a table.
+Extraction indexes (integers) and field names (strings) can be commuted (swapped in order). Extraction indexes do not commute with other extraction indexes, as this would violate dimension order, and field names do not commute with other field names, as this would violate records of different nesting depths, but extraction indexes commute with field names. Reversing an integer index and a string name amounts to selecting column before row or row before column in a table.
 
 Ignoring this distinction hides the distinction between https://en.wikipedia.org/wiki/AOS_and_SOA[an array of structs and a struct of arrays], so that array manipulation code does not depend on this difference (just as Numpy hides C vs. Fortran order as an internal array flag). For instance,
 
@@ -254,6 +254,26 @@ for unions of _x, y, z_ floating point records with _x, y_ integer records.
 
 Sum types with the same set of enumerated types, in any order, are equivalent, though an awkward-array library should maintain the user-specified order for readability and an unambiguous type resolution order. (A value may be a member of more than one of the enumerated types.)
 
+Sum types may be nested, though they are equivalent to their flattened form. For instance,
+
+[source]
+----
+[0, n) -> (bool          |
+           int64         |
+           (float64    |
+            complex128 ) )
+----
+
+is equivalent to
+
+[source]
+----
+[0, n) -> (bool       |
+           int64      |
+           float64    |
+           complex128 )
+----
+
 ==== Option types
 
 An important special case of sum types is to describe missing data with a `null`, `None`, `na`, or `NaN` token. This could be expressed as a union of the non-missing data type with a https://en.wikipedia.org/wiki/Unit_type[unit type] for `None`, but building these constructions manually (as in https://avro.apache.org[Avro]) becomes unwieldy when most data can be missing (is "`nullable`") and it forces us to consider an array that can only be filled with `None` as a legitimate array type. Instead, we introduce another element: an option type.
@@ -278,6 +298,20 @@ or
 ----
 [0, n) -> ?('x' -> float64
             'y' -> float64)
+----
+
+Option types may be nested, though they are equivalent to their flattened form. For instance,
+
+[source]
+----
+[0, n) -> ?(?(float64))
+----
+
+is equivalent to
+
+[source]
+----
+[0, n) -> ?(float64)
 ----
 
 Note that Numpy has a `numpy.ma.MaskedArray` type, but awkward-array has its own `awkward.MaskedArray`. The awkward-array masked type can contain non-basic arrays (jagged arrays, tables, etc.) and uses `None` to represent missing values, rather than `numpy.ma.masked`, an object with surprising properties.
