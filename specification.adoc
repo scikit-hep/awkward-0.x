@@ -68,16 +68,15 @@ An awkward-array library provides the above features in the following new contex
    * *Cross-references and cyclic references:* extend a primitive type system with values that may be references to another array, including a parent of the array in which they reside. This adds "`pointers`" to the type system in a controlled way: references must point to elements of a specified array.
    * *Opaque object types:* allow array elements to virtually contain instances of any type expressible in a programming language, provided that it can be constructed strictly from elements of the array.
    * *Object methods:* adds user-defined methods to arrays, usually to emulate object methods as mapped kernels.
-   * *Non-contiguousness:* allows arrays to be non-contiguous in memory by mapping indexes.
-   * *Laziness:* allows arrays to be generated on demand.
+   * *Indirection:* allows arrays to be defined as a cherry-picked subset of other arrays.
+   * *Non-contiguousness:* allows arrays to be non-contiguous in memory by mapping indexes. This virtually concatenates data from separate chunks into a single logical array without copying.
+   * *Laziness:* allows arrays to be loaded or generated on demand, allowing arrays that have not yet been *materialized* to be treated on the same footing with arrays that have.
 
 Jaggedness, product types, sum types, option types, and references extend the expressivity of basic arrays to a complete, hierarchical data model. General data containers like https://developers.google.com/protocol-buffers[Protocol buffers], https://thrift.apache.org[Thrift], https://avro.apache.org[Avro], and https://parquet.apache.org[Parquet] present this data model, with the exception of references.
 
 Object types and methods generalize it further, allowing any type permitted by a programming language such as Python, with a loss of cross-language compatibility.
 
-Non-contiguousness does not affect data type, but it virtually concatenates data from separate chunks into a single, logical array without copying.
-
-Laziness does not affect data type, but it allows arrays that may be remote or not loaded into memory to be treated on the same footing as arrays that have.
+Indirection, non-contiguousness, and laziness do not affect data type: they are *purely low-level* features.
 
 Taken together, these features promote array programming to a wider set of applications.
 
@@ -385,6 +384,23 @@ This module has two functions:
    * `fromnumpy(shape, dtype, masked=False)` returns the type specification of a basic (Numpy) array directly from shape, dtype, and masked parameters.
 
 === Low-level features
+
+Some awkward-array structures differ from each other in ways that are intentionally not reflected by high-level type. Their purpose is to deal with awkward data sources.
+
+The following purely low-level features 
+
+
+
+
+
+The high-level types intentionally hide certain features. The most prominent of these are non-contiguousness, which presents a sequence of arrays as though they were concatenated, and laziness, which presents an unloaded or ungenerated array as though it were already materialized. These two features deal with memory-location awkwardness and load-time awkwardness but not type manipulation. These are *purely low-level* features.
+
+Some features modify the type but also have a low-level component. These are:
+
+   * `JaggedArray`, which indexes content by element index, and `ByteJaggedArray`, which indexes content by bytes. Both present a jagged array type.
+   * `MaskedArray`, which uses 1-byte booleans as a mask, and `BitMaskedArray`, which uses 1-bit booleans as a mask. `IndexedMaskedArray` uses negative indexes as a mask; the positive indexes 
+
+
 
 
 == General properties of all array classes
