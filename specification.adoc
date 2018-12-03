@@ -164,7 +164,7 @@ Jagged arrays, basic arrays, and record structure may be freely intermixed. An a
 [source]
 ----
 [0, n) -> [0, inf) -> 'one'   -> bool
-                      'two'   -> int64
+                      'two'   -> [0, inf) -> int64
                       'three' -> 'x' -> [0, inf) -> float64
                                  'y' -> complex128
 ----
@@ -213,6 +213,38 @@ for unions of _x, y, z_ records with jagged arrays of booleans, and
 for unions of _x, y, z_ floating point records with _x, y_ integer records.
 
 Sum types with the same set of enumerated types, in any order, are equivalent, though an awkward-array library should maintain the user-specified order for readability and an unambiguous type resolution order. (A value may be a member of more than one of the enumerated types.)
+
+==== Option types
+
+An important special case of sum types is to describe missing data with a `null`, `None`, `na`, or `NaN` token. This could be expressed as a union of the non-missing data type with a https://en.wikipedia.org/wiki/Unit_type[unit type] for `None`, but building these constructions manually (as in https://avro.apache.org[Avro]) becomes unwieldy when most data can be missing (is "`nullable`") and it forces us to consider an array that can only be filled with `None` as a legitimate array type. Instead, we introduce another element: an option type.
+
+Option types have one parameter, the non-missing type `T`, and indicate that values may be missing. When extracting data from such an array, the values might have type `T` or might be `None` (in Python). We denote this with a question mark and parentheses; for example,
+
+[source]
+----
+[0, n) -> ?(float64)
+----
+
+or
+
+[source]
+----
+[0, n) -> [0, inf) -> ?([0, 3) -> int64)
+----
+
+or
+
+[source]
+----
+[0, n) -> ?('x' -> float64
+            'y' -> float64)
+----
+
+Note that Numpy has a `numpy.ma.MaskedArray` type, but awkward-array has its own `awkward.MaskedArray`. The awkward-array masked type can contain non-basic arrays (jagged arrays, tables, etc.) and uses `None` to represent missing values, rather than `numpy.ma.masked`, an object with surprising properties.
+
+==== Cross-references
+
+
 
 === Low-level structures
 
