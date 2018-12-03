@@ -87,31 +87,31 @@ To describe how awkward-array extends basic array types, we start by defining a 
 
 ==== Basic arrays
 
-Any array, including those in awkward-array, can be thought of as a function that maps extraction indexes to values. The functional type of a basic, 1-dimensional array of dtype `D` and length `n` could be written as
+Any array, including those in awkward-array, can be thought of as a function that maps extraction indexes to values. The functional type of a basic, 1-dimensional array with value type `T` and length `n` could be written as
 
 [source]
 ----
-[0, n) -> D
+[0, n) -> T
 ----
 
-That is, the array is a function that takes an integer greater than or equal to `0` and less than `n` as its only argument, and returns a value of type `D`. The possible dtypes are the primitive types of the basic array library. Knowing the array's type signature as an extraction function is enough to deduce its behavior in slicing, masking, and gathering.
+That is, the array is a function that takes an integer greater than or equal to `0` and less than `n` as its only argument, and returns a value of type `T`. The possible value types are the primitive types of the basic array library. Knowing the array's type signature as an extraction function is enough to deduce its behavior in slicing, masking, and gathering.
 
 A 2-dimensional array with shape `(n, m)` is a function that returns a function.
 
 [source]
 ----
-[0, n) -> [0, m) -> D
+[0, n) -> [0, m) -> T
 ----
 
-That is, if we pass an integer `[0, n)` to the 2-dimensional array, we get a 1-dimensional array; if we pass an integer `[0, m)` to that 1-dimensional array, we get a primitive value of type `D`. This https://en.wikipedia.org/wiki/Currying[currying] can be applied indefinitely to describe arrays of any dimensionality. The shape in a tuple syntax like Numpy's is more concise, but we will need the longer form.
+That is, if we pass an integer `[0, n)` to the 2-dimensional array, we get a 1-dimensional array; if we pass an integer `[0, m)` to that 1-dimensional array, we get a primitive value of type `T`. This https://en.wikipedia.org/wiki/Currying[currying] can be applied indefinitely to describe arrays of any dimensionality. The shape in a tuple syntax like Numpy's is more concise, but we will need the longer form.
 
 ==== Jagged arrays
 
-Jagged arrays are like multidimensional arrays in the number of integer arguments that must be passed before obtaining a scalar primitive type, but not all of the arguments have precise domains. A simple jagged array of length `n`, only one level of jaggedness, and primitive type `D` would be expressed as
+https://en.wikipedia.org/wiki/Jagged_array[Jagged arrays] are like multidimensional arrays in the number of integer arguments that must be passed before obtaining a scalar primitive type, but not all of the arguments have precise domains. A simple jagged array of length `n`, only one level of jaggedness, and primitive type `T` would be expressed as
 
 [source]
 ----
-[0, n) -> [0, inf) -> D
+[0, n) -> [0, inf) -> T
 ----
 
 because the second argument may be any non-negative integer. Unlike a basic array, some values for this second parameter, allowed by the above expression, would be rejected in practice. For example, the array
@@ -134,12 +134,35 @@ would have type
 
 [source]
 ----
-[0, n) -> [0, inf) -> [0, inf) -> D
+[0, n) -> [0, inf) -> [0, inf) -> T
 ----
 
 ==== Product types
 
-here
+https://en.wikipedia.org/wiki/Product_type[Product types] are variously known as "`records,`" "`structs,`" "`compounds,`" "`classes,`" etc. They are values that contain a fixed set of named, typed attributes. They are "`products`" in the sense of Cartesian products: the set of records containing a floating point `x` and an integer `i` is the Cartesian product of the set of floating point values and the set of integer values.
+
+To extract an attribute from a record, we give the record the attribute's name. In a dynamically typed language, this amounts to passing a string argument; in a statically typed language, this string is usually a parsed, checked, compile-time literal. In either case, we can express it as an extraction function like
+
+[source]
+----
+'x' -> float64
+'i' -> int64
+----
+
+The names are enumerated because there is a fixed set of choices, and each choice returns a potentially different type. An array of length `n` containing these records is
+
+[source]
+----
+[0, n) -> 'x' -> float64
+          'i' -> int64
+----
+
+In general, the form is a sequence of name, type specification pairs called *fields* that can be embedded in a type specification. Product types with the same set of fields, in any order, are equivalent, though an awkward-array library should maintain the user-specified order for readability.
+
+==== Sum types
+
+
+
 
 
 
