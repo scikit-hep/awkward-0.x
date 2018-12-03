@@ -101,7 +101,7 @@ A 2-dimensional array with shape `(n, m)` is a function that returns a function.
 [0, n) -> [0, m) -> D
 ----
 
-That is, if we pass an integer `[0, n)` to the 2-dimensional array, we get a 1-dimensional array; if we pass an integer `[0, m)` to that 1-dimensional array, we get a primitive value of type `D`. This https://en.wikipedia.org/wiki/Currying[currying] can be applied indefinitely to describe arrays of any dimensionality. The shape as a tuple syntax is more concise, but we will need the longer form.
+That is, if we pass an integer `[0, n)` to the 2-dimensional array, we get a 1-dimensional array; if we pass an integer `[0, m)` to that 1-dimensional array, we get a primitive value of type `D`. This https://en.wikipedia.org/wiki/Currying[currying] can be applied indefinitely to describe arrays of any dimensionality. The shape in a tuple syntax like Numpy's is more concise, but we will need the longer form.
 
 Jagged arrays are like multidimensional arrays in the number of integer arguments that must be passed before obtaining a scalar primitive type, but not all of the arguments have precise domains. A simple jagged array of length `n`, only one level of jaggedness, and primitive type `D` would be expressed as
 
@@ -117,7 +117,22 @@ because the second argument may be any non-negative integer. Unlike a basic arra
 [[1, 2, 3], [], [4, 5]]
 ----
 
-would accept `[0, 3)` as a second argument if the first argument is `0`, would accept nothing (empty domain) if the first argument is `1`, and accept `[0, 2)` if the first argument is `2`. Expressing this in full detail would require a type signature as long as the array itself.
+would accept only `[0, 3)` as a second argument if the first argument is `0`, would accept nothing (empty domain) if the first argument is `1`, and would accept only `[0, 2)` if the first argument is `2`. We have a choice between expressing the type signature fully, such that any arguments satisfying that signature would never fail to return a primitive value, and underexpressing it with `[0, inf)`, which has the advantage that the length of the type signature does not scale with the length of the array itself. Brevity is more useful for our purposes.
+
+Continuing this line of reasoning, a doubly jagged array, such as
+
+[source, python]
+----
+[[[1, 2, 3], []], [[4, 5]], []]
+----
+
+would have type
+
+[source]
+----
+[0, n) -> [0, inf) -> [0, inf) -> D
+----
+
 
 
 
