@@ -370,6 +370,11 @@ Opaque objects cannot be shared across platforms the way that pure constructions
 
 ==== Type representation
 
+In awkward-array, the above types are represented by the following classes in `awkward.type`:
+
+   * `ArrayType(n, m, ..., to)` constructs a linear sequence like `[0, n) -> [0, m) -> ... -> to`.
+
+
 
 
 
