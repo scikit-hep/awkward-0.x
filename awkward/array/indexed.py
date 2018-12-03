@@ -150,7 +150,11 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if awkward.util.isstringslice(where):
             content = self._content[where]
-            return awkward.array.objects.Methods.maybemixin(type(content), IndexedArray)(self._index, content)
+            cls = awkward.array.objects.Methods.maybemixin(type(content), IndexedArray)
+            out = cls.__new__(cls)
+            out.__dict__.update(self.__dict__)
+            out._content = content
+            return out
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
@@ -564,7 +568,11 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
         if awkward.util.isstringslice(where):
             content = self._content[where]
-            return awkward.array.objects.Methods.maybemixin(type(content), SparseArray)(self._length, self._index, content, self._default)
+            cls = awkward.array.objects.Methods.maybemixin(type(content), SparseArray)
+            out = cls.__new__(cls)
+            out.__dict__.update(self.__dict__)
+            out._content = content
+            return out
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
