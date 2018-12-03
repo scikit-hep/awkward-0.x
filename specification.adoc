@@ -117,6 +117,9 @@ because the second argument may be any non-negative integer. Unlike a basic arra
 [[1, 2, 3], [], [4, 5]]
 ----
 
+would accept `[0, 3)` as a second argument if the first argument is `0`, would accept nothing (empty domain) if the first argument is `1`, and accept `[0, 2)` if the first argument is `2`. Expressing this in full detail would require a type signature as long as the array itself.
+
+
 
 
 
