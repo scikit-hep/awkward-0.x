@@ -432,7 +432,23 @@ There are many ways to represent a https://en.wikipedia.org/wiki/Jagged_array[ja
 
 Columnar solutions keep the contents of the nested lists in a single, contiguous array (a "`column`"). The https://root.cern[ROOT] file format was an early solution (1995). Although the intention was for more efficient packing and compression on disk, this format can be transplanted into memory for efficient access in computation. The https://parquet.apache.org[Parquet] file format is another, though it modifies ("`https://github.com/julienledem/redelm/wiki/The-striping-and-assembly-algorithms-from-the-Dremel-paper[shreds]`") the data in a way that is hard to use without restructuring it. The https://arrow.apache.org[Arrow] in-memory format is an excellent solution, and will be described below.
 
-The simplest way to represent a jagged array with columnar arrays is to store flattened *content* in one array and *counts* of the number of elements in each list in another array. The starting and stopping index of a list can unambiguously be determined by summing counts up to the element of interest. This operation is _O(N)_ in array length _N_, which is a mark against it. It is, however, *composable*, in that
+The simplest way to represent a jagged array with columnar arrays is to store flattened *content* in one array and *counts* of the number of elements in each interior list in another array. The starting and stopping index of one element -- an interior list -- can unambiguously be determined by summing counts up to the element of interest. This operation is _O(N)_ in array length _N_, unfortunately. It is, however, *composable*, in that nested lists of nested lists (and so on) can be constructed by setting one jagged array as the content of another. For example, to represent the following nested structure:
+
+[source, python]
+----
+[[], [[1.1, 2.2, 3.3], [], [4.4, 5.5]], [[6.6, 7.7], [8.8]]]
+----
+
+we note that the first level of depth contains lists of length `0`, length `3`, and length `2`. Inside that (and ignoring boundaries of the first level of depth), the second level of depth contains lists of length `3`, `0`, `2`, `2`, and `1`. Inside that, the content consists of floating point numbers. (The type for this doubly jagged array is `[0, inf) -> [0, inf) -> float64`.) It can be represented by three arrays:
+
+   * outer counts: `0, 3, 2`
+   * inner counts: `3, 0, 2, 2, 1`
+   * inner content: `1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8`
+
+The inner jagged array instance has inner counts and inner content as its counts and content, and the outer jagged array instance has outer counts as its counts and the inner jagged array as its content. Recursively, we can construct jaggedness of any depth from this one primitive.
+
+
+
 
 
 
