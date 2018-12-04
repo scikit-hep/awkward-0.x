@@ -1000,6 +1000,16 @@ Constructs a view into an existing `Table`, using a representation of views. `No
 
 == Sum types
 
+Sum types, or tagged unions, allow us to build heterogeneous arrays. In type theory, tagged unions are needed to express a collection that mixes data of incompatible types, but our use of tagged unions is broader: we may want to mix data of identical types that reside in different columnar arrays. This allows us to express the result of a blend (in the SIMD sense) without copying data.
+
+
+
+
+tags and index arrays
+
+
+
+
 
 === UnionArray
 
