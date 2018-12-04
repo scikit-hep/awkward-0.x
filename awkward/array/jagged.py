@@ -105,6 +105,36 @@ def uniques2offsetsparents(uniques):
 
     return offsets, parents
 
+def aligned(*jaggedarrays):
+    if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
+        raise TypeError("all objects passed to aligned must be JaggedArrays")
+
+    if len(jaggedarrays) == 0:
+        return True
+
+    # empty subarrays can be represented by any start,stop as long as start == stop
+    relevant, relevantstarts, relevantstops = None, None, None
+
+    first = jaggedarrays[0]
+    for next in jaggedarrays[1:]:
+        if first._starts is not next._starts:
+            if relevant is None:
+                relevant = (first.counts != 0)
+            if relevantstarts is None:
+                relevantstarts = first._starts[relevant]
+            if not awkward.util.numpy.array_equal(relevantstarts, next._starts[relevant]):
+                return False
+
+        if first._stops is not next._stops:
+            if relevant is None:
+                relevant = (first.counts != 0)
+            if relevantstops is None:
+                relevantstops = first._stops[relevant]
+            if not awkward.util.numpy.array_equal(relevantstops, next._stops[relevant]):
+                return False
+
+    return True
+
 class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     """
     JaggedArray
@@ -830,37 +860,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             indexes = awkward.util.numpy.repeat(self._starts, count).reshape(self._starts.shape + (count,))
             indexes += awkward.util.numpy.arange(count)
             return self._content[indexes]
-
-    @staticmethod
-    def aligned(*jaggedarrays):
-        if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
-            raise TypeError("all objects passed to JaggedArray.aligned must be JaggedArrays")
-
-        if len(jaggedarrays) == 0:
-            return True
-
-        # empty subarrays can be represented by any start,stop as long as start == stop
-        relevant, relevantstarts, relevantstops = None, None, None
-
-        first = jaggedarrays[0]
-        for next in jaggedarrays[1:]:
-            if first._starts is not next._starts:
-                if relevant is None:
-                    relevant = (first.counts != 0)
-                if relevantstarts is None:
-                    relevantstarts = first._starts[relevant]
-                if not awkward.util.numpy.array_equal(relevantstarts, next._starts[relevant]):
-                    return False
-
-            if first._stops is not next._stops:
-                if relevant is None:
-                    relevant = (first.counts != 0)
-                if relevantstops is None:
-                    relevantstops = first._stops[relevant]
-                if not awkward.util.numpy.array_equal(relevantstops, next._stops[relevant]):
-                    return False
-
-        return True
 
     def argdistincts(self):
         return self.argpairs(same=False)
