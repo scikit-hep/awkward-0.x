@@ -588,7 +588,7 @@ The `starts`, `stops`, and `content` properties are read-write; setting them inv
 
 When a jagged array `myarray` is passed a `selection` in square brackets, it obeys the following rules.
 
-*If `selection` is an integer,* it returns the element at that index (handling negative indexes). If the provided index is beyond the array's range, an error is raised.
+*If `selection` is an integer,* the element at that index is extracted (handling negative indexes, if applicable). If the provided index is beyond the array's range, an error is raised.
 
 For example,
 
@@ -603,16 +603,83 @@ myarray[-1]
 # returns array([4.4, 5.5])
 ----
 
+*If `selection` is a slice,* elements selected by the slice are returned as a new jagged array (handling negative indexes, if applicable).
 
+For example,
 
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+myarray[1:]
+# returns <JaggedArray [[] [4.4 5.5]] at 7f02018afc18>
+myarray[100:]
+# returns <JaggedArray [] at 7f020c214438>
+----
 
+*If `selection` is a non-jagged sequence of booleans,* elements corresponding to `True` values in the mask are returned as a new jagged array. The mask must be one-dimensional and the mask and jagged array must have the same length, or an error is raised.
 
+For example,
 
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+mask = numpy.array([True, True, False])
+myarray[mask]
+# returns <JaggedArray [[1.1 2.2 3.3] []] at 7f020e8122b0>
+----
 
+*If `selection` is a jagged array of booleans,* sub-elements corresponding to `True` values in the jagged mask are returned as a new jagged array. If the jagged mask and the jagged array do not have the same jagged structure, an error is raised.
 
+For example,
 
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+mask = awkward.JaggedArray.fromiter([[False, True, True], [], [True, False]])
+myarray[mask]
+# returns <JaggedArray [[2.2 3.3] [] [4.4]] at 7f02018af8d0>
+----
 
-*If `selection` is a string or a sequence of strings,* it attempts to return a jagged column of the nested table or a jagged subtable, respectively, for that column or those columns. If there are no `Table` instances nested within `content`, this raises an error.
+*If `selection` is a non-jagged sequence of integers,* elements identified by the integer indexes are gathered as a new jagged array (handling negative indexes, if applicable).
+
+For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+myarray[[2, 0, 1, -1]]
+# returns <JaggedArray [[4.4 5.5] [1.1 2.2 3.3] [] [4.4 5.5]] at 7f020c214438>
+----
+
+*If `selection` is a jagged sequence of integers,* sub-elements identified by the integer local indexes are gathered as a new jagged array (handling negative indexes, if applicable). If the length of the indexes is not equal to the length of the jagged array, an error is raised.
+
+For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+indexes = awkward.JaggedArray.fromiter([[2, 2, 0], [], [1]])
+myarray[indexes]
+# returns <JaggedArray [[3.3 3.3 1.1] [] [5.5]] at 7f02018afa58>
+----
+
+*If `selection` is a tuple,* a multidimensional extract/slice/mask/gather operation (in any combination) is performed. Any errors encountered along the way are raised.
+
+For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromcounts([2, 0, 1], awkward.JaggedArray.fromiter(
+              [[1.1, 2.2, 3.3], [], [4.4, 5.5]]))
+myarray
+# returns <JaggedArray [[[1.1 2.2 3.3] []] [] [[4.4 5.5]]] at 7f02018afba8>
+myarray[2, 0, 1]
+# returns 5.5
+myarray[myarray.counts > 0, 0, -2:]
+# returns <JaggedArray [[2.2 3.3] [4.4 5.5]] at 7f020c214438>
+----
+
+*If `selection` is a string or a sequence of strings,* the jagged column of the nested table or jagged subtable, respectively, for that column or those columns is returned. If there are no `Table` instances nested within `content`, this raises an error.
 
 For example,
 
