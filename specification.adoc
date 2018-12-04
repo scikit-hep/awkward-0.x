@@ -419,7 +419,7 @@ The default primitive types for various roles are given below.
 
 | `DEFAULTTYPE` | `float64` | default array content
 | `CHARTYPE` | `uint8` | array content for byte-granularity arrays
-| `INDEXTYPE` | `int64` | default type for indexes of other arrays (signed so that subtraction does not change type)
+| `INDEXTYPE` | `int64` | default type for indexes (signed so that subtraction does not change type)
 | `TAGTYPE` | `uint8` | default type for tagged union tags
 | `MASKTYPE` | `bool_` | type for byte masks
 | `BITMASKTYPE` | `uint8` | type for bit masks
