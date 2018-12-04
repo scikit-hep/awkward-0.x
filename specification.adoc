@@ -447,6 +447,14 @@ we note that the first level of depth contains lists of length `0`, length `3`, 
 
 The inner jagged array instance has inner counts and inner content as its counts and content, and the outer jagged array instance has outer counts as its counts and the inner jagged array as its content. Recursively, we can construct jaggedness of any depth from this one primitive.
 
+To address the random access problem, we can consider replacing counts with its integral, *offsets*. An offsets array is a cumulative sum of counts, which avoids the need to recompute the sum for each lookup. Given a counts array, we compute the offsets by allocating an array one larger than counts, filling its first element with `0`, and filling each subsequent element `i` with `offsets[i] = offsets[i - 1] + counts[i - 1]`. Similarly, counts is the derivative of offsets, and can be derived with a vectorized `counts = offsets[1:] - offsets[:-1]`. (There is a https://en.wikipedia.org/wiki/Prefix_sum#Algorithm_1:_Shorter_span,_more_parallel[vectorized algorithm] for computing the cumulative sum as well.)
+
+Like jagged arrays defined by counts, jagged arrays defined by offsets are composable, but unlike counts, any element may be accessed in _O(1)_ time. There are only a few situations in which counts may be preferable:
+
+   * counts are non-negative small integers, which can be packed more efficiently with https://en.wikipedia.org/wiki/Variable-length_quantity[variable width encoding] and lightweight compression (both of which destroy _O(1)_ lookup time anyway);
+   * counts are position-independent, allowing a large dataset to be processed without knowing its position in the sequence. This is particularly useful for _generating_ large sequences when the total size of each parallel chunk is not known until it is complete.
+
+One shortcoming that 
 
 
 
