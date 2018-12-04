@@ -855,7 +855,7 @@ A `Table` applies slices, masks, and gather indexes lazily: rather than immediat
 
 When a table `myarray` is passed a `selection` in square brackets, it obeys the following rules.
 
-If `selection` is a string, one column is pulled from the table. If the column lengths do not match, its length is truncated to the table length -- the minimum of all column lengths.
+If `selection` is a string, one column is pulled from the table. If the column lengths do not match, its length is truncated to the table length -- the minimum of all column lengths. For example,
 
 [source, python]
 ----
@@ -880,7 +880,7 @@ myarray[["x", "y"]].tolist()
            {'x': 6.6, 'y': 106}]
 ---
 
-If `selection` is any integer, slice, sequence of booleans, or sequence of integers, the extraction/slicing/masking/gathering operation is applied to the rows, as though it were any other array.
+If `selection` is any integer, slice, sequence of booleans, or sequence of integers, the extraction/slicing/masking/gathering operation is applied to the rows, as though it were any other array. For example,
 
 [source, python]
 ----
@@ -895,6 +895,30 @@ myarray[3]
 ----
 
 The subset of rows have persistent numbers (e.g. "`Row 3`" in the sliced output is the same object as "`Row 3`" in the base) because `Table` views remember their internal viewing state.
+
+Column-projection and extraction/slicing/masking/gathering is order-independent: get-item operations applied in either order return the same output (they commute). For example,
+
+[source, python]
+----
+myarray["x"][-3:]
+# returns array([2.2, 3.3, 4.4])
+myarray[-3:]["x"]
+# returns array([2.2, 3.3, 4.4])
+----
+
+Column-projection and extraction/slicing/masking/gathering cannot be performed in the same tuple, and column-projection of nested tables cannot be performed in the same tuple. Nor do column-projections of nested tables commute. Attempting to do so would raise an erorr. For example,
+
+[source, python]
+----
+points = awkward.Table(x=[0.0, 1.1, 2.2, 3.3], y=[0, 100, 101, 102, 103])
+myarray = awkward.Table(points=points, n=[0, 1, 2, 3])'
+myarray["points"]["x"]
+# returns array([0. , 1.1, 2.2, 3.3])
+myarray["points"]["y"]
+# returns array([  0, 100, 101, 102])
+myarray["n"]
+# returnsarray([0, 1, 2, 3])
+----
 
 
 
