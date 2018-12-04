@@ -853,6 +853,50 @@ A `Table` applies slices, masks, and gather indexes lazily: rather than immediat
 
 ==== Get-item behavior
 
+When a table `myarray` is passed a `selection` in square brackets, it obeys the following rules.
+
+If `selection` is a string, one column is pulled from the table. If the column lengths do not match, its length is truncated to the table length -- the minimum of all column lengths.
+
+[source, python]
+----
+myarray = awkward.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8],
+                        y=[100, 101, 102, 103, 104, 105, 106],
+                        n=[0, 1, 2, 3, 4])
+myarray
+# returns <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 72afb63cba90>
+myarray["x"]
+# returns array([0. , 1.1, 2.2, 3.3, 4.4])
+myarray["y"]
+# returns array([100, 101, 102, 103, 104])
+myarray["n"]
+# returns array([0, 1, 2, 3, 4])
+myarray[["x", "y"]]
+# returns <Table [<Row 0> <Row 1> <Row 2> ... <Row 4> <Row 5> <Row 6>] at 7005965b6400>
+myarray[["x", "y"]].columns
+# returns ['x', 'y']
+myarray[["x", "y"]].tolist()
+# returns [{'x': 0.0, 'y': 100}, {'x': 1.1, 'y': 101}, {'x': 2.2, 'y': 102},
+           {'x': 3.3, 'y': 103}, {'x': 4.4, 'y': 104}, {'x': 5.5, 'y': 105},
+           {'x': 6.6, 'y': 106}]
+---
+
+If `selection` is any integer, slice, sequence of booleans, or sequence of integers, the extraction/slicing/masking/gathering operation is applied to the rows, as though it were any other array.
+
+[source, python]
+----
+myarray = awkward.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8],
+                        n=[0, 1, 2, 3, 4])
+myarray
+# returns <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 70e1687f9a58>
+myarray[3]
+# returns <Row 3>
+>>> myarray[3:]
+<Table [<Row 3> <Row 4>] at 7e55fe51a278>
+----
+
+The subset of rows have persistent numbers (e.g. "`Row 3`" in the sliced output is the same object as "`Row 3`" in the base) because `Table` views remember their internal viewing state.
+
+
 
 
 

@@ -449,7 +449,7 @@ class Table(awkward.array.base.AwkwardArray):
                 index = self._index()
                 try:
                     if index is None:
-                        return self._content[where]
+                        return self._content[where][:self._length()]
                     else:
                         return self._content[where][index]
                 except KeyError:
