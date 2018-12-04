@@ -374,7 +374,7 @@ Opaque objects cannot be shared across platforms the way that pure constructions
 In awkward-array, the above types are represented by the following classes in `awkward.type`:
 
    * `Type` is an abstract base class for type objects. Types may be `Types`, Numpy dtypes, or Python callables.
-   * `+{ArrayType(n, m, ..., to)}+` constructs a linear sequence like `+{[0, n) -> [0, m) -> ... -> to}+`. At least two arguments are required, and all arguments but the last must be positive integers or infinity (which is floating point) or a string, to make a single-field table. The last argument must be a basic array dtype (for a primitive type) or a Python callable (for an opaque type). `ArrayType` objects are recursively linked lists: each instance has two members, `takes` and `to`, where `takes` is a single number and `to` is the rest of the sequence.
+   * `+ArrayType(n, m, ..., to)+` constructs a linear sequence like `+[0, n) -> [0, m) -> ... -> to+`. At least two arguments are required, and all arguments but the last must be positive integers or infinity (which is floating point) or a string, to make a single-field table. The last argument must be a basic array dtype (for a primitive type) or a Python callable (for an opaque type). `ArrayType` objects are recursively linked lists: each instance has two members, `takes` and `to`, where `takes` is a single number and `to` is the rest of the sequence.
    * `TableType(**fields)` constructs a product type from a mapping of field names to field types. The preferred way to construct a `TableType` is through the `&` operator, which glues single-field tables into a multi-field table. The `TableType` has get-item and set-item methods for manipulation as a Python dict.
    * `UnionType(*possibilities)` constructs a sum type from a sequence of types. The preferred way to construct a `UnionType` is through the `|` operator. The `UnionType` has get-item and set-item methods, as well as `append`, for manipulation as a list.
    * `OptionType(type)` constructs an option type from a type parameter. It has a `type` attribute.
@@ -398,7 +398,7 @@ Array classes are defined in the `awkward.array` submodule but are all accessibl
    * String indexes commute with extraction/slicing/masking/gathering, but they can't be used in the same set of square brackets, the way extraction/slicing/masking/gathering can.
    * All arrays have a set-item method to add columns to a `Table` (product type), but _only_ for this purpose. Elements of an awkward-array cannot be changed in place without digging down to the basic array (and that can have hard-to-predict consequences).
    * All arrays have a length (for `len`) and Pythonic iteration (for `for` loops).
-   * String representations (`str` and `repr` in Python) show logical content in square brackets without commas (spaces only), limited to 6 elements at each level of depth (filling in missing with three dots: `+{...}+`). In Python, the `repr` representation includes the top-most class name but `str` does not. String representations trigger whole-array validity tests.
+   * String representations (`str` and `repr` in Python) show logical content in square brackets without commas (spaces only), limited to 6 elements at each level of depth (filling in missing with three dots: `+...+`). In Python, the `repr` representation includes the top-most class name but `str` does not. String representations trigger whole-array validity tests.
    * The `type` read-only property returns a representation of the array type.
    * The `dtype` and `shape` read-only properties attempt to express the array as a basic (Numpy) array, which can involve information loss.
    * The `columns` read-only property returns a list of field names for the shallowest `Table` within the array that are valid Python identifiers. The `allcolumns` read-only property is not restricted to valid Python identifiers.
@@ -441,7 +441,7 @@ The simplest way to represent a jagged array with columnar arrays is to store fl
 [[], [[1.1, 2.2, 3.3], [], [4.4, 5.5]], [[6.6, 7.7], [8.8]]]
 ----
 
-we note that the first level of depth contains lists of length `0`, length `3`, and length `2`. Inside that (and ignoring boundaries of the first level of depth), the second level of depth contains lists of length `3`, `0`, `2`, `2`, and `1`. Inside that, the content consists of floating point numbers. (The type for this doubly jagged array is `+{[0, inf) -> [0, inf) -> float64}+`.) It can be represented by three arrays:
+we note that the first level of depth contains lists of length `0`, length `3`, and length `2`. Inside that (and ignoring boundaries of the first level of depth), the second level of depth contains lists of length `3`, `0`, `2`, `2`, and `1`. Inside that, the content consists of floating point numbers. (The type for this doubly jagged array is `+[0, inf) -> [0, inf) -> float64+`.) It can be represented by three arrays:
 
    * outer counts: `0, 3, 2`
    * inner counts: `3, 0, 2, 2, 1`
@@ -490,14 +490,14 @@ and the parents array is
 
 The first three elements of parents (`1, 1, 1`) associate the first three contents (`1.1, 2.2, 3.3`) with element `1` of starts and stops. The next two elements of parents (`3, 3`) associate the next two contents (`4.4, 5.5`) with element `3` of starts and stops. The fact that parents lacks `0` and `2` indicate that these are empty lists. Only empty lists at the end of the jagged array are unrepresented unless the total length of the jagged array is also given. Out of order elements can easily be expressed because parents does not need to be an increasing array. Unreachable elements can also be expressed by setting these parents elements to a negative value, such as `-1`. However, repeated elements cannot be expressed, so a parents array cannot represent the result of a gather operation. Likewise, partial overlaps cannot be expressed.
 
-Given a starts array and its corresponding parents, the following invariant holds for all `+{0 <= i < len(starts)}+`:
+Given a starts array and its corresponding parents, the following invariant holds for all `+0 <= i < len(starts)+`:
 
 [source, python]
 ----
 parents[starts[i]] == i
 ----
 
-and the following holds for all `+{0 <= j < len(content)}+` that are at the beginning of a nested list:
+and the following holds for all `+0 <= j < len(content)+` that are at the beginning of a nested list:
 
 [source, python]
 ----
@@ -508,7 +508,7 @@ Although parents is a highly expressive inside-out representation, another that 
 
    * index: `0, 1, 2, 0, 1, 0, 1, 0`
 
-These values are local indexes for elements within the nested lists. For all `+{0 <= j < len(content)}+`, the following invariant holds:
+These values are local indexes for elements within the nested lists. For all `+0 <= j < len(content)+`, the following invariant holds:
 
 [source, python]
 ----
@@ -524,14 +524,14 @@ All of the above discussion has focused on jagged arrays and nested jagged array
 [0, inf) -> [0, m) -> T
 ----
 
-construct a jagged array whose content is an array of type `+{[0, m) -> T}+`. Regular dimensions that appear before (or "`outside`") a jagged dimension are harder: the starts and stops of the jagged array must both have the shape of these regular dimensions. That is, to get an array of type
+construct a jagged array whose content is an array of type `+[0, m) -> T+`. Regular dimensions that appear before (or "`outside`") a jagged dimension are harder: the starts and stops of the jagged array must both have the shape of these regular dimensions. That is, to get an array of type
 
 [source]
 ----
 [0, n) -> [0, inf) -> T
 ----
 
-the starts and stops must be arrays of type `+{[0, n) -> INDEXTYPE}+`. In a counts representation, the counts must be an array of this type. This cannot be expressed in an offsets representation because offsets elements do not have a one-to-one relationship with logical jagged array elements. This could be taken as another argument for starts and stops over offsets.
+the starts and stops must be arrays of type `+[0, n) -> INDEXTYPE+`. In a counts representation, the counts must be an array of this type. This cannot be expressed in an offsets representation because offsets elements do not have a one-to-one relationship with logical jagged array elements. This could be taken as another argument for starts and stops over offsets.
 
 Some applications of awkward-array may require data that is being filled while it is being accessed. This is possible if whole-array validity constraints on array shapes are not too strict. Assuming that basic arrays can be appended atomically, or at least their lengths can be increased atomically to reveal content filled before increasing their lengths, jagged arrays can atomically grow by
 
