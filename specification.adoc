@@ -584,12 +584,17 @@ The `starts`, `stops`, and `content` properties are read-write; setting them inv
    * `regular()`: returns a basic _N_-dimensional array if this jagged array happens to have regular structure; raises an error if not.
    * `flatten()`: returns the content without nested list boundaries. Equivalent to `content` in a special case: when the jagged structure is describable by an offsets array and `offsets[0] == 0` and `offsets[-1] == len(content)`. Use this method instead of `content` to ensure generality.
 
-`JaggedArray` has the following reducers, which decrease the jaggedness by one level:
+`JaggedArray` has the following reducers. Reducers decrease the jaggedness by one level, turning a singly jagged array into a non-jagged array, a doubly jagged array into a singly jagged array, etc. The resulting array has the same length as `self`.
 
-   * 
+   * `any()`: returns an array of `BOOLTYPE`; each is `True` if the corresponding nested list has any non-zero values and `False` if not or if the nested list is empty.
+   * `all()`: returns an array of `BOOLTYPE`; each is `True` if the corresponding nested list has only non-zero values, including the case in which the nested list is empty; `False` otherwise.
+   * `count_nonzero()`: returns an array of `INDEXTYPE`, the number of non-zero values in each nested list.
+   * `sum()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the sum of values in each nested list. Empty lists yield `0`.
+   * `prod()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the product of values in each nested list. Empty lists yield `1`.
+   * `min()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the minimum of values in each nested list. Empty lists yield `inf` for floating point types and the maximum integer value for integer types.
+   * `max()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the maximum of values in each nested list. Empty lists yield `-inf` for floating point types and the minimum integer value for integer types.
 
-
-
+The `argmin()` and `argmax()` methods are not reducers: they return jagged arrays of the local index that minimizes or maximizes each nested list. If a nested list is empty, the corresponding nested list in the output is also empty. If a nested list is not empty, the corresponding nested list in the output has exactly one local index. Data in this form is usable in gather operations.
 
 `JaggedArray` has the following structure manipulation methods:
 
@@ -597,10 +602,8 @@ The `starts`, `stops`, and `content` properties are read-write; setting them inv
    * `argcross(other)`: like `cross(other)`, except that the values in the table are not elements of `content` but their local indexes, usable in gather operations. Unlike `cross(other)`, chains of `argcross(other)` produce nested tables with only `+"0"+` and `"1"` columns.
    * `pairs()` and `argpairs()`: like `cross(self)` and `argcross(self)` except that if the pair corresponding to local indexes `i` and `j` are included, the pair corresponding to local indexes `j` and `i` are not.
    * `distincts()` and `argdistincts()`: like `pairs()` and `argpairs()` except that pairs corresponding to local indexes `i` and `i` are not included.
-
-
-
-
+   * `JaggedArray.concatenate(arrays)` and `instance.concatenate(arrays)`: concatenates the jagged arrays, including `instance` if called as an instance method. The `arrays` is must be a list of jagged arrays, like `numpy.concatenate`.
+   * `JaggedArray.zip(columns)` and `instance.zip(columns)`: builds a jagged table from a set of `columns` (same constructor specification as the `Table` class, in the section on product types below). Includes `instance` if called as an instance method.
 
 A `JaggedArray` may be created from one of the following alternate constructors.
 

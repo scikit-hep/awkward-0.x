@@ -1250,6 +1250,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def zip(cls, columns1={}, *columns2, **columns3):
+        # FIXME for 1.0: make an @awkward.util.bothmethod like concatenate
         import awkward.array.table
         table = awkward.array.table.Table(columns1, *columns2, **columns3)
         inputs = list(table._content.values())
