@@ -742,7 +742,7 @@ The `argmin()` and `argmax()` methods are not reducers: they return jagged array
    * `pairs()` and `argpairs()`: like `cross(self)` and `argcross(self)` except that if the pair corresponding to local indexes `i` and `j` are included, the pair corresponding to local indexes `j` and `i` are not.
    * `distincts()` and `argdistincts()`: like `pairs()` and `argpairs()` except that pairs corresponding to local indexes `i` and `i` are not included.
    * `JaggedArray.concatenate(arrays)` and `instance.concatenate(arrays)`: concatenates the jagged arrays, including `instance` if called as an instance method. The `arrays` is must be a list of jagged arrays, like `numpy.concatenate`.
-   * `JaggedArray.zip(columns)` and `instance.zip(columns)`: builds a jagged table from a set of `columns` (same constructor specification as the `Table` class, in the section on product types below). Includes `instance` if called as an instance method.
+   * `JaggedArray.zip(columns)` and `instance.zip(columns)`: builds a jagged table from a set of `columns` (same constructor specification as the `Table` class, <<Table,defined below>>). Includes `instance` if called as an instance method.
 
 A `JaggedArray` may be created from one of the following alternate constructors.
 
@@ -815,9 +815,82 @@ The `awkward.array.jagged` submodule may define helper functions, such as the fo
 
 == Product types
 
+Product types, or arrays of records with a fixed set of named, typed fields can be conceptually represented as tables. The "`row-wise`" vs. https://en.wikipedia.org/wiki/Column-oriented_DBMS[columnar] representations discussed in the <<Jaggedness>> section were first developed in the context of tables. The "`row`" and "`table`" terminology came from a discussion of tables: named, typed attributes are conventionally associated with columns of a data table, while anonymous data points fill the rows. A row-wise data representation can be replaced with a columnar representation by simply transposing it in memory, or at least writing each column of data to a separate, equal-length array. Columnar layouts have been used in tabular databases since TAXIR in 1969.
+
+Numpy has a product type called a https://docs.scipy.org/doc/numpy/user/basics.rec.html[structured array] or record array. This is a row-wise data representation, which would be hard to mix with columnar jagged arrays. Instead of using structured arrays from the base library directly, awkward-array defines a `Table` type with the same syntax.
+
+Like Numpy's structured arrays, `Table` columns are selected by strings in a get-item, these string get-items commute with extract/slice/mask/gather get-items, and they can't be used in the same multidimensional tuple with extract/slice/mask/gather get-items. (Despite the tabular metaphors, columns are not a dimension in the sense of _N_-dimensional arrays; they're a qualitatively different kind of accessor.) Unlike Numpy's structured arrays, `Table` columns have no constraints on where they reside in memory: they may be strides across a Numpy structured array, they may be fully columnar arrays in an https://arrow.apache.org[Arrow] buffer, or they may be Numpy arrays, scattered in memory.
+
+The `Table` interface hides the distinction between https://en.wikipedia.org/wiki/AOS_and_SOA[an array of structs and a struct of arrays], an important transformation for preparing data for vectorization. It is used to create objects whose attributes may be widely dispersed in memory, or (through a `VirtualArray`) not all loaded into memory. (To avoid materializing a `VirtualArray`, the string representation of `Table.Row` does not show internal data.)
 
 === Table
 
+A `Table` is defined by an arbitrary number of named arrays, which are columns of the table. A `Table` need not represent purely tabular data; if it is nested within a `JaggedArray`, it is a jagged table, and if it contains any `JaggedArray`, it is a stringy jagged table.
+
+The `Table` constructor permits the following argument patterns:
+
+   . `+Table(column1, column2, ...)+`: initialize with unnamed column arrays. Column names are strings of integers starting with zero (`"0"`, `"1"`, `"2"`, etc.).
+   . `+Table({"column1": column1, "column2": column2, ...})+`: initialize with a single dict (may be an ordered dict). Column names are keys of the dict.
+   . `+Table(column1=column1, column2=column2)+`: initialize with keywords. Column names are the keywords.
+
+Pattern 1 and pattern 2 are incompatible; the first argument is either a subclass of dict or not. More than one positional argument in pattern 2 is not allowed. Both of the first two patterns are compatible with pattern 3: they may be freely mixed, as long as column names are never repeated (impossible with pattern 1).
+
+After construction, columns can be added, overwritten, and removed using `Table`'s set-item and del-item methods. The fact that `Tables` may be nested is the only reason awkward-arrays have set-item and del-item methods: to pass a new column to a nested `Table` or request that one of its columns be deleted.
+
+`Table` has no whole-array validity conditions. The columns might have different lengths, but the total length of the `Table` is given by the minimum length of all contained columns (zero if there are no columns).
+
+A `Table` applies slices, masks, and gather indexes lazily: rather than immediately applying these selections, they are stored as an internal view and applied when a single column is selected. Thus, if any columns are `VirtualArrays`, they won't be materialized unless that particular column is requested. Internal views must therefore be composed.
+
+`Table` has the following read-only properties and methods:
+
+   * `rowname`: usually `"Row"`, but may be any string set by the `Table.named` alternate constructor.
+
+
+
+
+
+
+
+==== Get-item behavior
+
+
+
+
+==== Mapped kernel behavior
+
+
+
+
+==== Methods
+
+
+
+
+
+A `Table` may be created from one of the following alternate constructors.
+
+==== `+Table.named(rowname, ...)+`
+
+   * `rowname`: a string to label `Table.Row` objects.
+
+The row name is used for display purposes (so that "`rows`" have a more meaningful name in a science domain) and may be used by methods to distinguish types that are structurally identical. For instance, "`positions`" and "`directions`" in a 3-dimensional space may both contain columns named `"x"`, `"y"`, and `"z"`, but they should be transformed differently when a coordinate system is rotated.
+
+The existence of a label allows what would usually be a https://en.wikipedia.org/wiki/Structural_type_system[structural type system] (tables are identified by the fields they contain) to be treated as a https://en.wikipedia.org/wiki/Nominal_type_system[nominative type system] (tables are identified by their type name).
+
+==== `Table.fromrec(recarray)`
+
+   * `recarray`: Numpy recarray
+
+==== `Table.frompairs(pairs)`
+
+   * `pairs`: list of 2-tuples of name (string) and array
+
+==== `Table.fromview(view, base)`
+
+   * `view`: `None` or 3-tuple of `start`, `step`, `length` (integers) or base array of gather indexes
+   * `base`: another `Table`
+
+Constructs a view into an existing `Table`, using a representation of views. `None` means no view (the new `Table` is identical to the `base`). The 3-tuple represents a slice in a basis that is independent of table length and is easier to compose: `start` is the starting element, same as a slice but strictly non-negative, `step` is a step size, same as a slice (cannot be zero), and `length` is the number of steps to take, rather than truncating by a `stop`. Gather indexes are the same as indexes that would be passed to get-item. A boolean mask can be converted into gather indexes with `numpy.nonzero`.
 
 == Sum types
 

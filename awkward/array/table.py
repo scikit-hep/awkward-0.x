@@ -91,7 +91,7 @@ class Table(awkward.array.base.AwkwardArray):
                 return self._table.Row(table, index + where)
 
         def __dir__(self):
-            return ["_" + x for x in self._table._content if x.isnumeric() or x.isidentifier()] + ["tolist"]
+            return ["at", "tolist"]
 
         def __iter__(self, checkiter=True):
             if checkiter:
