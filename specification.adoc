@@ -584,6 +584,27 @@ The `starts`, `stops`, and `content` properties are read-write; setting them inv
    * `regular()`: returns a basic _N_-dimensional array if this jagged array happens to have regular structure; raises an error if not.
    * `flatten()`: returns the content without nested list boundaries. Equivalent to `content` in a special case: when the jagged structure is describable by an offsets array and `offsets[0] == 0` and `offsets[-1] == len(content)`. Use this method instead of `content` to ensure generality.
 
+==== Get-item behavior
+
+When a jagged array `myarray` is passed a `selection` in square brackets (`myarray[selection]`), it obeys the following rules.
+
+*If `selection` is a string,*
+
+
+
+
+
+
+
+
+==== Universal function behavior
+
+
+
+
+
+==== Methods
+
 `JaggedArray` has the following reducers. Reducers decrease the jaggedness by one level, turning a singly jagged array into a non-jagged array, a doubly jagged array into a singly jagged array, etc. The resulting array has the same length as `self`.
 
    * `any()`: returns an array of `BOOLTYPE`; each is `True` if the corresponding nested list has any non-zero values and `False` if not or if the nested list is empty.
