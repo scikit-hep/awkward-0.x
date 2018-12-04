@@ -594,7 +594,10 @@ For example,
 
 [source, python]
 ----
-myarray = awkward.JaggedArray.fromcounts([3, 0, 2], awkward.Table(x=[1, 2, 3, 4, 5], y=[1.1, 2.2, 3.3, 4.4, 5.5], z=[True, False, True, False, False]))
+myarray = awkward.JaggedArray.fromcounts([3, 0, 2], awkward.Table(
+              x=[1, 2, 3, 4, 5],
+              y=[1.1, 2.2, 3.3, 4.4, 5.5],
+              z=[True, False, True, False, False]))
 myarray["x"]
 # returns <JaggedArray [[1 2 3] [] [4 5]] at 7f020e8122b0>
 myarray[["x", "y"]]
