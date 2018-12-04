@@ -826,7 +826,7 @@ The `Table` interface hides the distinction between https://en.wikipedia.org/wik
 
 === Table
 
-A `Table` is defined by an arbitrary number of named arrays, which are columns of the table. A `Table` need not represent purely tabular data; if it is nested within a `JaggedArray`, it is a jagged table, and if it contains any `JaggedArray`, it is a stringy jagged table.
+A `Table` is defined by an arbitrary number of named arrays, which are columns of the table. A `Table` need not represent purely tabular data; if it is nested within a `JaggedArray`, it is a jagged table, and if it contains any `JaggedArray`, it is a stringy table.
 
 The `Table` constructor permits the following argument patterns:
 
@@ -920,9 +920,37 @@ myarray["n"]
 # returnsarray([0, 1, 2, 3])
 ----
 
+Tables inside of other awkward-array components may not be strictly rectangular. For example, a `JaggedArray` of `Table` is a jagged table:
 
+[source, python]
+----
+myarray = awkward.JaggedArray.fromcounts([3, 0, 2], awkward.Table(
+              x=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8],
+              n=[0, 1, 2, 3, 4]))
+myarray
+# returns <JaggedArray [[<Row 0> <Row 1> <Row 2>] [] [<Row 3> <Row 4>]] at 7e33f10569e8>
+myarray["x"]
+# returns <JaggedArray [[0.  1.1 2.2] [] [3.3 4.4]] at 7e33e188c438>
+myarray["n"]
+# returns <JaggedArray [[0 1 2] [] [3 4]] at 7e33e188c470>
+----
 
+Other awkward-array components inside of tables may not be strictly rectangular. For example, a `Table` containing a `JaggedArray` is a stringy table:
 
+[source, python]
+----
+myarray = awkward.Table(
+              x=awkward.JaggedArray.fromcounts(
+                  [4, 0, 2, 2, 1],
+                  [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8]),
+              n=[0, 1, 2, 3, 4])
+myarray
+# returns <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 73ab6e406a20>
+myarray["x"]
+# returns <JaggedArray [[0.  1.1 2.2 3.3] [] [4.4 5.5] [6.6 7.7] [8.8]] at 73ab6a1a3e48>
+myarray["n"]
+# returns array([0, 1, 2, 3, 4])
+----
 
 ==== Mapped kernel behavior
 
