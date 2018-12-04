@@ -413,6 +413,7 @@ All arrays have the following read-only properties and methods.
    * `+copy(...)+`: copies an array object without recursively copying array content. Any explicitly passed arguments (none are required, but otherwise same arguments as the array's constructor) are used instead of copying the array's properties. Passing all arguments is equivalent to calling the class's primary constructor.
    * `+deepcopy(...)+`: like the above except that all array content is recursively copied.
    * `+empty_like(...)+`, `+zeros_like(...)+`, and `+ones_like(...)+`: create arrays with the same structure but uninitialized, zeros, or ones for content.
+   * `astype(dtype)`: return a copy of the whole structure with basic arrays at the deepest level converted to `dtype`.
 
 == Global switches and types
 
@@ -835,21 +836,20 @@ The `Table` constructor permits the following argument patterns:
 
 Pattern 1 and pattern 2 are incompatible; the first argument is either a subclass of dict or not. More than one positional argument in pattern 2 is not allowed. Both of the first two patterns are compatible with pattern 3: they may be freely mixed, as long as column names are never repeated (impossible with pattern 1).
 
-After construction, columns can be added, overwritten, and removed using `Table`'s set-item and del-item methods. The fact that `Tables` may be nested is the only reason awkward-arrays have set-item and del-item methods: to pass a new column to a nested `Table` or request that one of its columns be deleted.
+After construction, columns can be added, overwritten, and removed using `Table`'s set-item and del-item methods. The fact that `Tables` may be nested is the only reason awkward-arrays have set-item and del-item methods: to pass a new column to a nested `Table` or request that one of its columns be deleted. Columns maintain their order (following Python's ordered dict semantics).
 
 `Table` has no whole-array validity conditions. The columns might have different lengths, but the total length of the `Table` is given by the minimum length of all contained columns (zero if there are no columns).
 
 A `Table` applies slices, masks, and gather indexes lazily: rather than immediately applying these selections, they are stored as an internal view and applied when a single column is selected. Thus, if any columns are `VirtualArrays`, they won't be materialized unless that particular column is requested. Internal views must therefore be composed.
 
+`Table` has the following read-write properties:
+
+   * `rowname`: defaults to `"Row"`, but may be any string. Can also be set by the `Table.named` alternate constructor. <<`+Table.named(rowname, ...)+`,See below>> for an explanation.
+   * `content`: the columns as an ordered dict. (This is an assignable view, not a copy.)
+
 `Table` has the following read-only properties and methods:
 
-   * `rowname`: usually `"Row"`, but may be any string set by the `Table.named` alternate constructor.
-
-
-
-
-
-
+   * `base`: if this `Table` is a view, `base` is the original table. If not, `base` is `None`.
 
 ==== Get-item behavior
 
@@ -861,11 +861,8 @@ A `Table` applies slices, masks, and gather indexes lazily: rather than immediat
 
 
 
+
 ==== Methods
-
-
-
-
 
 A `Table` may be created from one of the following alternate constructors.
 
