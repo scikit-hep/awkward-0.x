@@ -419,7 +419,7 @@ The default primitive types for various roles are given below.
 
 | `DEFAULTTYPE` | `float64` | Default array content
 | `CHARTYPE` | `uint8` | Array content for byte-granularity arrays
-| `INDEXTYPE` | `int64` | Default type for indexes of other arrays
+| `INDEXTYPE` | `int64` | Default type for indexes of other arrays (signed so that subtraction does not change type)
 | `TAGTYPE` | `uint8` | Default type for tagged union tags
 | `MASKTYPE` | `bool_` | Type for byte masks
 | `BITMASKTYPE` | `uint8` | Type for bit masks
@@ -462,15 +462,50 @@ A jagged array defined by starts and stops can skip any interior content, can re
 
 The starts/stops scheme is a very general way to describe a jagged array from the outside-in, for efficient extraction, slicing, masking, and gathering. It is a tree structure with pointers (indexes) from the root toward the leaves. For reduction operations, however, we need pointers from the leaves toward the root: an array with (nominally) the same length as the content, indicating where each nested list begins and ends. (This is similar to normal forms in database management, and the scheme used by https://parquet.apache.org[Parquet], though the latter is transformed and highly bit-packed.)
 
-The simplest inside-out scheme is associate an integer with each content element, 
+The simplest inside-out scheme is associate an integer with each content element, and distinct values of these integers indicate different nested lists. (This is closest to database normal form: aggregation over nested lists could then be performed by an SQL group-by.) For efficient access, especially if the jagged array is distributed and acted upon in parallel, we can stipulate that identical values are contiguous, since content belonging to the same nested list must be contiguous in the starts/stops scheme. Such an array is called a *uniques* array. It underrepresents a jagged array in two ways:
+
+   * it doesn't specify an ordering of elements (though we can assume the content is in increasing order), and
+   * it can't express any empty lists (though we can assume that there are none).
+
+Because of this underrepresentation, a uniques array can be used to generate a jagged array but can't be used to represent one that is already defined by starts and stops. We can modify the definition of uniques to more fully specify a jagged array by requiring the unique values associated with every nested list to be the index of the corresponding starts element. This specialized uniques array is called *parents*.
+
+For example, with a jagged array logically defined as
+
+[source, python]
+----
+[[], [1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7], [8.8], []]
+----
+
+the starts, stops, and content are
+
+   * starts: `0, 0, 3, 3, 5, 7, 8`
+   * stops: `0, 3, 3, 5, 7, 8, 8`
+   * content: `1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8`
+
+and the parents array is
+
+   * parents: `1, 1, 1, 3, 3, 4, 4, 5`
+
+The first three elements of parents (`1, 1, 1`) associate the first three contents (`1.1, 2.2, 3.3`) with element `1` of starts and stops. The next two elements of parents (`3, 3`) associate the next two contents (`4.4, 5.5`) with element `3` of starts and stops. The fact that parents lacks `0` and `2` indicate that these are empty lists. Only empty lists after all content are unrepresented unless the total array length is also given. Out of order elements can easily be expressed because parents does not need to be an increasing array. Unreachable elements can also be expressed by setting their values to a negative value. However, repeated elements cannot be expressed, so a parents array cannot represent the result of a gather operation. Likewise, partial overlaps cannot be expressed.
+
+Given a starts array and its corresponding parents, the following invariant holds for all `0 <= i < len(starts)`:
+
+[source, python]
+----
+parents[starts[i]] == i
+----
+
+Although parents is a highly expressive inside-out representation, another that is sometimes useful, called *index*, consists of integers that are zero at the start of each nested list and increase by one for each content element. For instance, the above example has the following index:
+
+   * index: `0, 1, 2, 0, 1, 0, 1, 0`
+
+These values are local indexes 
 
 
 
 
 
-
-parents, uniques
-
+shape
 
 
 
