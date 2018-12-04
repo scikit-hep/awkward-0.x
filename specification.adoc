@@ -462,6 +462,8 @@ A jagged array based on counts can have unreachable elements: any content at ind
 
 A jagged array defined by starts and stops can skip any interior content, can repeat elements, can list elements in any order, and can even make nested lists partially overlap. Skipping elements is useful for masking, repeating elements is useful for gathering, and reordering elements is useful for optimizing data to minimize disk page-reads. (No use for partial overlaps is currently known.) A potential cost of separate starts and stops is that it can double memory use and time spent in validation tests. However, if the starts and stops happen to be dense and in order, they can be views of a single offsets array and if this case is detected, simplified calculations may be performed.
 
+These three arrays -- starts, stops, and content -- overrepresent the logical structure of a jagged array. Two jagged arrays constructed from different starts/stops/content may be compatible for elementwise operations and may even be equal. An easy way to see this is to consider the fact that the starts/stops scheme allows content to be reordered without affecting the data it represents. Another consideration is that unreachable content may differ in values or length. Only an array defined by offsets (and their starts/stops equivalent) in which `offsets[0] == 0` and `offsets[-1] == len(content)` have a one-to-one relationship between the logical elements of the jagged array and their underlying representation in terms of starts, stops, and content.
+
 The starts/stops scheme is a very general way to describe a jagged array from the outside in, for efficient extraction, slicing, masking, and gathering. It is a tree structure with pointers (indexes) from the root toward the leaves. For reduction operations, however, we need pointers from the leaves toward the root: an array with (nominally) the same length as the content, indicating where each nested list begins and ends. (This is similar to https://en.wikipedia.org/wiki/Database_normalization[database normalization], and the scheme used by https://parquet.apache.org[Parquet], though the latter is highly transformed and bit-packed.)
 
 The simplest inside-out scheme is to associate an integer with each content element, and distinct values of these integers indicate different nested lists. (This is closest to database normalization: aggregation over nested lists could then be performed by an SQL group-by.) For efficient access, especially if the jagged array is distributed and acted upon in parallel, we can stipulate that identical values must be contiguous, since content belonging to the same nested list must be contiguous in the starts/stops scheme. Such an array is called a *uniques* array. It underrepresents a jagged array in two ways:
@@ -575,10 +577,35 @@ A `JaggedArray` may be created from one of the following alternate constructors.
    * `offsets`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
    * `content`: any array (default is a basic array of `DEFAULTTYPE`).
 
+==== `JaggedArray.fromuniques(uniques, content)`
 
+   * `uniques`: basic array of integer dtype (default is `INDEXTYPE`) with exactly one dimension and the same length as `content`.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
 
+==== `JaggedArray.fromparents(parents, content, length=None)`
 
+   * `parents`: basic array of integer dtype (default is `INDEXTYPE`) with exactly one dimension and the same length as `content`.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `length`: if not `None`, a non-negative integer setting the length of the resulting jagged array; useful for adding empty lists at the end or truncating.
 
+==== `JaggedArray.fromindex(index, content, validate=True)`
+
+   * `index`: basic array or jagged array of integer dtype (default is `INDEXTYPE`). If a jagged array, only a flattened version of the jagged array is considered. The basic or flattened `index` must have exactly one dimension and the same length as `content`.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `validate`: if `True`, raise an error if non-zero values are not exactly one greater than the previous and raise an error if `index` is jagged and the jagged structure of `index` differs from the jagged structure derived from its values.
+
+==== `JaggedArray.fromjagged(jagged)`
+
+   * `jagged`: jagged array to convert to the given class (without copying data, if possible).
+
+==== `JaggedArray.fromregular(regular)`
+
+   * `regular`: basic array (default has `DEFAULTTYPE`) with more than one dimension. The array's regular shape is replaced with the corresponding jagged structure.
+
+==== `JaggedArray.fromfolding(content, size)`
+
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `size`: number of elements to fold into each nested list of the resulting jagged array, and the maximum number of elements for the last nested list if `len(content) % size != 0`.
 
 === ByteJaggedArray
 

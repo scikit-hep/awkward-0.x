@@ -68,7 +68,8 @@ def startsstops2parents(starts, stops):
         i += 1
     return out
 
-def parents2startsstops(parents):
+def parents2startsstops(parents, length=None):
+    # FIXME for 1.0: use length to add empty lists at the end of the jagged array or truncate
     # assumes that children are contiguous, but not necessarily in order or fully covering (allows empty lists)
     tmp = awkward.util.numpy.nonzero(parents[1:] != parents[:-1])[0] + 1
     changes = awkward.util.numpy.empty(len(tmp) + 2, dtype=awkward.util.INDEXTYPE)
@@ -160,13 +161,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return out
 
     @classmethod
-    def fromparents(cls, parents, content):
+    def fromparents(cls, parents, content, length=None):
         parents = awkward.util.toarray(parents, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
         if not issubclass(parents.dtype.type, awkward.util.numpy.integer):
             raise TypeError("parents must have integer dtype")
         if len(parents.shape) != 1 or len(parents) != len(content):
             raise ValueError("parents array must be one-dimensional with the same length as content")
-        starts, stops = parents2startsstops(parents)
+        starts, stops = parents2startsstops(parents, length=length)
         out = cls(starts, stops, content)
         out._parents = parents
         return out
@@ -185,9 +186,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromindex(cls, index, content, validate=True):
-        index = awkward.util.toarray(index, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
+        index = awkward.util.toarray(index, awkward.util.INDEXTYPE, (awkward.util.numpy.ndarray, JaggedArray))
+        original_counts = None
         if isinstance(index, JaggedArray):
-            index = index.content
+            if validate:
+                original_counts = index.counts
+            index = index.flatten()
+
         if not issubclass(index.dtype.type, awkward.util.numpy.integer):
             raise TypeError("index must have integer dtype")
         if len(index.shape) != 1 or len(index) != len(content):
@@ -201,6 +206,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         offsets = awkward.util.numpy.empty(len(starts) + 1, dtype=awkward.util.INDEXTYPE)
         offsets[:-1] = starts
         offsets[-1] = len(index)
+        if original_counts is not None:
+            if not awkward.util.numpy.array_equal(offsets[1:] - starts, original_counts):
+                raise ValueError("jagged structure of index does not match jagged structure derived from index")
+
         return cls.fromoffsets(offsets, content)
 
     @classmethod
@@ -209,7 +218,19 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return cls(jagged._starts, jagged._stops, jagged._content)
 
     @classmethod
-    def fromregular(cls, content, size=1):
+    def fromregular(cls, regular):
+        regular = awkward.util.toarray(regular, awkward.util.DEFAULTTYPE, awkward.util.numpy.ndarray)
+        shape = regular.shape
+        if len(shape) <= 1:
+            raise ValueError("regular array must have more than one dimension")
+        out = regular.reshape(-1)
+        for x in shape[:0:-1]:
+            out = cls.fromfolding(out, x)
+        return out
+
+    @classmethod
+    def fromfolding(cls, content, size):
+        content = awkward.util.toarray(content, awkward.util.DEFAULTTYPE)
         quotient = -(-len(content) // size)
         offsets = awkward.util.numpy.arange(0, quotient * size + 1, size, dtype=awkward.util.INDEXTYPE)
         if len(offsets) > 0:
