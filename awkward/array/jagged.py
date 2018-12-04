@@ -1332,14 +1332,6 @@ class ByteJaggedArray(JaggedArray):
         tmp = ByteJaggedArray.__bases__[0].fromuniques(uniques, awkward.util.numpy.array([]))
         return cls(tmp._starts, tmp._stops, content, subdtype=subdtype)
 
-    @classmethod
-    def fromregular(cls, content, size=1):
-        quotient = -(-len(content) // size)
-        offsets = awkward.util.numpy.arange(0, quotient * size + 1, size, dtype=awkward.util.INDEXTYPE)
-        if len(offsets) > 0:
-            offsets[-1] = len(content)
-        return cls.fromoffsets(offsets, content)
-
     def copy(self, starts=None, stops=None, content=None, subdtype=None):
         out = super(ByteJaggedArray, self).copy(starts=starts, stops=stops, content=content)
         if subdtype is None:

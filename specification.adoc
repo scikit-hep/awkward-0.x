@@ -792,9 +792,26 @@ A `JaggedArray` may be created from one of the following alternate constructors.
 
 === ByteJaggedArray
 
+A `ByteJaggedArray` is a `JaggedArray` in which the indexing arrays (starts, stops, offsets, counts, parents, uniques) determine byte positions in the content, which must be a basic array (or buffer/memoryview). Additionally, it takes a `subdtype` parameter, which is the dtype that the content will be cast into, after slicing byte ranges.
+
+   * `starts`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
+   * `stops`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
+   * `content`: basic array (default is a basic array of `CHARTYPE`).
+   * `subdtype`: Numpy dtype.
+
+The whole-array validity conditions are the same as for `JaggedArray`. `ByteJaggedArray` has the same properties, methods, alternate constructors, get-item behavior, and mapped kernel behavior as `JaggedArray`.
 
 === Helper functions
 
+The `awkward.array.jagged` submodule may define helper functions, such as the following.
+
+   * `offsetsaliased(starts, stops)`: returns `True` if the starts and stops arrays overlap in memory and are consistent with a single offsets array at `starts.base` (or equivalently, `stops.base`); `False` otherwise.
+   * `counts2offsets(counts)`: convert a counts array to an offsets array.
+   * `offsets2parents(offsets)`: convert an offsets array to a parents array.
+   * `startsstops2parents(starts, stops)`: convert a general starts/stops pair to a parents array.
+   * `parents2startsstops(parents, length=None)`: convert a parents array to a starts/stops pair, optionally with a given `length`. This `length` may cause empty nested lists to be added at the end of the `starts` and `stops` representing a jagged structure or it may truncate the jagged structure, depending on whether it is greater or less than `parents.max()`.
+   * `uniques2offsetsparents(uniques)`: convert a uniques array to a 2-tuple of offsets and parents.
+   * `aligned(*jaggedarrays)`: return `True` if all `jaggedarrays` have the same jagged structure; `False` otherwise.
 
 == Product types
 
