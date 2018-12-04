@@ -588,7 +588,31 @@ The `starts`, `stops`, and `content` properties are read-write; setting them inv
 
 When a jagged array `myarray` is passed a `selection` in square brackets, it obeys the following rules.
 
-*If `selection` is a string or a sequence of strings,* it attempts to return a jagged column of the nested table or a jagged subtable, respectively, for that column or those columns.
+*If `selection` is an integer,* it returns the element at that index (handling negative indexes). If the provided index is beyond the array's range, an error is raised.
+
+For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+myarray[0]
+# returns array([1.1, 2.2, 3.3])
+myarray[1]
+# returns array([], dtype=float64)
+myarray[-1]
+# returns array([4.4, 5.5])
+----
+
+
+
+
+
+
+
+
+
+
+*If `selection` is a string or a sequence of strings,* it attempts to return a jagged column of the nested table or a jagged subtable, respectively, for that column or those columns. If there are no `Table` instances nested within `content`, this raises an error.
 
 For example,
 
@@ -602,16 +626,11 @@ myarray["x"]
 # returns <JaggedArray [[1 2 3] [] [4 5]] at 7f020e8122b0>
 myarray[["x", "y"]]
 # returns <JaggedArray [[<Row 0> <Row 1> <Row 2>] [] [<Row 3> <Row 4>]] at 7f02018af860>
+myarray[["x", "y"]].columns
+# returns ['x', 'y']
 ----
 
-
-
-
-
-
-
-
-
+A string or a sequence of strings is also the _only_ acceptable argument to set-item. Columns may be added to a jagged table, provided that the jagged structure of the new columns matches that of the table.
 
 ==== Universal function behavior
 
