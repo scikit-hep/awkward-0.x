@@ -683,11 +683,43 @@ myarray[["x", "y"]].columns
 
 A string or a sequence of strings is also the _only_ acceptable argument to set-item. Columns may be added to a jagged table, provided that the jagged structure of the new columns matches that of the table.
 
-==== Universal function behavior
+==== Mapped kernel behavior
 
+If jagged array are passed into a Numpy ufunc (or equivalent mapped kernel), they are computed elementwise at the deepest level of jaggedness, adjusting for different starts/stops/content representations of the same logical structure, and broadcasting scalars and non-jagged values to the jagged structure. If not all jagged arrays have the same logical jagged structure or non-jagged arrays are not broadcastable to this structure (because they have different lengths), an error is raised.
 
+For example,
 
+[source, python]
+----
+a = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+b = awkward.JaggedArray([0, 3, 4], [3, 3, 6], [10, 20, 30, -9999, 40, 50])
+c = numpy.array([100, 200, 300])
+d = 1000
+----
 
+defines `a` as `[[1.1, 2.2, 3.3], [], [4.4, 5.5]]` and `b` as `[[10, 20, 30], [], [40, 50]]` (`-9999` is unreachable). These have the same logical strucutre, but a different physical structure.
+
+[source, python]
+----
+a.starts, a.stops
+# returns (array([0, 3, 3]), array([3, 3, 5]))
+b.starts, b.stops
+# returns (array([0, 3, 4]), array([3, 3, 6]))
+----
+
+Nevertheless, they can be combined in the same ufunc because they have the same logical structure, matching sub-element to sub-element before computing. Basic array `c` is (conceptually) promoted to a jagged array before operating as an instance of jagged broadcasting, and `d` is promoted as usual for scalar broadcasting.
+
+[source, python]
+----
+numpy.add(a, b)
+# returns <JaggedArray [[11.1 22.2 33.3] [] [44.4 55.5]] at 7f02018afc50>
+numpy.add(a, c)
+# returns <JaggedArray [[101.1 102.2 103.3] [] [304.4 305.5]] at 7f02018afba8>
+numpy.add(a, d)
+# returns <JaggedArray [[1001.1 1002.2 1003.3] [] [1004.4 1005.5]] at 7f02018afd30>
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus, the above could have been `a + b`, `a + c`, and `a + d`.
 
 ==== Methods
 
