@@ -453,8 +453,8 @@ To address the random access problem, we can consider replacing counts with its 
 
 Like jagged arrays defined by counts, jagged arrays defined by offsets are composable, but unlike counts, any element may be accessed in _O(1)_ time. There are only a few situations in which counts may be preferable:
 
-   * counts are non-negative small integers, which can be packed more efficiently with https://en.wikipedia.org/wiki/Variable-length_quantity[variable width encoding] and lightweight compression (both of which destroy _O(1)_ lookup time anyway);
-   * counts are position-independent, allowing a large dataset to be processed without knowing its position in the sequence. This is particularly useful for _generating_ large sequences when the total size of each parallel chunk is not known until it is complete.
+   * counts are non-negative small integers, which can be packed more efficiently with https://en.wikipedia.org/wiki/Variable-length_quantity[variable width encoding] and/or lightweight compression (both of which destroy _O(1)_ lookup time anyway);
+   * counts are position-independent, allowing a large dataset to be processed in parallel without knowing the absolute positions of each parallel worker's chunks. This is particularly useful for _generating_ large sequences when the total size of each parallel chunk is not known until it is complete.
 
 One shortcoming that counts and offsets share is that they can only describe dense content. The data for list `i + 1` must appear directly after the data for list `i`. If we wish to view the jagged array with any interior elements removed, we would have to make a new copy of the content with those lists removed, which could trigger a deep recursive copy. It would be more efficient to allow the content to contain unreachable elements, so that these selections can be zero-copy views.
 
