@@ -517,14 +517,29 @@ starts[parents[j]] + index[j] == j
 
 It is also useful to wrap the index array as a jagged array with the same jagged structure as the original jagged array, because then it can be used in gather operations.
 
-All of the above discussion has focused on jagged arrays and nested jagged arrays without any *regular* array dimensions -- that is, without dimensions whose sizes are known to be constant. Jagged arrays are more general, so a regular array may be emulated by a jagged array with constant counts, but this is inefficient 
+All of the above discussion has focused on jagged arrays and nested jagged arrays without any *regular* array dimensions -- that is, without dimensions whose sizes are known to be constant. Jagged arrays are more general, so a regular array may be emulated by a jagged array with constant counts, but this clearly less efficient than storing the regular dimension sizes only once. Regular dimensions that appear after (or "`inside`") a jagged dimension can be represented by simply including a multidimensional array as content in a jagged array. That is, to get an array of type
 
+[source]
+----
+[0, inf) -> [0, m) -> T
+----
 
+construct a jagged array whose content is an array of type `[0, m) -> T`. Regular dimensions that appear before (or "`outside`") a jagged dimension are harder: the starts and stops of the jagged array must both have the shape of these regular dimensions. That is, to get an array of type
 
+[source]
+----
+[0, n) -> [0, inf) -> T
+----
 
-shape
+the starts and stops must be arrays of type `[0, n) -> INDEXTYPE`. In a counts representation, the counts must be an array of this type. This cannot be expressed in an offsets representation because offsets elements do not have a one-to-one relationship with logical jagged array elements. This could be taken as another argument for starts and stops over offsets.
 
+Some applications of awkward-array may require data that is being filled while it is being accessed. This is possible if whole-array validity constraints on array shapes are not too strict. Assuming that basic arrays can be appended atomically, or at least their lengths can be increased atomically to reveal content filled before increasing their lengths, jagged arrays can atomically grow by
 
+   . appending content first,
+   . then appending stops,
+   . then appending starts.
+
+The length of the content is allowed to be greater than or equal to the maximum stop value, and the length of stops is allowed to be greater than or equal to the length of starts. The logical length of the jagged array is taken to be the length of starts. As described above, starts and stops must have the same shape, but only for dimensions other than the first dimension.
 
 === JaggedArray
 
