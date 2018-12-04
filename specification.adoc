@@ -588,7 +588,7 @@ The `starts`, `stops`, and `content` properties are read-write; setting them inv
 
 When a jagged array `myarray` is passed a `selection` in square brackets, it obeys the following rules.
 
-*If `selection` is an integer,* the element at that index is extracted (handling negative indexes, if applicable). If the provided index is beyond the array's range, an error is raised.
+[.underline]#If `selection` is an integer,# the element at that index is extracted (handling negative indexes, if applicable). If the provided index is beyond the array's range, an error is raised.
 
 For example,
 
