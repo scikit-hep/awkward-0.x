@@ -541,10 +541,49 @@ Some applications of awkward-array may require data that is being filled while i
 
 The length of the content is allowed to be greater than or equal to the maximum stop value, and the length of stops is allowed to be greater than or equal to the length of starts. The logical length of the jagged array is taken to be the length of starts. As described above, starts and stops must have the same shape, but only for dimensions other than the first dimension.
 
+Likewise, the length of the content may be greater than or equal to the length of the parents array. The parents array must have the same shape as the content in all dimensions other than the first.
+
 === JaggedArray
+
+A `JaggedArray` is defined by three arrays, starts, stops, and content, which are the arguments of its constructor. Below are their single-property validity conditions. They may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `starts`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
+   * `stops`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+
+The whole-array validity conditions are:
+
+   * `starts` must have the same (or shorter) length than `stops`.
+   * `starts` and `stops` must have the same dimensionality (`shape[1:]`).
+   * `stops` must be greater than or equal to `starts`.
+   * The maximum of `starts` for non-empty elements must be less than the length of `content`.
+   * The maximum of `stops` for non-empty elements must be less than or equal to the length of `content`.
+
+A `JaggedArray` may be created from one of the following alternate constructors.
+
+==== `JaggedArray.fromiter(iterable)`
+
+   * `iterable`: a list of lists of a primitive type, corresponding to a jagged array of some fixed depth: `+[0, n) -> [0, inf) -> T+`, `+[0, n) -> [0, inf) -> [0, inf) -> T+`, etc.
+
+==== `JaggedArray.fromoffsets(offsets, content)`
+
+   * `offsets`: basic array of integer dtype (default is `INDEXTYPE`) with exactly one dimension, at least one element, and all non-negative values.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+
+==== `JaggedArray.fromcounts(counts, content)`
+
+   * `offsets`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+
+
+
+
 
 
 === ByteJaggedArray
+
+
+=== Helper functions
 
 
 == Product types
