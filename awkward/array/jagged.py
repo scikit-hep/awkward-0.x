@@ -119,8 +119,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
             if not issubclass(self._offsets.dtype.type, awkward.util.numpy.integer):
                 raise TypeError("offsets must have integer dtype")
-            if len(self._offsets.shape) != 1 or (self._offsets < 0).any():
-                raise ValueError("offsets must be a one-dimensional, non-negative array")
+            if len(self._offsets.shape) != 1:
+                raise ValueError("offsets must be a one-dimensional array")
+            if len(self._offsets) == 0:
+                raise ValueError("offsets must be a non-empty array")
+            if (self._offsets < 0).any():
+                raise ValueError("offsets must be a non-negative array")
 
         else:
             self.starts = starts
@@ -129,6 +133,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromiter(cls, iterable):
+        # FIXME for 1.0: detect deep jagged arrays and construct them
         offsets = [0]
         content = []
         for x in iterable:
