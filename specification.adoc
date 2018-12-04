@@ -497,7 +497,7 @@ Given a starts array and its corresponding parents, the following invariant hold
 parents[starts[i]] == i
 ----
 
-and the following holds for all `+0 <= j < len(content)+` _that are at the beginning of a nested list:_
+and the following holds for all `+0 <= j < len(content)+` that are at the beginning of a nested list:
 
 [source, python]
 ----
@@ -531,7 +531,7 @@ construct a jagged array whose content is an array of type `+[0, m) -> T+`. Regu
 [0, n) -> [0, inf) -> T
 ----
 
-the starts and stops must be arrays of type `+[0, n) -> INDEXTYPE+`. In a counts representation, the counts must be an array of this type. This cannot be expressed in an offsets representation because offsets elements do not have a one-to-one relationship with logical jagged array elements. This could be taken as another argument for starts and stops over offsets.
+the starts and stops must be arrays of type `+[0, n) -> INDEXTYPE+`. In a counts representation, the counts must be an array of this type. This cannot be expressed in an offsets representation because offsets elements do not have a one-to-one relationship with logical jagged array elements (another argument for starts and stops over offsets).
 
 Some applications of awkward-array may require data that is being filled while it is being accessed. This is possible if whole-array validity constraints on array shapes are not too strict. Assuming that basic arrays can be appended atomically, or at least their lengths can be increased atomically to reveal content filled before increasing their lengths, jagged arrays can atomically grow by
 
