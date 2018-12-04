@@ -686,7 +686,7 @@ A string or a sequence of strings is also the _only_ acceptable argument to set-
 
 ==== Mapped kernel behavior
 
-If jagged array are passed into a Numpy ufunc (or equivalent mapped kernel), they are computed elementwise at the deepest level of jaggedness, adjusting for different starts/stops/content representations of the same logical structure, and broadcasting scalars and non-jagged values to the jagged structure. If not all jagged arrays have the same logical jagged structure or non-jagged arrays are not broadcastable to this structure (because they have different lengths), an error is raised.
+If jagged arrays are passed into a Numpy ufunc (or equivalent mapped kernel), they are computed elementwise at the deepest level of jaggedness, adjusting for different starts/stops/content representations of the same logical structure, and broadcasting scalars and non-jagged values to the jagged structure. If not all jagged arrays have the same logical jagged structure or non-jagged arrays are not broadcastable to this structure (because they have different lengths), an error is raised.
 
 For example,
 
@@ -906,6 +906,8 @@ myarray[-3:]["x"]
 # returns array([2.2, 3.3, 4.4])
 ----
 
+This is because a single row of a table is represented by a `Table.Row`, which has a get-item method for its place in a `Table`. If a `Table.Row` is iterated over, its length and iteration correspond to the fields named as consecutive integer strings, starting from zero: `"0"`, `"1"`, `"2"`, etc.
+
 Column-projection and extraction/slicing/masking/gathering cannot be performed in the same tuple, and column-projection of nested tables cannot be performed in the same tuple. Nor do column-projections of nested tables commute. Attempting to do so would raise an erorr. For example,
 
 [source, python]
@@ -954,9 +956,20 @@ myarray["n"]
 
 ==== Mapped kernel behavior
 
+If tables are passed into a Numpy ufunc (or equivalent mapped kernel), the ufunc is applied separately to each column. If multiple tables are passed into the same ufunc with different sets of columns, an error is raised, and if they have different lengths, an error is raised. For example,
 
+[source, python]
+----
+a = awkward.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4], n=[0, 1, 2, 3, 4])
+b = awkward.Table(x=[0, 100, 200, 300, 400], n=[0, 100, 200, 300, 400])'
+numpy.add(a, b)
+# returns <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 74ce37c32320>
+numpy.add(a, b).tolist()
+# returns [{'x': 0.0, 'n': 0}, {'x': 101.1, 'n': 101}, {'x': 202.2, 'n': 202},
+           {'x': 303.3, 'n': 303}, {'x': 404.4, 'n': 404}]
+----
 
-
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus, the above could have been `a + b`.
 
 ==== Methods
 
