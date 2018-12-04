@@ -594,15 +594,11 @@ For example,
 
 [source, python]
 ----
->>> myarray = awkward.JaggedArray.fromcounts([3, 0, 2], awkward.Table(x=[1, 2, 3, 4, 5], y=[1.1, 2.2, 3.3, 4.4, 5.5], z=[True, False, True, False, False]))
->>> myarray.tolist()
-[[{'x': 1, 'y': 1.1, 'z': True}, {'x': 2, 'y': 2.2, 'z': False}, {'x': 3, 'y': 3.3, 'z': True}], [], [{'x': 4, 'y': 4.4, 'z': False}, {'x': 5, 'y': 5.5, 'z': False}]]
->>> myarray["x"]
-<JaggedArray [[1 2 3] [] [4 5]] at 7f020e8122b0>
->>> myarray[["x", "y"]]
-<JaggedArray [[<Row 0> <Row 1> <Row 2>] [] [<Row 3> <Row 4>]] at 7f02018af860>
->>> myarray[["x", "y"]].tolist()
-[[{'x': 1, 'y': 1.1}, {'x': 2, 'y': 2.2}, {'x': 3, 'y': 3.3}], [], [{'x': 4, 'y': 4.4}, {'x': 5, 'y': 5.5}]]
+myarray = awkward.JaggedArray.fromcounts([3, 0, 2], awkward.Table(x=[1, 2, 3, 4, 5], y=[1.1, 2.2, 3.3, 4.4, 5.5], z=[True, False, True, False, False]))
+myarray["x"]
+# returns <JaggedArray [[1 2 3] [] [4 5]] at 7f020e8122b0>
+myarray[["x", "y"]]
+# returns <JaggedArray [[<Row 0> <Row 1> <Row 2>] [] [<Row 3> <Row 4>]] at 7f02018af860>
 ----
 
 
