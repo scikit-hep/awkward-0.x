@@ -417,18 +417,20 @@ The default primitive types for various roles are given below.
 |===
 | Awkward type | Numpy dtype | Purpose
 
-| `DEFAULTTYPE` | `float64` | Default array content
-| `CHARTYPE` | `uint8` | Array content for byte-granularity arrays
-| `INDEXTYPE` | `int64` | Default type for indexes of other arrays (signed so that subtraction does not change type)
-| `TAGTYPE` | `uint8` | Default type for tagged union tags
-| `MASKTYPE` | `bool_` | Type for byte masks
-| `BITMASKTYPE` | `uint8` | Type for bit masks
-| `BOOLTYPE` | `bool_` | Type for boolean data
+| `DEFAULTTYPE` | `float64` | default array content
+| `CHARTYPE` | `uint8` | array content for byte-granularity arrays
+| `INDEXTYPE` | `int64` | default type for indexes of other arrays (signed so that subtraction does not change type)
+| `TAGTYPE` | `uint8` | default type for tagged union tags
+| `MASKTYPE` | `bool_` | type for byte masks
+| `BITMASKTYPE` | `uint8` | type for bit masks
+| `BOOLTYPE` | `bool_` | type for boolean data
 |===
 
 == Jaggedness
 
-There are many ways to represent a https://en.wikipedia.org/wiki/Jagged_array[jagged array]. One natural way is to introduce markers in the byte stream where each variable-length nested list begins or ends, or to introduce nested list sizes to avoid having to distinguish values from markers (as in the https://avro.apache.org[Avro] protocol). However, this "`row-wise`" representation interrupts vectorized processing of the content. Another natural way is to create an array of pointers to nested lists, like Numpy's object array, but this is even worse because it also adds memory latency.
+https://en.wikipedia.org/wiki/Jagged_array[Jagged arrays] have a logical structure that is independent of how they are represented in memory, but since awkward-array defines this structure in terms of a basic array library (Numpy), the structure we choose is a visible part of the awkward-array specification. This introduction presents many ways to represent jagged arrays, their advantages and disadvantages, before specifying the `JaggedArray` class itself. The `JaggedArray` class uses the most general representation internally with conversions to and from the other forms.
+
+One natural way to represent a jagged array is to introduce markers in the serialized content where each variable-length nested list begins or ends, or to insert nested list sizes before each list (as in the https://avro.apache.org[Avro] protocol) to avoid having to distinguish content values from markers. However, this "`row-wise`" representation interrupts vectorized processing of the content. Another natural way is to create an array of pointers to nested lists, like Numpy's object array, but this is even worse because it also adds memory latency.
 
 Columnar solutions keep the contents of the nested lists in a single, contiguous array (a "`column`"). The https://root.cern[ROOT] file format was an early solution (1995). Although the intention was for more efficient packing and compression on disk, this format can be transplanted into memory for efficient access in computation. The https://parquet.apache.org[Parquet] file format is another, though it modifies ("`https://github.com/julienledem/redelm/wiki/The-striping-and-assembly-algorithms-from-the-Dremel-paper[shreds]`") the data in a way that is hard to use without restructuring it. The https://arrow.apache.org[Arrow] in-memory format is an excellent solution, and will be described below.
 
@@ -495,12 +497,27 @@ Given a starts array and its corresponding parents, the following invariant hold
 parents[starts[i]] == i
 ----
 
+and the following holds for all `0 <= j < len(content)` that are at the beginning of a nested list:
+
+[source, python]
+----
+starts[parents[j]] == j
+----
+
 Although parents is a highly expressive inside-out representation, another that is sometimes useful, called *index*, consists of integers that are zero at the start of each nested list and increase by one for each content element. For instance, the above example has the following index:
 
    * index: `0, 1, 2, 0, 1, 0, 1, 0`
 
-These values are local indexes 
+These values are local indexes for elements within the nested lists. For all `0 <= j < len(content)`, the following invariant holds:
 
+[source, python]
+----
+starts[parents[j]] + index[j] == j
+----
+
+It is also useful to wrap the index array as a jagged array with the same jagged structure as the original jagged array, because then it can be used in gather operations.
+
+All of the above discussion has focused on jagged arrays and nested jagged arrays without any *regular* array dimensions -- that is, without dimensions whose sizes are known to be constant. Jagged arrays are more general, so a regular array may be emulated by a jagged array with constant counts, but this is inefficient 
 
 
 
