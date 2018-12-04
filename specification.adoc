@@ -497,7 +497,7 @@ Given a starts array and its corresponding parents, the following invariant hold
 parents[starts[i]] == i
 ----
 
-and the following holds for all `+0 <= j < len(content)+` that are at the beginning of a nested list:
+and the following holds for all `+0 <= j < len(content)+` _that are at the beginning of a nested list:_
 
 [source, python]
 ----
