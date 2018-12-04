@@ -458,13 +458,13 @@ One shortcoming that counts and offsets share is that they can only describe den
 
 A jagged array based on counts can have unreachable elements: any content at indexes greater than or equal to `sum(counts)` are effectively not in the jagged array. A jagged array based on offsets can have uncreachable elements at indexes less than `offsets[0]` and greater than or equal to `offsets[-1]`, assuming that we allow `offsets[0]` to be greater than `0`. To allow interior elements to be unreachable, we can generalize offsets into two arrays, *starts* and *stops*. These two arrays (nominally) have the same shape as each other and define the shape of the jagged array. The nested list at index `i` is `content[starts[i]:stops[i]]`. Given an offsets array, we can compute starts and stops by `starts = offsets[:-1]` and `stops = offsets[1:]`.
 
+A jagged array defined by starts and stops can skip any interior content, can repeat elements, can list elements in any order, and can even make nested lists partially overlap. Skipping elements is useful for masking, repeating elements is useful for gathering, and reordering elements is useful for optimizing data to minimize disk page-reads. (No use for partial overlaps is currently known.) The cost of separate starts and stops is that it can double memory use and time spent in validation tests.
 
 
 
 
 
-
-parents
+parents, uniques
 
 
 
