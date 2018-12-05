@@ -41,22 +41,22 @@ class Test(unittest.TestCase):
     def test_masked_get(self):
         a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True)
         assert a.tolist() == [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9]
-        assert MaskedArray.is_masked(a[0])
-        assert not MaskedArray.is_masked(a[1])
+        assert a[0] is None
+        assert not a[1] is None
         assert a[5:].tolist() == [5.5, None, 7.7, None, 9.9]
-        assert not MaskedArray.is_masked(a[5:][0])
-        assert MaskedArray.is_masked(a[5:][1])
+        assert not a[5:][0] is None
+        assert a[5:][1] is None
         assert a[[3, 2, 1]].tolist() == [3.3, None, 1.1]
         assert a[[True, True, True, True, True, False, False, False, False, False]].tolist() == [None, 1.1, None, 3.3, None]
 
     def test_masked_get_flip(self):
         a = MaskedArray([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=False)
         assert a.tolist() == [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9]
-        assert MaskedArray.is_masked(a[0])
-        assert not MaskedArray.is_masked(a[1])
+        assert a[0] is None
+        assert not a[1] is None
         assert a[5:].tolist() == [5.5, None, 7.7, None, 9.9]
-        assert not MaskedArray.is_masked(a[5:][0])
-        assert MaskedArray.is_masked(a[5:][1])
+        assert not a[5:][0] is None
+        assert a[5:][1] is None
         assert a[[3, 2, 1]].tolist() == [3.3, None, 1.1]
         assert a[[True, True, True, True, True, False, False, False, False, False]].tolist() == [None, 1.1, None, 3.3, None]
 
@@ -71,42 +71,42 @@ class Test(unittest.TestCase):
     def test_bitmasked_get(self):
         a = BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True, lsborder=True)
         assert a.tolist() == [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9]
-        assert MaskedArray.is_masked(a[0])
-        assert not MaskedArray.is_masked(a[1])
+        assert a[0] is None
+        assert not a[1] is None
         assert a[5:].tolist() == [5.5, None, 7.7, None, 9.9]
-        assert not MaskedArray.is_masked(a[5:][0])
-        assert MaskedArray.is_masked(a[5:][1])
+        assert not a[5:][0] is None
+        assert a[5:][1] is None
         assert a[[3, 2, 1]].tolist() == [3.3, None, 1.1]
         assert a[[True, True, True, True, True, False, False, False, False, False]].tolist() == [None, 1.1, None, 3.3, None]
 
         a = BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True, lsborder=False)
         assert a.tolist() == [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9]
-        assert MaskedArray.is_masked(a[0])
-        assert not MaskedArray.is_masked(a[1])
+        assert a[0] is None
+        assert not a[1] is None
         assert a[5:].tolist() == [5.5, None, 7.7, None, 9.9]
-        assert not MaskedArray.is_masked(a[5:][0])
-        assert MaskedArray.is_masked(a[5:][1])
+        assert not a[5:][0] is None
+        assert a[5:][1] is None
         assert a[[3, 2, 1]].tolist() == [3.3, None, 1.1]
         assert a[[True, True, True, True, True, False, False, False, False, False]].tolist() == [None, 1.1, None, 3.3, None]
 
     def test_bitmasked_get_flip(self):
         a = BitMaskedArray.fromboolmask([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=False, lsborder=True)
         assert a.tolist() == [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9]
-        assert MaskedArray.is_masked(a[0])
-        assert not MaskedArray.is_masked(a[1])
+        assert a[0] is None
+        assert not a[1] is None
         assert a[5:].tolist() == [5.5, None, 7.7, None, 9.9]
-        assert not MaskedArray.is_masked(a[5:][0])
-        assert MaskedArray.is_masked(a[5:][1])
+        assert not a[5:][0] is None
+        assert a[5:][1] is None
         assert a[[3, 2, 1]].tolist() == [3.3, None, 1.1]
         assert a[[True, True, True, True, True, False, False, False, False, False]].tolist() == [None, 1.1, None, 3.3, None]
 
         a = BitMaskedArray.fromboolmask([False, True, False, True, False, True, False, True, False, True], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=False, lsborder=False)
         assert a.tolist() == [None, 1.1, None, 3.3, None, 5.5, None, 7.7, None, 9.9]
-        assert MaskedArray.is_masked(a[0])
-        assert not MaskedArray.is_masked(a[1])
+        assert a[0] is None
+        assert not a[1] is None
         assert a[5:].tolist() == [5.5, None, 7.7, None, 9.9]
-        assert not MaskedArray.is_masked(a[5:][0])
-        assert MaskedArray.is_masked(a[5:][1])
+        assert not a[5:][0] is None
+        assert a[5:][1] is None
         assert a[[3, 2, 1]].tolist() == [3.3, None, 1.1]
         assert a[[True, True, True, True, True, False, False, False, False, False]].tolist() == [None, 1.1, None, 3.3, None]
 

@@ -124,6 +124,14 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             return awkward.util.numpy.logical_not(self._mask)
 
     @property
+    def ismasked(self):
+        return self.boolmask(maskedwhen=True)
+
+    @property
+    def isunmasked(self):
+        return self.boolmask(maskedwhen=False)
+
+    @property
     def content(self):
         return self._content
 
@@ -139,14 +147,6 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     @maskedwhen.setter
     def maskedwhen(self, value):
         self._maskedwhen = bool(value)
-
-    @property
-    def masked(self):
-        return self._mask == self._maskedwhen
-
-    @property
-    def unmasked(self):
-        return self._mask != self._maskedwhen
 
     def __len__(self):
         return len(self._mask)
@@ -283,7 +283,7 @@ class BitMaskedArray(MaskedArray):
     BitMaskedArray
     """
 
-    # TODO for 1.0: need a maskshape parameter to apply multidimensional shape to the output
+    # TODO for 1.0: need a maskshape parameter to apply length and multidimensional shape to the output
 
     def __init__(self, mask, content, maskedwhen=True, lsborder=False):
         super(BitMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
@@ -326,14 +326,6 @@ class BitMaskedArray(MaskedArray):
             raise ValueError("mask must have 1-dimensional shape")
         self._mask = value.view(awkward.util.BITMASKTYPE)
         self._isvalid = False
-
-    @property
-    def masked(self):
-        return self.boolmask() == self._maskedwhen
-
-    @property
-    def unmasked(self):
-        return self.boolmask() != self._maskedwhen
 
     def __len__(self):
         return len(self._content)
@@ -591,15 +583,9 @@ class IndexedMaskedArray(MaskedArray):
             raise TypeError("maskedwhen must be an integer for IndexedMaskedArray")
         self._maskedwhen = value
 
-    @property
-    def masked(self):
-        return self._mask < 0
-
-    @property
-    def unmasked(self):
-        return self._mask >= 0
-
     def boolmask(self, maskedwhen=True):
+        if maskedwhen is None:
+            raise TypeError("maskedwhen must be True or False")
         if maskedwhen:
             return self._mask == self._maskedwhen
         else:

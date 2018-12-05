@@ -1204,7 +1204,7 @@ myarray[0]
 # returns array([1.1, 2.2, 3.3])
 myarray[1]
 # returns None
-myarray[myarray.unmasked, 1:]
+myarray[myarray.isunmasked, 1:]
 # returns <MaskedArray [[2.2 3.3] [5.5]] at 7f5e1acf0f60>
 ----
 
