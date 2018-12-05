@@ -1372,15 +1372,15 @@ A `SparseArray` is defined by a shape, two arrays, and a default element. Below 
    * `index`: basic array of integer dtype (default is `INDEXTYPE`) with exactly one dimension and all non-negative values. This array must be monatonically increasing (sorted).
    * `content`: any array (default is a basic array of `DEFAULTTYPE`).
    * `default`: `None` or any value. If `None`, an appropriate zero will be generated:
-     * `content.dtype.type(0)` if `content` is a 1-dimensional basic array;
-     * `numpy.zeros(content.shape[1:], content.dtype)` if `content` is a multidimensional basic array;
-     * empty jagged array if `content` is a jagged array;
-     * the masked value if `content` is a masked array;
-     * `None` if `content` is an object array;
-     * an empty string if `content` is a string array;
-     * the first basic array zero if `content` is a union array; the first other type if the union has no basic arrays;
-     * a `Table.Row` of defaults if `content` is a table;
-     * a decision based on the content of any other type.
+   ** `content.dtype.type(0)` if `content` is a 1-dimensional basic array;
+   ** `numpy.zeros(content.shape[1:], content.dtype)` if `content` is a multidimensional basic array;
+   ** empty jagged array if `content` is a jagged array;
+   ** the masked value if `content` is a masked array;
+   ** `None` if `content` is an object array;
+   ** an empty string if `content` is a string array;
+   ** the first basic array zero if `content` is a union array; the first other type if the union has no basic arrays;
+   ** a `Table.Row` of defaults if `content` is a table;
+   ** a decision based on the content of any other type.
 
 ==== Get-item behavior
 
