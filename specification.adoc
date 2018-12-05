@@ -1059,7 +1059,7 @@ can be expressed by giving the tags and index arrays a multidimensional shape. T
 
 === UnionArray
 
-A `UnionArray` is defined by two arrays and an ordered sequence of arrays. Below are their single-property validity conditions. They may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+A `UnionArray` is defined by two arrays and an ordered sequence of arrays. Below are their single-property validity conditions. Arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
 
    * `tags`: basic array of integer dtype (default is `TAGTYPE`) with at least one dimension and all non-negative values.
    * `index`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
@@ -1129,18 +1129,105 @@ numpy.add(a, 10)
 
 Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus, the above could have been `a + 10`.
 
+==== Methods
+
+A `UnionArray` may be created from one of the following alternate constructors.
+
+==== `UnionArray.fromtags(tags, contents)`
+
+   * `tags`: same as primary constructor.
+   * `contents`: same as primary constructor.
+
+This methods generates an `index` assuming that all `contents` are in order with no padding. Union arrays generated this way would always have `issequential == True`.
+
 == Option types
 
+In type theory, option types may be considered a special case of sum types: `?T` is the sum of `T` with a unit type; a unit type has only one possible value, null. As described above, we do not wish to introduce an array type whose only information content is the shape of the array.
 
+Additionally, we implement option types in a different way from unions: as boolean masks. With the exception of `IndexedMaskedArray`, Each missing value in a masked array has only one bit of information, the fact that it is missing. A single boolean mask array suffices. An awkward-array library has three masked array types:
 
+   * `MaskedArray` (superclass): the mask array has one boolean per byte.
+   * `BitMaskedArray`: the mask array has one boolean per bit, with padding to fill a whole number of bytes.
+   * `IndexedMaskedArray`: the mask array functions both as a mask, with a negative value like `-1` indicating that an element is missing, and as an index, so that the content does not need to have unreachable elements. This can be important if content values are large, such as a wide `Table`.
+
+Numpy has a `numpy.ma.MaskedArray` type that uses one boolean per byte to indicate missing values. Arrow defines all types as potentially masked with one boolean per bit to indicate missing values. Neither have an equivalent for `IndexedMaskedArray`.
+
+With `MaskedArray` and `BitMaskedArray`, there is a two-fold ambiguity: should `True` mean that a value is missing or that a value is present? Both classes have a `maskedwhen` argument indicating which boolean value is a masked value (default is `True`, values of `True` in the mask array mean data are missing). Numpy's `numpy.ma.MaskedArray` has `maskedwhen = True`, and Arrow's bitmasks have `maskedwhen = False`.
+
+With `BitMaskedArray`, there is another two-fold ambiguity: should bits read from most significant to least significant or least significant to most significant in each byte? This is a bit-level equivalent of the endianness ambiguity, but it is not decided by hardware because most CPU instruction sets don't operate on individual bits. `BitMaskedArray` has an `lsborder` that is `True` for https://en.wikipedia.org/wiki/Bit_numbering#Least_significant_bit[Least significant bit] (LSB) ordering and `False` for https://en.wikipedia.org/wiki/Bit_numbering#Most_significant_bit[Most significant bit] (MSB) ordering. Arrow's bitmasks have `lsborder = True`.
+
+`IndexedMaskedArray` has an integer-typed mask array, so it has no `maskedwhen`. Any negative value corresponds to being masked.
+
+Regularly divided optional types, such as
+
+[source]
+----
+[0, n) -> [0, m) -> ?T
+----
+
+can be expressed by giving the mask arrays a multidimensional shape. This is not possible for `BitMaskedArray`, since bits cannot be shaped, nor can an exact length be prescribed, since bits must pack into bytes and therefore pad up to seven values. Therefore, `BitMaskedArray` additionally has a `maskshape` to define the sizes of all dimensions, including the first (length).
+
+The value returned for missing data is `MaskedArray.mask`, which is by default `None`. `BitMaskedArray` and `IndexedMaskedArray` inherit from `MaskedArray`, so setting `MaskedArray.mask` changes the return value for missing data globally.
 
 === MaskedArray
 
+A `MaskedArray` is defined by two arrays and a boolean `maskedwhen`. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `mask`: basic array of boolean dtype (default is `MASKTYPE`) with at least one dimension.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `maskedwhen`: boolean; element `i` is considered missing if `mask[i] == maskedwhen` (default is `True`).
+
+The whole-array validity conditions are:
+
+   * flattened `mask` length must be less than or equal to the `content` length.
+
+The length of the `MaskedArray` is determined by the length of the `mask` array.
+
+==== Methods
+
+`MaskedArray` and its subclasses (`BitMaskedArray` and `IndexedMaskedArray`) have the following methods:
+
+   * `boolmask(maskedwhen=None)`: return the `mask` as boolean bytes. If `maskedwhen` is `None`, use the instance's `maskedwhen`. Otherwise, override it. (`IndexedMaskedArray.boolmask` has a default `maskedwhen` of `True`.)
+   * `indexed()`: convert to an `IndexedMaskedArray`.
 
 === BitMaskedArray
 
+A `BitMaskedArray` is defined by two arrays, a boolean `maskedwhen`, a boolean `lsborder`, and a shape parameter `maskshape`. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `mask`: basic array with exactly one dimension; will be viewed as `BITMASKTYPE`.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `maskedwhen`: boolean; same meaning as in `MaskedArray`.
+   * `lsborder`: boolean; if `True`, bits in `mask` are interpreted in LSB (least significant bit) order; if `False`, bits in `mask` are interpreted in MSB (most significant bit) order.
+   * `maskshape`: `None`, a positive integer, or a tuple of positive integers; the sizes of the logical mask dimensions. If not an integer, `maskshape` will be converted to `(maskshape,)`. If `None` (the default), the `maskshape` will be assumed to be `(len(content),)`. A value of `None` is persistent, so an unspecified `maskshape` scales with changes in `content`.
+
+The whole-array validity conditions are:
+
+   * The length of the `BitMaskedArray` must be less than or equal to the `content` length.
+   * The length of the `mask` must be greater than or equal to `8` times the length of the `BitMaskArray`.
+
+The length of the `BitMaskedArray` depends on `maskshape`: if `None`, the length is the `content` length. Otherwise, the length is `maskshape[0]`.
+
+==== Methods
+
+In addition to methods defined in `MaskedArray`, a `BitMaskedArray` has the following static methods:
+
+   * `BitMaskedArray.bit2bool(bitmask, lsborder=False)`: converts one boolean per bit into one boolean per byte with a specified `lsborder`.
+   * `BitMaskedArray.bool2bit(boolmask, lsborder=False)`: converts one boolean per byte into one boolean per bit with a specified `lsborder`.
+
+A `BitMaskedArray` may be created from one of the following alternate constructors.
+
+==== `BitMaskedArray.fromboolmask(mask, content, maskedwhen=True, lsborder=True, maskshape=None)`
+
+   * `mask`: one boolean per byte array; converted to one boolean per bit with `BitMaskedArray.bool2bit(mask, lsborder=lsborder)`.
+   * `content`: same as primary constructor.
+   * `maskedwhen`: same as primary constructor.
+   * `lsborder`: same as primary constructor.
+   * `maskshape`: same as primary constructor.
 
 === IndexedMaskedArray
+
+
+
 
 
 == Indirection

@@ -40,23 +40,6 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     MaskedArray
     """
 
-    ### WTF were the designers of numpy.ma thinking?
-    # @staticmethod
-    # def is_masked(x):
-    #     return awkward.util.numpy.ma.is_masked(x)
-    # masked = awkward.util.numpy.ma.masked
-
-    @staticmethod
-    def is_masked(x):
-        if isinstance(x, MaskedArray):
-            # numpy.ma.is_masked(array) if any element is masked
-            if x.maskedwhen:
-                return x.mask.any()
-            else:
-                return not x.mask.all()
-        else:
-            # numpy.ma.is_masked(x) if x represents a masked constant
-            return x is MaskedArray.masked
     masked = None
 
     def __init__(self, mask, content, maskedwhen=True):
@@ -132,7 +115,9 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         self._mask = value
         self._isvalid = False
 
-    def boolmask(self, maskedwhen=True):
+    def boolmask(self, maskedwhen=None):
+        if maskedwhen is None:
+            maskedwhen = self._maskedwhen
         if maskedwhen == self._maskedwhen:
             return self._mask
         else:
@@ -290,6 +275,8 @@ class BitMaskedArray(MaskedArray):
     BitMaskedArray
     """
 
+    # TODO for 1.0: need a maskshape parameter to apply multidimensional shape to the output
+
     def __init__(self, mask, content, maskedwhen=True, lsborder=False):
         super(BitMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
         self.lsborder = lsborder
@@ -372,7 +359,9 @@ class BitMaskedArray(MaskedArray):
 
         return awkward.util.numpy.packbits(out)
 
-    def boolmask(self, maskedwhen=True):
+    def boolmask(self, maskedwhen=None):
+        if maskedwhen is None:
+            maskedwhen = self._maskedwhen
         if maskedwhen == self._maskedwhen:
             bitmask = self._mask
         else:
@@ -524,6 +513,8 @@ class IndexedMaskedArray(MaskedArray):
     """
     IndexedMaskedArray
     """
+
+    # TODO for 1.0: remove maskedwhen and instead check for any negative value (can't be allowed to inherit methods that assume self.maskedwhen!)
 
     def __init__(self, mask, content, maskedwhen=-1):
         super(IndexedMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
