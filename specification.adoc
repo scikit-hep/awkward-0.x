@@ -424,7 +424,7 @@ The `awkward.array.base.AwkwardArray` abstract base class has switches to contro
    * `check_prop_valid` _default:_ `True`, if `False`, skip single-property validity checks.
    * `check_valid` _default:_ `True`, if `False`, skip whole-array validity checks.
 
-The default primitive types for various roles are given below.
+The default primitive types are defined in `awkward.util`.
 
 |===
 | Awkward type | Numpy dtype | Purpose
@@ -891,7 +891,7 @@ myarray
 myarray[3]
 # returns <Row 3>
 >>> myarray[3:]
-<Table [<Row 3> <Row 4>] at 7e55fe51a278>
+# returns <Table [<Row 3> <Row 4>] at 7e55fe51a278>
 ----
 
 The subset of rows have persistent numbers (e.g. "`Row 3`" in the sliced output is the same object as "`Row 3`" in the base) because `Table` views remember their internal viewing state.
