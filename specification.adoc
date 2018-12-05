@@ -1439,8 +1439,27 @@ The `awkward.array.indexed` submodule may define helper functions, such as the f
 
 == Opaque objects
 
+The array types defined above are sufficient to create rich data types -- most of the types expected in a general programming environment. With columnar layouts in memory, they take a minimum of space and regular operations can be applied on them very quickly. However, all of these are awkward-array types: only Numpy ufuncs and Python get-item know how to operate on them. Situations will arise in which types must satisfy third-party constraints.
+
+Data structures built by combining awkward-arrays are *constructive* (built by construction), instances of other types are *opaque* (not known to the awkward-array library). To emulate an array of opaque objects, we wrap it in an `ObjectArray` that applies a function to an element `i` to generate the object at `i`. The object must be a pure function of the data at element `i` and not maintain long-lived state.
+
+Get-item selections and mapped kernels perform vectorized operations across all or much of the array, and if the object type has methods, users may want to apply the methods as vectorized operations as well. Instantiating all elements in the array and invoking the method on all of them misses the point (one might as well use a Python list or a Numpy object array), so there is an alternate way to apply them: as vectorized operations on the data used to generate the objects.
+
+Here is a motivating example: a `Table` of floating point `"x"` and `"y"` columns is wrapped in an `ObjectArray` with a `Point` constructor to effectively make an array of user-defined `Point` objects. `Point` instances have an `angle` method the computes `math.atan2(self.y, self.x)`. Users want to compute the `angle` of all values in the array without constructing `Point` for each. We therefore add a method `angle` to `ObjectArray` that computes `numpy.arctan2(self["x"], self["y"])`.
+
+These methods are added with a mix-in facility that accepts any class containing pure-function methods (no persistent state) and has no `__init__` method. This is where different languages  will put the most constraint on what can be done. Mix-ins are equivalent to Java's Interfaces, but in a statically compiled language, methods can't be added at runtime. In Java in particular, classes can be created from mix-ins in a nested `ClassContext`, but methods from these runtime types can't be used in the main `ClassContext` code because it has already been type-checked. Code that uses the new methods must be compiled after the mix-ins, which means that it must be compiled on the fly. In C++, a just-in-time compiler like https://root.cern.ch/cling[Cling] would be needed.
+
+A library may be called compliant with awkward-array if it lacks the ability to add mix-in methods.
+
+An important use of `ObjectArray` and mix-in methods is `StringArray`, which implements an array of strings as a `JaggedArray` of `CHARTYPE`, generating `str` or `bytes` objects upon extraction. It is important (for users) that the objects drawn from this array have the native string type of whichever language they're using. It's also important to have some vectorized methods, like dropping the last character of all strings (which can actually be a shift to the `JaggedArray`'s stops array). `StringArray` has its mix-in methods built-in, so it does not suffer the dynamic vs. static issue described above.
 
 === Mix-in Methods
+
+For a class to be eligible as a mix-in method, it must not have an `__init__` method and not modify `self` in any of its methods. The `Methods` class cannot be instantiated; it only contains the following static methods:
+
+   * `mixin(methods, awkwardtype)`:
+   * `maybemixin(sample, awkwardtype)`: 
+
 
 
 === ObjectArray
