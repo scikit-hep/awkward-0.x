@@ -415,6 +415,21 @@ All arrays have the following read-only properties and methods.
    * `+empty_like(...)+`, `+zeros_like(...)+`, and `+ones_like(...)+`: create arrays with the same structure but uninitialized, zeros, or ones for content.
    * `astype(dtype)`: return a copy of the whole structure with basic arrays at the deepest level converted to `dtype`.
 
+== Reducer methods on all arrays
+
+Reducers convert arrays into scalars, reducing the dimensionality by one. In awkward-array, this applies to the innermost dimension (like `axis = len(array.shape) - 1` in Numpy) and it removes one level of jaggedness (the innermost) from jagged arrays. They are all mask-aware and treat `NaN` values in floating point types as though they were masked.
+
+   * `any()`: returns `True` if any values are non-masked and non-zero. Arrays without non-masked values yield `False`.
+   * `all()`: returns `True` if all non-masked values are non-zero. Arrays without non-masked values yield `True`.
+   * `count()`: returns the number of non-masked values.
+   * `count_nonzero()`: returns the number of non-masked, non-zero values.
+   * `sum()`: returns the sum of all non-masked values or `0` if there are no non-masked values.
+   * `prod()`: returns the product of all non-masked values or `1` if there are no non-masked values.
+   * `min()`: returns the minimum of non-masked values. Arrays without non-masked values yield `inf` for floating point types and the maximum integer value for integer types.
+   * `max()`: returns the maximum of non-masked values. Arrays without non-masked values yield `-inf` for floating point types and the minimum integer value for integer types.
+
+The methods `argmin()` and `argmax()` are not reducers: they return an array of zero or one elements: zero if there are no non-masked values, a single index position of the non-masked value that minimizes or maximizes the array otherwise. Data in this form is usable as a gather index. When applied to another array, it returns an empty array or a singleton, depending on the length of the `argmin()` or `argmax()`.
+
 == Global switches and types
 
 The `awkward.array.base.AwkwardArray` abstract base class has switches to control global behavior. They may be set at any level: on the base class to affect all awkward-array types, all instances, or on a concrete class for all instances of that class, or on a single instance. In languages other than Python, an alternative mechanism may be substituted.
@@ -724,17 +739,18 @@ Unary and binary operators corresponding to mapped kernels should have the same 
 
 ==== Methods
 
-`JaggedArray` has the following reducers. Reducers decrease the jaggedness by one level, turning a singly jagged array into a non-jagged array, a doubly jagged array into a singly jagged array, etc. The resulting array has the same length as `self`.
+`JaggedArray` reducers differ from generic reducers in that they only reduce the innermost level of jaggedness: inner nested lists are replaced with scalars, but the total structure is still an array. Hence, a reduced singly-jagged array is a non-jagged array, and a reduced doulby-jagged array is a singly-jagged array. The reduced array has the same length as the unreduced jagged array.
 
-   * `any()`: returns an array of `BOOLTYPE`; each is `True` if the corresponding nested list has any non-zero values and `False` if not or if the nested list is empty.
-   * `all()`: returns an array of `BOOLTYPE`; each is `True` if the corresponding nested list has only non-zero values, including the case in which the nested list is empty; `False` otherwise.
-   * `count_nonzero()`: returns an array of `INDEXTYPE`, the number of non-zero values in each nested list.
-   * `sum()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the sum of values in each nested list. Empty lists yield `0`.
-   * `prod()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the product of values in each nested list. Empty lists yield `1`.
-   * `min()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the minimum of values in each nested list. Empty lists yield `inf` for floating point types and the maximum integer value for integer types.
-   * `max()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the maximum of values in each nested list. Empty lists yield `-inf` for floating point types and the minimum integer value for integer types.
+   * `any()`: returns an array of `BOOLTYPE`; each is `True` if the corresponding nested list has any non-masked, non-zero values and `False` if not or if the nested list has no non-masked values at all.
+   * `all()`: returns an array of `BOOLTYPE`; each is `True` if the corresponding nested list's only non-masked values are non-zero, including the case in which the nested list has no non-masked values at all; `False` otherwise.
+   * `count()`: returns an array of `INDEXTYPE`, the number of non-masked values in each nested list.
+   * `count_nonzero()`: returns an array of `INDEXTYPE`, the number of non-masked, non-zero values in each nested list.
+   * `sum()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the sum of non-masked values in each nested list. Lists with no non-masked values yield `0`.
+   * `prod()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the product of non-masked values in each nested list. Lists with no non-masked values yield `1`.
+   * `min()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the minimum of non-masked values in each nested list. Lists with no non-masked values yield `inf` for floating point types and the maximum integer value for integer types.
+   * `max()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the maximum of non-masked values in each nested list. Lists with no non-masked values yield `-inf` for floating point types and the minimum integer value for integer types.
 
-The `argmin()` and `argmax()` methods are not reducers: they return jagged arrays of the local index that minimizes or maximizes each nested list. If a nested list is empty, the corresponding nested list in the output is also empty. If a nested list is not empty, the corresponding nested list in the output has exactly one local index. Data in this form is usable in gather operations.
+The jagged `argmin()` and `argmax()` methods are not reducers: they return jagged arrays of the local index that minimizes or maximizes the non-masked values in each nested list. If a nested list has no non-masked values, the corresponding nested list in the output is empty. If an output nested list is not empty, it has exactly one value. Data in this form is usable in gather operations.
 
 `JaggedArray` has the following structure manipulation methods:
 
@@ -1275,7 +1291,10 @@ The length of the `IndexedMaskedArray` is the length of the `mask`.
 
 == Indirection
 
-_(pointers go here)_
+Most programming environments have a concept of a "`pointer`" or "`reference`" that 
+
+
+
 
 
 === IndexedArray
