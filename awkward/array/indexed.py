@@ -219,6 +219,8 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     SparseArray
     """
 
+    # TODO for 1.0: replace length with an indexshape
+
     def __init__(self, length, index, content, default=None):
         self.length = length
         self.index = index

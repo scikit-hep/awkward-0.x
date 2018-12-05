@@ -1291,16 +1291,23 @@ The length of the `IndexedMaskedArray` is the length of the `mask`.
 
 == Indirection
 
-Most programming environments have a concept of a "`pointer`" or "`reference`" that 
+Most programming environments have a concept of a "`pointer`" or "`reference`" that allows one object to be logically nested within another without being nested in the memory layout. The referenced object may be anywhere in memory and might not conform to the structure required of its type (depending on how strictly the language maintains type-safety). Completely general pointers cannot be emulated with arrays unless the entirety of a program's memory were put into a single array. However, a limited form of indirection can be implemented through arrays of indexes.
 
+As described in the <<Cross-references and cyclic references,types section>>, awkward-array allows the same data to appear in multiple parts of the data structure or even to contain themselves. In Python, awkward-arrays are Python instances whose members can be reassigned after construction, so nothing prevents an array from appearing in multiple parts of a structure or from containing itself.
 
+To facilitate this kind of indirection, the `IndexedArray` class represents a delayed gather operation: it contains an array of indexes and a content array: extraction, slicing, masking, and gathering are filtered through the indexes before selecting contents. Its content could be itself, allowing the creation of graphs, though a `JaggedArray`, `UnionArray`, or `MaskedArray` in between would be needed to keep the graph finite.
 
+`IndexedArray` acts as a bound for bounded pointers: part of a data structure with `IndexedArray` type can point to any element of the `IndexedArray`'s content. To bind pointers to more than one pool, combine them with `UnionArray`.
 
+In a sense, a `SparseArray` is the opposite of an `IndexedArray`. A `SparseArray` contains logical indexes where the contents are not zero (or some other default) and content for each of those indexes, known as https://en.wikipedia.org/wiki/Sparse_matrix#Coordinate_list_(COO)[coordinate format] (COO). Whereas logical element `i` of an `IndexedArray` is at content index `index[i]`, content element `j` of a `SparseArray` is at logical index `index[j]`. An `IndexedArray` _applies_ its index array as a function to obtain elements, a `SparseArray` _inverts_ its index array as a function to obtain elements.
 
 === IndexedArray
 
 
 === SparseArray
+
+
+=== Helper functions
 
 
 == Opaque objects
