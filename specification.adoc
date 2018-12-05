@@ -1303,12 +1303,32 @@ In a sense, a `SparseArray` is the opposite of an `IndexedArray`. A `SparseArray
 
 === IndexedArray
 
+An `IndexedArray` is defined by two arrays. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `index`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimensions and all non-negative values.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+
+The whole-array validity conditions are:
+
+   * The maximum of `index` must be less than the length of `content`.
+
+The length of an `IndexedArray` is the length of the `index` array.
+
+==== Get-item behavior
+
+==== Mapped kernel behavior
 
 === SparseArray
 
+==== Get-item behavior
+
+==== Mapped kernel behavior
 
 === Helper functions
 
+The `awkward.array.indexed` submodule may define helper functions, such as the following.
+
+   * `invert(permutation)`: returns `inverse` such that `inverse[permutation] == numpy.arange(len(permutation))` is the identity. (If `permutation` contains all values from `0` to `len(permutation) - 1`, it is also the case that `permutation[inverse] == numpy.arange(len(permutation))`.) If not all values in `permutation` are distinct, this function raises an error.
 
 == Opaque objects
 
