@@ -1250,7 +1250,7 @@ A `BitMaskedArray` is defined by two arrays, a boolean `maskedwhen`, a boolean `
    * `content`: any array (default is a basic array of `DEFAULTTYPE`).
    * `maskedwhen`: boolean; same meaning as in `MaskedArray`.
    * `lsborder`: boolean; if `True`, bits in `mask` are interpreted in LSB (least significant bit) order; if `False`, bits in `mask` are interpreted in MSB (most significant bit) order.
-   * `maskshape`: `None`, a positive integer, or a tuple of positive integers; the sizes of the logical mask dimensions. If not an integer, `maskshape` will be converted to `(maskshape,)`. If `None` (the default), the `maskshape` will be assumed to be `(len(content),)`. A value of `None` is persistent, so an unspecified `maskshape` scales with changes in `content`.
+   * `maskshape`: `None`, a non-negative integer, or a tuple of positive integers (first may be zero); the sizes of the logical mask dimensions. If an integer, `maskshape` will be converted to `(maskshape,)`. If `None` (the default), the `maskshape` will be assumed to be `(len(content),)`. A value of `None` is persistent, so an unspecified `maskshape` scales with changes in `content`.
 
 The whole-array validity conditions are:
 
@@ -1365,6 +1365,22 @@ numpy.sum(myarray, 10)
 Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus the above could have been `myarray + 10`.
 
 === SparseArray
+
+A `SparseArray` is defined by a shape, two arrays, and a default element. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `indexshape`: non-negative integer or a tuple of positive integers (first may be zero); the sizes of the logical dimensions. If an integer, `indexshape` will be converted to `(indexshape,)`.
+   * `index`: basic array of integer dtype (default is `INDEXTYPE`) with exactly one dimension and all non-negative values. This array must be monatonically increasing (sorted).
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `default`: `None` or any value. If `None`, an appropriate zero will be generated:
+     * `content.dtype.type(0)` if `content` is a 1-dimensional basic array;
+     * `numpy.zeros(content.shape[1:], content.dtype)` if `content` is a multidimensional basic array;
+     * empty jagged array if `content` is a jagged array;
+     * the masked value if `content` is a masked array;
+     * `None` if `content` is an object array;
+     * an empty string if `content` is a string array;
+     * the first basic array zero if `content` is a union array; the first other type if the union has no basic arrays;
+     * a `Table.Row` of defaults if `content` is a table;
+     * a decision based on the content of any other type.
 
 ==== Get-item behavior
 
