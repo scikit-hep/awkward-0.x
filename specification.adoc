@@ -826,7 +826,7 @@ The `Table` interface hides the distinction between https://en.wikipedia.org/wik
 
 === Table
 
-A `Table` is defined by an arbitrary number of named arrays, which are columns of the table. A `Table` need not represent purely tabular data; if it is nested within a `JaggedArray`, it is a jagged table, and if it contains any `JaggedArray`, it is a stringy table.
+A `Table` is defined by an arbitrary number of named arrays, which are columns of the table. A `Table` need not represent purely tabular data; if it is nested within a `JaggedArray`, it is a jagged table, and if it contains any `JaggedArray`, it is a stringy table. Columns may be generated from any basic array, awkward-array, or Python iterable, with `DEFAULTTYPE` as the default type of empty iterables.
 
 The `Table` constructor permits the following argument patterns:
 
@@ -954,6 +954,8 @@ myarray["n"]
 # returns array([0, 1, 2, 3, 4])
 ----
 
+TODO: multidimensional indexes through a `Table`.
+
 ==== Mapped kernel behavior
 
 If tables are passed into a Numpy ufunc (or equivalent mapped kernel), the ufunc is applied separately to each column. If multiple tables are passed into the same ufunc with different sets of columns, an error is raised, and if they have different lengths, an error is raised. For example,
@@ -1026,6 +1028,11 @@ for tag, content in enumerate(contents):
 In circumstances where the index can be derived, it does not need to be stored.
 
 === UnionArray
+
+A `UnionArray` is defined by two arrays and an ordered sequence of arrays. Below are their single-property validity conditions. They may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `tags`: basic array of integer dtype (default is `TAGTYPE`) with at least one dimension
+
 
 
 == Option types

@@ -470,7 +470,7 @@ class Table(awkward.array.base.AwkwardArray):
         head, tail = where[0], where[1:]
 
         if tail != ():
-            raise IndexError("cannot pass multidimensional indexes through a Table")
+            raise NotImplementedError("multidimensional index through a Table (TODO: needed for [0, n) -> [0, m) -> \"table\" -> ...)")
 
         newslice = self._newslice(head)
 
