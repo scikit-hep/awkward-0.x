@@ -51,7 +51,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
         if len(out._tags.reshape(-1)) > 0 and out._tags.reshape(-1).max() >= len(out._contents):
             raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(out._tags.reshape(-1).max(), len(out._contents)))
 
-        index = awkward.util.numpy.full(out._tags.shape, -1, dtype=awkward.util.INDEXTYPE)
+        index = awkward.util.numpy.full(out._tags.shape, -1, dtype=cls.INDEXTYPE)
         for tag, content in enumerate(out._contents):
             mask = (out._tags == tag)
             index[mask] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(mask))
@@ -120,7 +120,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @tags.setter
     def tags(self, value):
-        value = awkward.util.toarray(value, awkward.util.TAGTYPE, awkward.util.numpy.ndarray)
+        value = awkward.util.toarray(value, self.TAGTYPE, awkward.util.numpy.ndarray)
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("tags must have integer dtype")
         if (value < 0).any():
@@ -134,7 +134,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @index.setter
     def index(self, value):
-        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
+        value = awkward.util.toarray(value, self.INDEXTYPE, awkward.util.numpy.ndarray)
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("index must have integer dtype")
         if (value < 0).any():
@@ -152,7 +152,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
             iter(value)
         except TypeError:
             raise TypeError("contents must be iterable")
-        value = tuple(awkward.util.toarray(x, awkward.util.DEFAULTTYPE) for x in value)
+        value = tuple(awkward.util.toarray(x, self.DEFAULTTYPE) for x in value)
         if len(value) == 0:
             raise ValueError("contents must be non-empty")
         self._contents = value
@@ -351,8 +351,8 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
         combos = awkward.util.numpy.stack(tags, axis=-1).view([(str(i), x.dtype) for i, x in enumerate(tags)]).reshape(tags[0].shape)
 
-        outtags = awkward.util.numpy.empty(tags[0].shape, dtype=awkward.util.TAGTYPE)
-        outindex = awkward.util.numpy.empty(tags[0].shape, dtype=awkward.util.INDEXTYPE)
+        outtags = awkward.util.numpy.empty(tags[0].shape, dtype=self.TAGTYPE)
+        outindex = awkward.util.numpy.empty(tags[0].shape, dtype=self.INDEXTYPE)
 
         out = None
         contents = {}

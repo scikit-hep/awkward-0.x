@@ -422,9 +422,9 @@ The `awkward.array.base.AwkwardArray` abstract base class has switches to contro
    * `allow_tonumpy` _default:_ `True`, if `False`, any operation that would convert an awkward-array type into a basic (Numpy) array instead raises a `RuntimeError`.
    * `allow_iter` _default:_ `True`, if `False`, any attempt to iterate over an awkward-array in Python (except via `str` or `repr`) would raise a `RuntimeError`.
    * `check_prop_valid` _default:_ `True`, if `False`, skip single-property validity checks.
-   * `check_valid` _default:_ `True`, if `False`, skip whole-array validity checks.
+   * `check_whole_valid` _default:_ `True`, if `False`, skip whole-array validity checks.
 
-The default primitive types are defined in `awkward.util`.
+The default primitive types are also defined on `awkward.array.base.AwkwardArray`.
 
 |===
 | Awkward type | Numpy dtype | Purpose

@@ -291,7 +291,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             return self._array is not None and self._array in self._cache
 
     def materialize(self):
-        array = awkward.util.toarray(self._generator(*self._args, **self._kwargs), awkward.util.DEFAULTTYPE)
+        array = awkward.util.toarray(self._generator(*self._args, **self._kwargs), self.DEFAULTTYPE)
         if self._setitem is not None:
             for n, x in self._setitem.items():
                 array[n] = x

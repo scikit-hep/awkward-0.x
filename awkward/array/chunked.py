@@ -99,7 +99,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             iter(value)
         except TypeError:
             raise TypeError("chunks must be iterable")
-        self._chunks = [awkward.util.toarray(x, awkward.util.DEFAULTTYPE) for x in value]
+        self._chunks = [awkward.util.toarray(x, self.DEFAULTTYPE) for x in value]
         self._types = [None] * len(self._chunks)
 
     @property
@@ -173,7 +173,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             index = awkward.util.numpy.array(index, copy=False)
             if len(index.shape) == 1 and issubclass(index.dtype.type, awkward.util.numpy.integer):
                 if len(index) == 0:
-                    out = awkward.util.numpy.empty(0, dtype=awkward.util.INDEXTYPE)
+                    out = awkward.util.numpy.empty(0, dtype=self.INDEXTYPE)
 
                 else:
                     mask = (index < 0)
@@ -222,7 +222,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
                 self.knowcounts(chunkid.max() + 1)
                 self._valid()
-                counts = numpy.array(self._counts, dtype=awkward.util.INDEXTYPE)
+                counts = numpy.array(self._counts, dtype=self.INDEXTYPE)
                 mask = (index < 0)
                 index[mask] += counts[mask]
                 if not ((0 <= index) & (index < counts)).all():
@@ -242,7 +242,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 if tpe is not None and tpe is not ():
                     break
             else:
-                tpe = awkward.util.DEFAULTTYPE
+                tpe = self.DEFAULTTYPE
 
         for i in range(len(self._types)):
             if self._types[i] is None or self._types[i] is () or self._types[i] is tpe:
@@ -296,7 +296,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
         if isinstance(self.type.to, awkward.util.numpy.dtype):
             if len(self) == 0:
-                return awkward.util.numpy.empty(0, dtype=awkward.util.DEFAULTTYPE)
+                return awkward.util.numpy.empty(0, dtype=self.DEFAULTTYPE)
             else:
                 out = awkward.util.numpy.empty(self.shape, dtype=self.dtype)
                 for chunk, slc in zip(self._chunks, self._slices()):
@@ -444,7 +444,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
                 diff = (chunkid[1:] - chunkid[:-1])
                 if (diff >= 0).all():
-                    diff2 = awkward.util.numpy.empty(len(chunkid), dtype=awkward.util.INDEXTYPE)
+                    diff2 = awkward.util.numpy.empty(len(chunkid), dtype=self.INDEXTYPE)
                     diff2[0] = 1
                     diff2[1:] = diff
                     mask = (diff2 > 0)
@@ -711,7 +711,7 @@ class AppendableArray(ChunkedArray):
             iter(value)
         except TypeError:
             raise TypeError("chunks must be iterable")
-        chunks = [awkward.util.toarray(x, awkward.util.DEFAULTTYPE, awkward.util.numpy.ndarray) for x in value]
+        chunks = [awkward.util.toarray(x, self.DEFAULTTYPE, awkward.util.numpy.ndarray) for x in value]
         for chunk in chunks:
             if chunk.dtype != self._dtype:
                 raise ValueError("cannot assign chunk with dtype ({0}) to an AppendableArray with dtype ({1})".format(chunk.dtype, self._dtype))

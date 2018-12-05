@@ -215,7 +215,7 @@ def view(obj):
                 return out
 
         elif tpe == pyarrow.bool_():
-            out = awkward.util.numpy.unpackbits(awkward.util.numpy.frombuffer(buffers.pop(), dtype=ARROW_CHARTYPE)).view(awkward.util.BOOLTYPE)
+            out = awkward.util.numpy.unpackbits(awkward.util.numpy.frombuffer(buffers.pop(), dtype=ARROW_CHARTYPE)).view(awkward.array.masked.MaskedArray.BOOLTYPE)
             out = out.reshape(-1, 8)[:,::-1].reshape(-1)    # lsborder=True
             mask = buffers.pop()
             if mask is not None:

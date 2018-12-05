@@ -133,7 +133,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
+        self._content = awkward.util.toarray(value, self.DEFAULTTYPE)
 
     @property
     def generator(self):
@@ -260,7 +260,7 @@ class StringMethods(object):
             elif isinstance(left, awkward.util.numpy.ndarray) and left.dtype == awkward.util.numpy.dtype(object):
                 left = StringArray.fromiter(left)
             elif not isinstance(left, StringMethods):
-                return awkward.util.numpy.zeros(len(right), dtype=awkward.util.BOOLTYPE)
+                return awkward.util.numpy.zeros(len(right), dtype=self.BOOLTYPE)
 
             if isinstance(right, (str, bytes)):
                 right = StringArray.fromstr(len(left), right)
@@ -269,7 +269,7 @@ class StringMethods(object):
             elif isinstance(right, awkward.util.numpy.ndarray) and right.dtype == awkward.util.numpy.dtype(object):
                 right = StringArray.fromiter(right)
             elif not isinstance(right, StringMethods):
-                return awkward.util.numpy.zeros(len(left), dtype=awkward.util.BOOLTYPE)
+                return awkward.util.numpy.zeros(len(left), dtype=self.BOOLTYPE)
 
             left = awkward.array.jagged.JaggedArray(left.starts, left.stops, left.content)
             right = awkward.array.jagged.JaggedArray(right.starts, right.stops, right.content)
@@ -281,7 +281,7 @@ class StringMethods(object):
 
             reallyequal = (leftmask == rightmask).count_nonzero() == leftmask.counts
 
-            out = awkward.util.numpy.zeros(len(left), dtype=awkward.util.BOOLTYPE)
+            out = awkward.util.numpy.zeros(len(left), dtype=self.BOOLTYPE)
             out[maybeequal] = reallyequal
 
             if ufunc is awkward.util.numpy.equal:
@@ -315,10 +315,10 @@ class StringArray(StringMethods, ObjectArray):
         if encoding is not None:
             encoder = codecs.getencoder(encoding)
             string = encoder(string)[0]
-        content = awkward.util.numpy.empty(length * len(string), dtype=awkward.util.CHARTYPE)
+        content = awkward.util.numpy.empty(length * len(string), dtype=cls.CHARTYPE)
         for i, x in string:
             content[0::length] = ord(x)
-        counts = awkward.util.numpy.empty(length, dtype=awkward.util.INDEXTYPE)
+        counts = awkward.util.numpy.empty(length, dtype=cls.INDEXTYPE)
         counts[:] = length
         return cls.fromcounts(counts, content, encoding)
 
@@ -335,9 +335,9 @@ class StringArray(StringMethods, ObjectArray):
 
         starts = awkward.util.numpy.arange(                   0,  len(array)      * array.dtype.itemsize, array.dtype.itemsize)
         stops  = awkward.util.numpy.arange(array.dtype.itemsize, (len(array) + 1) * array.dtype.itemsize, array.dtype.itemsize)
-        content = array.view(awkward.util.CHARTYPE)
+        content = array.view(cls.CHARTYPE)
 
-        shorter = awkward.util.numpy.ones(len(array), dtype=awkward.util.BOOLTYPE)
+        shorter = awkward.util.numpy.ones(len(array), dtype=cls.BOOLTYPE)
         if array.dtype.kind == "S":
             for checkat in range(array.dtype.itemsize - 1, -1, -1):
                 shorter &= (content[checkat::array.dtype.itemsize] == 0)
@@ -369,10 +369,10 @@ class StringArray(StringMethods, ObjectArray):
             encoder = codecs.getencoder(encoding)
             encoded = [encoder(x)[0] for x in iterable]
         counts = [len(x) for x in encoded]
-        content = awkward.util.numpy.empty(sum(counts), dtype=awkward.util.CHARTYPE)
+        content = awkward.util.numpy.empty(sum(counts), dtype=cls.CHARTYPE)
         i = 0
         for x in encoded:
-            content[i : i + len(x)] = awkward.util.numpy.frombuffer(x, dtype=awkward.util.CHARTYPE)
+            content[i : i + len(x)] = awkward.util.numpy.frombuffer(x, dtype=cls.CHARTYPE)
             i += len(x)
         return cls.fromcounts(counts, content, encoding)
 
@@ -418,8 +418,8 @@ class StringArray(StringMethods, ObjectArray):
 
     @classmethod
     def fromjagged(cls, jagged, encoding="utf-8"):
-        if jagged.content.type.to != awkward.util.CHARTYPE:
-            raise TypeError("jagged array must have CHARTYPE ({0})".format(str(awkward.util.CHARTYPE)))
+        if jagged.content.type.to != cls.CHARTYPE:
+            raise TypeError("jagged array must have CHARTYPE ({0})".format(str(cls.CHARTYPE)))
         out = cls.__new__(cls)
         out._content = jagged
         out._generator = tostring

@@ -38,7 +38,7 @@ import awkward.util
 
 def invert(permutation):
     permutation = permutation.reshape(-1)
-    out = awkward.util.numpy.zeros(permutation.max() + 1, dtype=awkward.util.INDEXTYPE)
+    out = awkward.util.numpy.zeros(permutation.max() + 1, dtype=IndexedArray.INDEXTYPE)
     identity = awkward.util.numpy.arange(len(permutation))
     out[permutation] = identity
     if not awkward.util.numpy.array_equal(out[permutation], identity):
@@ -104,7 +104,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @index.setter
     def index(self, value):
-        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
+        value = awkward.util.toarray(value, self.INDEXTYPE, awkward.util.numpy.ndarray)
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("index must have integer dtype")
         if (value < 0).any():
@@ -119,7 +119,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
+        self._content = awkward.util.toarray(value, self.DEFAULTTYPE)
         self._isvalid = False
 
     def __len__(self):
@@ -314,7 +314,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     @index.setter
     def index(self, value):
-        value = awkward.util.toarray(value, awkward.util.INDEXTYPE, awkward.util.numpy.ndarray)
+        value = awkward.util.toarray(value, self.INDEXTYPE, awkward.util.numpy.ndarray)
         if not issubclass(value.dtype.type, awkward.util.numpy.integer):
             raise TypeError("index must have integer dtype")
         if len(value.shape) != 1:
@@ -333,7 +333,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, awkward.util.DEFAULTTYPE)
+        self._content = awkward.util.toarray(value, self.DEFAULTTYPE)
         self._isvalid = False
 
     @property
@@ -484,12 +484,12 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(length=length, index=index, content=content)
 
         else:
-            head = awkward.util.toarray(head, awkward.util.INDEXTYPE)
+            head = awkward.util.toarray(head, self.INDEXTYPE)
             if len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
                 if self._length != len(head):
                     raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(self._length, len(head)))
 
-                head = awkward.util.numpy.arange(self._length, dtype=awkward.util.INDEXTYPE)[head]
+                head = awkward.util.numpy.arange(self._length, dtype=self.INDEXTYPE)[head]
 
             if len(head.shape) == 1 and issubclass(head.dtype.type, awkward.util.numpy.integer):
                 mask = (head < 0)
@@ -502,8 +502,8 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
                 match[match >= len(self._index)] = len(self._index) - 1
                 explicit = (self._index[match] == head)
 
-                tags = awkward.util.numpy.zeros(len(head), dtype=awkward.util.TAGTYPE)
-                index = awkward.util.numpy.zeros(len(head), dtype=awkward.util.INDEXTYPE)
+                tags = awkward.util.numpy.zeros(len(head), dtype=self.TAGTYPE)
+                index = awkward.util.numpy.zeros(len(head), dtype=self.INDEXTYPE)
                 tags[explicit] = 1
                 index[explicit] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(explicit))
 
@@ -516,7 +516,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _getinverse(self):
         if self._inverse is None:
-            self._inverse = awkward.util.numpy.searchsorted(self._index, awkward.util.numpy.arange(self._length, dtype=awkward.util.INDEXTYPE), side="left")
+            self._inverse = awkward.util.numpy.searchsorted(self._index, awkward.util.numpy.arange(self._length, dtype=self.INDEXTYPE), side="left")
             if len(self._index) > 0:
                 self._inverse[self._index[-1] + 1 :] = len(self._index) - 1
         return self._inverse
@@ -542,9 +542,9 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             return awkward.util.numpy.empty(0, dtype=awkward.util.numpy.bool_)
 
         if maskedwhen:
-            return self._index[self._getinverse()] == awkward.util.numpy.arange(self._length, dtype=awkward.util.INDEXTYPE)
+            return self._index[self._getinverse()] == awkward.util.numpy.arange(self._length, dtype=self.INDEXTYPE)
         else:
-            return self._index[self._getinverse()] != awkward.util.numpy.arange(self._length, dtype=awkward.util.INDEXTYPE)
+            return self._index[self._getinverse()] != awkward.util.numpy.arange(self._length, dtype=self.INDEXTYPE)
 
     def _invert(self, what):
         if len(what) != self._length:
