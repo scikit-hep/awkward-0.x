@@ -1338,7 +1338,7 @@ Here is another example, this one using a cyclic reference to build arbitrary de
 myarray = awkward.IndexedArray([0],
               awkward.UnionArray.fromtags([1, 0, 1, 0, 1, 0, 0, 1], [
                   numpy.array([1.1, 2.2, 3.3, 4.4]),
-                  awkward.JaggedArray([1, 3, 5, 8], [3, 5, 8, 8], [])]))
+                  awkward.JaggedArray([1, 3, 5, 8], [3, 5, 8, 8], [])]))   # the [] will be replaced
 myarray.content.contents[1].content = myarray.content
 myarray
 # returns <IndexedArray [[1.1 [2.2 [3.3 4.4 []]]]] at 746bf6c422b0>
