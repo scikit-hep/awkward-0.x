@@ -34,9 +34,9 @@ import awkward.array.chunked
 import awkward.array.indexed
 import awkward.array.jagged
 import awkward.array.masked
+import awkward.array.objects
 import awkward.array.table
 import awkward.array.virtual
-import awkward.derived.strings
 import awkward.type
 import awkward.util
 
@@ -195,7 +195,7 @@ def view(obj):
         elif tpe == pyarrow.string():
             content = awkward.util.numpy.frombuffer(buffers.pop(), dtype=ARROW_CHARTYPE)
             offsets = awkward.util.numpy.frombuffer(buffers.pop(), dtype=ARROW_INDEXTYPE)
-            out = awkward.derived.strings.StringArray.fromoffsets(offsets, content, encoding="utf-8")
+            out = awkward.array.objects.StringArray.fromoffsets(offsets, content, encoding="utf-8")
             mask = buffers.pop()
             if mask is not None:
                 mask = awkward.util.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
@@ -206,7 +206,7 @@ def view(obj):
         elif tpe == pyarrow.binary():
             content = awkward.util.numpy.frombuffer(buffers.pop(), dtype=ARROW_CHARTYPE)
             offsets = awkward.util.numpy.frombuffer(buffers.pop(), dtype=ARROW_INDEXTYPE)
-            out = awkward.derived.strings.StringArray.fromoffsets(offsets, content, encoding=None)
+            out = awkward.array.objects.StringArray.fromoffsets(offsets, content, encoding=None)
             mask = buffers.pop()
             if mask is not None:
                 mask = awkward.util.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
