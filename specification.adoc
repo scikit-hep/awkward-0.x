@@ -878,7 +878,7 @@ myarray[["x", "y"]].tolist()
 # returns [{'x': 0.0, 'y': 100}, {'x': 1.1, 'y': 101}, {'x': 2.2, 'y': 102},
            {'x': 3.3, 'y': 103}, {'x': 4.4, 'y': 104}, {'x': 5.5, 'y': 105},
            {'x': 6.6, 'y': 106}]
----
+----
 
 If `selection` is any integer, slice, sequence of booleans, or sequence of integers, the extraction/slicing/masking/gathering operation is applied to the rows, as though it were any other array. For example,
 
