@@ -99,7 +99,7 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
     """
 
     def __init__(self, starts, stops, content, encoding="utf-8"):
-        self._content = awkward.array.jagged.ByteJaggedArray(starts, stops, content, awkward.util.CHARTYPE)
+        self._content = awkward.array.jagged.JaggedArray(starts, stops, content)
         self._generator = tostring
         self._kwargs = {}
         self.encoding = encoding
@@ -147,7 +147,7 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
                     break
 
         out = cls.__new__(cls)
-        out._content = awkward.array.jagged.ByteJaggedArray(starts, stops, content, awkward.util.CHARTYPE)
+        out._content = awkward.array.jagged.JaggedArray(starts, stops, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -171,7 +171,7 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
     @classmethod
     def fromoffsets(cls, offsets, content, encoding="utf-8"):
         out = cls.__new__(cls)
-        out._content = awkward.array.jagged.ByteJaggedArray.fromoffsets(offsets, content, awkward.util.CHARTYPE)
+        out._content = awkward.array.jagged.JaggedArray.fromoffsets(offsets, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -180,7 +180,7 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
     @classmethod
     def fromcounts(cls, counts, content, encoding="utf-8"):
         out = cls.__new__(cls)
-        out._content = awkward.array.jagged.ByteJaggedArray.fromcounts(counts, content, awkward.util.CHARTYPE)
+        out._content = awkward.array.jagged.JaggedArray.fromcounts(counts, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -189,7 +189,7 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
     @classmethod
     def fromparents(cls, parents, content, encoding="utf-8"):
         out = cls.__new__(cls)
-        out._content = awkward.array.jagged.ByteJaggedArray.fromparents(parents, content, awkward.util.CHARTYPE)
+        out._content = awkward.array.jagged.JaggedArray.fromparents(parents, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -198,7 +198,7 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
     @classmethod
     def fromuniques(cls, uniques, content, encoding="utf-8"):
         out = cls.__new__(cls)
-        out._content = awkward.array.jagged.ByteJaggedArray.fromuniques(uniques, content, awkward.util.CHARTYPE)
+        out._content = awkward.array.jagged.JaggedArray.fromuniques(uniques, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -217,7 +217,7 @@ class StringArray(StringMethods, awkward.array.objects.ObjectArray):
 
     def copy(self, starts=None, stops=None, content=None, encoding=None):
         out = self.__class__.__new__(self.__class__)
-        out._content = awkward.array.jagged.ByteJaggedArray(self.starts, self.stops, self.content, awkward.util.CHARTYPE)
+        out._content = awkward.array.jagged.JaggedArray(self.starts, self.stops, self.content)
         out._generator = self._generator
         out._args = self._args
         out._kwargs = self._kwargs

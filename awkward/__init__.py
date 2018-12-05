@@ -29,8 +29,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from awkward.array.chunked import ChunkedArray, AppendableArray
-from awkward.array.indexed import IndexedArray, ByteIndexedArray, SparseArray
-from awkward.array.jagged import JaggedArray, ByteJaggedArray
+from awkward.array.indexed import IndexedArray, SparseArray
+from awkward.array.jagged import JaggedArray
 from awkward.array.masked import MaskedArray, BitMaskedArray, IndexedMaskedArray
 from awkward.array.objects import Methods, ObjectArray
 from awkward.array.table import Table
@@ -46,4 +46,4 @@ from awkward.persist import serialize, deserialize, save, load, hdf5
 # convenient access to the version number
 from awkward.version import __version__
 
-__all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "ByteIndexedArray", "SparseArray", "JaggedArray", "ByteJaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]
+__all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]

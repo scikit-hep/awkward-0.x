@@ -102,31 +102,6 @@ class Test(unittest.TestCase):
         assert a["b"].tolist() == [3, 2, 4, 0]
         assert a["c"].tolist() == ["a", "b", "c", "d"]
 
-    def test_byteindexed_get(self):
-        a = ByteIndexedArray([12, 8, 4, 0], b"\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00", numpy.int32)
-        assert [x for x in a] == [3, 2, 1, 0]
-        assert [a[i] for i in range(len(a))] == [3, 2, 1, 0]
-        assert a[:].tolist() == [3, 2, 1, 0]
-        assert a[[3, 2, 1, 0]].tolist() == [0, 1, 2, 3]
-        assert a[[True, False, True, False]].tolist() == [3, 1]
-
-    def test_byteindexed_get5byte(self):
-        a = ByteIndexedArray([15, 10, 5, 1], b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x00\x03\x00\x00\x00\x00", numpy.int32)
-        assert [x for x in a] == [3, 2, 1, 0]
-        assert [a[i] for i in range(len(a))] == [3, 2, 1, 0]
-        assert a[:].tolist() == [3, 2, 1, 0]
-        assert a[[3, 2, 1, 0]].tolist() == [0, 1, 2, 3]
-        assert a[[True, False, True, False]].tolist() == [3, 1]
-
-    def test_byteindexed_ufunc(self):
-        a = ByteIndexedArray([15, 10, 5, 1], b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\x00\x00\x00\x00\x03\x00\x00\x00\x00", numpy.int32)
-        assert (a + 100).tolist() == [103, 102, 101, 100]
-
-    def test_indexed_byteindexed(self):
-        a = IndexedArray([1, 2, 3], ByteIndexedArray([12, 8, 4, 0], b"\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00", numpy.int32))
-        assert [a[i] for i in range(len(a))] == [2, 1, 0]
-        assert a[:].tolist() == [2, 1, 0]
-
     def test_sparse_get(self):
         a = SparseArray(10, [1, 3, 5, 7, 9], [100, 101, 102, 103, 104])
 

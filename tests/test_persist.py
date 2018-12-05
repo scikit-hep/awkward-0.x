@@ -138,13 +138,6 @@ class Test(unittest.TestCase):
         b = deserialize(storage)
         assert a.tolist() == b.tolist()
 
-    def test_ByteIndexedArray(self):
-        storage = {}
-        a = ByteIndexedArray([12, 8, 4, 0], b"\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00", numpy.int32)
-        serialize(a, storage)
-        b = deserialize(storage)
-        assert a.tolist() == b.tolist()
-
     def test_SparseArray(self):
         storage = {}
         a = SparseArray(10, [1, 3, 5, 7, 9], [100, 101, 102, 103, 104])
@@ -162,13 +155,6 @@ class Test(unittest.TestCase):
     def test_JaggedArray_fromcounts(self):
         storage = {}
         a = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-        serialize(a, storage)
-        b = deserialize(storage)
-        assert a.tolist() == b.tolist()
-
-    def test_ByteJaggedArray(self):
-        storage = {}
-        a = ByteJaggedArray.fromoffsets([5, 17, 17, 25], b"\xff\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x05\x00\x00\x00\xff\xff", numpy.int32)
         serialize(a, storage)
         b = deserialize(storage)
         assert a.tolist() == b.tolist()
