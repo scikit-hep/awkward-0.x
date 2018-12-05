@@ -628,7 +628,7 @@ myarray[100:]
 # returns <JaggedArray [] at 7f020c214438>
 ----
 
-If `selection` is a non-jagged sequence of booleans, elements corresponding to `True` values in the mask are returned as a new jagged array. The mask must be 1-dimensional and the mask and jagged array must have the same length, or an error is raised. For example,
+If `selection` is a non-jagged list or array of booleans, elements corresponding to `True` values in the mask are returned as a new jagged array. The mask must be 1-dimensional and the mask and jagged array must have the same length, or an error is raised. For example,
 
 [source, python]
 ----
@@ -648,7 +648,7 @@ myarray[mask]
 # returns <JaggedArray [[2.2 3.3] [] [4.4]] at 7f02018af8d0>
 ----
 
-If `selection` is a non-jagged sequence of integers, elements identified by the integer indexes are gathered as a new jagged array (handling negative indexes, if applicable). For example,
+If `selection` is a non-jagged list or array of integers, elements identified by the integer indexes are gathered as a new jagged array (handling negative indexes, if applicable). For example,
 
 [source, python]
 ----
@@ -657,7 +657,7 @@ myarray[[2, 0, 1, -1]]
 # returns <JaggedArray [[4.4 5.5] [1.1 2.2 3.3] [] [4.4 5.5]] at 7f020c214438>
 ----
 
-If `selection` is a jagged sequence of integers, sub-elements identified by the integer local indexes are gathered as a new jagged array (handling negative indexes, if applicable). If the length of the indexes is not equal to the length of the jagged array, an error is raised. For example,
+If `selection` is a jagged array of integers, sub-elements identified by the integer local indexes are gathered as a new jagged array (handling negative indexes, if applicable). If the length of the indexes is not equal to the length of the jagged array, an error is raised. For example,
 
 [source, python]
 ----
@@ -681,7 +681,7 @@ myarray[myarray.counts > 0, 0, -2:]
 # returns <JaggedArray [[2.2 3.3] [4.4 5.5]] at 7f020c214438>
 ----
 
-If `selection` is a string or a sequence of strings, the jagged column of the nested table or jagged subtable, respectively, for that column or those columns is returned. If there are no `Table` instances nested within `content`, this raises an error. For example,
+If `selection` is a string or a list or array of strings, the jagged column of the nested table or jagged subtable, respectively, for that column or those columns is returned. If there are no `Table` instances nested within `content`, this raises an error. For example,
 
 [source, python]
 ----
@@ -697,7 +697,7 @@ myarray[["x", "y"]].columns
 # returns ['x', 'y']
 ----
 
-A string or a sequence of strings is also the _only_ acceptable argument to set-item. Columns may be added to a jagged table, provided that the jagged structure of the new columns matches that of the table.
+A string or a list or array of strings is also the _only_ acceptable argument to set-item. Columns may be added to a jagged table, provided that the jagged structure of the new columns matches that of the table.
 
 ==== Mapped kernel behavior
 
@@ -905,7 +905,7 @@ myarray[["x", "y"]].tolist()
            {'x': 6.6, 'y': 106}]
 ----
 
-If `selection` is any integer, slice, sequence of booleans, or sequence of integers, the extraction/slicing/masking/gathering operation is applied to the rows, as though it were any other array. For example,
+If `selection` is any integer, slice, list or array of booleans, or list or array of integers, the extraction/slicing/masking/gathering operation is applied to the rows, as though it were any other array. For example,
 
 [source, python]
 ----
@@ -1083,7 +1083,7 @@ The `tags`, `index` and `contents` properties are read-write; setting them invok
 
 ==== Get-item behavior
 
-When a union array `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an index performs extraction, a slice performs slicing, a 1-dimensional sequence of booleans with the same length as `myarray` performs masking, and a 1-dimensional sequence of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
+When a union array `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an integer performs extraction, a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
 
 For example,
 
@@ -1195,7 +1195,7 @@ Masked arrays (all types) have the following read-only properties:
 
 ==== Get-item behavior
 
-When a masked array (any type) `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an index performs extraction, a slice performs slicing, a 1-dimensional sequence of booleans with the same length as `myarray` performs masking, and a 1-dimensional sequence of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
+When a masked array (any type) `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an integer performs extraction, a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
 
 For example,
 
@@ -1295,7 +1295,7 @@ Most programming environments have a concept of a "`pointer`" or "`reference`" t
 
 As described in the <<Cross-references and cyclic references,types section>>, awkward-array allows the same data to appear in multiple parts of the data structure or even to contain themselves. In Python, awkward-arrays are Python instances whose members can be reassigned after construction, so nothing prevents an array from appearing in multiple parts of a structure or from containing itself.
 
-To facilitate this kind of indirection, the `IndexedArray` class represents a delayed gather operation: it contains an array of indexes and a content array: extraction, slicing, masking, and gathering are filtered through the indexes before selecting contents. Its content could be itself, allowing the creation of graphs, though a `JaggedArray`, `UnionArray`, or `MaskedArray` in between would be needed to keep the graph finite.
+To facilitate this kind of indirection, the `IndexedArray` class represents a delayed gather operation: it contains an array of indexes and a content array: extraction, slicing, masking, and gathering are filtered through the indexes before selecting contents. Its content could be itself, allowing the creation of graphs, though a `JaggedArray` or `UnionArray` in between would be needed to keep the graph finite.
 
 `IndexedArray` acts as a bound for bounded pointers: part of a data structure with `IndexedArray` type can point to any element of the `IndexedArray`'s content. To bind pointers to more than one pool, combine them with `UnionArray`.
 
@@ -1316,7 +1316,53 @@ The length of an `IndexedArray` is the length of the `index` array.
 
 ==== Get-item behavior
 
+When an indexed array `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an integer performs extraction, a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
+
+For example,
+
+[source, python]
+----
+myarray = awkward.IndexedArray([2, 2, 1, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5])
+myarray
+# returns <IndexedArray [2.2 2.2 1.1 4.4] at 772e306077f0>
+myarray[2]
+# returns 1.1
+myarray[2:]
+# returns array([1.1, 4.4])
+----
+
+Here is another example, this one using a cyclic reference to build arbitrary depth trees.
+
+[source, python]
+----
+myarray = awkward.IndexedArray([0],
+              awkward.UnionArray.fromtags([1, 0, 1, 0, 1, 0, 0, 1], [
+                  numpy.array([1.1, 2.2, 3.3, 4.4]),
+                  awkward.JaggedArray([1, 3, 5, 8], [3, 5, 8, 8], [])]))
+myarray.content.contents[1].content = myarray.content
+myarray
+# returns <IndexedArray [[1.1 [2.2 [3.3 4.4 []]]]] at 746bf6c422b0>
+myarray[0, 1]
+# returns <UnionArray [2.2 [3.3 4.4 []]] at 746bf6c422e8>
+myarray[0, 1, 1]
+# returns <UnionArray [3.3 4.4 []] at 746bf6c42390>
+myarray[0, 1, 1, 2]
+# returns array([], dtype=float64)
+----
+
+The depth of this tree is not a function of the depth of the `IndexedArray` of `UnionArray` of basic and `JaggedArray` that built it. The depth of this tree is a function of the _values_ of the `index` array, the `tags` array, and the `starts`/`stops` arrays. This construction is a purely columnar tree of numbers and sub-trees.
+
 ==== Mapped kernel behavior
+
+If indexed arrays are passed into a Numpy ufunc (or equivalent mapped kernel), the delayed gather is applied before computing the result. This even works in arbitrarily nested cases, like the last examples in the previous section.
+
+[source, python]
+----
+numpy.sum(myarray, 10)
+# returns <JaggedArray [[11.1 [12.2 [13.3 14.4 []]]]] at 746bf6c42400>
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus the above could have been `myarray + 10`.
 
 === SparseArray
 
