@@ -791,17 +791,6 @@ A `JaggedArray` may be created from one of the following alternate constructors.
    * `content`: any array (default is a basic array of `DEFAULTTYPE`).
    * `size`: number of elements to fold into each nested list of the resulting jagged array, and the maximum number of elements for the last nested list if `len(content) % size != 0`.
 
-=== ByteJaggedArray
-
-A `ByteJaggedArray` is a `JaggedArray` in which the indexing arrays (starts, stops, offsets, counts, parents, uniques) determine byte positions in the content, which must be a basic array (or buffer/memoryview). Additionally, it takes a `subdtype` parameter, which is the dtype that the content will be cast into, after slicing byte ranges.
-
-   * `starts`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
-   * `stops`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
-   * `content`: basic array (default is a basic array of `CHARTYPE`).
-   * `subdtype`: Numpy dtype.
-
-The whole-array validity conditions are the same as for `JaggedArray`. `ByteJaggedArray` has the same properties, methods, alternate constructors, get-item behavior, and mapped kernel behavior as `JaggedArray`.
-
 === Helper functions
 
 The `awkward.array.jagged` submodule may define helper functions, such as the following.
@@ -1290,9 +1279,6 @@ _(pointers go here)_
 
 
 === IndexedArray
-
-
-=== ByteIndexedArray
 
 
 === SparseArray
