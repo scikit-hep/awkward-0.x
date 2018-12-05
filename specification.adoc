@@ -71,6 +71,7 @@ An awkward-array library provides the above features in the following new contex
    * *Opaque object types:* allow array elements to virtually contain instances of any type expressible in a programming language, provided that it can be constructed strictly from elements of the array.
    * *Object methods:* adds user-defined methods to arrays, usually to emulate object methods as mapped kernels.
    * *Indirection:* allows arrays to be defined as a cherry-picked subset of other arrays.
+   * *Sparseness:* allows arrays to be defined at a minority of their index positions.
    * *Non-contiguousness:* allows arrays to be non-contiguous in memory by mapping indexes. This virtually concatenates data from separate chunks into a single logical array without copying.
    * *Laziness:* allows arrays to be loaded or generated on demand, allowing arrays that have not yet been *materialized* to be treated on the same footing with arrays that have.
 
@@ -78,7 +79,7 @@ Jaggedness, product types, sum types, option types, and references extend the ex
 
 Object types and methods generalize it further, allowing any type permitted by a programming language such as Python, with a loss of cross-language compatibility.
 
-Indirection, non-contiguousness, and laziness do not affect data type: they are *purely low-level* features.
+Indirection, sparseness, non-contiguousness, and laziness do not affect data type: they are *purely low-level* features.
 
 Taken together, these features promote array programming to a wider set of applications.
 
@@ -1310,6 +1311,8 @@ order = numpy.argsort(index)
 awkward.SparseArray(length, index[order], content[order])
 ----
 
+`IndexedArray` and `SparseArray` both have the data type of their content -- they are invisible at the type level, providing low-level features.
+
 === IndexedArray
 
 An `IndexedArray` is defined by two arrays. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
@@ -1427,11 +1430,6 @@ numpy.add(myarray, 10)[100:106]
 ----
 
 Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus the above could have been `(myarray + 10)[100:106]`.
-
-==== Methods
-
-
-
 
 === Helper functions
 
