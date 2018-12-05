@@ -1000,16 +1000,30 @@ Constructs a view into an existing `Table`, using a representation of views. `No
 
 == Sum types
 
-Sum types, or tagged unions, allow us to build heterogeneous arrays. In type theory, tagged unions are needed to express a collection that mixes data of incompatible types, but our use of tagged unions is broader: we may want to mix data of identical types that reside in different columnar arrays. This allows us to express the result of a blend (in the SIMD sense) without copying data.
+Sum types, or tagged unions, allow us to build heterogeneous arrays. As a data type, tagged unions are needed to express a collection that mixes data of incompatible types, but our use of tagged unions is broader: we may want to mix data that reside in different columnar arrays, regardless of whether they're the same type or not. This allows us to express the result of a blend (in the SIMD sense) without copying data. (For example, `SparseArray` needs to blend data from a sparse lookup table with zeros from a different source when it is sliced; it uses a `UnionArray` to represent that result.)
 
+The general structure of a `UnionArray` is a collection of arrays with a *tags* array to specify which is active in each element. If `tags[i]` is `3`, then the array value at `i` is drawn from array `3`. In https://github.com/apache/arrow/blob/master/format/Layout.md[Arrow terminology], the tags array is the "`types buffer.`"
 
+If we always draw element `i` from the selected array, then all unselected arrays would have to be padded with unreachable elements at `i`, what Arrow calls a "`sparse union.`" Instead, we add another array, an *index* to identify the elements to draw from the selected arrays; we use what Arrow calls a "`dense union.`" (Arrow calls this index the "`offsets,`" but it is more similar to the index of our `IndexedArray` than the offsets of our `JaggedArray`.)
 
+Given a set of arrays `contents`, a tags array `tags`, and an index array `index`, the element at `i` is:
 
-tags and index arrays
+[source]
+----
+contents[tags[i]][index[i]]
+----
 
+It is possible to emulate an Arrow sparse union by setting the index to a simple numeric range (`numpy.arange(len(tags))`). It is possible to generate an index for a union whose contents are in order and have no padding:
 
+[source, python]
+----
+index = numpy.full(tags.shape, -1)
+for tag, content in enumerate(contents):
+    mask = (tags == tag)
+    index[mask] = numpy.arange(numpy.count_nonzero(mask))
+----
 
-
+In circumstances where the index can be derived, it does not need to be stored.
 
 === UnionArray
 
