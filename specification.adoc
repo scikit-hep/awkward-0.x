@@ -1301,6 +1301,15 @@ To facilitate this kind of indirection, the `IndexedArray` class represents a de
 
 In a sense, a `SparseArray` is the opposite of an `IndexedArray`. A `SparseArray` contains logical indexes where the contents are not zero (or some other default) and content for each of those indexes, known as https://en.wikipedia.org/wiki/Sparse_matrix#Coordinate_list_(COO)[coordinate format] (COO). Whereas logical element `i` of an `IndexedArray` is at content index `index[i]`, content element `j` of a `SparseArray` is at logical index `index[j]`. An `IndexedArray` _applies_ its index array as a function to obtain elements, a `SparseArray` _inverts_ its index array as a function to obtain elements.
 
+Since `SparseArray` must invert its index with every extraction, the index should be monatonically increasing (sorted). If a set of (index, content) pairs are known, they could be loaded into a `SparseArray` like this:
+
+[source, python]
+----
+index, content     # coordinates as two equal-length arrays
+order = numpy.argsort(index)
+awkward.SparseArray(length, index[order], content[order])
+----
+
 === IndexedArray
 
 An `IndexedArray` is defined by two arrays. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
@@ -1382,9 +1391,47 @@ A `SparseArray` is defined by a shape, two arrays, and a default element. Below 
    ** a `Table.Row` of defaults if `content` is a table;
    ** a decision based on the content of any other type.
 
+The whole-array validity conditions are:
+
+   * flattened `index` length must be less than or equal to the `content` length.
+
+The length of the `IndexedArray` is determined purely by the `indexshape`.
+
 ==== Get-item behavior
 
+When a sparse array `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an integer performs extraction, a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
+
+For example,
+
+[source, python]
+----
+myarray = awkward.SparseArray(1000, [101, 102, 105, 800], [1.1, 2.2, 3.3, 4.4])
+myarray
+# returns <SparseArray [0.0 0.0 0.0 ... 0.0 0.0 0.0] at 7131e4b9a438>
+myarray[100:106]
+# returns <SparseArray [0.0 1.1 2.2 0.0 0.0 3.3] at 7131e4b9a518>
+myarray[798:803]
+# returns <SparseArray [0.0 0.0 4.4 0.0 0.0] at 7131e4b9a550>
+----
+
 ==== Mapped kernel behavior
+
+If sparse arrays are passed into a Numpy ufunc (or equivalent mapped kernel), the ufunc is computed for all non-default values and separately for the default value, blending the results as a `UnionArray`.
+
+For example (reusing `myarray` from the previous section),
+
+[source, python]
+----
+numpy.add(myarray, 10)[100:106]
+# returns <UnionArray [10.0 11.1 12.2, 10.0 10.0 13.3] at 746bf6c41800>
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus the above could have been `(myarray + 10)[100:106]`.
+
+==== Methods
+
+
+
 
 === Helper functions
 
