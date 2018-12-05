@@ -140,6 +140,14 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def maskedwhen(self, value):
         self._maskedwhen = bool(value)
 
+    @property
+    def masked(self):
+        return self._mask == self._maskedwhen
+
+    @property
+    def unmasked(self):
+        return self._mask != self._maskedwhen
+
     def __len__(self):
         return len(self._mask)
 
@@ -318,6 +326,14 @@ class BitMaskedArray(MaskedArray):
             raise ValueError("mask must have 1-dimensional shape")
         self._mask = value.view(awkward.util.BITMASKTYPE)
         self._isvalid = False
+
+    @property
+    def masked(self):
+        return self.boolmask() == self._maskedwhen
+
+    @property
+    def unmasked(self):
+        return self.boolmask() != self._maskedwhen
 
     def __len__(self):
         return len(self._content)
@@ -574,6 +590,14 @@ class IndexedMaskedArray(MaskedArray):
         if not isinstance(value, awkward.util.integer):
             raise TypeError("maskedwhen must be an integer for IndexedMaskedArray")
         self._maskedwhen = value
+
+    @property
+    def masked(self):
+        return self._mask < 0
+
+    @property
+    def unmasked(self):
+        return self._mask >= 0
 
     def boolmask(self, maskedwhen=True):
         if maskedwhen:

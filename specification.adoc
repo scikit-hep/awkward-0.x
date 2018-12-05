@@ -613,7 +613,7 @@ myarray[100:]
 # returns <JaggedArray [] at 7f020c214438>
 ----
 
-If `selection` is a non-jagged sequence of booleans, elements corresponding to `True` values in the mask are returned as a new jagged array. The mask must be one-dimensional and the mask and jagged array must have the same length, or an error is raised. For example,
+If `selection` is a non-jagged sequence of booleans, elements corresponding to `True` values in the mask are returned as a new jagged array. The mask must be 1-dimensional and the mask and jagged array must have the same length, or an error is raised. For example,
 
 [source, python]
 ----
@@ -1078,7 +1078,7 @@ The `tags`, `index` and `contents` properties are read-write; setting them invok
 
 ==== Get-item behavior
 
-When a union array `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an index performs extraction, a slice performs slicing, a one-dimensional sequence of booleans with the same length as `myarray` performs masking, and a one-dimensional sequence of integers performs a gather operation. String `selections` are passed down to a nested `Table`, if it exists.
+When a union array `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an index performs extraction, a slice performs slicing, a 1-dimensional sequence of booleans with the same length as `myarray` performs masking, and a 1-dimensional sequence of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
 
 For example,
 
@@ -1154,7 +1154,7 @@ Numpy has a `numpy.ma.MaskedArray` type that uses one boolean per byte to indica
 
 With `MaskedArray` and `BitMaskedArray`, there is a two-fold ambiguity: should `True` mean that a value is missing or that a value is present? Both classes have a `maskedwhen` argument indicating which boolean value is a masked value (default is `True`, values of `True` in the mask array mean data are missing). Numpy's `numpy.ma.MaskedArray` has `maskedwhen = True`, and Arrow's bitmasks have `maskedwhen = False`.
 
-With `BitMaskedArray`, there is another two-fold ambiguity: should bits read from most significant to least significant or least significant to most significant in each byte? This is a bit-level equivalent of the endianness ambiguity, but it is not decided by hardware because most CPU instruction sets don't operate on individual bits. `BitMaskedArray` has an `lsborder` that is `True` for https://en.wikipedia.org/wiki/Bit_numbering#Least_significant_bit[Least significant bit] (LSB) ordering and `False` for https://en.wikipedia.org/wiki/Bit_numbering#Most_significant_bit[Most significant bit] (MSB) ordering. Arrow's bitmasks have `lsborder = True`.
+With `BitMaskedArray`, there is another two-fold ambiguity: should bits read from most significant to least significant or least significant to most significant in each byte? This is a bit-level equivalent of the endianness ambiguity, but it is not decided by hardware because most CPU instruction sets don't operate on individual bits. `BitMaskedArray` has an `lsborder` that is `True` for https://en.wikipedia.org/wiki/Bit_numbering#Least_significant_bit[Least Significant Bit] (LSB) ordering and `False` for https://en.wikipedia.org/wiki/Bit_numbering#Most_significant_bit[Most Significant Bit] (MSB) ordering. Arrow's bitmasks have `lsborder = True`.
 
 `IndexedMaskedArray` has an integer-typed mask array, so it has no `maskedwhen`. Any negative value corresponds to being masked.
 
@@ -1182,6 +1182,53 @@ The whole-array validity conditions are:
    * flattened `mask` length must be less than or equal to the `content` length.
 
 The length of the `MaskedArray` is determined by the length of the `mask` array.
+
+Masked arrays (all types) have the following read-only properties:
+
+   * `masked`: boolean per byte array with the length of the array; `True` where values are masked, `False` where they are not (independent of `maskedwhen`).
+   * `unmasked`: negation of `masked`.
+
+==== Get-item behavior
+
+When a masked array (any type) `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an index performs extraction, a slice performs slicing, a 1-dimensional sequence of booleans with the same length as `myarray` performs masking, and a 1-dimensional sequence of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
+
+For example,
+
+[content, python]
+----
+myarray = awkward.MaskedArray([False, True, True, False],
+              awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [999], [4.4, 5.5]]))
+myarray
+# returns <MaskedArray [[1.1 2.2 3.3] None None [4.4 5.5]] at 7f5e1aceb7b8>
+myarray[0]
+# returns array([1.1, 2.2, 3.3])
+myarray[1]
+# returns None
+myarray[myarray.unmasked, 1:]
+# returns <MaskedArray [[2.2 3.3] [5.5]] at 7f5e1acf0f60>
+----
+
+==== Mapped kernel behavior
+
+If masked arrays (any type) are passed into a Numpy ufunc (or equivalent mapped kernel), values that are not masked in all inputs (including any non-masked arrays) are converted into `IndexedMaskedArrays` without padding before applying the ufunc. Unnecessary values do not enter the calculation.
+
+For example,
+
+[source, python]
+----
+a = awkward.MaskedArray([False, False, True, False, True], [1.1, 2.2, 3.3, 4.4, 5.5])
+b = awkward.MaskedArray([False, True, True, False, False], [100, 200, 300, 400, 500])
+a
+# returns <MaskedArray [1.1 2.2 None 4.4 None] at 7f5e1aceb6d8>
+b
+# returns <MaskedArray [100 None None 400 500] at 7f5e1aceb710>
+numpy.add(a, b)
+# returns <IndexedMaskedArray [101.1 None None 404.4 None] at 7f5e1acf0f98>
+numpy.add(a, b).content
+# returns array([101.1, 404.4])
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus, the above could have been `a + b`.
 
 ==== Methods
 
@@ -1225,6 +1272,7 @@ A `BitMaskedArray` may be created from one of the following alternate constructo
    * `maskshape`: same as primary constructor.
 
 === IndexedMaskedArray
+
 
 
 
