@@ -1273,10 +1273,16 @@ A `BitMaskedArray` may be created from one of the following alternate constructo
 
 === IndexedMaskedArray
 
+An `IndexedMaskedArray` is defined by two arrays. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
 
+   * `mask`: a basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
 
+The whole-array validity conditions are:
 
+   * maximum of `mask` (if non-negative) must be less than the `content` length.
 
+The length of the `IndexedMaskedArray` is the length of the `mask`.
 
 == Indirection
 
