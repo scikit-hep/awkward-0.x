@@ -1464,9 +1464,73 @@ Mix-in methods are automatically transferred in the following situations:
 
    . When processing a Numpy ufunc (or equivalent mapped kernel), which includes unary and binary operations like `+` and `-`, all mix-in methods of the arguments are transferred to the output.
    . When selecting a column from a `Table`, including selections through a nested contents (e.g. `jaggedtable["x"]`), the mix-in methods of the table column apply to the output, but the mix-in methods of the original container (e.g. `jaggedtable`) do not apply.
+   . When slicing, masking, or gathering through an array's get-item (but not extracting!), the array's mix-ins are retained in the output.
+
+In all other operations, such as reductions and other methods, mix-ins are not carried through.
 
 === ObjectArray
 
+An `ObjectArray` is defined by an array and a generator function with arguments. Below are their single-property validity conditions. The array may be generated from any Python iterable, with the default type chosen in the case of an empty iterable.
+
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `generator`: function that produces object `i` from `content[i]`.
+   * `args`: a tuple of constant positional arguments to pass to `generator`.
+   * `kwargs`: a dict of constant keyword arguments to pass to `generator`.
+   * `dims`: a positive integer (default is `1`); the number of dimensions in the `ObjectArray`.
+
+The whole-array validity conditions are:
+
+   * `dims` must be less than or equal to `len(content.shape)`.
+
+The length of the `ObjectArray` is the length of `content`, and the shape of the `ObjectArray` is `content.shape[:dims]`.
+
+==== Get-item behavior
+
+When an object array `myarray` is passed a `selection` in square brackets, it obeys the usual rules for all operations except extraction: a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. An integer, however, extracts from `content` and calls
+
+[source, python]
+----
+generator(content[i], *args, **kwargs)
+----
+
+on the result to return an output. If `dims > 1`, the first `dims - 1` elements of a given tuple are passed through `content` (so that an `ObjectArray` may be multidimensional) and then element `dims - 1` of the tuple is run through the `generator` function. Any remaining elements of a given tuple are applied to the output of that `generator`.
+
+For example,
+
+[source, python]
+---
+class Point(object):
+    def __init__(self, row):
+        self.x, self.y = row["x"], row["y"]
+    def __repr__(self):
+        return "<Point {0} {1}>".format(self.x, self.y)
+
+myarray = awkward.ObjectArray(awkward.Table(x=[1.1, 2.2, 3.3], y=[10, 20, 30]), Point)
+myarray
+# returns <ObjectArray [<Point 1.1 10> <Point 2.2 20> <Point 3.3 30>] at 7779705f4860>
+myarray[1:]
+# returns <ObjectArray [<Point 2.2 20> <Point 3.3 30>] at 7779705f49b0>
+myarray[1]
+# returns <Point 2.2 20>
+myarray[1].y
+# returns 20
+----
+
+==== Mapped kernel behavior
+
+If object arrays are passed into a Numpy ufunc (or equivalent mapped kernel), the ufunc is computed on the contents and the output is re-wrapped as object arrays. This might not be the intended semantics for the objects; if so, overload them with mix-in methods. (The mix-in should define `__array_ufunc__`, described https://docs.scipy.org/doc/numpy/reference/arrays.classes.html#numpy.class.__array_ufunc__[in the Numpy docs] and https://docs.scipy.org/doc/numpy-1.13.0/neps/ufunc-overrides.html[as a NEP].)
+
+Using the class from the previous example,
+
+[source, python]
+----
+a = awkward.ObjectArray(awkward.Table(x=[1.1, 2.2, 3.3], y=[10, 20, 30]), Point)
+b = awkward.ObjectArray(awkward.Table(x=[10, 20, 30], y=[100, 100, 100]), Point)
+numpy.add(a, b)
+# returns <ObjectArray [<Point 11.1 110> <Point 22.2 120> <Point 33.3 130>] at 7aea8ce5a358>
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus the above could have been `a + b`.
 
 === StringArray
 

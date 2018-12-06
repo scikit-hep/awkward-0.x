@@ -201,7 +201,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=content)
 
         else:
-            return [x[tail] for x in content]
+            return [x[tail] for x in content]   # FIXME: in self.copy(content=content), right?
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         if method != "__call__":
