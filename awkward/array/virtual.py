@@ -69,6 +69,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         self._delitem = None
 
     def copy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, persistvirtual=None):
+        # FIXME: arguments through **kwargs because undef is different from None (None has meaning for some of them)
         out = self.__class__.__new__(self.__class__)
         out._generator = self._generator
         out._args = self._args

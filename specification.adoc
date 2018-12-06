@@ -1479,8 +1479,8 @@ An `ObjectArray` is defined by an array and a generator function with arguments.
 
    * `content`: any array (default is a basic array of `DEFAULTTYPE`).
    * `generator`: function that produces object `i` from `content[i]`.
-   * `args`: a tuple of constant positional arguments to pass to `generator`.
-   * `kwargs`: a dict of constant keyword arguments to pass to `generator`.
+   * `args`: a tuple of constant positional arguments to pass to `generator`. If not a tuple, it will be converted to `(args,)`.
+   * `kwargs`: a dict of constant keyword arguments to pass to `generator`. If not a dict, an error will be raised. The given dict is shallowly copied to avoid referencing issues.
    * `dims`: a positive integer (default is `1`); the number of dimensions in the `ObjectArray`.
 
 The whole-array validity conditions are:
@@ -1664,11 +1664,30 @@ A https://pandas.pydata.org[Dask] delayed array is the equivalent of a `ChunkedA
 A `VirtualArray` is defined by a generating function, not any arrays. Below are the single-property validity conditions for all of its primary constructor arguments.
 
    * `generator`: a callable that produces the array. It must accept arguments as given by `args` and `kwargs` as `generator(*args, **kwargs)`.
-   * 
+   * `args` (default `()`): a tuple of arguments for the `generator`. If not a tuple, it will be converted to `(args,)`.
+   * `kwargs` (default `{}`): a dict of keyword arguments for the `generator`. If not a dict, an error will be raised. The given dict is shallowly copied to avoid referencing issues.
+   * `cache` (default `None`): `None` for no cache or a dict-like object to use as a cache.
+   * `persistentkey` (default `None`): `None` to use transient keys in a cache or a string to use as a key in a persistent cache.
+   * `type` (default `None`): `None` or high-level type of the array to use before materializing it. If `None`, any query that requires type knowledge, such as asking for the length of the array, would cause the array to be materialized.
+   * `persistvirtual` (default `True`): if `True`, persist this object as a virtual array, meaning that its data are _not_ stored in the serialized form. If the `VirtualArray` depends on the existence of a file at a given path, for instance, the serialized form can't be deserialized on a system without that file at that path. If `False`, persist this object as a concrete array, so that everything needed to reconstruct the data is stored in the serialized form.
 
+There are no whole-array validity conditions in the normal sense, but if the `type` parameter is not `None` and the materialized array has a different type, an error is raised at that time.
 
+`VirtualArray` has the following read-only properties and methods:
 
+   * `ismaterialized`: `True` if the array has been loaded and `False` if it has not.
+   * `materialize()`: cause the array to be loaded.
 
+If `type` is `None`, then attempts to get the `VirtualArray` length, type, dtype, shape, etc. will cause the array to be materialized. In any case, an attempt to get-item or use the array in a Numpy ufunc (or equivalent mapped kernel) will cause the array to be materialized.
 
+If `cache` is `None`, then the materialized array is internally cached in the `VirtualArray` object itself. To delete the array, it would be necessary to delete the `VirtualArray`.
+
+If `cache` is not `None` and `persistentkey` is `None`, then the array is placed in the `cache` and a `VirtualArray.TransientKey` is used as the key. The transient key is guaranteed to be globally unique in the Python process as long as the `VirtualArray` exists. If the `VirtualArray` is deleted, its `__del__` method attempts to delete its transient key from the `cache` because its global uniqueness can no longer be guaranteed. However, this is fragile because the `cache` might have been changed for another `cache`, the `__del__` method might not be called before another Python object uses the `VirtualArray's` Python `id`, etc. Generally, transient keys should be used when the `VirtualArray` objects are known to be long-lived. (If they are short-lived, setting `cache` to `None` and letting the Python garbage collector manage eviction would be a better policy.) If the `cache` only accepts strings as keys, the `VirtualArray.TransientKey` has a unique `__str__` representation.
+
+If `cache` is not `None` and `persistentkey` is not `None`, then `persistentkey` will be used as the key for the cache. The burden of ensuring uniqueness is on the user, and the user will have to decide whether the key needs to be process-unique, machine-unique, or unique in some distributed sense.
+
+`VirtualArray` maintains an internal list of columns added, overwritten, or deleted to or from any internal `Tables`. If the generated array is ever lost due to cache eviction and needs to be regenerated, these modifications will be replayed so that the apparent content maintains its state. Also, if `persistvirtual` is `True` and the generated array is not written to a serialized form, the modifications are written to the serialized form, and will be replayed when reconstructed from that serialized form.
 
 == Serialization
+
+
