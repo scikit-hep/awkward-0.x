@@ -1696,7 +1696,16 @@ We define a protocol to store any awkward-array structure in any named array con
 
 This persistence protocol does not define a method for storing named arrays. We assume that an existing mechanism, such as ROOT, Parquet, or Arrow, or ZIP, HDF5, named files, or an object store manage that. For complete generality, the "`named arrays`" do not need to keep array metadata (the way HDF5 files do), but can store only named binary blobs (the way ZIP files do). We only fill this container with array data, assign names to them, and additionally provide a JSON object that can be used to reverse the process.
 
+The awkward-array library in Python uses this serialization mechanism to pickle array objects, `save` them to and `load` them from ZIP files, and to use HDF5 as a read-write database of awkward arrays.
+
+=== JSON metadata format
+
 The JSON object is a nested expression to be interpreted as a command, like a LISP https://en.wikipedia.org/wiki/S-expression[S-expression]. This provides the most flexibility for backward and forward compatibility. For security, deserialization takes a *whitelist* of allowed functions: maliciously constructed data cannot execute arbitrary functions, only the ones in the whitelist. If a new feature is added that requires the execution of previously unforeseen functions, users may need to manually expand the whitelist for forward compatibility (or they may completely open the whitelist if they trust the data source).
 
+A single JSON object represents a single awkward-array. Multiple awkward-arrays may be saved in the same namespace if they each have a different *prefix*. In general, it would be the user's responsibility to ensure that prefixes don't overlap, but the Numpy-only implementation of awkward-array checks for name collisions when writing to ZIP files and separates namespaces with Groups in HDF5 files. Prefixes can also be filesystem paths up to a directory delimiter -- arrays would not overlap if they are saved to different directories.
 
+The top level of the JSON format defines the following fields:
 
+   * `awkward` (optional, for information purposes only): the version of the awkward-array library that wrote this object.
+   * `prefix` (optional, default is `""`): the prefix at the beginning of the name of each binary blob.
+   * `schema`: the deserialization function.
