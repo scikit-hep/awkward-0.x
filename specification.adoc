@@ -1780,7 +1780,7 @@ The expression is purely expressed by `data`, an arbitrary JSON value.
 
 ===== `+{"python": data}+`
 
-The expression is encoded in `data` in a way that only Python can decode. It is a https://en.wikipedia.org/wiki/Base64[Base64] encoding of a https://docs.python.org/3/library/pickle.html[Pickled] object.
+The expression is encoded in `data` in a way that only Python can decode. It is a https://en.wikipedia.org/wiki/Base64[base-64] encoding of a https://docs.python.org/3/library/pickle.html[pickled] object.
 
 ===== `+{"ref": id}+`
 
@@ -1788,4 +1788,61 @@ The expression is a reference to an array defined elsewhere in the object.
 
 === Persistence configuration and signatures
 
+==== Whitelist specification
 
+The function whitelist is globally defined in `awkward.persist.whitelist` but it can also be passed into deserialization functions manually. The format is a list of function specifiers with glob-style wildcards. Function specifiers, as described in the `"call"` type, are a fully qualified module name followed by a path of objects within objects leading to a callable, like
+
+[source]
+----
+["awkward", "JaggedArray", "fromcounts"]
+----
+
+for the `fromcounts` constructor of the `JaggedArray` class in the `awkward` module. Whitelist specifiers allow http://man7.org/linux/man-pages/man3/fnmatch.3.html[fnmatch] wildcards, like
+
+[source]
+----
+["awkward", "*Array", "from*"]
+----
+
+to allow any array type's non-primary constructor. A single string is promoted to a specifier and a single specifier is promoted to a list of specifiers, so `"*"` by itself is a valid whitelist for allowing any function to run (for trusted data).
+
+A function name that satisfies _any_ wildcard expression is allowed.
+
+`awkward.persist.topython` should not be in a default whitelist because unpickling untrusted data can call arbitrary Python functions.
+
+An awkward-array library's default whitelist is not defined in this specification.
+
+==== Compression policy
+
+When serializing, users have the option to compress basic (Numpy) arrays. (When deserializing, whatever decompression functions are found are executed, if they are in the whitelist.) Compression has more value for some kinds of arrays than others, so the decision to compress or not compress is parameterized as in a policy.
+
+The default policy is globally defined in `awkward.persist.compression` as a list of rules. Each rule has the following format:
+
+    * `minsize`: minimum size in bytes; if the basic array is smaller than this size, it is not compressed by this rule.
+    * `types`: list of item types; if the basic array's item type is not a subclass of one of these types, it is not compressed by this rule.
+    * `contexts`: http://man7.org/linux/man-pages/man3/fnmatch.3.html[fnmatch] wildcard string or list of such strings; if the basic array's context (what parameter it belongs to in an awkward-array) does not match any of these patterns, it is not compressed by this rule.
+    * `pair`: 2-tuple of compression function, decompression function specifier. The compression function is a Python callable, which turns a buffer into compressed bytes. The decompression function is a tuple of strings naming the module and object where the function may be found (as in the `"call"` type). Whereas the compression function is needed right away, the decompression function need only be specified so that it can be called during deserialization. The compression and decompression functions should be strict inverses of one another, with no parameters needed except the buffer to compress or decompress.
+
+A single `pair` is promoted to a rule and a single rule is promoted to a list of rules, so it would be sufficient to pass `compression=(zlib.compress, ("zlib", "decompress"))` to a serialization function. If the compression pair is in the `awkward.persist.partner` dict, only the compression function is needed: `compression=zlib.compress`.
+
+==== Persistence functions
+
+`+serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=None, compression=compression, **kwargs)+`
+
+serializes `obj` (an awkard-array) and puts all binary blobs into `storage` using names derived from a `name` prefix, separated by `delimiter`. Binary blobs optionally may have a `suffix` (such as `".raw"`) and the schema itself (also inserted into `storage` as a binary blob) may have a `schemasuffix` (such as `".json"`). The compression option is described above. No return value.
+
+`+deserialize(storage, name="", whitelist=whitelist, cache=None)+`
+
+returns an awkward-array from `storage` using `name` as a prefix and an exact name for finding the schema. The whitelist option is described above. If a `cache` is passed, that cache is passed as an argument to every `VirtualArray`.
+
+`+save(file, array, name=None, mode="a", **options)+`
+
+Save an `array` (an awkward-array) into a `file` specified as a name, a path, or as a file-like object. If it is a name that does not end in `.awkd`, this suffix is appended. The `mode` is passed to the `zipfile.ZipFile` object; `"a"` means append to an existing file or create a file. If there are name conflicts, an erorr is raised before writing anything to the file. No return value.
+
+`+load(file, **options)+`
+
+Open `file` as a read-only dict-like object containing awkward-arrays. The arrays may be found by asking for the dict-like object's `keys` and extracted with get-item.
+
+`+hdf5(group, **options)+`
+
+Interpret an HDF5 file or group (from the https://www.h5py.org/[h5py] library) as containing awkward-arrays, rather than arrays. Low-level binary blobs are hidden in favor of logical awkward arrays. This object can be written to or read from as a dict-like object with get-item, set-item, and del-item.
