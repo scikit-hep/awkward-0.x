@@ -1456,7 +1456,7 @@ A library may be called compliant with awkward-array if it lacks the ability to 
 
 An important use of `ObjectArray` and mix-in methods is `StringArray`, which implements an array of strings as a `JaggedArray` of `CHARTYPE`, generating `str` or `bytes` objects upon extraction. It is important (for users) that the objects drawn from this array have the native string type of whichever language they're using. It's also important to have some vectorized methods, like dropping the last character of all strings (which can actually be a shift to the `JaggedArray`'s stops array). `StringArray` has its mix-in methods built-in, so it does not suffer the dynamic vs. static issue described above.
 
-Although Numpy can store strings in arrays, its rectangular model requires strings to be padded to the length of the longest string in an array. `StringArray` takes advantage of `+JaggedArray+`'s efficient encoding of variable-length contents to store variable-length strings.
+Although Numpy can store strings in arrays, its rectangular model requires strings to be padded to the length of the longest string in an array. `StringArray` takes advantage of `JaggedArray's` efficient encoding of variable-length contents to store variable-length strings.
 
 === Mix-in Methods
 
