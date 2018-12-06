@@ -1455,12 +1455,15 @@ An important use of `ObjectArray` and mix-in methods is `StringArray`, which imp
 
 === Mix-in Methods
 
-For a class to be eligible as a mix-in method, it must not have an `__init__` method and not modify `self` in any of its methods. The `Methods` class cannot be instantiated; it only contains the following static methods:
+For a class to be eligible as a mix-in, it must not have an `__init__` method and must not modify `self` in any of its methods. Mix-ins can be added to a class by inheritance or to an instance (in Python) by changing an object's `__class__` attribute. Convenience functions are provided in `Methods`, which is a container of static methods:
 
-   * `mixin(methods, awkwardtype)`:
-   * `maybemixin(sample, awkwardtype)`: 
+   * `mixin(methods, awkwardtype)`: given a `methods` class (the mix-ins) and an `awkwardtype` (the awkward-array class object, like `JaggedArray` or `ObjectArray`), this returns an array class object with the methods added. This class object can be constructed like the corresponding awkward-array, or it may be assigned to an existing instance's `__class__` attribute.
+   * `maybemixin(samples, awkwardtype)`: given a `samples` object (an array that might have mix-ins) or list (arrays that might have mix-ins) and an `awkwardtype` (the awkward-array class object, like `JaggedArray` or `ObjectArray`), this returns an array class object with any mix-ins any of the `samples` might have (union of all mix-in methods, in Python subclassing order). It is used to transfer mix-in methods from one array to another.
 
+Mix-in methods are automatically transferred in the following situations:
 
+   . When processing a Numpy ufunc (or equivalent mapped kernel), which includes unary and binary operations like `+` and `-`, all mix-in methods of the arguments are transferred to the output.
+   . When selecting a column from a `Table`, including selections through a nested contents (e.g. `jaggedtable["x"]`), the mix-in methods of the table column apply to the output, but the mix-in methods of the original container (e.g. `jaggedtable`) do not apply.
 
 === ObjectArray
 
