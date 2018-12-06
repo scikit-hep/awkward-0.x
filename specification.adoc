@@ -1720,17 +1720,23 @@ If additional fields are filled, the object is not considered invalid, though it
 
 A deserialization expression is a JSON object whose type is determined by the presence of an *identifying key*. If additional fields beyond the ones described below are filled, the object is not considered invalid, though it risks conflicts with future versions of this specification. However, a deserialization expression must not include more than one identifying key in the same JSON object.
 
+Every deserialization expression has an `"id"` field, which is a non-negative integer. These identifiers are used by `"ref"` to build cross-references and cyclic references into the arrays within the object. These identifiers are not guaranteed to be in order; a reference to an unrecognized identifier can be deserialized as a `VirtualArray` to break a cyclic dependency.
+
 Each of the sections below is labeled with the identifying key first.
 
 ===== `+{"call": function, "args": [expressions...]}+`
 
 The expression is a function to be called if its function specification matches a pattern in the whitelist.
 
-    * `call`: <<function specification>>
+    * `call`: function specification, described below.
     * `args` (default is `[]`): list of <<deserialization expressions>> to use as positional arguments.
     * `kwargs` (default is `{}`): JSON object of <<deserialization expressions>> to use as keyword, argument pairs.
     * `cacheable` (default is `false`): if `true`, pass the cache as a `cache` keyword argument to the function.
     * `whitelistable` (default is `false`): if `true`, pass the whitelist as a `whitelist` keyword argument to the function.
+
+Functions are specified by a list of at least two strings. The first is a fully qualified module path and rest are objects or objects within objects in that module that terminate in a callable.
+
+For example, `["awkward", "JaggedArray", "fromcounts"]` is the `fromcounts` constructor of class `JaggedArray` in module `awkward`.
 
 ===== `+{"read": name}+`
 
@@ -1741,22 +1747,45 @@ The expression is a binary blob to read with a given name.
 
 ===== `+{"list": [expressions...]}+`
 
-The expression is a list of <<Deserialization expressions,expressions>>.
+The expression is a list of <<deserialization expressions>>.
 
 ===== `+{"tuple": [expressions...]}+`
 
-The expression is a tuple of <<Deserialization expressions,expressions>>.
+The expression is a tuple of <<deserialization expressions>>.
+
+===== `+{"dict": {name: expression, ...}}+`
+
+The expression is a dict of name (string), <<deserialization expressions,deserialization expression>> pairs.
+
 
 ===== `+{"pairs": [[name, expression], ...]}+`
 
-The expression is a list of name (string), <<Deserialization expressions,expression>> pairs.
+The expression is a list of name (string), <<deserialization expressions,deserialization expression>> pairs. It is not a JSON object so that the order is maintained.
 
+===== `+{"dtype": dtype}+`
 
+The expression is a Numpy dtype, expressed as JSON. Numpy distinguishes between Python tuples and lists, so the following patterns must all be converted to tuples before passing the result to the `numpy.dtype` constructor:
 
-==== Function specification
+   * `+[..., integer]+`
+   * `+[..., [all integers]]+`
+   * `+[string, ...]+`
 
-Functions are specified by a list of at least two strings. The first is a fully qualified module path and rest are objects or objects within objects in that module that terminate in a callable.
+===== `+{"function": function-specification}+`
 
-For example, `["awkward", "JaggedArray", "fromcounts"]` is the `fromcounts` constructor of class `JaggedArray` in module `awkward`.
+The expression is a function object to pass as an argument, not to call. The function specification is the same as in the `"call"` type, though.
+
+===== `+{"json": data}+`
+
+The expression is purely expressed by `data`, an arbitrary JSON value.
+
+===== `+{"python": data}+`
+
+The expression is encoded in `data` in a way that only Python can decode. It is a https://en.wikipedia.org/wiki/Base64[Base64] encoding of a https://docs.python.org/3/library/pickle.html[Pickled] object.
+
+===== `+{"ref": id}+`
+
+The expression is a reference to an array defined elsewhere in the object.
 
 === Persistence configuration and signatures
+
+

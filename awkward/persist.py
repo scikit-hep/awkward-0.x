@@ -417,11 +417,11 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
             elif "tuple" in schema:
                 out = tuple(unfill(x) for x in schema["tuple"])
 
-            elif "pairs" in schema:
-                out = [(n, unfill(x)) for n, x in schema["pairs"]]
-
             elif "dict" in schema:
                 out = {n: unfill(x) for n, x in schema["dict"].items()}
+
+            elif "pairs" in schema:
+                out = [(n, unfill(x)) for n, x in schema["pairs"]]
 
             elif "dtype" in schema:
                 out = json2dtype(schema["dtype"])
@@ -498,13 +498,13 @@ def keys(storage, name="", subschemas=True):
                     for y in recurse(x):
                         yield y
 
-            elif "pairs" in schema:
-                for n, x in schema["pairs"]:
+            elif "dict" in schema:
+                for x in schema["dict"].values():
                     for y in recurse(x):
                         yield y
 
-            elif "dict" in schema:
-                for x in schema["dict"].values():
+            elif "pairs" in schema:
+                for n, x in schema["pairs"]:
                     for y in recurse(x):
                         yield y
 
