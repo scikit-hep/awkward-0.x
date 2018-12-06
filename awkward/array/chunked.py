@@ -687,7 +687,7 @@ class AppendableArray(ChunkedArray):
                 for x in value:
                     assert isinstance(x, awkward.util.integer) and x > 0
             except TypeError:
-                raise TypeError("chunkshape must be an integer or a tuple of integers")
+                raise TypeError("chunkshape must be a positive integer or a tuple of integers")
             except AssertionError:
                 raise ValueError("chunkshape must be a positive integer or tuple of positive integers")
             else:

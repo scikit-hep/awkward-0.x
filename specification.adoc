@@ -1561,13 +1561,89 @@ All Numpy ufuncs (or equivalent mapped functions) apply mathematical operations 
 
 == Non-contiguousness
 
+Many array sources are non-contiguous, usually so that they can be read in releatively small, memory-friendly chunks (e.g. ROOT baskets or Parquet pages). However, a basic array library like Numpy expects its arrays to be fully contiguous in memory, and that can usually only be achieved by copying data.
 
+However, just as we wrap arrays in classes to give them new logical structure, we can wrap a sequence of arrays as a `ChunkedArray` to view it as though it were a concatenated version of those arrays. The arrays in the sequence all need to have the same high-level type, but they don't all need to have the same low-level structure. Some may be basic arrays and others `IndexedArrays` to correspond to pages that alternate between a simple encoding and a dictionary encoding. The high-level type of the `ChunkedArray` is the same as the high-level type of its chunks.
+
+To extract an element at index `i`, it is necessary to know the length of all chunks up to and including the one in which index `i` resides, but getting this information might be an expensive operation. Therefore, `ChunkedArray` does not require this information up-front, but requests it and retains it as higher indexes are requested. Its string representations (`str` and `repr` in Python) only show the first few elements and not the last if not all of the counts are known.
+
+A non-contiguous array interface makes it possible to efficiently append rows to an array. Instead of copying a whole array into a larger allocation with each append, we can allocate a chunk, fill it by writing to it and increasing its "`end`" pointer, then allocate a new chunk when it is full. Since we can address non-contiguous data as a single array, we never have to copy partial results to concatenate. `AppendableArray` is an array with appendable rows, and is one of the only two mutable array types in awkward-arrays: `AppendableArray` can add new rows and `Table` can add, overwrite, and remove columns.
 
 === ChunkedArray
 
+A `ChunkedArray` is defined by a list of `chunks` (arrays) and a list of `counts` (non-negative integers). Below are their single-property validity conditions. The arrays in `chunks` may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `chunks`: a Python list of any array (defaults are basic arrays of `DEFAULTTYPE`).
+   * `counts`: a Python list of non-negative integers. Default is `[]`.
+
+The whole-array validity conditions are:
+
+   * `chunks` length must be greater than or equal to `counts` length.
+   * Each count (non-negative integer in `counts`) must be equal to the length of the corresponding chunk (item in `chunks`).
+   * All non-empty `chunks` must have the same high-level type as the first non-empty chunk.
+
+`ChunkedArray` fills its `counts` as they become known, strictly from first to last. As a public property, these are visible to the user. `ChunkedArray` may also internally cache types as they become known (in any order), to avoid repeated queries.
+
+A `ChunkedArray` has the following read-only properties and methods:
+
+   * `countsknown`: `True` if `counts` has the same length as `chunks`; `False` otherwise.
+   * `typesknown`: `True` if all types are internally cached; `False` otherwise. If a `ChunkedArray` does not cache types, this property may be omitted.
+   * `knowcounts(until=None)`: request and cache the lengths of `chunks` up to and not including `until`, or up to the end if `until` is `None`.
+   * `knowtype(at)`: request and cache the type of chunk `at`. If a `ChunkedArray` does not cache types, this property may be omitted.
+   * `global2chunkid(index, return_normalized=False)`: convert a `ChunkedArray` index to the chunk id in which it resides. (`chunks[i]` is the chunk at id `i`, etc.) The `index` may be an integer or a 1-dimensional array of integers for a gather operation. Negative indexes are normalized to count from the end of the `ChunkedArray`. If `return_normalized` is `True`, the output is a 2-tuple: the chunk id and the `index` normalized to count from the end of the `ChunkedArray`.
+   * `global2local(index)`: convert a `ChunkedArray` index to the corresponding chunk and its local index in the chunk. The `index` may be an integer or a 1-dimensional array of integers for a gather operation. If so, then the chunk output is a Numpy object array of chunks.
+   * `local2global(index, chunkid)`: convert a local chunk index and its chunk id to a global `ChunkArray` index. The `index` may be an integer or a 1-dimensional array of integers for a gather operation.
+
+==== Get-item behavior
+
+When a chunked array `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an integer performs extraction, a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
+
+Touching elements can affect which `counts` are known and therefore the string representation of the array. For example,
+
+[source, python]
+----
+myarray = awkward.ChunkedArray([[0, 1, 2], [], [3, 4], [5, 6, 7, 8], [9]])
+myarray
+# returns <ChunkedArray [0 1 2 3 4 5 6 ...] at 7f778daed7f0>
+myarray[-1]
+# returns 9
+myarray
+# returns <ChunkedArray [0 1 2 ... 7 8 9] at 7f778daed7f0>
+----
+
+==== Mapped kernel behavior
+
+If chunked arrays are passed into a Numpy ufunc (or equivalent mapped kernel), the ufunc is computed iteratively on chunk sizes determined by the first chunked array argument, and the return value is a `ChunkedArray` with that structure.
+
+For example (reusing `myarray` from the previous section),
+
+[source, python]
+----
+numpy.add(myarray, 0.1)
+# returns <ChunkedArray [0.1 1.1 2.1 3.1 4.1 5.1 6.1 ...] at 7f778daeda20>
+numpy.add(myarray, 0.1).chunks
+# returns [array([0.1, 1.1, 2.1]), array([], dtype=float64), array([3.1, 4.1]),
+#          array([5.1, 6.1, 7.1, 8.1]), array([9.1])]
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus the above could have been `myarray + 0.1`.
 
 === AppendableArray
 
+An `AppendableArray` is a `ChunkedArray` of primitive type that can be efficiently appended. Below are the single-property validity conditions. The arrays may be generated from any Python iterable, with dfault types chosen in the case of empty iterables.
+
+   * `chunkshape`: positive integer or a tuple of positive integers defining the allocated shape of each chunk.
+   * `dtype`: Numpy dtype of the content.
+   * `chunks`: a Python list of basic arrays (default type `DEFAULTTYPE`).
+
+The `counts` parameter is read-only and internally managed. In `ChunkedArray`, the `counts` must be exactly equal to the length of each chunk, but in `AppendableArray`, the last count is less than or equal to the length of the last chunk because not all of the allocated chunk may be filled with valid data. Uninitialized data may be visible to the user through `chunks[-1]`, but not through get-item and mapped kernels on the `AppendableArray` itself.
+
+The whole-array validity conditions are the same as for `ChunkedArray`, except that `counts` is not required to be equal to the length of each chunk.
+
+`AppendableArray` has the following special methods:
+
+   * `append(value)`: add one value at the end of the array.
+   * `extend(values)`: add multiple values to the end of the array.
 
 == Laziness
 
