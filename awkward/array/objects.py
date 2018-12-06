@@ -311,13 +311,13 @@ class StringArray(StringMethods, ObjectArray):
         self.encoding = encoding
 
     @classmethod
-    def fromstr(cls, length, string, encoding="utf-8"):
+    def fromstr(cls, length, string, encoding="utf-8"):   # FIXME: infer encoding from string
         if encoding is not None:
             encoder = codecs.getencoder(encoding)
             string = encoder(string)[0]
         content = awkward.util.numpy.empty(length * len(string), dtype=cls.CHARTYPE)
         for i, x in string:
-            content[0::length] = ord(x)
+            content[0::length] = ord(x)                   # FIXME: use numpy.tile!
         counts = awkward.util.numpy.empty(length, dtype=cls.INDEXTYPE)
         counts[:] = length
         return cls.fromcounts(counts, content, encoding)

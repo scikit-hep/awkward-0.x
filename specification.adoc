@@ -1319,6 +1319,7 @@ An `IndexedArray` is defined by two arrays. Below are their single-property vali
 
    * `index`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimensions and all non-negative values.
    * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `dictencoding`: boolean (default is `False`). If `True`, equality tests (`==` and `!=` or `numpy.equal` and `numpy.not_equal`) do not propagate through to the content, but apply at the `IndexedArray` level and check for equality of the indexes. This makes `IndexedArray` usable as a dictionary encoding for categorical data.
 
 The whole-array validity conditions are:
 
@@ -1364,6 +1365,8 @@ myarray[0, 1, 1, 2]
 
 The depth of this tree is not a function of the depth of the `IndexedArray` of `UnionArray` of basic and `JaggedArray` that built it. The depth of this tree is a function of the _values_ of the `index` array, the `tags` array, and the `starts`/`stops` arrays. This construction is a purely columnar tree of numbers and sub-trees.
 
+If `dictencoding` is `True`, the equality tests (`==` and `!=` or `numpy.equal` and `numpy.not_equal`) do not propagate through to the content, but apply at the `IndexedArray` level and check for equality of the indexes.
+
 ==== Mapped kernel behavior
 
 If indexed arrays are passed into a Numpy ufunc (or equivalent mapped kernel), the delayed gather is applied before computing the result. This even works in arbitrarily nested cases, like the last examples in the previous section.
@@ -1398,7 +1401,7 @@ The whole-array validity conditions are:
 
    * flattened `index` length must be less than or equal to the `content` length.
 
-The length of the `IndexedArray` is determined purely by the `indexshape`.
+The length of the `SparseArray` is determined purely by the `indexshape`.
 
 ==== Get-item behavior
 
@@ -1452,6 +1455,8 @@ These methods are added with a mix-in facility that accepts any class containing
 A library may be called compliant with awkward-array if it lacks the ability to add mix-in methods.
 
 An important use of `ObjectArray` and mix-in methods is `StringArray`, which implements an array of strings as a `JaggedArray` of `CHARTYPE`, generating `str` or `bytes` objects upon extraction. It is important (for users) that the objects drawn from this array have the native string type of whichever language they're using. It's also important to have some vectorized methods, like dropping the last character of all strings (which can actually be a shift to the `JaggedArray`'s stops array). `StringArray` has its mix-in methods built-in, so it does not suffer the dynamic vs. static issue described above.
+
+Although Numpy can store strings in arrays, its rectangular model requires strings to be padded to the length of the longest string in an array. `StringArray` takes advantage of `JaggedArray`'s efficient encoding of variable-length contents to store variable-length strings.
 
 === Mix-in Methods
 
@@ -1534,8 +1539,28 @@ Unary and binary operators corresponding to mapped kernels should have the same 
 
 === StringArray
 
+A `StringArray` is an `ObjectArray` with `awkward.array.objects.StringMethods` mix-ins. Its `content` is an internal `JaggedArray` and it accepts `JaggedArray` constructors. Its primary constructor parameters are:
+
+   * `starts`: same as `JaggedArray.starts` except that it will apply to byte positions in `content.
+   * `stops`: same as `JaggedArray.stops` except that it will apply to byte positions in 
+   * `content`: same as `JaggedArray.content` except that it will be viewed as `CHARTYPE`.
+   * `encoding`: `None` (for `bytes`) or an encoding name (for `str`). Default is `"utf-8"`. This property must be assigned with `None` or an encoding name but its value is `None` or a decoder function from `codecs.getdecoder`. (If the encoding name is not recognized, an error is raised.)
+
+A `StringArray` has the same whole-array validity conditions as `JaggedArray`.
+
+The length and shape of `StringArray` are the length and shape of `starts`.
+
+`StringArray` has the same alternate constructors as `JaggedArray`: `fromiter`, `fromoffsets`, `fromcounts`, `fromparents`, `fromuniques`, and `fromjagged`, except that the content is always required to be or interpreted as `CHARTYPE`. `StringArray` additionally has the following constructors:
+
+   * `StringArray.fromstr(shape, string)`: duplicates a single `str` or `bytes` object to fill an array with a given `shape` (may be a non-negative integer).
+   * `StringArray.fromnumpy(array)`: converts a Numpy string array into a `StringArray`.
+
+As an `ObjectArray` with an implicit `generator` of `awkward.array.objects.tostring` an implicit `args` of `(encoding,)`, and an implicit `dims` of `len(starts.shape)`, a `StringArray` returns a `bytes` or `str` for each item.
+
+All Numpy ufuncs (or equivalent mapped functions) apply mathematical operations on the characters of the strings as though they were `uint8` integers, except for equality tests (`==` and `!=` or `numpy.equal` and `numpy.not_equal`), which are overloaded in `awkward.array.objects.StringMethods` to compute string equality.
 
 == Non-contiguousness
+
 
 
 === ChunkedArray
