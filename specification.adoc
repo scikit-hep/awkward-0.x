@@ -1661,6 +1661,12 @@ A https://pandas.pydata.org[Dask] delayed array is the equivalent of a `ChunkedA
 
 === VirtualArray
 
+A `VirtualArray` is defined by a generating function, not any arrays. Below are the single-property validity conditions for all of its primary constructor arguments.
+
+   * `generator`: a callable that produces the array. It must accept arguments as given by `args` and `kwargs` as `generator(*args, **kwargs)`.
+   * 
+
+
 
 
 
