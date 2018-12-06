@@ -1696,7 +1696,7 @@ We define a protocol to store any awkward-array structure in any named array con
 
 This persistence protocol does not define a method for storing named arrays. We assume that an existing mechanism, such as ROOT, Parquet, or Arrow, or ZIP, HDF5, named files, or an object store manage that. For complete generality, the "`named arrays`" do not need to keep array metadata (the way HDF5 files do), but can store only named binary blobs (the way ZIP files do). We only fill this container with array data, assign names to them, and additionally provide a JSON object that can be used to reverse the process.
 
-The awkward-array library in Python uses this serialization mechanism to pickle array objects, `save` them to and `load` them from ZIP files, and to use HDF5 as a read-write database of awkward arrays.
+The awkward-array library in Python uses this serialization mechanism to pickle array objects, `save` them to and `load` them from ZIP files, and to use HDF5 as a read-write database of awkward arrays. ZIP files of awkward-array objects are identified with file extension `.awkd`.
 
 === JSON metadata format
 
@@ -1704,8 +1704,33 @@ The JSON object is a nested expression to be interpreted as a command, like a LI
 
 A single JSON object represents a single awkward-array. Multiple awkward-arrays may be saved in the same namespace if they each have a different *prefix*. In general, it would be the user's responsibility to ensure that prefixes don't overlap, but the Numpy-only implementation of awkward-array checks for name collisions when writing to ZIP files and separates namespaces with Groups in HDF5 files. Prefixes can also be filesystem paths up to a directory delimiter -- arrays would not overlap if they are saved to different directories.
 
+==== Top level object
+
 The top level of the JSON format defines the following fields:
 
-   * `awkward` (optional, for information purposes only): the version of the awkward-array library that wrote this object.
+   * `awkward` (required, but for information purposes only): the version of the awkward-array library that wrote this object. Only the existence of this field is checked as a format signature.
+   * `doc` (optional, for information purposes only): should be a string
+   * `metadata` (optional, for information purposes only): any JSON structure
    * `prefix` (optional, default is `""`): the prefix at the beginning of the name of each binary blob.
-   * `schema`: the deserialization function.
+   * `schema`: the *deserialization expression*, which recursively defines the awkward-array to build.
+
+If additional fields are filled, the object is not considered invalid, though it risks conflicts with future versions of this specification.
+
+==== Deserialization expression
+
+A deserialization expression is a JSON object whose type is determined by the presence of an *identifying key*. If additional fields beyond the ones described below are filled, the object is not considered invalid, though it risks conflicts with future versions of this specification. However, a deserialization expression must not include more than one identifying key in the same JSON object.
+
+===== `+{"call": function, "args": [expressions...]}+`
+
+    * `call`: <<function specification>>
+
+
+
+
+
+
+==== Function specification
+
+here
+
+=== Persistence configuration and signatures
