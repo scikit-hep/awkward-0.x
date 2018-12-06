@@ -1503,7 +1503,7 @@ on the result to return an output. If `dims > 1`, the first `dims - 1` elements 
 For example,
 
 [source, python]
----
+----
 class Point(object):
     def __init__(self, row):
         self.x, self.y = row["x"], row["y"]
