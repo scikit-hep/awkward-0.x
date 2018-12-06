@@ -1690,4 +1690,13 @@ If `cache` is not `None` and `persistentkey` is not `None`, then `persistentkey`
 
 == Serialization
 
+The purpose of awkward-array is to perform computations on complex data with an array programming idiom, not as a storage or interchange format to rival https://root.cern[ROOT], https://parquet.apache.org[Parquet], or https://arrow.apache.org[Arrow]. However, since the bulk data consist entirely of basic (Numpy) arrays, any storage format that can store a set of named arrays and the awkward metadata can store one or more awkward-arrays.
+
+We define a protocol to store any awkward-array structure in any named array container so that users have a way to stash and share intermediate results and, hopefully, to communicate between awkward-array implementations. The definition consists of a JSON format with as little reference to Python specifics as possible, so that implementations of awkward-array in other languages would be able to share data. This sharing could be through pointer locations in a process, shared memory on a single operating system, files on disk, or a distributed network.
+
+This persistence protocol does not define a method for storing named arrays. We assume that an existing mechanism, such as ROOT, Parquet, or Arrow, or ZIP, HDF5, named files, or an object store manage that. For complete generality, the "`named arrays`" do not need to keep array metadata (the way HDF5 files do), but can store only named binary blobs (the way ZIP files do). We only fill this container with array data, assign names to them, and additionally provide a JSON object that can be used to reverse the process.
+
+The JSON object is a nested expression to be interpreted as a command, like a LISP https://en.wikipedia.org/wiki/S-expression[S-expression]. This provides the most flexibility for backward and forward compatibility. For security, deserialization takes a *whitelist* of allowed functions: maliciously constructed data cannot execute arbitrary functions, only the ones in the whitelist. If a new feature is added that requires the execution of previously unforeseen functions, users may need to manually expand the whitelist for forward compatibility (or they may completely open the whitelist if they trust the data source).
+
+
 
