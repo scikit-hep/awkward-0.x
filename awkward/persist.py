@@ -403,11 +403,6 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
                 if "kwargs" in schema:
                     kwargs.update({n: unfill(x) for n, x in schema["kwargs"].items()})
 
-                if "*" in schema:
-                    args = args + [unfill(x) for x in schema["*"]]
-                if "**" in schema:
-                    kwargs.update({n: unfill(x) for n, x in schema["**"].items()})
-
                 out = gen(*args, **kwargs)
 
             elif "read" in schema:

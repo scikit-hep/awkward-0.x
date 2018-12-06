@@ -1706,31 +1706,57 @@ A single JSON object represents a single awkward-array. Multiple awkward-arrays 
 
 ==== Top level object
 
-The top level of the JSON format defines the following fields:
+The top level of the JSON format defines the following fields. If a field has a default, it is optional. If it isn't labeled with a default or as optional, it is required.
 
    * `awkward` (required, but for information purposes only): the version of the awkward-array library that wrote this object. Only the existence of this field is checked as a format signature.
    * `doc` (optional, for information purposes only): should be a string
    * `metadata` (optional, for information purposes only): any JSON structure
-   * `prefix` (optional, default is `""`): the prefix at the beginning of the name of each binary blob.
+   * `prefix` (default is `""`): the prefix at the beginning of the name of each binary blob.
    * `schema`: the *deserialization expression*, which recursively defines the awkward-array to build.
 
 If additional fields are filled, the object is not considered invalid, though it risks conflicts with future versions of this specification.
 
-==== Deserialization expression
+==== Deserialization expressions
 
 A deserialization expression is a JSON object whose type is determined by the presence of an *identifying key*. If additional fields beyond the ones described below are filled, the object is not considered invalid, though it risks conflicts with future versions of this specification. However, a deserialization expression must not include more than one identifying key in the same JSON object.
 
+Each of the sections below is labeled with the identifying key first.
+
 ===== `+{"call": function, "args": [expressions...]}+`
 
+The expression is a function to be called if its function specification matches a pattern in the whitelist.
+
     * `call`: <<function specification>>
+    * `args` (default is `[]`): list of <<deserialization expressions>> to use as positional arguments.
+    * `kwargs` (default is `{}`): JSON object of <<deserialization expressions>> to use as keyword, argument pairs.
+    * `cacheable` (default is `false`): if `true`, pass the cache as a `cache` keyword argument to the function.
+    * `whitelistable` (default is `false`): if `true`, pass the whitelist as a `whitelist` keyword argument to the function.
 
+===== `+{"read": name}+`
 
+The expression is a binary blob to read with a given name.
 
+    * `read`: string; the name of the binary blob to read.
+    * `absolute` (default `false`): if `true`, the name is used as-is, if `false`, the global prefix must be prepended before the name.
+
+===== `+{"list": [expressions...]}+`
+
+The expression is a list of <<Deserialization expressions,expressions>>.
+
+===== `+{"tuple": [expressions...]}+`
+
+The expression is a tuple of <<Deserialization expressions,expressions>>.
+
+===== `+{"pairs": [[name, expression], ...]}+`
+
+The expression is a list of name (string), <<Deserialization expressions,expression>> pairs.
 
 
 
 ==== Function specification
 
-here
+Functions are specified by a list of at least two strings. The first is a fully qualified module path and rest are objects or objects within objects in that module that terminate in a callable.
+
+For example, `["awkward", "JaggedArray", "fromcounts"]` is the `fromcounts` constructor of class `JaggedArray` in module `awkward`.
 
 === Persistence configuration and signatures
