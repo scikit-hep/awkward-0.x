@@ -1647,8 +1647,22 @@ The whole-array validity conditions are the same as for `ChunkedArray`, except t
 
 == Laziness
 
+Often, datasets are too large to entirely load into memory or too large to load up-front. Many data-loading libraries offer the ability to load parts of a file or dataset as needed. However, the decisions about when to load data, how much to load, and what to cache are system-dependent, and we might instead want them to be encoded in the array structure itself, so awkward-array has a `VirtualArray` class to represent an array that might or might not be in memory, but will be when asked.
+
+Laziness and non-contiguousness are closely related. If a `Table` is too big to load but its columns of interest are not, then we may want a `Table` of `VirtualArrays`, so that each entire column is loaded when touched. However, if a single column is too big to load, then delaying that operation with a `VirtualArray` is not enough: we need a `ChunkedArray` of `VirtualArrays` to load chunks of rows at a time.
+
+Laziness and caching are closely related. If all the data needed for a process is too large to hold in memory, then lazily loading each section and keeping it forever is not enough: we need the loaded data to be evicted when we're done with it. If the `VirtualArray` instance goes out of scope, then Python's garbage collector does that automatically. If not, then the `VirtualArray` must let its loaded data be managed by a cache with explicit eviction rules.
+
+Most cache implementations in Python have a dict-like interface. If it is process-bound, then transient keys based on the Python `id` of the `VirtualArrays`. If it is not, then permanent identifiers must be assigned somehow.
+
+If absolutely no caching is desired, then a Python MutableMapping with a do-nothing `__setitem__` would act as an immediately forgetful cache (with transient keys).
+
+A https://pandas.pydata.org[Dask] delayed array is the equivalent of a `ChunkedArray` of `VirtualArrays`, for which all of the chunked array's `counts` are known.
 
 === VirtualArray
+
+
+
 
 
 == Serialization

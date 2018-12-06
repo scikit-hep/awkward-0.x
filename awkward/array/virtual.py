@@ -45,6 +45,8 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             self._id = id
         def __repr__(self):
             return "<VirtualArray.TransientKey {0}>".format(repr(self._id))
+        def __str__(self):
+            return "_" + repr(self._id)
         def __hash__(self):
             return hash((VirtualArray.TransientKey, self._id))
         def __eq__(self, other):
