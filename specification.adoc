@@ -862,7 +862,7 @@ The `Table` constructor permits the following argument patterns:
 
 Pattern 1 and pattern 2 are incompatible; the first argument is either a subclass of dict or not. More than one positional argument in pattern 2 is not allowed. Both of the first two patterns are compatible with pattern 3: they may be freely mixed, as long as column names are never repeated (impossible with pattern 1).
 
-After construction, columns can be added, overwritten, and removed using `Table`'s set-item and del-item methods. The fact that `Tables` may be nested is the only reason awkward-arrays have set-item and del-item methods: to pass a new column to a nested `Table` or request that one of its columns be deleted. Columns maintain their order (following Python's ordered dict semantics).
+After construction, columns can be added, overwritten, and removed using `Table's` set-item and del-item methods. The fact that `Tables` may be nested is the only reason awkward-arrays have set-item and del-item methods: to pass a new column to a nested `Table` or request that one of its columns be deleted. Columns maintain their order (following Python's ordered dict semantics).
 
 `Table` has no whole-array validity conditions. The columns might have different lengths, but the total length of the `Table` is given by the minimum length of all contained columns (zero if there are no columns).
 
@@ -1298,7 +1298,7 @@ As described in the <<Cross-references and cyclic references,types section>>, aw
 
 To facilitate this kind of indirection, the `IndexedArray` class represents a delayed gather operation: it contains an array of indexes and a content array: extraction, slicing, masking, and gathering are filtered through the indexes before selecting contents. Its content could be itself, allowing the creation of graphs, though a `JaggedArray` or `UnionArray` in between would be needed to keep the graph finite.
 
-`IndexedArray` acts as a bound for bounded pointers: part of a data structure with `IndexedArray` type can point to any element of the `IndexedArray`'s content. To bind pointers to more than one pool, combine them with `UnionArray`.
+`IndexedArray` acts as a bound for bounded pointers: part of a data structure with `IndexedArray` type can point to any element of the `IndexedArray's` content. To bind pointers to more than one pool, combine them with `UnionArray`.
 
 In a sense, a `SparseArray` is the opposite of an `IndexedArray`. A `SparseArray` contains logical indexes where the contents are not zero (or some other default) and content for each of those indexes, known as https://en.wikipedia.org/wiki/Sparse_matrix#Coordinate_list_(COO)[coordinate format] (COO). Whereas logical element `i` of an `IndexedArray` is at content index `index[i]`, content element `j` of a `SparseArray` is at logical index `index[j]`. An `IndexedArray` _applies_ its index array as a function to obtain elements, a `SparseArray` _inverts_ its index array as a function to obtain elements.
 
@@ -1454,7 +1454,7 @@ These methods are added with a mix-in facility that accepts any class containing
 
 A library may be called compliant with awkward-array if it lacks the ability to add mix-in methods.
 
-An important use of `ObjectArray` and mix-in methods is `StringArray`, which implements an array of strings as a `JaggedArray` of `CHARTYPE`, generating `str` or `bytes` objects upon extraction. It is important (for users) that the objects drawn from this array have the native string type of whichever language they're using. It's also important to have some vectorized methods, like dropping the last character of all strings (which can actually be a shift to the `JaggedArray`'s stops array). `StringArray` has its mix-in methods built-in, so it does not suffer the dynamic vs. static issue described above.
+An important use of `ObjectArray` and mix-in methods is `StringArray`, which implements an array of strings as a `JaggedArray` of `CHARTYPE`, generating `str` or `bytes` objects upon extraction. It is important (for users) that the objects drawn from this array have the native string type of whichever language they're using. It's also important to have some vectorized methods, like dropping the last character of all strings (which can actually be a shift to the `JaggedArray's` stops array). `StringArray` has its mix-in methods built-in, so it does not suffer the dynamic vs. static issue described above.
 
 Although Numpy can store strings in arrays, its rectangular model requires strings to be padded to the length of the longest string in an array. `StringArray` takes advantage of `JaggedArray's` efficient encoding of variable-length contents to store variable-length strings.
 
