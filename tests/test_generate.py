@@ -33,7 +33,7 @@ import unittest
 import awkward
 
 class Test(unittest.TestCase):
-    def runTest(self):
+    def test_generate_runTest(self):
         pass
 
     def test_generate_empty(self):
@@ -95,6 +95,9 @@ class Test(unittest.TestCase):
         x = [[], [[]], []]
         assert awkward.fromiter(x).tolist() == x
 
+        x = [[], [[], [], []], []]
+        assert awkward.fromiter(x).tolist() == x
+
         x = [[[3.14]]]
         assert awkward.fromiter(x).tolist() == x
 
@@ -102,6 +105,9 @@ class Test(unittest.TestCase):
         assert awkward.fromiter(x).tolist() == x
 
         x = [[[3.14]], [], [[]]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], [[1], [2], [3]], []]
         assert awkward.fromiter(x).tolist() == x
 
         x = [[[3.14]], [], [[3.14]]]
@@ -112,3 +118,279 @@ class Test(unittest.TestCase):
 
         x = [[[999]], [], [[3.14]]]
         assert isinstance(awkward.fromiter(x).tolist()[0][0][0], float)
+
+    def test_generate_table(self):
+        x = [{"a": 1, "b": 1.1}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {"a": 3, "b": 3.3}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {"a": 3, "b": 3.3}]
+        assert isinstance(awkward.fromiter(x).tolist()[0]["a"], int)
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {"a": 3.0, "b": 3.3}]
+        assert isinstance(awkward.fromiter(x).tolist()[0]["a"], float)
+
+        x = [{"a": 1, "b": "one"}, {"a": 2, "b": "two"}, {"a": 3, "b": "three"}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": b"one"}, {"a": 2, "b": b"two"}, {"a": 3, "b": b"three"}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": []}, {"a": 2, "b": [2.2]}, {"a": 3.0, "b": [3.3, 3.3]}]
+        assert isinstance(awkward.fromiter(x).tolist()[0]["a"], float)
+
+        x = [{"a": 1, "b": {"x": 1.1}}, {"a": 2, "b": {"x": 2.2}}, {"a": 3, "b": {"x": 3.3}}]
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_primitive_primitive(self):
+        x = [1, 2, True]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [True, 1, 2]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, True, 2]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, 2, True, False]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [True, 1, 2, False]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, True, 2, False]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [False, 1, 2, True]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [False, True, 1, 2]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [False, 1, True, 2]
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_primitive_strings(self):
+        x = ["one", "two", 1]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, "one", "two"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", 1, "two"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, 2, "one"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, "one", 2]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", 1, 2]
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_primitive_jagged(self):
+        x = [1, 2, []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, 2, [3.14]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, [], 2]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, [3.14], 2]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], 1, 2]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[3.14], 1, 2]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, [], []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, [3.14], []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, [], [3.14]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], 1, []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[3.14], 1, []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], 1, [3.14]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], [], 1]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[3.14], [], 1]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], [3.14], 1]
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_primitive_table(self):
+        x = [999, {"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, 999, {"a": 2, "b": 2.2}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, 999]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, 2, {"a": 999, "b": 3.14}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, {"a": 999, "b": 3.14}, 2]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 999, "b": 3.14}, 1, 2]
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_strings_strings(self):
+        x = ["one", b"two"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [b"one", "two"]
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_strings_jagged(self):
+        x = ["one", "two", []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", "two", [3.14]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", [], "two"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", [3.14], "two"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], "one", "two"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[3.14], "one", "two"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", [], []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", [1.1], []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", [], [2.2]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", [1.1], [2.2]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], "one", []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[1.1], "one", []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], "one", [2.2]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[1.1], "one", [2.2]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], [], "one"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[1.1], [], "one"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], [2.2], "one"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[1.1], [2.2], "one"]
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_strings_table(self):
+        x = ["one", {"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, "one", {"a": 2, "b": 2.2}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, "one"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", "two", {"a": 1, "b": 1.1}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", {"a": 1, "b": 1.1}, "two"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, "one", "two"]
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_jagged_jagged(self):
+        x = [[[[[1]]]], [[[[2]]]]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[[[[1]]]], [[[[2]]]]]
+        assert isinstance(awkward.fromiter(x).tolist()[0][0][0][0][0], int)
+
+        x = [[[[[1]]]], [[[[2.2]]]]]
+        assert isinstance(awkward.fromiter(x).tolist()[0][0][0][0][0], float)
+
+        x = [[[[[1]]]], [[[[[2.2]]]]]]
+        assert isinstance(awkward.fromiter(x).tolist()[0][0][0][0][0], int)
+
+    def test_generate_jagged_table(self):
+        x = [[], {"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, [], {"a": 2, "b": 2.2}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], [3.14], {"a": 1, "b": 1.1}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], {"a": 1, "b": 1.1}, [3.14]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, [], [3.14]]
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_table_table(self):
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {"x": 3, "y": 3.3}]
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_table_union(self):
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {"a": 3, "b": True}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {"a": 3, "b": "three"}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {"a": 3, "b": b"three"}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {"a": 3, "b": b"three"}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {"a": 3, "b": []}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {"a": 3, "b": [3.14]}]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {"a": 3, "b": {"x": 999, "y": 3.14}}]
+        assert awkward.fromiter(x).tolist() == x
