@@ -67,10 +67,20 @@ def typeof(obj):
 class Fillable(object):
     @staticmethod
     def make(tpe):
-        if isinstance(tpe, type):
+        if tpe is None:
+            return MaskedFillable(UnknownFillable(), 0)
+
+        elif isinstance(tpe, type):
             return tpe()
+
+        elif isinstance(tpe, set):
+            if len(tpe) == 0:
+                return MaskedFillable(UnknownFillable(), 0)
+            else:
+                return TableFillable(tpe)
+
         else:
-            raise NotImplementedError
+            raise AssertionError(tpe)
 
     def matches(self, tpe):
         return type(self) is tpe
@@ -88,17 +98,13 @@ class UnknownFillable(Fillable):
         if obj is None:
             self.count += 1
             return self
+
         else:
             fillable = Fillable.make(tpe)
-
-            if isinstance(fillable, (SimpleFillable, JaggedFillable)):
-                if self.count == 0:
-                    return fillable.append(obj, tpe)
-                else:
-                    return MaskedFillable(fillable.append(obj, tpe), self.count)
-
-            else:
+            if self.count == 0:
                 return fillable.append(obj, tpe)
+            else:
+                return MaskedFillable(fillable.append(obj, tpe), self.count)
 
     def finalize(self):
         if self.count == 0:
@@ -169,15 +175,47 @@ class JaggedFillable(Fillable):
     def finalize(self):
         return awkward.array.jagged.JaggedArray.fromoffsets(self.offsets, self.content.finalize())
 
-class MaskedFillable(Fillable):
-    __slots__ = ["content", "nullpos"]
+class TableFillable(Fillable):
+    __slots__ = ["fields", "contents", "count"]
+
+    def __init__(self, fields):
+        assert len(fields) > 0
+        self.fields = fields
+        self.contents = {n: UnknownFillable() for n in fields}
+        self.count = 0
+
+    def __len__(self):
+        return self.count
 
     def matches(self, tpe):
-        return tpe is None
+        return isinstance(tpe, set) and self.fields == tpe
+
+    def append(self, obj, tpe):
+        if obj is None:
+            return MaskedFillable(self, 0).append(obj, tpe)
+
+        if self.matches(tpe):
+            for n in self.fields:
+                x = obj[n]
+                self.contents[n] = self.contents[n].append(x, typeof(x))
+            self.count += 1
+            return self
+
+        else:
+            return UnionFillable(self).append(obj, tpe)
+
+    def finalize(self):
+        return awkward.array.table.Table.frompairs((n, self.contents[n].finalize()) for n in sorted(self.fields))
+
+class MaskedFillable(Fillable):
+    __slots__ = ["content", "nullpos"]
 
     def __init__(self, content, count):
         self.content = content
         self.nullpos = list(range(count))
+
+    def matches(self, tpe):
+        return tpe is None
 
     def __len__(self):
         return len(self.content) + len(self.nullpos)
@@ -190,7 +228,7 @@ class MaskedFillable(Fillable):
         return self
 
     def finalize(self):
-        if isinstance(self.content, UnionFillable):
+        if isinstance(self.content, (TableFillable, UnionFillable)):
             index = awkward.util.numpy.zeros(len(self), dtype=awkward.array.masked.IndexedMaskedArray.INDEXTYPE)
             index[self.nullpos] = -1
             index[index == 0] = awkward.util.numpy.arange(len(self.content))
@@ -259,7 +297,7 @@ class UnionFillable(Fillable):
 
     def finalize(self):
         return awkward.array.union.UnionArray(self.tags, self.index, [x.finalize() for x in self.contents])
-    
+
 def fromiter(iterable):
     fillable = UnknownFillable()
 
