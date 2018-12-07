@@ -158,10 +158,6 @@ class MaskedFillable(Fillable):
         else:
             raise NotImplementedError
 
-class UnionFillable(Fillable):
-    def __init__(self, 
-
-
 def fromiter(iterable):
     fillable = UnknownFillable()
 
