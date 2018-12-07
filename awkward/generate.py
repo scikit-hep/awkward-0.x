@@ -81,7 +81,7 @@ class UnknownFillable(Fillable):
             return self
         else:
             fillable = fillableof(obj)
-            if isinstance(fillable, SimpleFillable):
+            if isinstance(fillable, (SimpleFillable, JaggedFillable)):
                 if self.count == 0:
                     return fillable.append(obj)
                 else:
@@ -105,12 +105,14 @@ class SimpleFillable(Fillable):
         return len(self.data)
 
     def append(self, obj):
-        fillable = fillableof(obj)
-        if fillable is None:
+        if obj is None:
             return MaskedFillable(self, 0).append(obj)
-        elif self.matches(fillable):
+
+        fillable = fillableof(obj)
+        if self.matches(fillable):
             self.data.append(obj)
             return self
+
         else:
             return UnionFillable(self).append(obj)
 
@@ -129,6 +131,31 @@ class BytesFillable(SimpleFillable):
 class StringFillable(SimpleFillable):
     def finalize(self):
         return awkward.array.objects.StringArray.fromiter(self.data, encoding="utf-8")
+
+class JaggedFillable(Fillable):
+    def __init__(self):
+        self.content = UnknownFillable()
+        self.offsets = [0]
+
+    def __len__(self):
+        return len(self.offsets) - 1
+
+    def append(self, obj):
+        if obj is None:
+            return MaskedFillable(self, 0).append(obj)
+
+        fillable = fillableof(obj)
+        if self.matches(fillable):
+            for x in obj:
+                self.content = self.content.append(x)
+            self.offsets.append(len(self.content))
+            return self
+
+        else:
+            return UnionFillable(self).append(obj)
+
+    def finalize(self):
+        return awkward.array.jagged.JaggedArray.fromoffsets(self.offsets, self.content.finalize())
 
 class MaskedFillable(Fillable):
     def matches(self, fillable):
@@ -156,6 +183,20 @@ class MaskedFillable(Fillable):
             compact = self.content.finalize()
             expanded = awkward.util.numpy.empty(len(self), dtype=compact.dtype)
             expanded[valid] = compact
+
+            return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
+
+        elif isinstance(self.content, (BytesFillable, StringFillable)):
+            raise NotImplementedError
+
+        elif isinstance(self.content, JaggedFillable):
+            valid = awkward.util.numpy.ones(len(self), dtype=awkward.array.masked.MaskedArray.MASKTYPE)
+            valid[self.nullpos] = False
+
+            compact = self.content.finalize()
+            counts = awkward.util.numpy.zeros(len(self), dtype=compact.counts.dtype)
+            counts[valid] = compact.counts
+            expanded = awkward.array.jagged.JaggedArray.fromcounts(counts, compact.content)
 
             return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
 
