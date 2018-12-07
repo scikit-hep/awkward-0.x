@@ -44,7 +44,7 @@ import awkward.array.objects
 import awkward.array.table
 import awkward.array.union
 
-def fillableof(obj):
+def typeof(obj):
     if obj is None:
         return None
     elif isinstance(obj, (bool, awkward.util.numpy.bool_, awkward.util.numpy.bool)):
@@ -66,14 +66,14 @@ def fillableof(obj):
 
 class Fillable(object):
     @staticmethod
-    def make(fillable):
-        if isinstance(fillable, type):
-            return fillable()
+    def make(tpe):
+        if isinstance(tpe, type):
+            return tpe()
         else:
             raise NotImplementedError
 
-    def matches(self, fillable):
-        return type(self) is fillable
+    def matches(self, tpe):
+        return type(self) is tpe
 
 class UnknownFillable(Fillable):
     __slots__ = ["count"]
@@ -84,21 +84,21 @@ class UnknownFillable(Fillable):
     def __len__(self):
         return self.count
 
-    def append(self, obj):
+    def append(self, obj, tpe):
         if obj is None:
             self.count += 1
             return self
         else:
-            fillable = Fillable.make(fillableof(obj))
+            fillable = Fillable.make(tpe)
 
             if isinstance(fillable, (SimpleFillable, JaggedFillable)):
                 if self.count == 0:
-                    return fillable.append(obj)
+                    return fillable.append(obj, tpe)
                 else:
-                    return MaskedFillable(fillable.append(obj), self.count)
+                    return MaskedFillable(fillable.append(obj, tpe), self.count)
 
             else:
-                return fillable.append(obj)
+                return fillable.append(obj, tpe)
 
     def finalize(self):
         if self.count == 0:
@@ -116,17 +116,16 @@ class SimpleFillable(Fillable):
     def __len__(self):
         return len(self.data)
 
-    def append(self, obj):
+    def append(self, obj, tpe):
         if obj is None:
-            return MaskedFillable(self, 0).append(obj)
+            return MaskedFillable(self, 0).append(obj, tpe)
 
-        fillable = fillableof(obj)
-        if self.matches(fillable):
+        if self.matches(tpe):
             self.data.append(obj)
             return self
 
         else:
-            return UnionFillable(self).append(obj)
+            return UnionFillable(self).append(obj, tpe)
 
 class BoolFillable(SimpleFillable):
     def finalize(self):
@@ -154,19 +153,18 @@ class JaggedFillable(Fillable):
     def __len__(self):
         return len(self.offsets) - 1
 
-    def append(self, obj):
+    def append(self, obj, tpe):
         if obj is None:
-            return MaskedFillable(self, 0).append(obj)
+            return MaskedFillable(self, 0).append(obj, tpe)
 
-        fillable = fillableof(obj)
-        if self.matches(fillable):
+        if self.matches(tpe):
             for x in obj:
-                self.content = self.content.append(x)
+                self.content = self.content.append(x, typeof(x))
             self.offsets.append(len(self.content))
             return self
 
         else:
-            return UnionFillable(self).append(obj)
+            return UnionFillable(self).append(obj, tpe)
 
     def finalize(self):
         return awkward.array.jagged.JaggedArray.fromoffsets(self.offsets, self.content.finalize())
@@ -174,8 +172,8 @@ class JaggedFillable(Fillable):
 class MaskedFillable(Fillable):
     __slots__ = ["content", "nullpos"]
 
-    def matches(self, fillable):
-        return fillable is None
+    def matches(self, tpe):
+        return tpe is None
 
     def __init__(self, content, count):
         self.content = content
@@ -184,11 +182,11 @@ class MaskedFillable(Fillable):
     def __len__(self):
         return len(self.content) + len(self.nullpos)
 
-    def append(self, obj):
+    def append(self, obj, tpe):
         if obj is None:
             self.nullpos.append(len(self))
         else:
-            self.content = self.content.append(obj)
+            self.content = self.content.append(obj, tpe)
         return self
 
     def finalize(self):
@@ -239,24 +237,23 @@ class UnionFillable(Fillable):
     def __len__(self):
         return len(self.tags)
 
-    def append(self, obj):
-        fillable = fillableof(obj)
-        if fillable is None:
-            return MaskedFillable(self, 0).append(obj)
+    def append(self, obj, tpe):
+        if tpe is None:
+            return MaskedFillable(self, 0).append(obj, tpe)
 
         else:
             for tag, content in enumerate(self.contents):
-                if content.matches(fillable):
+                if content.matches(tpe):
                     self.tags.append(tag)
                     self.index.append(len(content))
-                    content.append(obj)
+                    content.append(obj, tpe)
                     break
 
             else:
-                fillable = Fillable.make(fillable)
+                fillable = Fillable.make(tpe)
                 self.tags.append(len(self.contents))
                 self.index.append(len(fillable))
-                self.contents.append(fillable.append(obj))
+                self.contents.append(fillable.append(obj, tpe))
 
             return self
 
@@ -267,6 +264,6 @@ def fromiter(iterable):
     fillable = UnknownFillable()
 
     for obj in iterable:
-        fillable = fillable.append(obj)
+        fillable = fillable.append(obj, typeof(obj))
 
     return fillable.finalize()
