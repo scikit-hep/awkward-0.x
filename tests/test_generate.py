@@ -40,6 +40,12 @@ class Test(unittest.TestCase):
         x = []
         assert awkward.fromiter(x).tolist() == x
 
+        x = [None]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [None, None, None]
+        assert awkward.fromiter(x).tolist() == x
+
     def test_generate_primitive(self):
         x = [False, True, True]
         assert awkward.fromiter(x).tolist() == x
@@ -334,6 +340,15 @@ class Test(unittest.TestCase):
         x.insert(1, None)
         assert awkward.fromiter(x).tolist() == x
         x.insert(0, None)
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, True, None]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, True, None, 3]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, True, None, False]
         assert awkward.fromiter(x).tolist() == x
 
     def test_generate_primitive_strings(self):

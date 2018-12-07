@@ -75,7 +75,7 @@ class Fillable(object):
 
         elif isinstance(tpe, set):
             if len(tpe) == 0:
-                return MaskedFillable(UnknownFillable(), 0)
+                raise TypeError("Table with no fields")
             else:
                 return TableFillable(tpe)
 
