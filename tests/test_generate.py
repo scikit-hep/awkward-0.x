@@ -488,20 +488,44 @@ class Test(unittest.TestCase):
     def test_generate_primitive_table(self):
         x = [999, {"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}]
         assert awkward.fromiter(x).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x).tolist() == x
 
         x = [{"a": 1, "b": 1.1}, 999, {"a": 2, "b": 2.2}]
+        assert awkward.fromiter(x).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x).tolist() == x
+        x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
 
         x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, 999]
         assert awkward.fromiter(x).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x).tolist() == x
 
         x = [1, 2, {"a": 999, "b": 3.14}]
+        assert awkward.fromiter(x).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x).tolist() == x
+        x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
 
         x = [1, {"a": 999, "b": 3.14}, 2]
         assert awkward.fromiter(x).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x).tolist() == x
 
         x = [{"a": 999, "b": 3.14}, 1, 2]
+        assert awkward.fromiter(x).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x).tolist() == x
+        x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
 
     def test_generate_strings_strings(self):
