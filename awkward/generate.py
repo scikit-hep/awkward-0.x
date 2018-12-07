@@ -46,25 +46,27 @@ import awkward.array.union
 
 def fillableof(obj):
     if obj is None:
-        return MaskedFillable
+        return None
     elif isinstance(obj, (bool, awkward.util.numpy.bool_, awkward.util.numpy.bool)):
-        return BoolFillable
+        return BoolFillable()
     elif isinstance(obj, (numbers.Number, awkward.util.numpy.number)):
-        return NumberFillable
+        return NumberFillable()
     elif isinstance(obj, bytes):
-        return BytesFillable
+        return BytesFillable()
     elif isinstance(obj, awkward.util.string):
-        return StringFillable
+        return StringFillable()
     elif isinstance(obj, dict):
-        return tuple(obj)
+        return TableFillable(set(obj))
     elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
-        return self._fields
+        return TableFillable(set(self._fields))
     elif isinstance(obj, Iterable):
-        return JaggedFillable
+        return JaggedFillable()
     else:
-        return tuple(n for n in obj.__dict__ if not n.startswith("_"))
+        return TableFillable(set(n for n in obj.__dict__ if not n.startswith("_")))
 
-class Fillable(object): pass
+class Fillable(object):
+    def matches(self, fillable):
+        return type(self) is type(fillable)
 
 class UnknownFillable(Fillable):
     def __init__(self):
@@ -79,18 +81,21 @@ class UnknownFillable(Fillable):
             return self
         else:
             fillable = fillableof(obj)
-            if issubclass(fillable, SimpleFillable):
+            if isinstance(fillable, SimpleFillable):
                 if self.count == 0:
-                    return fillable().append(obj)
+                    return fillable.append(obj)
                 else:
-                    return MaskedFillable.fromcount(fillable().append(obj), self.count)
+                    return MaskedFillable(fillable.append(obj), self.count)
 
             else:
-                return fillable(UnknownFillable()).append(obj)
+                return fillable.append(obj)
 
     def finalize(self):
-        mask = awkward.util.numpy.zeros(self.count, dtype=awkward.array.masked.MaskedArray.MASKTYPE)
-        return awkward.array.masked.MaskedArray(mask, mask, maskedwhen=False)
+        if self.count == 0:
+            return awkward.util.numpy.empty(0, dtype=awkward.array.base.AwkwardArray.DEFAULTTYPE)
+        else:
+            mask = awkward.util.numpy.zeros(self.count, dtype=awkward.array.masked.MaskedArray.MASKTYPE)
+            return awkward.array.masked.MaskedArray(mask, mask, maskedwhen=False)
 
 class SimpleFillable(Fillable):
     def __init__(self):
@@ -101,11 +106,13 @@ class SimpleFillable(Fillable):
 
     def append(self, obj):
         fillable = fillableof(obj)
-        if fillable is self.__class__:
+        if fillable is None:
+            return MaskedFillable(self, 0).append(obj)
+        elif self.matches(fillable):
             self.data.append(obj)
             return self
         else:
-            return fillable(self).append(obj)
+            return UnionFillable(self).append(obj)
 
 class BoolFillable(SimpleFillable):
     def finalize(self):
@@ -124,15 +131,12 @@ class StringFillable(SimpleFillable):
         return awkward.array.objects.StringArray.fromiter(self.data, encoding="utf-8")
 
 class MaskedFillable(Fillable):
-    def __init__(self, content):
-        self.content = content
-        self.nullpos = []
+    def matches(self, fillable):
+        return fillable is None
 
-    @classmethod
-    def fromcount(cls, content, count):
-        self = MaskedFillable(content)
+    def __init__(self, content, count):
+        self.content = content
         self.nullpos = list(range(count))
-        return self
 
     def __len__(self):
         return len(self.content) + len(self.nullpos)
@@ -154,10 +158,49 @@ class MaskedFillable(Fillable):
             expanded[valid] = compact
 
             return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
-            
+
+        elif isinstance(self.content, UnionFillable):
+            index = awkward.util.numpy.zeros(len(self), dtype=awkward.array.masked.IndexedMaskedArray.INDEXTYPE)
+            index[self.nullpos] = -1
+            index[index == 0] = awkward.util.numpy.arange(len(self.content))
+
+            return awkward.array.masked.IndexedMaskedArray(index, self.content.finalize())
+
         else:
             raise NotImplementedError
 
+class UnionFillable(Fillable):
+    def __init__(self, content):
+        self.contents = [content]
+        self.tags = [0] * len(content)
+        self.index = list(range(len(content)))
+
+    def __len__(self):
+        return len(self.tags)
+
+    def append(self, obj):
+        fillable = fillableof(obj)
+        if fillable is None:
+            return MaskedFillable(self, 0).append(obj)
+
+        else:
+            for tag, content in enumerate(self.contents):
+                if content.matches(fillable):
+                    self.tags.append(tag)
+                    self.index.append(len(content))
+                    content.append(obj)
+                    break
+
+            else:
+                self.tags.append(len(self.contents))
+                self.index.append(len(fillable))
+                self.contents.append(fillable.append(obj))
+
+            return self
+
+    def finalize(self):
+        return awkward.array.union.UnionArray(self.tags, self.index, [x.finalize() for x in self.contents])
+    
 def fromiter(iterable):
     fillable = UnknownFillable()
 
