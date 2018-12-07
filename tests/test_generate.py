@@ -36,6 +36,79 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
-    def test_primitive(self):
+    def test_generate_empty(self):
+        x = []
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_primitive(self):
         x = [False, True, True]
         assert awkward.fromiter(x).tolist() == x
+
+        x = [1, 2, 3]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1.1, 2.2, 3.3]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1.1j, 2.2j, 3.3j]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [1, 2, 3]
+        assert isinstance(awkward.fromiter(x).tolist()[0], int)
+
+        x = [1, 2, 3.3]
+        assert isinstance(awkward.fromiter(x).tolist()[0], float)
+
+    def test_generate_strings(self):
+        x = [b"one", b"two", b"three"]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = ["one", "two", "three"]
+        assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_jagged(self):
+        x = [[]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], [], []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], [3.14], []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[999], [], [999]]
+        assert isinstance(awkward.fromiter(x).tolist()[0][0], int)
+
+        x = [[999], [], [3.14]]
+        assert isinstance(awkward.fromiter(x).tolist()[0][0], float)
+
+    def test_generate_multijagged(self):
+        x = [[[]]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[[]], [], [[]]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[], [[]], []]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[[3.14]]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[[]], [], [[3.14]]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[[3.14]], [], [[]]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[[3.14]], [], [[3.14]]]
+        assert awkward.fromiter(x).tolist() == x
+
+        x = [[[999]], [], [[999]]]
+        assert isinstance(awkward.fromiter(x).tolist()[0][0][0], int)
+
+        x = [[[999]], [], [[3.14]]]
+        assert isinstance(awkward.fromiter(x).tolist()[0][0][0], float)
