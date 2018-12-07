@@ -69,6 +69,8 @@ class Fillable(object):
         return type(self) is type(fillable)
 
 class UnknownFillable(Fillable):
+    __slots__ = ["count"]
+
     def __init__(self):
         self.count = 0
 
@@ -98,6 +100,8 @@ class UnknownFillable(Fillable):
             return awkward.array.masked.MaskedArray(mask, mask, maskedwhen=False)
 
 class SimpleFillable(Fillable):
+    __slots__ = ["data"]
+
     def __init__(self):
         self.data = []
 
@@ -133,6 +137,8 @@ class StringFillable(SimpleFillable):
         return awkward.array.objects.StringArray.fromiter(self.data, encoding="utf-8")
 
 class JaggedFillable(Fillable):
+    __slots__ = ["content", "offsets"]
+
     def __init__(self):
         self.content = UnknownFillable()
         self.offsets = [0]
@@ -158,6 +164,8 @@ class JaggedFillable(Fillable):
         return awkward.array.jagged.JaggedArray.fromoffsets(self.offsets, self.content.finalize())
 
 class MaskedFillable(Fillable):
+    __slots__ = ["content", "nullpos"]
+
     def matches(self, fillable):
         return fillable is None
 
@@ -213,6 +221,8 @@ class MaskedFillable(Fillable):
             raise AssertionError(self.content)
 
 class UnionFillable(Fillable):
+    __slots__ = ["contents", "tags", "index"]
+
     def __init__(self, content):
         self.contents = [content]
         self.tags = [0] * len(content)
