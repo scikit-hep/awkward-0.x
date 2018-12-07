@@ -176,10 +176,17 @@ class MaskedFillable(Fillable):
         return self
 
     def finalize(self):
-        if isinstance(self.content, (BoolFillable, NumberFillable)):
-            valid = awkward.util.numpy.ones(len(self), dtype=awkward.array.masked.MaskedArray.MASKTYPE)
-            valid[self.nullpos] = False
+        if isinstance(self.content, UnionFillable):
+            index = awkward.util.numpy.zeros(len(self), dtype=awkward.array.masked.IndexedMaskedArray.INDEXTYPE)
+            index[self.nullpos] = -1
+            index[index == 0] = awkward.util.numpy.arange(len(self.content))
 
+            return awkward.array.masked.IndexedMaskedArray(index, self.content.finalize())
+
+        valid = awkward.util.numpy.ones(len(self), dtype=awkward.array.masked.MaskedArray.MASKTYPE)
+        valid[self.nullpos] = False
+
+        if isinstance(self.content, (BoolFillable, NumberFillable)):
             compact = self.content.finalize()
             expanded = awkward.util.numpy.empty(len(self), dtype=compact.dtype)
             expanded[valid] = compact
@@ -187,12 +194,14 @@ class MaskedFillable(Fillable):
             return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
 
         elif isinstance(self.content, (BytesFillable, StringFillable)):
-            raise NotImplementedError
+            compact = self.content.finalize()
+            counts = awkward.util.numpy.zeros(len(self), dtype=compact.counts.dtype)
+            counts[valid] = compact.counts
+            expanded = awkward.array.objects.StringArray.fromcounts(counts, compact.content)
+
+            return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
 
         elif isinstance(self.content, JaggedFillable):
-            valid = awkward.util.numpy.ones(len(self), dtype=awkward.array.masked.MaskedArray.MASKTYPE)
-            valid[self.nullpos] = False
-
             compact = self.content.finalize()
             counts = awkward.util.numpy.zeros(len(self), dtype=compact.counts.dtype)
             counts[valid] = compact.counts
@@ -200,15 +209,8 @@ class MaskedFillable(Fillable):
 
             return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
 
-        elif isinstance(self.content, UnionFillable):
-            index = awkward.util.numpy.zeros(len(self), dtype=awkward.array.masked.IndexedMaskedArray.INDEXTYPE)
-            index[self.nullpos] = -1
-            index[index == 0] = awkward.util.numpy.arange(len(self.content))
-
-            return awkward.array.masked.IndexedMaskedArray(index, self.content.finalize())
-
         else:
-            raise NotImplementedError
+            raise AssertionError(self.content)
 
 class UnionFillable(Fillable):
     def __init__(self, content):
