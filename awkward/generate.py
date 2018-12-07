@@ -31,18 +31,79 @@
 import codecs
 import collections
 import numbers
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
-import awkward.array.base
 import awkward.util
-from awkward.array.chunked import ChunkedArray, AppendableArray
-from awkward.array.jagged import JaggedArray
-from awkward.array.masked import BitMaskedArray, IndexedMaskedArray
-from awkward.array.objects import ObjectArray
-from awkward.array.table import Table
-from awkward.array.union import UnionArray
+import awkward.array.base
+import awkward.array.jagged
+import awkward.array.masked
+import awkward.array.objects
+import awkward.array.table
+import awkward.array.union
 
+def fillableof(obj):
+    if obj is None:
+        return MaskedFillable
+    elif isinstance(obj, (bool, awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+        return BoolFillable
+    elif isinstance(obj, (numbers.Number, awkward.util.numpy.number)):
+        return NumberFillable
+    elif isinstance(obj, bytes):
+        return BytesFillable
+    elif isinstance(obj, awkward.util.string):
+        return StringFillable
+    elif isinstance(obj, dict):
+        return {n: typeof.typeof(x) for n, x in obj.items()}
+    elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
+        return {n: typeof.typeof(x) for n, x in zip(obj._fields, obj)}
+    elif isinstance(obj, Iterable):
+        return JaggedFillable
+    else:
+        return {n: typeof.typeof(x) for n, x in obj.__dict__.items() if not n.startswith("_")}
 
+class Fillable(object):
+    def replacement(self, obj):
+        fillable = fillableof(obj)
+        if fillable is self.__class__:
+            return self
+        else:
+            return fillable(self)
 
+class SimpleFillable(Fillable):
+    def __init__(self):
+        self.data = []
 
-def fromiter(iterable, chunksize=1024):
-    pass
+    def append(self, obj):
+        self.data.append(obj)
+
+class BoolFillable(SimpleFillable):
+    def finalize(self):
+        return awkward.util.numpy.array(self.data, dtype=awkward.array.base.AwkwardArray.BOOLTYPE)
+
+class NumberFillable(SimpleFillable):
+    def finalize(self):
+        return awkward.util.numpy.array(self.data)
+
+class BytesFillable(SimpleFillable):
+    def finalize(self):
+        return awkward.array.objects.StringArray.fromiter(self.data, encoding=None)
+
+class StringFillable(SimpleFillable):
+    def finalize(self):
+        return awkward.array.objects.StringArray.fromiter(self.data, encoding="utf-8")
+
+def fromiter(iterable):
+    fillable = None
+
+    for obj in iterable:
+        if fillable is None:
+            fillable = fillableof(obj)()
+        else:
+            fillable = fillable.replacement(obj)
+
+        fillable.append(obj)
+
+    return fillable.finalize()
