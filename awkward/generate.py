@@ -56,28 +56,52 @@ def fillableof(obj):
     elif isinstance(obj, awkward.util.string):
         return StringFillable
     elif isinstance(obj, dict):
-        return {n: typeof.typeof(x) for n, x in obj.items()}
+        return tuple(obj)
     elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
-        return {n: typeof.typeof(x) for n, x in zip(obj._fields, obj)}
+        return self._fields
     elif isinstance(obj, Iterable):
         return JaggedFillable
     else:
-        return {n: typeof.typeof(x) for n, x in obj.__dict__.items() if not n.startswith("_")}
+        return tuple(n for n in obj.__dict__ if not n.startswith("_"))
 
-class Fillable(object):
-    def replacement(self, obj):
-        fillable = fillableof(obj)
-        if fillable is self.__class__:
+class Fillable(object): pass
+
+class UnknownFillable(Fillable):
+    def __init__(self):
+        self.count = 0
+
+    def __len__(self):
+        return self.count
+
+    def append(self, obj):
+        if obj is None:
+            self.count += 1
             return self
         else:
-            return fillable(self)
+            fillable = fillableof(obj)
+            if issubclass(fillable, SimpleFillable):
+                if self.count == 0:
+                    return fillable().append(obj)
+                else:
+                    return MaskedFillable.fromcount(fillable().append(obj), self.count)
+
+            else:
+                return fillable(UnknownFillable()).append(obj)
 
 class SimpleFillable(Fillable):
     def __init__(self):
         self.data = []
 
+    def __len__(self):
+        return len(self.data)
+
     def append(self, obj):
-        self.data.append(obj)
+        fillable = fillableof(obj)
+        if fillable is self.__class__:
+            self.data.append(obj)
+            return self
+        else:
+            return fillable(self).append(obj)
 
 class BoolFillable(SimpleFillable):
     def finalize(self):
@@ -95,15 +119,45 @@ class StringFillable(SimpleFillable):
     def finalize(self):
         return awkward.array.objects.StringArray.fromiter(self.data, encoding="utf-8")
 
+class MaskedFillable(Fillable):
+    def __init__(self, content):
+        self.content = content
+        self.nullpos = []
+
+    @classmethod
+    def fromcount(cls, content, count):
+        self = MaskedFillable(content)
+        self.nullpos = list(range(count))
+        return self
+
+    def __len__(self):
+        return len(self.content) + len(self.nullpos)
+
+    def append(self, obj):
+        if obj is None:
+            self.nullpos.append(len(self))
+        else:
+            self.content = self.content.append(obj)
+        return self
+
+    def finalize(self):
+        if isinstance(self.content, (BoolFillable, NumberFillable)):
+            valid = awkward.util.numpy.ones(len(self), dtype=bool)
+            valid[self.nullpos] = False
+
+            compact = self.content.finalize()
+            expanded = awkward.util.numpy.empty(len(self), dtype=compact.dtype)
+            expanded[valid] = compact
+
+            return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
+            
+        else:
+            raise NotImplementedError
+
 def fromiter(iterable):
-    fillable = None
+    fillable = UnknownFillable()
 
     for obj in iterable:
-        if fillable is None:
-            fillable = fillableof(obj)()
-        else:
-            fillable = fillable.replacement(obj)
-
-        fillable.append(obj)
+        fillable = fillable.append(obj)
 
     return fillable.finalize()
