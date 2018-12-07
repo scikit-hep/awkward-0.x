@@ -88,6 +88,10 @@ class UnknownFillable(Fillable):
             else:
                 return fillable(UnknownFillable()).append(obj)
 
+    def finalize(self):
+        mask = awkward.util.numpy.zeros(self.count, dtype=awkward.array.masked.MaskedArray.MASKTYPE)
+        return awkward.array.masked.MaskedArray(mask, mask, maskedwhen=False)
+
 class SimpleFillable(Fillable):
     def __init__(self):
         self.data = []
@@ -142,7 +146,7 @@ class MaskedFillable(Fillable):
 
     def finalize(self):
         if isinstance(self.content, (BoolFillable, NumberFillable)):
-            valid = awkward.util.numpy.ones(len(self), dtype=bool)
+            valid = awkward.util.numpy.ones(len(self), dtype=awkward.array.masked.MaskedArray.MASKTYPE)
             valid[self.nullpos] = False
 
             compact = self.content.finalize()
@@ -153,6 +157,10 @@ class MaskedFillable(Fillable):
             
         else:
             raise NotImplementedError
+
+class UnionFillable(Fillable):
+    def __init__(self, 
+
 
 def fromiter(iterable):
     fillable = UnknownFillable()
