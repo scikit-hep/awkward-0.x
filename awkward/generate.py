@@ -249,7 +249,7 @@ class MaskedFillable(Fillable):
             compact = self.content.finalize()
             counts = awkward.util.numpy.zeros(len(self), dtype=compact.counts.dtype)
             counts[valid] = compact.counts
-            expanded = awkward.array.objects.StringArray.fromcounts(counts, compact.content)
+            expanded = awkward.array.objects.StringArray.fromcounts(counts, compact.content, encoding=compact.encoding)
 
             return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
 
