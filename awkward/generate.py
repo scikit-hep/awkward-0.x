@@ -48,25 +48,32 @@ def fillableof(obj):
     if obj is None:
         return None
     elif isinstance(obj, (bool, awkward.util.numpy.bool_, awkward.util.numpy.bool)):
-        return BoolFillable()
+        return BoolFillable
     elif isinstance(obj, (numbers.Number, awkward.util.numpy.number)):
-        return NumberFillable()
+        return NumberFillable
     elif isinstance(obj, bytes):
-        return BytesFillable()
+        return BytesFillable
     elif isinstance(obj, awkward.util.string):
-        return StringFillable()
+        return StringFillable
     elif isinstance(obj, dict):
-        return TableFillable(set(obj))
+        return set(obj)
     elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
-        return TableFillable(set(self._fields))
+        return set(self._fields)
     elif isinstance(obj, Iterable):
-        return JaggedFillable()
+        return JaggedFillable
     else:
-        return TableFillable(set(n for n in obj.__dict__ if not n.startswith("_")))
+        return set(n for n in obj.__dict__ if not n.startswith("_"))
 
 class Fillable(object):
+    @staticmethod
+    def make(fillable):
+        if isinstance(fillable, type):
+            return fillable()
+        else:
+            raise NotImplementedError
+
     def matches(self, fillable):
-        return type(self) is type(fillable)
+        return type(self) is fillable
 
 class UnknownFillable(Fillable):
     __slots__ = ["count"]
@@ -82,7 +89,8 @@ class UnknownFillable(Fillable):
             self.count += 1
             return self
         else:
-            fillable = fillableof(obj)
+            fillable = Fillable.make(fillableof(obj))
+
             if isinstance(fillable, (SimpleFillable, JaggedFillable)):
                 if self.count == 0:
                     return fillable.append(obj)
@@ -245,6 +253,7 @@ class UnionFillable(Fillable):
                     break
 
             else:
+                fillable = Fillable.make(fillable)
                 self.tags.append(len(self.contents))
                 self.index.append(len(fillable))
                 self.contents.append(fillable.append(obj))
