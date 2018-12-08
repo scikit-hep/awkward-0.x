@@ -135,6 +135,7 @@ Tutorial
 **Table of contents:**
 
 * `JSON log data processing example <#json-log-data-processing-example>`__
+
 * Features
   - `Jaggedness <#jaggedness>`__
   - `Record structure <#record-structure>`__
@@ -146,8 +147,11 @@ Tutorial
   - `Sparseness <#sparseness>`__
   - `Non-contiguousness <#non-contiguousness>`__
   - `Laziness <#laziness>`__
+
 * `Serialization, reading and writing files <#serialization-reading-and-writing-files>`__
+
 * Detailed particle physics examples
+
   - `Jagged Lorentz vector arrays; Z peak <#jagged-lorentz-vector-arrays-z-peak>`__
   - `Particle isolation cuts <#particle-isolation-cuts>`__
   - `Generator/reconstructed matching <#generatorreconstructed-matching>`__
