@@ -106,8 +106,16 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def __str__(self):
         if len(self) <= 6:
             return "[{0}]".format(" ".join(awkward.util.array_str(x) for x in self.__iter__(checkiter=False)))
+
         else:
-            return "[{0} ... {1}]".format(" ".join(awkward.util.array_str(x) for x in self[:3].__iter__(checkiter=False)), " ".join(awkward.util.array_str(x) for x in self[-3:].__iter__(checkiter=False)))
+            first = self[:3]
+            if isinstance(first, AwkwardArray):
+                first = first.__iter__(checkiter=False)
+            last = self[-3:]
+            if isinstance(first, AwkwardArray):
+                last = last.__iter__(checkiter=False)
+
+            return "[{0} ... {1}]".format(" ".join(awkward.util.array_str(x) for x in first), " ".join(awkward.util.array_str(x) for x in last))
 
     def __repr__(self):
         return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
