@@ -871,7 +871,7 @@ A `Table` applies slices, masks, and gather indexes lazily: rather than immediat
 `Table` has the following read-write properties:
 
    * `rowname`: defaults to `"Row"`, but may be any string. Can also be set by the `Table.named` alternate constructor. <<`+Table.named(rowname, ...)+`,See below>> for an explanation.
-   * `content`: the columns as an ordered dict. (This is an assignable view, not a copy.)
+   * `contents`: the columns as an ordered dict. (This is an assignable view, not a copy.)
 
 `Table` has the following read-only properties and methods:
 

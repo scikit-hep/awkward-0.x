@@ -939,11 +939,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         import awkward.array.table
 
         argcross = self._argcross(other)
-        left, right = argcross._content._content.values()
+        left, right = argcross._content._contents.values()
 
         fields = [other._content[right]]
         if getattr(self, "_iscross", False):
-            fields = [x[left] for x in self._content._content.values()] + fields
+            fields = [x[left] for x in self._content._contents.values()] + fields
         else:
             fields = [self._content[left]] + fields
 

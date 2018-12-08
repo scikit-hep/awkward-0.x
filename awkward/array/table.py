@@ -60,26 +60,26 @@ class Table(awkward.array.base.AwkwardArray):
             return awkward.array.base.At(self)
 
         def __contains__(self, name):
-            return name in self._table._content
+            return name in self._table._contents
 
         def tolist(self):
-            return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._content.items())
+            return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._contents.items())
 
         def __getitem__(self, where):
             if isinstance(where, awkward.util.string):
                 try:
-                    return self._table._content[where][self._index]
+                    return self._table._contents[where][self._index]
                 except KeyError:
                     raise ValueError("no column named {0}".format(repr(where)))
 
             elif awkward.util.isstringslice(where):
-                content = awkward.util.OrderedDict()
+                contents = awkward.util.OrderedDict()
                 for n in where:
                     try:
-                        content[n] = self._table._content[n]
+                        contents[n] = self._table._contents[n]
                     except KeyError:
                         raise ValueError("no column named {0}".format(repr(n)))
-                table = self._table.copy(content=content)
+                table = self._table.copy(contents=contents)
                 return table.Row(table, self._index)
 
             else:
@@ -97,13 +97,13 @@ class Table(awkward.array.base.AwkwardArray):
             if checkiter:
                 self._checkiter()
             i = 0
-            while str(i) in self._table._content:
-                yield self._table._content[str(i)]
+            while str(i) in self._table._contents:
+                yield self._table._contents[str(i)]
                 i += 1
 
         def __len__(self):
             i = 0
-            while str(i) in self._table._content:
+            while str(i) in self._table._contents:
                 i += 1
             return i
 
@@ -113,7 +113,7 @@ class Table(awkward.array.base.AwkwardArray):
             elif self._table is other._table and self._index == other._index:
                 return True
             else:
-                return set(self._table._content) == set(other._table._content) and all(self._table._content[n][self._index] == other._table._content[n][other._index] for n in self._table._content)
+                return set(self._table._contents) == set(other._table._contents) and all(self._table._contents[n][self._index] == other._table._contents[n][other._index] for n in self._table._contents)
 
         def __ne__(self, other):
             return not self.__eq__(other)
@@ -124,7 +124,7 @@ class Table(awkward.array.base.AwkwardArray):
         self._view = None
         self._base = None
         self.rowname = "Row"
-        self._content = awkward.util.OrderedDict()
+        self._contents = awkward.util.OrderedDict()
 
         seen = set()
         if isinstance(columns1, dict):
@@ -143,7 +143,7 @@ class Table(awkward.array.base.AwkwardArray):
             for i, x in enumerate(columns2):
                 self[str(i + 1)] = x
 
-        seen.update(self._content)
+        seen.update(self._contents)
 
         for n, x in columns3.items():
             if n in seen:
@@ -208,27 +208,27 @@ class Table(awkward.array.base.AwkwardArray):
         else:
             raise TypeError("view must be None, a 3-tuple of integers, or a Numpy array of integers")
 
-    def copy(self, content=None):
+    def copy(self, contents=None):
         out = self.__class__.__new__(self.__class__)
         out._view = self._view
         out._base = self._base
         out._rowname = self._rowname
-        out._content = self._content
-        if content is not None and isinstance(content, dict):
-            out._content = awkward.util.OrderedDict(content.items())
-        elif content is not None:
-            out._content = awkward.util.OrderedDict(content)
+        out._contents = self._contents
+        if contents is not None and isinstance(contents, dict):
+            out._contents = awkward.util.OrderedDict(contents.items())
+        elif contents is not None:
+            out._contents = awkward.util.OrderedDict(contents)
         else:
-            out._content = awkward.util.OrderedDict(self._content.items())
+            out._contents = awkward.util.OrderedDict(self._contents.items())
         return out
 
-    def deepcopy(self, content=None):
-        out = self.copy(content=content)
+    def deepcopy(self, contents=None):
+        out = self.copy(contents=contents)
         index = out._index()
         if index is None:
-            out._content = awkward.util.OrderedDict([(n, awkward.util.deepcopy(x)) for n, x in out._content.items()])
+            out._contents = awkward.util.OrderedDict([(n, awkward.util.deepcopy(x)) for n, x in out._contents.items()])
         else:
-            out._content = awkward.util.OrderedDict([(n, awkward.util.deepcopy(x[index])) for n, x in out._content.items()])
+            out._contents = awkward.util.OrderedDict([(n, awkward.util.deepcopy(x[index])) for n, x in out._contents.items()])
             out._view = None
             out._base = None
         return out
@@ -238,12 +238,12 @@ class Table(awkward.array.base.AwkwardArray):
         out._view = None
         out._base = None
         out._rowname = self._rowname
-        out._content = awkward.util.OrderedDict()
+        out._contents = awkward.util.OrderedDict()
         return out
 
     def zeros_like(self, **overrides):
         out = self.empty_like(**overrides)
-        for n, x in self._content.items():
+        for n, x in self._contents.items():
             if isinstance(x, awkward.util.numpy.ndarray):
                 out[n] = awkward.util.numpy.zeros_like(x)
             else:
@@ -252,7 +252,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     def ones_like(self, **overrides):
         out = self.empty_like(**overrides)
-        for n, x in self._content.items():
+        for n, x in self._contents.items():
             if isinstance(x, awkward.util.numpy.ndarray):
                 out[n] = awkward.util.numpy.ones_like(x)
             else:
@@ -262,7 +262,7 @@ class Table(awkward.array.base.AwkwardArray):
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         out = {"call": ["awkward", self.__class__.__name__, "frompairs"],
-               "args": [{"pairs": [[n, fill(x, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)] for n, x in self._content.items()]}]}
+               "args": [{"pairs": [[n, fill(x, self.__class__.__name__ + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs)] for n, x in self._contents.items()]}]}
         if isinstance(self._view, tuple):
             start, step, length = self._view
             out = {"call": ["awkward", self.__class__.__name__, "fromview"],
@@ -280,32 +280,32 @@ class Table(awkward.array.base.AwkwardArray):
         return self._base
 
     @property
-    def content(self):
-        return self._content
+    def contents(self):
+        return self._contents
 
-    @content.setter
-    def content(self, value):
+    @contents.setter
+    def contents(self, value):
         if not isinstance(value, dict) or not all(isinstance(n, awkward.util.string) for n in value):
-            raise TypeError("content must be a dict from strings to arrays")
+            raise TypeError("contents must be a dict from strings to arrays")
         for n in list(value):
             value[n] = awkward.util.toarray(value[n], self.DEFAULTTYPE)
-        self._content = value
+        self._contents = value
 
     def __len__(self):
         return self._length()
 
     def _gettype(self, seen):
         out = awkward.type.TableType()
-        for n, x in self._content.items():
+        for n, x in self._contents.items():
             out[n] = awkward.type._fromarray(x, seen)
         return out
 
     def _length(self):
         if self._view is None:
-            if len(self._content) == 0:
+            if len(self._contents) == 0:
                 return 0
             else:
-                return min([len(x) for x in self._content.values()])
+                return min([len(x) for x in self._contents.values()])
 
         elif isinstance(self._view, tuple):
             start, step, length = self._view
@@ -449,19 +449,19 @@ class Table(awkward.array.base.AwkwardArray):
                 index = self._index()
                 try:
                     if index is None:
-                        return self._content[where][:self._length()]
+                        return self._contents[where][:self._length()]
                     else:
-                        return self._content[where][index]
+                        return self._contents[where][index]
                 except KeyError:
                     raise ValueError("no column named {0}".format(repr(where)))
             else:
-                content = awkward.util.OrderedDict()
+                contents = awkward.util.OrderedDict()
                 for n in where:
                     try:
-                        content[n] = self._content[n]
+                        contents[n] = self._contents[n]
                     except KeyError:
                         raise ValueError("no column named {0}".format(repr(n)))
-                return self.copy(content=content)
+                return self.copy(contents=contents)
 
         if isinstance(where, tuple) and where == ():
             return self
@@ -478,7 +478,7 @@ class Table(awkward.array.base.AwkwardArray):
             return self.Row(self, newslice)
 
         else:
-            out = self.copy(content=self._content)
+            out = self.copy(contents=self._contents)
             out._view = newslice
             out._base = self._base
             return out
@@ -488,13 +488,13 @@ class Table(awkward.array.base.AwkwardArray):
             raise ValueError("new columns can only be attached to the original Table, not a view (try table.base['col'] = array)")
 
         if isinstance(where, awkward.util.string):
-            self._content[where] = awkward.util.toarray(what, self.DEFAULTTYPE)
+            self._contents[where] = awkward.util.toarray(what, self.DEFAULTTYPE)
 
         elif awkward.util.isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
-                self._content[x] = awkward.util.toarray(y, self.DEFAULTTYPE)
+                self._contents[x] = awkward.util.toarray(y, self.DEFAULTTYPE)
 
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
@@ -504,10 +504,10 @@ class Table(awkward.array.base.AwkwardArray):
             raise ValueError("columns can only be removed from the original Table, not a view (try del table.base['col'])")
 
         if isinstance(where, awkward.util.string):
-            del self._content[where]
+            del self._contents[where]
         elif awkward.util.isstringslice(where):
             for x in where:
-                del self._content[x]
+                del self._contents[x]
         else:
             raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
@@ -521,9 +521,9 @@ class Table(awkward.array.base.AwkwardArray):
                 x._valid()
 
                 if inputsdict is None:
-                    inputsdict = awkward.util.OrderedDict([(n, []) for n in x._content])
+                    inputsdict = awkward.util.OrderedDict([(n, []) for n in x._contents])
                     table = x
-                elif set(inputsdict) != set(x._content):
+                elif set(inputsdict) != set(x._contents):
                     raise ValueError("Tables have different sets of columns")
 
         assert inputsdict is not None
@@ -531,7 +531,7 @@ class Table(awkward.array.base.AwkwardArray):
         for x in inputs:
             if isinstance(x, Table):
                 index = x._index()
-                for n, y in x._content.items():
+                for n, y in x._contents.items():
                     if index is None:
                         inputsdict[n].append(y)
                     else:
@@ -585,10 +585,10 @@ class Table(awkward.array.base.AwkwardArray):
             return tuple(out)
 
     def any(self):
-        return any(x.any() for x in self._content.values())
+        return any(x.any() for x in self._contents.values())
 
     def all(self):
-        return all(x.all() for x in self._content.values())
+        return all(x.all() for x in self._contents.values())
 
     @classmethod
     def concat(cls, first, *rest):
@@ -600,18 +600,18 @@ class Table(awkward.array.base.AwkwardArray):
 
     @property
     def columns(self):
-        return [x for x in self._content if awkward.util.isintstring(x)] + [x for x in self._content if awkward.util.isidentifier(x)]
+        return [x for x in self._contents if awkward.util.isintstring(x)] + [x for x in self._contents if awkward.util.isidentifier(x)]
 
     @property
     def allcolumns(self):
-        return list(self._content)
+        return list(self._contents)
 
     def astype(self, dtype):
-        out = self.copy(content={})
-        for n, x in self._content.items():
+        out = self.copy(contents={})
+        for n, x in self._contents.items():
             out[n] = x.astype(dtype)
         return out
 
     def pandas(self):
         import pandas
-        return pandas.DataFrame(self._content)
+        return pandas.DataFrame(self._contents)
