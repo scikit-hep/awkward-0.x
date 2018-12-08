@@ -429,6 +429,12 @@ class Test(unittest.TestCase):
         x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
 
+        assert awkward.fromiter([T0()]).tolist() == [T0()]
+        assert awkward.fromiter([T0(), T0(), T0()]).tolist() == [T0(), T0(), T0()]
+        assert awkward.fromiter([None, T0(), T0(), T0()]).tolist() == [None, T0(), T0(), T0()]
+        assert awkward.fromiter([T0(), None, T0(), T0()]).tolist() == [T0(), None, T0(), T0()]
+        assert awkward.fromiter([None, T0(), None, T0(), T0()]).tolist() == [None, T0(), None, T0(), T0()]
+
     def test_generate_primitive_primitive(self):
         x = [1, 2, True]
         assert awkward.fromiter(x).tolist() == x
