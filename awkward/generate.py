@@ -60,6 +60,8 @@ def typeof(obj):
         return StringFillable
 
     elif isinstance(obj, dict):
+        if any(not isinstance(x, str) for x in obj):
+            raise TypeError("only dicts with str-typed keys may be converted")
         if len(obj) == 0:
             return None
         else:
