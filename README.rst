@@ -9,15 +9,15 @@ Manipulate arrays of complex data structures as easily as Numpy.
 
 awkward-array is a pure Python+Numpy library for manipulating complex data structures as you would Numpy arrays. Even if your data structures
 
-- contain variable-length lists (jagged or ragged),
-- are deeply nested (records or structs),
-- have different data types in the same list (heterogeneous),
-- are masked, bit-masked, or index-mapped (nullable),
-- contain cross-references or even cyclic references,
-- need to be Python class instances on demand,
-- are not defined at every point (sparse),
-- are not contiguous in memory,
-- should not be loaded into memory all at once (lazy),
+* contain variable-length lists (jagged or ragged),
+* are deeply nested (records or structs),
+* have different data types in the same list (heterogeneous),
+* are masked, bit-masked, or index-mapped (nullable),
+* contain cross-references or even cyclic references,
+* need to be Python class instances on demand,
+* are not defined at every point (sparse),
+* are not contiguous in memory,
+* should not be loaded into memory all at once (lazy),
 
 this library can access them with the efficiency of Numpy arrays. They may be converted from JSON or Python data, loaded from "awkd" files, `HDF5 <https://www.hdfgroup.org>`__, `Parquet <https://parquet.apache.org>`__, or `ROOT <https://root.cern>`__ files, or they may be views into memory buffers like `Arrow <https://arrow.apache.org>`__.
 
@@ -134,23 +134,23 @@ Tutorial
 
 **Table of contents:**
 
-- JSON log data processing example
-- Features
-  - Jaggedness
-  - Record structure
-  - Heterogeneous arrays
-  - Masking
-  - Cross-references
-  - Class instances and methods
-  - Indirection
-  - Sparseness
-  - Non-contiguousness
-  - Laziness
-- Serialization, reading and writing files
-- Detailed particle physics examples
-  - Jagged Lorentz vector arrays; Z peak
-  - Particle isolation cuts
-  - Generator/reconstructed matching
+* `JSON log data processing example <#json-log-data-processing-example>`__
+* Features
+  - `Jaggedness <#jaggedness>`__
+  - `Record structure <#record-structure>`__
+  - `Heterogeneous arrays <#heterogeneous-arrays>`__
+  - `Masking <#masking>`__
+  - `Cross-references <#cross-references>`__
+  - `Class instances and methods <#class-instances-and-methods>`__
+  - `Indirection <#indirection>`__
+  - `Sparseness <#sparseness>`__
+  - `Non-contiguousness <#non-contiguousness>`__
+  - `Laziness <#laziness>`__
+* `Serialization, reading and writing files <#serialization-reading-and-writing-files>`__
+* Detailed particle physics examples
+  - `Jagged Lorentz vector arrays; Z peak <#jagged-lorentz-vector-arrays-z-peak>`__
+  - `Particle isolation cuts <#particle-isolation-cuts>`__
+  - `Generator/reconstructed matching <#generatorreconstructed-matching>`__
 
 (Parquet exoplanets is in the serialization section.)
 
