@@ -1688,6 +1688,26 @@ If `cache` is not `None` and `persistentkey` is not `None`, then `persistentkey`
 
 `VirtualArray` maintains an internal list of columns added, overwritten, or deleted to or from any internal `Tables`. If the generated array is ever lost due to cache eviction and needs to be regenerated, these modifications will be replayed so that the apparent content maintains its state. Also, if `persistvirtual` is `True` and the generated array is not written to a serialized form, the modifications are written to the serialized form, and will be replayed when reconstructed from that serialized form.
 
+== Row-wise to columnar conversion
+
+An awkward-array library should provide a general facility for creating columnar arrays from row-wise data. This would often be the first step before processing. In a statically typed language, the array structure can be fully determined before filling, but in a dynamically typed language, the array types and nesting structure would have to be discovered while iterating over the data.
+
+The interface has two entry points:
+
+   * `+fromiter(iterable, **options)+`: iterate over data and return an array representing all of the data in a columnar form. In a statically typed language, the type structure would have to be provided somehow, and this function would raise an error if the data do not conform to that type (if possible).
+   * `+fromiterchunks(iterable, chunksize, **options)+`: iterate over data and yield arrays of length `chunksize` or less for the last array. This function never yields an empty array, but may yield no arrays. If types are dynamically discovered, this function raises an error if a chunk's type differs from the first chunk. (The `chunksize` must be chosen large enough to fully discover the type in the first chunk.) In a statically typed language, the same type considerations apply as above.
+
+The following `options` are recognized:
+
+   * `dictencoding`: boolean or a function returning boolean. If `True`, all arrays of bytes/strings are https://en.wikipedia.org/wiki/Dictionary_coder[dictionary encoded] as an `IndexedArray` of `StringArray`. If `False`, all arrays of bytes/strings are simply `StringArray`. If a function, this function is called on the list of bytes/strings to determine if it should be dictionary encoded.
+
+
+
+
+
+
+
+
 == Serialization
 
 The purpose of awkward-array is to perform computations on complex data with an array programming idiom, not as a storage or interchange format to rival https://root.cern[ROOT], https://parquet.apache.org[Parquet], or https://arrow.apache.org[Arrow]. However, since the bulk data consist entirely of basic (Numpy) arrays, any storage format that can store a set of named arrays and the awkward metadata can store one or more awkward-arrays.
