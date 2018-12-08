@@ -10,7 +10,7 @@ Manipulate arrays of complex data structures as easily as Numpy.
 awkward-array is a pure Python+Numpy library for manipulating complex data structures as you would Numpy arrays. Even if your data structures
 
 * contain variable-length lists (jagged or ragged),
-* are deeply nested (records or structs),
+* are deeply nested (record structure),
 * have different data types in the same list (heterogeneous),
 * are masked, bit-masked, or index-mapped (nullable),
 * contain cross-references or even cyclic references,
