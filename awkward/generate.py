@@ -63,11 +63,11 @@ def typeof(obj):
         else:
             return set(obj)
 
-    elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
+    elif isinstance(obj, tuple) and hasattr(obj, "_fields") and obj._fields is type(obj)._fields:
         if len(obj._fields) == 0:
             return None
         else:
-            return set(self._fields)
+            return obj._fields, type(obj)
 
     elif isinstance(obj, Iterable):
         return JaggedFillable
@@ -77,7 +77,7 @@ def typeof(obj):
         if len(out) == 0:
             return None
         else:
-            return out
+            return out, type(obj)
 
 class Fillable(object):
     @staticmethod
@@ -90,6 +90,12 @@ class Fillable(object):
 
         elif isinstance(tpe, set):
             return TableFillable(tpe)
+
+        elif isinstance(tpe, tuple) and len(tpe) == 2 and isinstance(tpe[0], set):
+            return ObjectFillable(TableFillable(tpe[0]), tpe[1])
+
+        elif isinstance(tpe, tuple) and len(tpe) == 2 and isinstance(tpe[0], tuple):
+            return NamedTupleFillable(TableFillable(tpe[0]), tpe[1])
 
         else:
             raise AssertionError(tpe)
@@ -200,7 +206,7 @@ class TableFillable(Fillable):
         return self.count
 
     def matches(self, tpe):
-        return isinstance(tpe, set) and self.fields == tpe
+        return self.fields == tpe
 
     def append(self, obj, tpe):
         if tpe is None:
@@ -218,6 +224,57 @@ class TableFillable(Fillable):
 
     def finalize(self):
         return awkward.array.table.Table.frompairs((n, self.contents[n].finalize()) for n in sorted(self.fields))
+
+class ObjectFillable(Fillable):
+    __slots__ = ["content", "cls"]
+
+    def __init__(self, content, cls):
+        self.content = content
+        self.cls = cls
+
+    def __len__(self):
+        return len(self.content)
+
+    def matches(self, tpe):
+        return isinstance(tpe, tuple) and len(tpe) == 2 and tpe[1] is self.cls and self.content.matches(tpe[0])
+
+    def append(self, obj, tpe):
+        if tpe is None:
+            return MaskedFillable(self, 0).append(obj, tpe)
+
+        if self.matches(tpe):
+            self.content.append(obj.__dict__, tpe[0])
+            return self
+
+        else:
+            return UnionFillable(self).append(obj, tpe)
+
+    def finalize(self):
+        def make(x):
+            out = self.cls.__new__(self.cls)
+            out.__dict__.update(x.tolist())
+            return out
+
+        return awkward.array.objects.ObjectArray(self.content.finalize(), make)
+
+class NamedTupleFillable(ObjectFillable):
+    def append(self, obj, tpe):
+        if tpe is None:
+            return MaskedFillable(self, 0).append(obj, tpe)
+
+        if self.matches(tpe):
+            self.content.append({n: x for n, x in zip(obj._fields, obj)}, tpe[0])
+            return self
+
+        else:
+            return UnionFillable(self).append(obj, tpe)
+
+    def finalize(self):
+        def make(x):
+            asdict = x.tolist()
+            return self.cls(*[asdict[n] for n in self.cls._fields])
+
+        return awkward.array.objects.ObjectArray(self.content.finalize(), make)
 
 class MaskedFillable(Fillable):
     __slots__ = ["content", "nullpos"]
