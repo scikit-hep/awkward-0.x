@@ -19,7 +19,7 @@ awkward-array is a pure Python+Numpy library for manipulating complex data struc
 - are not contiguous in memory,
 - should not be loaded into memory all at once (lazy),
 
-this library can access them with the efficiency of Numpy arrays. They may be converted from JSON or Python data, loaded from ZIP, `HDF5 <https://www.h5py.org>`__, `Parquet <https://parquet.apache.org>`__, or `ROOT <https://root.cern>`__ files, or they may be views into memory buffers like `Arrow <https://arrow.apache.org>`__.
+this library can access them with the efficiency of Numpy arrays. They may be converted from JSON or Python data, loaded from "awkd" files, `HDF5 <https://www.hdfgroup.org>`__, `Parquet <https://parquet.apache.org>`__, or `ROOT <https://root.cern>`__ files, or they may be views into memory buffers like `Arrow <https://arrow.apache.org>`__.
 
 Consider this monstrosity:
 
@@ -61,7 +61,7 @@ or the last two:
     array[:, -2:]
     # returns <JaggedArray [[3.3 None] [4.4 [5.5]] [None <Row 1>]] at 79093e5ab3c8>
 
-Internally, the data has been rearranged into a ``columnar <https://towardsdatascience.com/the-beauty-of-column-oriented-data-2945c0c9f560>`__ form, with all values at a given level of hierarchy in the same array. Numpy-like slicing, masking, and fancy indexing are translated into Numpy operations on these internal arrays: they are _not_ implemented with Python for loops!
+Internally, the data has been rearranged into a `columnar <https://towardsdatascience.com/the-beauty-of-column-oriented-data-2945c0c9f560>`__ form, with all values at a given level of hierarchy in the same array. Numpy-like slicing, masking, and fancy indexing are translated into Numpy operations on these internal arrays: they are *not* implemented with Python for loops!
 
 To see some of this structure, ask for the content of the array:
 
@@ -70,7 +70,7 @@ To see some of this structure, ask for the content of the array:
     array.content
     # returns <IndexedMaskedArray [1.1 2.2 None ... <Row 0> None <Row 1>] at 79093e598ef0>
 
-Notice that the boundaries between sub-lists are gone: they exist only at the ``JaggedArray`` level. This ``IndexedMaskedArray`` level handles the ``None`` values in the data. If we dig further, we'll find a ``UnionArray`` to handle the mixture of sub-lists and sub-sub-lists and record structures. If we dig far enough, we'll find the numerical data:
+Notice that the boundaries between sub-lists are gone: they exist only at the ``JaggedArray`` level. This ``IndexedMaskedArray`` level handles the ``None`` values in the data. If we dig further, we'll find a ``UnionArray`` to handle the mixture of sub-lists and sub-sub-lists and record structures. If we dig deeply enough, we'll find the numerical data:
 
 .. code-block:: python
 
@@ -117,15 +117,15 @@ Strict dependencies:
 ====================
 
 - `Python <http://docs.python-guide.org/en/latest/starting/installation/>`__ (2.7+, 3.4+)
-- `Numpy <https://scipy.org/install.html>`__
+- `Numpy <https://scipy.org/install.html>`__ (1.13.1+)
 
 Recommended dependencies:
 =========================
 
-- `Numba and LLVM <http://numba.pydata.org/numba-doc/latest/user/installing.html>`__ to JIT-compile functions (requires a particular version of LLVM, follow instructions)
-- `Dask <http://dask.pydata.org/en/latest/install.html>`__ to distribute work on arrays
-- `bcolz <http://bcolz.blosc.org/en/latest/install.html>`__ for on-the-fly compression
-- `pyarrow and Arrow-C++ <https://arrow.apache.org/docs/python/install.html>`__ for interoperability with other applications and fast Parquet reading/writing
+- `pyarrow <https://arrow.apache.org/docs/python/install.html>`__ to view Arrow and Parquet data as awkward-arrays
+- `h5py <https://www.h5py.org>`__ to read and write awkward-arrays in HDF5 files
+
+(To do: integration with `Dask <https://pandas.pydata.org>`__, `Pandas <https://pandas.pydata.org>`__, and `Numba <https://pandas.pydata.org>`__.)
 
 .. inclusion-marker-3-do-not-remove
 
@@ -134,21 +134,74 @@ Tutorial
 
 **Table of contents:**
 
-(...)
+- JSON log data processing example
+- Features
+  - Jaggedness
+  - Record structure
+  - Heterogeneous arrays
+  - Masking
+  - Cross-references
+  - Class instances and methods
+  - Indirection
+  - Sparseness
+  - Non-contiguousness
+  - Laziness
+- Serialization, reading and writing files
+- Detailed particle physics examples
+  - Jagged Lorentz vector arrays; Z peak
+  - Particle isolation cuts
+  - Generator/reconstructed matching
+
+(Parquet exoplanets is in the serialization section.)
 
 Interactive tutorial
-====================
+--------------------
 
 .. Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/histbook/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
 
 (...)
 
-Reference documentation
-=======================
+JSON log data processing example
+--------------------------------
 
-(...)
+Jaggedness
+----------
 
-Getting started
----------------
+Record structure
+----------------
 
-Install awkward-arrays...
+Heterogeneous arrays
+--------------------
+
+Masking
+-------
+
+Cross-references
+----------------
+
+Class instances and methods
+---------------------------
+
+Indirection
+-----------
+
+Sparseness
+----------
+
+Non-contiguousness
+------------------
+
+Laziness
+--------
+
+Serialization, reading and writing files
+----------------------------------------
+
+Jagged Lorentz vector arrays; Z peak
+------------------------------------
+
+Particle isolation cuts
+-----------------------
+
+Generator/reconstructed matching
+--------------------------------
