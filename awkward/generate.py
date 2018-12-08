@@ -64,20 +64,13 @@ def typeof(obj):
             return set(obj)
 
     elif isinstance(obj, tuple) and hasattr(obj, "_fields") and obj._fields is type(obj)._fields:
-        if len(obj._fields) == 0:
-            return None
-        else:
-            return obj._fields, type(obj)
+        return obj._fields, type(obj)
 
     elif isinstance(obj, Iterable):
         return JaggedFillable
 
     else:
-        out = set(n for n in obj.__dict__ if not n.startswith("_"))
-        if len(out) == 0:
-            return None
-        else:
-            return out, type(obj)
+        return set(n for n in obj.__dict__ if not n.startswith("_")), type(obj)
 
 class Fillable(object):
     @staticmethod
@@ -92,10 +85,16 @@ class Fillable(object):
             return TableFillable(tpe)
 
         elif isinstance(tpe, tuple) and len(tpe) == 2 and isinstance(tpe[0], set):
-            return ObjectFillable(TableFillable(tpe[0]), tpe[1])
+            if len(tpe[0]) == 0:
+                return ObjectFillable(JaggedFillable(), tpe[1])
+            else:
+                return ObjectFillable(TableFillable(tpe[0]), tpe[1])
 
         elif isinstance(tpe, tuple) and len(tpe) == 2 and isinstance(tpe[0], tuple):
-            return NamedTupleFillable(TableFillable(tpe[0]), tpe[1])
+            if len(tpe[0]) == 0:
+                return NamedTupleFillable(JaggedFillable(), tpe[1])
+            else:
+                return NamedTupleFillable(TableFillable(tpe[0]), tpe[1])
 
         else:
             raise AssertionError(tpe)
@@ -236,14 +235,17 @@ class ObjectFillable(Fillable):
         return len(self.content)
 
     def matches(self, tpe):
-        return isinstance(tpe, tuple) and len(tpe) == 2 and tpe[1] is self.cls and self.content.matches(tpe[0])
+        return isinstance(tpe, tuple) and len(tpe) == 2 and tpe[1] is self.cls and (len(tpe[0]) == 0 or self.content.matches(tpe[0]))
 
     def append(self, obj, tpe):
         if tpe is None:
             return MaskedFillable(self, 0).append(obj, tpe)
 
         if self.matches(tpe):
-            self.content.append(obj.__dict__, tpe[0])
+            if len(tpe[0]) == 0:
+                self.content.append([], JaggedFillable)
+            else:
+                self.content.append(obj.__dict__, tpe[0])
             return self
 
         else:
@@ -263,7 +265,10 @@ class NamedTupleFillable(ObjectFillable):
             return MaskedFillable(self, 0).append(obj, tpe)
 
         if self.matches(tpe):
-            self.content.append({n: x for n, x in zip(obj._fields, obj)}, tpe[0])
+            if len(tpe[0]) == 0:
+                self.content.append([], JaggedFillable)
+            else:
+                self.content.append({n: x for n, x in zip(obj._fields, obj)}, tpe[0])
             return self
 
         else:
@@ -297,7 +302,7 @@ class MaskedFillable(Fillable):
         return self
 
     def finalize(self):
-        if isinstance(self.content, (TableFillable, UnionFillable)):
+        if isinstance(self.content, (TableFillable, ObjectFillable, UnionFillable)):
             index = awkward.util.numpy.zeros(len(self), dtype=awkward.array.masked.IndexedMaskedArray.INDEXTYPE)
             index[self.nullpos] = -1
             index[index == 0] = awkward.util.numpy.arange(len(self.content))
