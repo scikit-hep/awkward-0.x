@@ -98,7 +98,9 @@ Perhaps most importantly, Numpy's universal functions (operations that apply to 
     #                       [-0.951602073889516 [-0.70554033]]
     #                       [<Row 0> None <Row 1>]] at 70a40c3a61d0>
 
-Rather than matching the speed of compiled code, this can exceed the speed of compiled code on non-columnar data because the operation may be vectorized on awkward-array's underlying columnar arrays.
+Rather than matching the speed of compiled code, this can exceed the speed of compiled code (on non-columnar data) because the operation may be vectorized on awkward-array's underlying columnar arrays.
+
+(To do: performance example to substantiate that claim.)
 
 .. inclusion-marker-2-do-not-remove
 
