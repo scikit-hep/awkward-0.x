@@ -318,6 +318,31 @@ is equivalent to
 
 Note that Numpy has a `numpy.ma.MaskedArray` type, but awkward-array has its own `awkward.MaskedArray`. The awkward-array masked type can contain non-basic arrays (jagged arrays, tables, etc.) and uses `None` to represent missing values, rather than `numpy.ma.masked`, an object with surprising properties.
 
+Option types of sum types introduces another equivalence: a masked union is equivalent to a union in which any one (or more than one) of the union's enumerated types is masked. For example, `[1, "two", None]` is a union of integers and strings and is masked. This may be
+
+[source]
+----
+[0, 3) -> ?(int64         |
+            <class 'str'> )
+
+        - or -
+
+[0, 3) -> (?int64        |
+           <class 'str'> )
+
+        - or -
+
+[0, 3) -> (int64          |
+           ?<class 'str'> )
+
+        - or -
+
+[0, 3) -> (?int64         |
+           ?<class 'str'> )
+----
+
+The canonical form is the first, with the option type outside the union type, and no option types on any of the union's enumerated types.
+
 ==== Cross-references and cyclic references
 
 As described above, an awkward-array type can be a tree of primitive types, basic arrays, jagged arrays, product types, sum types, and option types. An arbitrary tree of types is powerful (see https://developers.google.com/protocol-buffers[Protocol buffers], https://thrift.apache.org[Thrift], https://avro.apache.org[Avro], and https://parquet.apache.org[Parquet]), but a given type tree sets an upper limit on the depth of values that are members of that type. There would be, for instance, no type specification for JSON, or even the subset of JSON corresponding to "`lists that contain numbers or other lists.`"
@@ -871,7 +896,7 @@ A `Table` applies slices, masks, and gather indexes lazily: rather than immediat
 `Table` has the following read-write properties:
 
    * `rowname`: defaults to `"Row"`, but may be any string. Can also be set by the `Table.named` alternate constructor. <<`+Table.named(rowname, ...)+`,See below>> for an explanation.
-   * `content`: the columns as an ordered dict. (This is an assignable view, not a copy.)
+   * `contents`: the columns as an ordered dict. (This is an assignable view, not a copy.)
 
 `Table` has the following read-only properties and methods:
 
@@ -1687,6 +1712,32 @@ If `cache` is not `None` and `persistentkey` is `None`, then the array is placed
 If `cache` is not `None` and `persistentkey` is not `None`, then `persistentkey` will be used as the key for the cache. The burden of ensuring uniqueness is on the user, and the user will have to decide whether the key needs to be process-unique, machine-unique, or unique in some distributed sense.
 
 `VirtualArray` maintains an internal list of columns added, overwritten, or deleted to or from any internal `Tables`. If the generated array is ever lost due to cache eviction and needs to be regenerated, these modifications will be replayed so that the apparent content maintains its state. Also, if `persistvirtual` is `True` and the generated array is not written to a serialized form, the modifications are written to the serialized form, and will be replayed when reconstructed from that serialized form.
+
+== Row-wise to columnar conversion
+
+An awkward-array library should provide a general facility for creating columnar arrays from row-wise data. This would often be the first step before processing. In a statically typed language, the array structure can be fully determined before filling, but in a dynamically typed language, the array types and nesting structure would have to be discovered while iterating over the data.
+
+The interface has two entry points:
+
+   * `+fromiter(iterable, **options)+`: iterate over data and return an array representing all of the data in a columnar form. In a statically typed language, the type structure would have to be provided somehow, and this function would raise an error if the data do not conform to that type (if possible).
+   * `+fromiterchunks(iterable, chunksize, **options)+`: iterate over data and yield arrays of length `chunksize` or less for the last array. This function never yields an empty array, but may yield no arrays. If types are dynamically discovered, this function raises an error if a chunk's type differs from the first chunk. (The `chunksize` must be chosen large enough to fully discover the type in the first chunk.) In a statically typed language, the same type considerations apply as above.
+
+The following `options` are recognized:
+
+   * `dictencoding`: boolean or a function returning boolean. If `True`, all arrays of bytes/strings are https://en.wikipedia.org/wiki/Dictionary_coder[dictionary encoded] as an `IndexedArray` of `StringArray`. If `False`, all arrays of bytes/strings are simply `StringArray`. If a function, this function is called on the list of bytes/strings to determine if it should be dictionary encoded.
+
+Types derived from the data resolve ambiguities by satisfying the following rules.
+
+   . Boolean types are distinct from numbers, but mixed numeric types are resolved in favor of the most general number at a level of the hierarchy. (That is, a single floating point value will make all integers at the same nesting depth floating point.) Booleans and numbers at the same level of hierarchy would be represented by a `UnionArray`.
+   . In Python (which makes a distinction between raw bytes and strings with an encoding), bytes and strings are different types. Bytes and strings at the same level of hierarchy would be represented by a `UnionArray`.
+   . All lists are presumed to be variable-length (`JaggedArray`).
+   . A mapping type (Python dict) is represented as a `Table`, and mappings with different sets of field names are considered distinct. Mappings with the same field names but different field types are not distinct: they are `Tables` with some `UnionArray` columns. Missing fields are different from fields with `None` values. Mappings must have string-typed keys: other types are not supported.
+   . An empty mapping, `{}`, is considered identical to `None`.
+   . `Table` column names are sorted alphabetically.
+   . An object type may be represented as an `ObjectArray` or it may not be supported. The Numpy-only implementation generates `ObjectArrays` from Python class instances and from namedtuples.
+   . Optional and sum types are in canonical form: `MaskedArrays` are not nested directly within `MaskedArrays` and `UnionArrays` are not nested directly within `UnionArrays`. If a given level of hierarchy is both masked and heterogeneous, the `MaskArray` is outside the `UnionArray` and none of the union array's `contents` are masked.
+   . `Tables`, `ObjectArrays`, and `UnionArrays` are masked with `IndexedMaskedArray`, while all others are masked with `MaskedArray`.
+   . If a type at some level of hierarchy cannot be determined (all lists at that level are empty), then the type is taken to be `DEFAULTTYPE`.
 
 == Serialization
 

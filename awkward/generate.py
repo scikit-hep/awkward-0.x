@@ -31,455 +31,441 @@
 import codecs
 import collections
 import numbers
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 import awkward.array.base
+import awkward.array.indexed
+import awkward.array.jagged
+import awkward.array.masked
+import awkward.array.objects
+import awkward.array.table
+import awkward.array.union
+import awkward.type
 import awkward.util
-from awkward.array.chunked import ChunkedArray, AppendableArray
-from awkward.array.jagged import JaggedArray
-from awkward.array.masked import BitMaskedArray, IndexedMaskedArray
-from awkward.array.objects import ObjectArray
-from awkward.array.table import Table
-from awkward.array.union import UnionArray
 
-# FIXME: the following must be totally broken from upstream changes
+def typeof(obj):
+    if obj is None:
+        return None
 
-def fromiter(iterable, chunksize=1024, maskmissing=True, references=False):
-    if references:
-        raise NotImplementedError    # keep all ids in a hashtable to create pointers (IndexedArray)
+    elif isinstance(obj, (bool, awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+        return BoolFillable
+    elif isinstance(obj, (numbers.Number, awkward.util.numpy.number)):
+        return NumberFillable
+    elif isinstance(obj, bytes):
+        return BytesFillable
+    elif isinstance(obj, awkward.util.string):
+        return StringFillable
 
-    tobytes = lambda x: x.tobytes()
-    tostring = lambda x: codecs.utf_8_decode(x.tobytes())[0]
+    elif isinstance(obj, dict):
+        if any(not isinstance(x, str) for x in obj):
+            raise TypeError("only dicts with str-typed keys may be converted")
+        if len(obj) == 0:
+            return None
+        else:
+            return set(obj)
 
-    def insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj):
-        if len(chunks) == 0 or offsets[-1] - offsets[-2] == len(chunks[-1]):
-            chunks.append(newchunk(obj))
-            offsets.append(offsets[-1])
+    elif isinstance(obj, tuple) and hasattr(obj, "_fields") and obj._fields is type(obj)._fields:
+        return obj._fields, type(obj)
 
-        if ismine(obj, chunks[-1]):
-            chunks[-1] = promote(obj, chunks[-1])
-            fillobj(obj, chunks[-1], offsets[-1] - offsets[-2])
-            offsets[-1] += 1
+    elif isinstance(obj, Iterable):
+        return JaggedFillable
 
-        elif isinstance(chunks[-1], IndexedMaskedArray) and len(chunks[-1]._content) == 0:
-            chunks[-1]._content = newchunk(obj)
+    else:
+        return set(n for n in obj.__dict__ if not n.startswith("_")), type(obj)
 
-            nextindex = chunks[-1]._nextindex
-            chunks[-1]._nextindex += 1
-            chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
+class Fillable(object):
+    @staticmethod
+    def make(tpe):
+        if tpe is None:
+            return MaskedFillable(UnknownFillable(), 0)
 
-            chunks[-1]._content = promote(obj, chunks[-1]._content)
-            fillobj(obj, chunks[-1]._content, nextindex)
-            offsets[-1] += 1
+        elif isinstance(tpe, type):
+            return tpe()
 
-        elif isinstance(chunks[-1], IndexedMaskedArray) and ismine(obj, chunks[-1]._content):
-            nextindex = chunks[-1]._nextindex
-            chunks[-1]._nextindex += 1
-            chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
+        elif isinstance(tpe, set):
+            return TableFillable(tpe)
 
-            chunks[-1]._content = promote(obj, chunks[-1]._content)
-            fillobj(obj, chunks[-1]._content, nextindex)
-            offsets[-1] += 1
+        elif isinstance(tpe, tuple) and len(tpe) == 2 and isinstance(tpe[0], set):
+            if len(tpe[0]) == 0:
+                return ObjectFillable(JaggedFillable(), tpe[1])
+            else:
+                return ObjectFillable(TableFillable(tpe[0]), tpe[1])
 
-        elif isinstance(chunks[-1], UnionArray) and any(isinstance(content, IndexedMaskedArray) and ismine(obj, content._content) for content in chunks[-1]._contents):
-            for tag in range(len(chunks[-1]._contents)):
-                if isinstance(chunks[-1]._contents[tag], IndexedMaskedArray) and ismine(obj, chunks[-1]._contents[tag]._content):
-                    nextindex_union = chunks[-1]._nextindex[tag]
-                    chunks[-1]._nextindex[tag] += 1
+        elif isinstance(tpe, tuple) and len(tpe) == 2 and isinstance(tpe[0], tuple):
+            if len(tpe[0]) == 0:
+                return NamedTupleFillable(JaggedFillable(), tpe[1])
+            else:
+                return NamedTupleFillable(TableFillable(tpe[0]), tpe[1])
 
-                    nextindex_mask = chunks[-1]._contents[tag]._nextindex
-                    chunks[-1]._contents[tag]._nextindex += 1
-                    chunks[-1]._contents[tag]._index[nextindex_union] = nextindex_mask
+        else:
+            raise AssertionError(tpe)
 
-                    chunks[-1]._contents[tag]._content = promote(obj, chunks[-1]._contents[tag]._content)
-                    fillobj(obj, chunks[-1]._contents[tag]._content, nextindex_mask)
+    def matches(self, tpe):
+        return type(self) is tpe
 
-                    chunks[-1]._tags[offsets[-1] - offsets[-2]] = tag
-                    chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex_union
+class UnknownFillable(Fillable):
+    __slots__ = ["count"]
 
-                    offsets[-1] += 1
+    def __init__(self):
+        self.count = 0
+
+    def __len__(self):
+        return self.count
+
+    def clear(self):
+        self.count = 0
+
+    def append(self, obj, tpe):
+        if tpe is None:
+            self.count += 1
+            return self
+
+        else:
+            fillable = Fillable.make(tpe)
+            if self.count == 0:
+                return fillable.append(obj, tpe)
+            else:
+                return MaskedFillable(fillable.append(obj, tpe), self.count)
+
+    def finalize(self, **options):
+        if self.count == 0:
+            return awkward.util.numpy.empty(0, dtype=awkward.array.base.AwkwardArray.DEFAULTTYPE)
+        else:
+            mask = awkward.util.numpy.zeros(self.count, dtype=awkward.array.masked.MaskedArray.MASKTYPE)
+            return awkward.array.masked.MaskedArray(mask, mask, maskedwhen=False)
+
+class SimpleFillable(Fillable):
+    __slots__ = ["data"]
+
+    def __init__(self):
+        self.data = []
+
+    def __len__(self):
+        return len(self.data)
+
+    def clear(self):
+        self.data = []
+
+    def append(self, obj, tpe):
+        if tpe is None:
+            return MaskedFillable(self, 0).append(obj, tpe)
+
+        if self.matches(tpe):
+            self.data.append(obj)
+            return self
+
+        else:
+            return UnionFillable(self).append(obj, tpe)
+
+class BoolFillable(SimpleFillable):
+    def finalize(self, **options):
+        return awkward.util.numpy.array(self.data, dtype=awkward.array.base.AwkwardArray.BOOLTYPE)
+
+class NumberFillable(SimpleFillable):
+    def finalize(self, **options):
+        return awkward.util.numpy.array(self.data)
+
+class BytesFillable(SimpleFillable):
+    def finalize(self, **options):
+        dictencoding = options.get("dictencoding", False)
+        if (callable(dictencoding) and dictencoding(self.data)) or (not callable(dictencoding) and dictencoding):
+            dictionary, index = awkward.util.numpy.unique(self.data, return_inverse=True)
+            return awkward.array.indexed.IndexedArray(index, awkward.array.objects.StringArray.fromiter(dictionary, encoding=None))
+        else:
+            return awkward.array.objects.StringArray.fromiter(self.data, encoding=None)
+
+class StringFillable(SimpleFillable):
+    def finalize(self, **options):
+        dictencoding = options.get("dictencoding", False)
+        if (callable(dictencoding) and dictencoding(self.data)) or (not callable(dictencoding) and dictencoding):
+            dictionary, index = awkward.util.numpy.unique(self.data, return_inverse=True)
+            return awkward.array.indexed.IndexedArray(index, awkward.array.objects.StringArray.fromiter(dictionary, encoding="utf-8"))
+        else:
+            return awkward.array.objects.StringArray.fromiter(self.data, encoding="utf-8")
+
+class JaggedFillable(Fillable):
+    __slots__ = ["content", "offsets"]
+
+    def __init__(self):
+        self.content = UnknownFillable()
+        self.offsets = [0]
+
+    def __len__(self):
+        return len(self.offsets) - 1
+
+    def clear(self):
+        self.content.clear()
+        self.offsets = [0]
+
+    def append(self, obj, tpe):
+        if tpe is None:
+            return MaskedFillable(self, 0).append(obj, tpe)
+
+        if self.matches(tpe):
+            for x in obj:
+                self.content = self.content.append(x, typeof(x))
+            self.offsets.append(len(self.content))
+            return self
+
+        else:
+            return UnionFillable(self).append(obj, tpe)
+
+    def finalize(self, **options):
+        return awkward.array.jagged.JaggedArray.fromoffsets(self.offsets, self.content.finalize(**options))
+
+class TableFillable(Fillable):
+    __slots__ = ["fields", "contents", "count"]
+
+    def __init__(self, fields):
+        assert len(fields) > 0
+        self.fields = fields
+        self.contents = {n: UnknownFillable() for n in fields}
+        self.count = 0
+
+    def __len__(self):
+        return self.count
+
+    def clear(self):
+        for content in self.contents.values():
+            content.clear()
+        self.count = 0
+
+    def matches(self, tpe):
+        return self.fields == tpe
+
+    def append(self, obj, tpe):
+        if tpe is None:
+            return MaskedFillable(self, 0).append(obj, tpe)
+
+        if self.matches(tpe):
+            for n in self.fields:
+                x = obj[n]
+                self.contents[n] = self.contents[n].append(x, typeof(x))
+            self.count += 1
+            return self
+
+        else:
+            return UnionFillable(self).append(obj, tpe)
+
+    def finalize(self, **options):
+        return awkward.array.table.Table.frompairs((n, self.contents[n].finalize(**options)) for n in sorted(self.fields))
+
+class ObjectFillable(Fillable):
+    __slots__ = ["content", "cls"]
+
+    def __init__(self, content, cls):
+        self.content = content
+        self.cls = cls
+
+    def __len__(self):
+        return len(self.content)
+
+    def clear(self):
+        self.content.clear()
+
+    def matches(self, tpe):
+        return isinstance(tpe, tuple) and len(tpe) == 2 and tpe[1] is self.cls and (len(tpe[0]) == 0 or self.content.matches(tpe[0]))
+
+    def append(self, obj, tpe):
+        if tpe is None:
+            return MaskedFillable(self, 0).append(obj, tpe)
+
+        if self.matches(tpe):
+            if len(tpe[0]) == 0:
+                self.content.append([], JaggedFillable)
+            else:
+                self.content.append(obj.__dict__, tpe[0])
+            return self
+
+        else:
+            return UnionFillable(self).append(obj, tpe)
+
+    def finalize(self, **options):
+        def make(x):
+            out = self.cls.__new__(self.cls)
+            out.__dict__.update(x.tolist())
+            return out
+
+        return awkward.array.objects.ObjectArray(self.content.finalize(**options), make)
+
+class NamedTupleFillable(ObjectFillable):
+    def append(self, obj, tpe):
+        if tpe is None:
+            return MaskedFillable(self, 0).append(obj, tpe)
+
+        if self.matches(tpe):
+            if len(tpe[0]) == 0:
+                self.content.append([], JaggedFillable)
+            else:
+                self.content.append({n: x for n, x in zip(obj._fields, obj)}, tpe[0])
+            return self
+
+        else:
+            return UnionFillable(self).append(obj, tpe)
+
+    def finalize(self, **options):
+        def make(x):
+            asdict = x.tolist()
+            return self.cls(*[asdict[n] for n in self.cls._fields])
+
+        return awkward.array.objects.ObjectArray(self.content.finalize(**options), make)
+
+class MaskedFillable(Fillable):
+    __slots__ = ["content", "nullpos"]
+
+    def __init__(self, content, count):
+        self.content = content
+        self.nullpos = list(range(count))
+
+    def matches(self, tpe):
+        return tpe is None
+
+    def __len__(self):
+        return len(self.content) + len(self.nullpos)
+
+    def clear(self):
+        self.content.clear()
+        self.nullpos = []
+
+    def append(self, obj, tpe):
+        if tpe is None:
+            self.nullpos.append(len(self))
+        else:
+            self.content = self.content.append(obj, tpe)
+        return self
+
+    def finalize(self, **options):
+        if isinstance(self.content, (TableFillable, ObjectFillable, UnionFillable)):
+            index = awkward.util.numpy.zeros(len(self), dtype=awkward.array.masked.IndexedMaskedArray.INDEXTYPE)
+            index[self.nullpos] = -1
+            index[index == 0] = awkward.util.numpy.arange(len(self.content))
+
+            return awkward.array.masked.IndexedMaskedArray(index, self.content.finalize(**options))
+
+        valid = awkward.util.numpy.ones(len(self), dtype=awkward.array.masked.MaskedArray.MASKTYPE)
+        valid[self.nullpos] = False
+
+        if isinstance(self.content, (BoolFillable, NumberFillable)):
+            compact = self.content.finalize(**options)
+            expanded = awkward.util.numpy.empty(len(self), dtype=compact.dtype)
+            expanded[valid] = compact
+
+            return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
+
+        elif isinstance(self.content, (BytesFillable, StringFillable)):
+            compact = self.content.finalize(**options)
+
+            if isinstance(compact, awkward.array.indexed.IndexedArray):
+                index = awkward.util.numpy.zeros(len(self), dtype=compact.index.dtype)
+                index[valid] = compact.index
+                expanded = awkward.array.indexed.IndexedArray(index, compact.content)
+            else:
+                counts = awkward.util.numpy.zeros(len(self), dtype=compact.counts.dtype)
+                counts[valid] = compact.counts
+                expanded = awkward.array.objects.StringArray.fromcounts(counts, compact.content, encoding=compact.encoding)
+
+            return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
+
+        elif isinstance(self.content, JaggedFillable):
+            compact = self.content.finalize(**options)
+            counts = awkward.util.numpy.zeros(len(self), dtype=compact.counts.dtype)
+            counts[valid] = compact.counts
+            expanded = awkward.array.jagged.JaggedArray.fromcounts(counts, compact.content)
+
+            return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
+
+        else:
+            raise AssertionError(self.content)
+
+class UnionFillable(Fillable):
+    __slots__ = ["contents", "tags", "index"]
+
+    def __init__(self, content):
+        self.contents = [content]
+        self.tags = [0] * len(content)
+        self.index = list(range(len(content)))
+
+    def __len__(self):
+        return len(self.tags)
+
+    def clear(self):
+        for content in self.contents:
+            content.clear()
+        self.tags = []
+        self.index = []
+
+    def append(self, obj, tpe):
+        if tpe is None:
+            return MaskedFillable(self, 0).append(obj, tpe)
+
+        else:
+            for tag, content in enumerate(self.contents):
+                if content.matches(tpe):
+                    self.tags.append(tag)
+                    self.index.append(len(content))
+                    content.append(obj, tpe)
                     break
 
-        else:
-            if not isinstance(chunks[-1], UnionArray):
-                chunks[-1] = UnionArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
-                                        numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
-                                        [chunks[-1]])
-                chunks[-1]._nextindex = [offsets[-1] - offsets[-2]]
-                chunks[-1]._tags[: offsets[-1] - offsets[-2]] = 0
-                chunks[-1]._index[: offsets[-1] - offsets[-2]] = numpy.arange(offsets[-1] - offsets[-2], dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
-                chunks[-1]._contents = list(chunks[-1]._contents)
-
-            if not any(ismine(obj, content) for content in chunks[-1]._contents):
-                chunks[-1]._nextindex.append(0)
-                chunks[-1]._contents.append(newchunk(obj))
-
-            for tag in range(len(chunks[-1]._contents)):
-                if ismine(obj, chunks[-1]._contents[tag]):
-                    nextindex = chunks[-1]._nextindex[tag]
-                    chunks[-1]._nextindex[tag] += 1
-
-                    chunks[-1]._contents[tag] = promote(obj, chunks[-1]._contents[tag])
-                    fillobj(obj, chunks[-1]._contents[tag], nextindex)
-
-                    chunks[-1]._tags[offsets[-1] - offsets[-2]] = tag
-                    chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
-
-                    offsets[-1] += 1
-                    break
-
-    def fill(obj, chunks, offsets):
-        if obj is None:
-            # anything with None -> IndexedMaskedArray
-
-            if len(chunks) == 0 or offsets[-1] - offsets[-2] == len(chunks[-1]):
-                chunks.append(IndexedMaskedArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), []))
-                chunks[-1]._nextindex = 0
-                offsets.append(offsets[-1])
-
-            if isinstance(chunks[-1], UnionArray) and any(isinstance(content, IndexedMaskedArray) for content in chunks[-1]._contents):
-                for tag in range(len(chunks[-1]._contents)):
-                    if isinstance(chunks[-1]._contents[tag], IndexedMaskedArray):
-                        nextindex = chunks[-1]._nextindex[tag]
-                        chunks[-1]._nextindex[tag] += 1
-
-                        chunks[-1]._contents[tag]._index[nextindex] = chunks[-1]._contents[tag]._maskedwhen
-
-                        chunks[-1]._tags[offsets[-1] - offsets[-2]] = tag
-                        chunks[-1]._index[offsets[-1] - offsets[-2]] = nextindex
-
-                        offsets[-1] += 1
-                        break
-
             else:
-                if not isinstance(chunks[-1], IndexedMaskedArray):
-                    chunks[-1] = IndexedMaskedArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), chunks[-1])
-                    chunks[-1]._index[: offsets[-1] - offsets[-2]] = numpy.arange(offsets[-1] - offsets[-2], dtype=awkward.array.base.AwkwardArray.INDEXTYPE)
-                    chunks[-1]._nextindex = offsets[-1] - offsets[-2]
-
-                chunks[-1]._index[offsets[-1] - offsets[-2]] = chunks[-1]._maskedwhen
-                offsets[-1] += 1
-
-        elif isinstance(obj, (bool, numpy.bool, numpy.bool_)):
-            # bool -> Numpy bool_
-
-            def newchunk(obj):
-                return numpy.empty(chunksize, dtype=numpy.bool_)
-
-            def ismine(obj, x):
-                return isinstance(x, numpy.ndarray) and x.dtype == numpy.dtype(numpy.bool_)
-
-            def promote(obj, x):
-                return x
-
-            def fillobj(obj, array, where):
-                array[where] = obj
-
-            insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
-
-        elif isinstance(obj, (numbers.Integral, numpy.integer)):
-            # int -> Numpy int64, float64, or complex128 (promotes to largest)
-
-            def newchunk(obj):
-                return numpy.empty(chunksize, dtype=numpy.int64)
-
-            def ismine(obj, x):
-                return isinstance(x, numpy.ndarray) and issubclass(x.dtype.type, numpy.number)
-
-            def promote(obj, x):
-                return x
-
-            def fillobj(obj, array, where):
-                array[where] = obj
-
-            insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
-
-        elif isinstance(obj, (numbers.Real, numpy.floating)):
-            # float -> Numpy int64, float64, or complex128 (promotes to largest)
-
-            def newchunk(obj):
-                return numpy.empty(chunksize, dtype=numpy.int64)
-
-            def ismine(obj, x):
-                return isinstance(x, numpy.ndarray) and issubclass(x.dtype.type, numpy.number)
-
-            def promote(obj, x):
-                if issubclass(x.dtype.type, numpy.floating):
-                    return x
-                else:
-                    return x.astype(numpy.float64)
-
-            def fillobj(obj, array, where):
-                array[where] = obj
-
-            insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
-
-        elif isinstance(obj, (numbers.Complex, numpy.complex, numpy.complexfloating)):
-            # complex -> Numpy int64, float64, or complex128 (promotes to largest)
-
-            def newchunk(obj):
-                return numpy.empty(chunksize, dtype=numpy.complex128)
-
-            def ismine(obj, x):
-                return isinstance(x, numpy.ndarray) and issubclass(x.dtype.type, numpy.number)
-
-            def promote(obj, x):
-                if issubclass(x.dtype.type, numpy.complexfloating):
-                    return x
-                else:
-                    return x.astype(numpy.complex128)
-
-            def fillobj(obj, array, where):
-                array[where] = obj
-
-            insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
-
-        elif isinstance(obj, bytes):
-            # bytes -> ObjectArray of JaggedArray
-
-            def newchunk(obj):
-                out = ObjectArray(tobytes, JaggedArray.fromoffsets(
-                    numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
-                    AppendableArray.empty(lambda: numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.CHARTYPE))))
-                out._content._starts[0] = 0
-                return out
-
-            def ismine(obj, x):
-                return isinstance(x, ObjectArray) and (x._generator is tobytes or x._generator is tostring)
-
-            def promote(obj, x):
-                return x
-
-            def fillobj(obj, array, where):
-                array._content._stops[where] = array._content._starts[where] + len(obj)
-                array._content._content.extend(numpy.fromstring(obj, dtype=awkward.array.base.AwkwardArray.CHARTYPE))
-                
-            insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
-
-        elif isinstance(obj, awkward.util.string):
-            # str -> ObjectArray of JaggedArray
-
-            def newchunk(obj):
-                out = ObjectArray(tostring, JaggedArray.fromoffsets(
-                    numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE),
-                    AppendableArray.empty(lambda: numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.CHARTYPE))))
-                out._content._starts[0] = 0
-                return out
-
-            def ismine(obj, x):
-                return isinstance(x, ObjectArray) and (x._generator is tobytes or x._generator is tostring)
-
-            def promote(obj, x):
-                if x._generator is tostring:
-                    return x
-                else:
-                    return ObjectArray(tostring, x._content)
-
-            def fillobj(obj, array, where):
-                bytes = codecs.utf_8_encode(obj)[0]
-                array._content._stops[where] = array._content._starts[where] + len(bytes)
-                array._content._content.extend(numpy.fromstring(bytes, dtype=awkward.array.base.AwkwardArray.CHARTYPE))
-                
-            insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
-
-        elif isinstance(obj, dict):
-            # dict keys -> Table columns
-
-            def newchunk(obj):
-                return Table(chunksize, collections.OrderedDict((n, []) for n in obj))
-
-            if maskmissing:
-                def ismine(obj, x):
-                    return isinstance(x, Table)
-
-                def promote(obj, x):
-                    for n in obj:
-                        if not n in x._content:
-                            x._content[n] = IndexedMaskedArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), [])
-                            x._content[n]._index[: offsets[-1] - offsets[-2]] = x._content[n]._maskedwhen
-                            x._content[n]._nextindex = 0
-                    return x
-
-            else:
-                def ismine(obj, x):
-                    return isinstance(x, Table) and all(n in x._content for n in obj)
-
-                def promote(obj, x):
-                    return x
-
-            def fillobj(obj, array, where):
-                for n in obj:
-                    if len(array._content[n]) == 0:
-                        subchunks = []
-                        suboffsets = [offsets[-2]]
-                    else:
-                        subchunks = [array._content[n]]
-                        suboffsets = [offsets[-2], offsets[-1]]
-
-                    fill(obj[n], subchunks, suboffsets)
-                    array._content[n] = subchunks[-1]
-
-            insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
-
-        elif isinstance(obj, tuple):
-            # tuple items -> Table columns
-
-            def newchunk(obj):
-                return Table(chunksize, collections.OrderedDict(("_" + str(i), []) for i in range(len(obj))))
-
-            def ismine(obj, x):
-                return isinstance(x, Table) and list(x._content) == ["_" + str(i) for i in range(len(obj))]
-
-            def promote(obj, x):
-                return x
-
-            def fillobj(obj, array, where):
-                for i, x in enumerate(obj):
-                    n = "_" + str(i)
-                    if len(array._content[n]) == 0:
-                        subchunks = []
-                        suboffsets = [offsets[-2]]
-                    else:
-                        subchunks = [array._content[n]]
-                        suboffsets = [offsets[-2], offsets[-1]]
-
-                    fill(x, subchunks, suboffsets)
-                    array._content[n] = subchunks[-1]
-
-            insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
-
-        else:
-            try:
-                it = iter(obj)
-
-            except TypeError:
-                # object attributes -> Table columns
-
-                def newchunk(obj):
-                    return NamedTable(chunksize, obj.__class__.__name__, collections.OrderedDict((n, []) for n in dir(obj) if not n.startswith("_")))
-
-                if maskmissing:
-                    def ismine(obj, x):
-                        return isinstance(x, NamedTable) and obj.__class__.__name__ == x._name
-
-                    def promote(obj, x):
-                        for n in dir(obj):
-                            if not n.startswith("_") and not n in x._content:
-                                x._content[n] = IndexedMaskedArray(numpy.empty(chunksize, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), [])
-                                x._content[n]._index[: offsets[-1] - offsets[-2]] = x._content[n]._maskedwhen
-                                x._content[n]._nextindex = 0
-                        return x
-
-                else:
-                    def ismine(obj, x):
-                        return isinstance(x, NamedTable) and obj.__class__.__name__ == x._name and all(n in x._content for n in dir(obj) if not n.startswith("_"))
-
-                    def promote(obj, x):
-                        return x
-
-                def fillobj(obj, array, where):
-                    for n in dir(obj):
-                        if not n.startswith("_"):
-                            if len(array._content[n]) == 0:
-                                subchunks = []
-                                suboffsets = [offsets[-2]]
-                            else:
-                                subchunks = [array._content[n]]
-                                suboffsets = [offsets[-2], offsets[-1]]
-
-                            fill(getattr(obj, n), subchunks, suboffsets)
-                            array._content[n] = subchunks[-1]
-
-                insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
-
-            else:
-                # iterable -> JaggedArray (and recurse)
-
-                def newchunk(obj):
-                    out = JaggedArray.fromoffsets(numpy.zeros(chunksize + 1, dtype=awkward.array.base.AwkwardArray.INDEXTYPE), PartitionedArray([0], []))
-                    out._starts[0] = 0
-                    out._content._offsets = [0]  # as an appendable list, not a Numpy array
-                    return out
-
-                def ismine(obj, x):
-                    return isinstance(x, JaggedArray)
-
-                def promote(obj, x):
-                    return x
-
-                def fillobj(obj, array, where):
-                    array._stops[where] = array._starts[where]
-                    for x in it:
-                        fill(x, array._content._chunks, array._content._offsets)
-                        array._stops[where] += 1
-
-                insert(obj, chunks, offsets, newchunk, ismine, promote, fillobj)
-
-    def trim(length, array):
-        if isinstance(array, numpy.ndarray):
-            if len(array) == length:
-                return array                          # the length is right: don't copy it
-            else:
-                return numpy.array(array[:length])    # copy so that the base can be deleted
-
-        elif isinstance(array, PartitionedArray):
-            for i in range(len(array._chunks)):
-                array._chunks[i] = trim(array._offsets[i + 1] - array._offsets[i], array._chunks[i])
-            return array
-
-        elif isinstance(array, IndexedMaskedArray):
-            index = trim(length, array._index)
-            selection = (index != array._maskedwhen)
-            content = trim(index[selection][-1] + 1, array._content)
-
-            if isinstance(content, numpy.ndarray):
-                # for simple types, IndexedMaskedArray wastes space; convert to an Arrow-like BitMaskedArray
-                mask = numpy.zeros(length, dtype=awkward.array.base.AwkwardArray.MASKTYPE)
-                mask[selection] = True
-
-                newcontent = numpy.empty(length, dtype=content.dtype)
-                newcontent[selection] = content
-
-                return BitMaskedArray.fromboolmask(mask, newcontent, maskedwhen=False, lsb=True)
-
-            else:
-                # for complex types, IndexedMaskedArray saves space; keep it
-                return IndexedMaskedArray(index, content)
-
-        elif isinstance(array, UnionArray):
-            tags = trim(length, array._tags)
-            index = trim(length, array._index)
-
-            contents = []
-            for tag, content in enumerate(array._contents):
-                length = index[tags == tag][-1] + 1
-                contents.append(trim(length, content))
-
-            return UnionArray(tags, index, contents)
-
-        elif isinstance(array, JaggedArray):
-            offsets = array.offsets                   # fill creates aliased starts/stops
-            if len(offsets) != length + 1:
-                offsets = numpy.array(offsets[: length + 1])
-
-            return JaggedArray.fromoffsets(offsets, trim(offsets[-1], array._content))
-
-        elif isinstance(array, NamedTable):
-            return NamedTable(length, array._name, collections.OrderedDict((n, trim(length, x)) for n, x in array._content.items()))
-
-        elif isinstance(array, Table):
-            return Table(length, collections.OrderedDict((n, trim(length, x)) for n, x in array._content.items()))
-
-        elif isinstance(array, ObjectArray):
-            return ObjectArray(array._generator, trim(length, array._content))
-
-        else:
-            raise AssertionError(array)
-
-    chunks = []
-    offsets = [0]
-    length = 0
-    for x in iterable:
-        fill(x, chunks, offsets)
-        length += 1
-        
-    return trim(length, PartitionedArray(offsets, chunks))
+                fillable = Fillable.make(tpe)
+                self.tags.append(len(self.contents))
+                self.index.append(len(fillable))
+                self.contents.append(fillable.append(obj, tpe))
+
+            return self
+
+    def finalize(self, **options):
+        return awkward.array.union.UnionArray(self.tags, self.index, [x.finalize(**options) for x in self.contents])
+
+def _checkoptions(options):
+    unrecognized = set(options).difference(["dictencoding"])
+    if len(unrecognized) != 0:
+        raise TypeError("unrecognized options: {0}".format(", ".join(sorted(unrecognized))))
+
+def fromiter(iterable, **options):
+    _checkoptions(options)
+
+    fillable = UnknownFillable()
+
+    for obj in iterable:
+        fillable = fillable.append(obj, typeof(obj))
+
+    return fillable.finalize(**options)
+
+def fromiterchunks(iterable, chunksize, **options):
+    if not isinstance(chunksize, (numbers.Integral, awkward.util.numpy.integer)) or chunksize <= 0:
+        raise TypeError("chunksize must be a positive integer")
+
+    _checkoptions(options)
+
+    fillable = UnknownFillable()
+    count = 0
+    tpe = None
+
+    for obj in iterable:
+        fillable = fillable.append(obj, typeof(obj))
+        count += 1
+
+        if count == chunksize:
+            out = fillable.finalize(**options)
+            outtpe = awkward.type.fromarray(out).to
+            if tpe is None:
+                tpe = outtpe
+            elif tpe != outtpe:
+                raise TypeError("data type has changed after the first chunk (first chunk is not large enough to see the full generality of the data):\n\n{0}\n\nversus\n\n{1}".format(awkward.type._str(tpe, indent="    "), awkward.type._str(outtpe, indent="    ")))
+            yield out
+
+            fillable.clear()
+            count = 0
+
+    if count != 0:
+        out = fillable.finalize(**options)
+        outtpe = awkward.type.fromarray(out).to
+        if tpe is None:
+            tpe = outtpe
+        elif tpe != outtpe:
+            raise TypeError("data type has changed after the first chunk (first chunk is not large enough to see the full generality of the data):\n\n{0}\n\nversus\n\n{1}".format(awkward.type._str(tpe, indent="    "), awkward.type._str(outtpe, indent="    ")))
+        yield out
