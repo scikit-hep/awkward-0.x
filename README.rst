@@ -137,6 +137,7 @@ Tutorial
 * `JSON log data processing example <#json-log-data-processing-example>`__
 
 * Features
+
   - `Jaggedness <#jaggedness>`__
   - `Record structure <#record-structure>`__
   - `Heterogeneous arrays <#heterogeneous-arrays>`__
