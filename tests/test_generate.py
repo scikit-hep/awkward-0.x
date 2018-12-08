@@ -127,6 +127,35 @@ class Test(unittest.TestCase):
         x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
 
+    def test_generate_strings_dictencoding(self):
+        x = [b"one", b"two", b"three"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", "two", "three"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [b"one", b"two", b"three"]
+        assert awkward.fromiter(x, dictencoding=lambda x: True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=lambda x: True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=lambda x: True).tolist() == x
+
+        x = ["one", "two", "three"]
+        assert awkward.fromiter(x, dictencoding=lambda x: True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=lambda x: True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=lambda x: True).tolist() == x
+
     def test_generate_jagged(self):
         x = [[]]
         assert awkward.fromiter(x).tolist() == x
@@ -551,6 +580,49 @@ class Test(unittest.TestCase):
         x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
 
+    def test_generate_primitive_strings_dictencoding(self):
+        x = ["one", "two", 1]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [1, "one", "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", 1, "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [1, 2, "one"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [1, "one", 2]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", 1, 2]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
     def test_generate_primitive_jagged(self):
         x = [1, 2, []]
         assert awkward.fromiter(x).tolist() == x
@@ -801,6 +873,21 @@ class Test(unittest.TestCase):
         x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
 
+    def test_generate_strings_strings_dictencoding(self):
+        x = ["one", b"two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [b"one", "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
     def test_generate_strings_jagged(self):
         x = ["one", "two", []]
         assert awkward.fromiter(x).tolist() == x
@@ -928,6 +1015,133 @@ class Test(unittest.TestCase):
         x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
 
+    def test_generate_strings_jagged_dictencoding(self):
+        x = ["one", "two", []]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", "two", [3.14]]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", [], "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", [3.14], "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [[], "one", "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [[3.14], "one", "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", [], []]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", [1.1], []]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", [], [2.2]]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", [1.1], [2.2]]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [[], "one", []]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [[1.1], "one", []]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [[], "one", [2.2]]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [[1.1], "one", [2.2]]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [[], [], "one"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [[1.1], [], "one"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [[], [2.2], "one"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [[1.1], [2.2], "one"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
     def test_generate_strings_table(self):
         x = ["one", {"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}]
         assert awkward.fromiter(x).tolist() == x
@@ -970,6 +1184,49 @@ class Test(unittest.TestCase):
         assert awkward.fromiter(x).tolist() == x
         x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_strings_table_dictencoding(self):
+        x = ["one", {"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, "one", {"a": 2, "b": 2.2}]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, "one"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", "two", {"a": 1, "b": 1.1}]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", {"a": 1, "b": 1.1}, "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [{"a": 1, "b": 1.1}, "one", "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
 
     def test_generate_strings_objects(self):
         x = ["one", S1(1, 1.1), S1(2, 2.2)]
@@ -1014,6 +1271,49 @@ class Test(unittest.TestCase):
         x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
 
+    def test_generate_strings_objects_dictencoding(self):
+        x = ["one", S1(1, 1.1), S1(2, 2.2)]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [S1(1, 1.1), "one", S1(2, 2.2)]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [S1(1, 1.1), S1(2, 2.2), "one"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", "two", S1(1, 1.1)]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", S1(1, 1.1), "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [S1(1, 1.1), "one", "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
     def test_generate_strings_namedtuples(self):
         x = ["one", T1(1, 1.1), T1(2, 2.2)]
         assert awkward.fromiter(x).tolist() == x
@@ -1056,6 +1356,49 @@ class Test(unittest.TestCase):
         assert awkward.fromiter(x).tolist() == x
         x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
+
+    def test_generate_strings_namedtuples_dictencoding(self):
+        x = ["one", T1(1, 1.1), T1(2, 2.2)]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [T1(1, 1.1), "one", T1(2, 2.2)]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [T1(1, 1.1), T1(2, 2.2), "one"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", "two", T1(1, 1.1)]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = ["one", T1(1, 1.1), "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+
+        x = [T1(1, 1.1), "one", "two"]
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(1, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
+        x.insert(0, None)
+        assert awkward.fromiter(x, dictencoding=True).tolist() == x
 
     def test_generate_jagged_jagged(self):
         x = [[[[[1]]]], [[[[2]]]]]

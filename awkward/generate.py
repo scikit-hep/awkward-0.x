@@ -38,6 +38,7 @@ except ImportError:
 
 import awkward.util
 import awkward.array.base
+import awkward.array.indexed
 import awkward.array.jagged
 import awkward.array.masked
 import awkward.array.objects
@@ -123,7 +124,7 @@ class UnknownFillable(Fillable):
             else:
                 return MaskedFillable(fillable.append(obj, tpe), self.count)
 
-    def finalize(self):
+    def finalize(self, **options):
         if self.count == 0:
             return awkward.util.numpy.empty(0, dtype=awkward.array.base.AwkwardArray.DEFAULTTYPE)
         else:
@@ -151,20 +152,30 @@ class SimpleFillable(Fillable):
             return UnionFillable(self).append(obj, tpe)
 
 class BoolFillable(SimpleFillable):
-    def finalize(self):
+    def finalize(self, **options):
         return awkward.util.numpy.array(self.data, dtype=awkward.array.base.AwkwardArray.BOOLTYPE)
 
 class NumberFillable(SimpleFillable):
-    def finalize(self):
+    def finalize(self, **options):
         return awkward.util.numpy.array(self.data)
 
 class BytesFillable(SimpleFillable):
-    def finalize(self):
-        return awkward.array.objects.StringArray.fromiter(self.data, encoding=None)
+    def finalize(self, **options):
+        dictencoding = options.get("dictencoding", False)
+        if (callable(dictencoding) and dictencoding(self.data)) or (not callable(dictencoding) and dictencoding):
+            dictionary, index = awkward.util.numpy.unique(self.data, return_inverse=True)
+            return awkward.array.indexed.IndexedArray(index, awkward.array.objects.StringArray.fromiter(dictionary, encoding=None))
+        else:
+            return awkward.array.objects.StringArray.fromiter(self.data, encoding=None)
 
 class StringFillable(SimpleFillable):
-    def finalize(self):
-        return awkward.array.objects.StringArray.fromiter(self.data, encoding="utf-8")
+    def finalize(self, **options):
+        dictencoding = options.get("dictencoding", False)
+        if (callable(dictencoding) and dictencoding(self.data)) or (not callable(dictencoding) and dictencoding):
+            dictionary, index = awkward.util.numpy.unique(self.data, return_inverse=True)
+            return awkward.array.indexed.IndexedArray(index, awkward.array.objects.StringArray.fromiter(dictionary, encoding="utf-8"))
+        else:
+            return awkward.array.objects.StringArray.fromiter(self.data, encoding="utf-8")
 
 class JaggedFillable(Fillable):
     __slots__ = ["content", "offsets"]
@@ -189,8 +200,8 @@ class JaggedFillable(Fillable):
         else:
             return UnionFillable(self).append(obj, tpe)
 
-    def finalize(self):
-        return awkward.array.jagged.JaggedArray.fromoffsets(self.offsets, self.content.finalize())
+    def finalize(self, **options):
+        return awkward.array.jagged.JaggedArray.fromoffsets(self.offsets, self.content.finalize(**options))
 
 class TableFillable(Fillable):
     __slots__ = ["fields", "contents", "count"]
@@ -221,8 +232,8 @@ class TableFillable(Fillable):
         else:
             return UnionFillable(self).append(obj, tpe)
 
-    def finalize(self):
-        return awkward.array.table.Table.frompairs((n, self.contents[n].finalize()) for n in sorted(self.fields))
+    def finalize(self, **options):
+        return awkward.array.table.Table.frompairs((n, self.contents[n].finalize(**options)) for n in sorted(self.fields))
 
 class ObjectFillable(Fillable):
     __slots__ = ["content", "cls"]
@@ -251,13 +262,13 @@ class ObjectFillable(Fillable):
         else:
             return UnionFillable(self).append(obj, tpe)
 
-    def finalize(self):
+    def finalize(self, **options):
         def make(x):
             out = self.cls.__new__(self.cls)
             out.__dict__.update(x.tolist())
             return out
 
-        return awkward.array.objects.ObjectArray(self.content.finalize(), make)
+        return awkward.array.objects.ObjectArray(self.content.finalize(**options), make)
 
 class NamedTupleFillable(ObjectFillable):
     def append(self, obj, tpe):
@@ -274,12 +285,12 @@ class NamedTupleFillable(ObjectFillable):
         else:
             return UnionFillable(self).append(obj, tpe)
 
-    def finalize(self):
+    def finalize(self, **options):
         def make(x):
             asdict = x.tolist()
             return self.cls(*[asdict[n] for n in self.cls._fields])
 
-        return awkward.array.objects.ObjectArray(self.content.finalize(), make)
+        return awkward.array.objects.ObjectArray(self.content.finalize(**options), make)
 
 class MaskedFillable(Fillable):
     __slots__ = ["content", "nullpos"]
@@ -301,34 +312,40 @@ class MaskedFillable(Fillable):
             self.content = self.content.append(obj, tpe)
         return self
 
-    def finalize(self):
+    def finalize(self, **options):
         if isinstance(self.content, (TableFillable, ObjectFillable, UnionFillable)):
             index = awkward.util.numpy.zeros(len(self), dtype=awkward.array.masked.IndexedMaskedArray.INDEXTYPE)
             index[self.nullpos] = -1
             index[index == 0] = awkward.util.numpy.arange(len(self.content))
 
-            return awkward.array.masked.IndexedMaskedArray(index, self.content.finalize())
+            return awkward.array.masked.IndexedMaskedArray(index, self.content.finalize(**options))
 
         valid = awkward.util.numpy.ones(len(self), dtype=awkward.array.masked.MaskedArray.MASKTYPE)
         valid[self.nullpos] = False
 
         if isinstance(self.content, (BoolFillable, NumberFillable)):
-            compact = self.content.finalize()
+            compact = self.content.finalize(**options)
             expanded = awkward.util.numpy.empty(len(self), dtype=compact.dtype)
             expanded[valid] = compact
 
             return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
 
         elif isinstance(self.content, (BytesFillable, StringFillable)):
-            compact = self.content.finalize()
-            counts = awkward.util.numpy.zeros(len(self), dtype=compact.counts.dtype)
-            counts[valid] = compact.counts
-            expanded = awkward.array.objects.StringArray.fromcounts(counts, compact.content, encoding=compact.encoding)
+            compact = self.content.finalize(**options)
+
+            if isinstance(compact, awkward.array.indexed.IndexedArray):
+                index = awkward.util.numpy.zeros(len(self), dtype=compact.index.dtype)
+                index[valid] = compact.index
+                expanded = awkward.array.indexed.IndexedArray(index, compact.content)
+            else:
+                counts = awkward.util.numpy.zeros(len(self), dtype=compact.counts.dtype)
+                counts[valid] = compact.counts
+                expanded = awkward.array.objects.StringArray.fromcounts(counts, compact.content, encoding=compact.encoding)
 
             return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
 
         elif isinstance(self.content, JaggedFillable):
-            compact = self.content.finalize()
+            compact = self.content.finalize(**options)
             counts = awkward.util.numpy.zeros(len(self), dtype=compact.counts.dtype)
             counts[valid] = compact.counts
             expanded = awkward.array.jagged.JaggedArray.fromcounts(counts, compact.content)
@@ -369,13 +386,17 @@ class UnionFillable(Fillable):
 
             return self
 
-    def finalize(self):
-        return awkward.array.union.UnionArray(self.tags, self.index, [x.finalize() for x in self.contents])
+    def finalize(self, **options):
+        return awkward.array.union.UnionArray(self.tags, self.index, [x.finalize(**options) for x in self.contents])
 
-def fromiter(iterable):
+def fromiter(iterable, **options):
+    unrecognized = set(options).difference(["dictencoding"])
+    if len(unrecognized) != 0:
+        raise TypeError("unrecognized options: {0}".format(", ".join(sorted(unrecognized))))
+
     fillable = UnknownFillable()
 
     for obj in iterable:
         fillable = fillable.append(obj, typeof(obj))
 
-    return fillable.finalize()
+    return fillable.finalize(**options)
