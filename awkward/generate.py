@@ -36,7 +36,6 @@ try:
 except ImportError:
     from collections import Iterable
 
-import awkward.util
 import awkward.array.base
 import awkward.array.indexed
 import awkward.array.jagged
@@ -44,6 +43,8 @@ import awkward.array.masked
 import awkward.array.objects
 import awkward.array.table
 import awkward.array.union
+import awkward.type
+import awkward.util
 
 def typeof(obj):
     if obj is None:
@@ -112,6 +113,9 @@ class UnknownFillable(Fillable):
     def __len__(self):
         return self.count
 
+    def clear(self):
+        self.count = 0
+
     def append(self, obj, tpe):
         if tpe is None:
             self.count += 1
@@ -139,6 +143,9 @@ class SimpleFillable(Fillable):
 
     def __len__(self):
         return len(self.data)
+
+    def clear(self):
+        self.data = []
 
     def append(self, obj, tpe):
         if tpe is None:
@@ -187,6 +194,10 @@ class JaggedFillable(Fillable):
     def __len__(self):
         return len(self.offsets) - 1
 
+    def clear(self):
+        self.content.clear()
+        self.offsets = [0]
+
     def append(self, obj, tpe):
         if tpe is None:
             return MaskedFillable(self, 0).append(obj, tpe)
@@ -214,6 +225,11 @@ class TableFillable(Fillable):
 
     def __len__(self):
         return self.count
+
+    def clear(self):
+        for content in self.contents.values():
+            content.clear()
+        self.count = 0
 
     def matches(self, tpe):
         return self.fields == tpe
@@ -244,6 +260,9 @@ class ObjectFillable(Fillable):
 
     def __len__(self):
         return len(self.content)
+
+    def clear(self):
+        self.content.clear()
 
     def matches(self, tpe):
         return isinstance(tpe, tuple) and len(tpe) == 2 and tpe[1] is self.cls and (len(tpe[0]) == 0 or self.content.matches(tpe[0]))
@@ -304,6 +323,10 @@ class MaskedFillable(Fillable):
 
     def __len__(self):
         return len(self.content) + len(self.nullpos)
+
+    def clear(self):
+        self.content.clear()
+        self.nullpos = []
 
     def append(self, obj, tpe):
         if tpe is None:
@@ -366,6 +389,12 @@ class UnionFillable(Fillable):
     def __len__(self):
         return len(self.tags)
 
+    def clear(self):
+        for content in self.contents:
+            content.clear()
+        self.tags = []
+        self.index = []
+
     def append(self, obj, tpe):
         if tpe is None:
             return MaskedFillable(self, 0).append(obj, tpe)
@@ -389,10 +418,13 @@ class UnionFillable(Fillable):
     def finalize(self, **options):
         return awkward.array.union.UnionArray(self.tags, self.index, [x.finalize(**options) for x in self.contents])
 
-def fromiter(iterable, **options):
+def _checkoptions(options):
     unrecognized = set(options).difference(["dictencoding"])
     if len(unrecognized) != 0:
         raise TypeError("unrecognized options: {0}".format(", ".join(sorted(unrecognized))))
+
+def fromiter(iterable, **options):
+    _checkoptions(options)
 
     fillable = UnknownFillable()
 
@@ -400,3 +432,38 @@ def fromiter(iterable, **options):
         fillable = fillable.append(obj, typeof(obj))
 
     return fillable.finalize(**options)
+
+def fromiterchunks(iterable, chunksize, **options):
+    if not isinstance(chunksize, (numbers.Integral, awkward.util.numpy.integer)) or chunksize <= 0:
+        raise TypeError("chunksize must be a positive integer")
+
+    _checkoptions(options)
+
+    fillable = UnknownFillable()
+    count = 0
+    tpe = None
+
+    for obj in iterable:
+        fillable = fillable.append(obj, typeof(obj))
+        count += 1
+
+        if count == chunksize:
+            out = fillable.finalize(**options)
+            outtpe = awkward.type.fromarray(out).to
+            if tpe is None:
+                tpe = outtpe
+            elif tpe != outtpe:
+                raise TypeError("data type has changed after the first chunk (first chunk is not large enough to see the full generality of the data):\n\n{0}\n\nversus\n\n{1}".format(awkward.type._str(tpe, indent="    "), awkward.type._str(outtpe, indent="    ")))
+            yield out
+
+            fillable.clear()
+            count = 0
+
+    if count != 0:
+        out = fillable.finalize(**options)
+        outtpe = awkward.type.fromarray(out).to
+        if tpe is None:
+            tpe = outtpe
+        elif tpe != outtpe:
+            raise TypeError("data type has changed after the first chunk (first chunk is not large enough to see the full generality of the data):\n\n{0}\n\nversus\n\n{1}".format(awkward.type._str(tpe, indent="    "), awkward.type._str(outtpe, indent="    ")))
+        yield out

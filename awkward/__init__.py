@@ -37,11 +37,11 @@ from awkward.array.table import Table
 from awkward.array.union import UnionArray
 from awkward.array.virtual import VirtualArray
 
-from awkward.generate import fromiter
+from awkward.generate import fromiter, fromiterchunks
 
 from awkward.persist import serialize, deserialize, save, load, hdf5
 
 # convenient access to the version number
 from awkward.version import __version__
 
-__all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]
+__all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "fromiterchunks", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]
