@@ -47,6 +47,7 @@ import awkward.array.union
 def typeof(obj):
     if obj is None:
         return None
+
     elif isinstance(obj, (bool, awkward.util.numpy.bool_, awkward.util.numpy.bool)):
         return BoolFillable
     elif isinstance(obj, (numbers.Number, awkward.util.numpy.number)):
@@ -55,14 +56,28 @@ def typeof(obj):
         return BytesFillable
     elif isinstance(obj, awkward.util.string):
         return StringFillable
+
     elif isinstance(obj, dict):
-        return set(obj)
+        if len(obj) == 0:
+            return None
+        else:
+            return set(obj)
+
     elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
-        return set(self._fields)
+        if len(obj._fields) == 0:
+            return None
+        else:
+            return set(self._fields)
+
     elif isinstance(obj, Iterable):
         return JaggedFillable
+
     else:
-        return set(n for n in obj.__dict__ if not n.startswith("_"))
+        out = set(n for n in obj.__dict__ if not n.startswith("_"))
+        if len(out) == 0:
+            return None
+        else:
+            return out
 
 class Fillable(object):
     @staticmethod
@@ -74,10 +89,7 @@ class Fillable(object):
             return tpe()
 
         elif isinstance(tpe, set):
-            if len(tpe) == 0:
-                raise TypeError("Table with no fields")
-            else:
-                return TableFillable(tpe)
+            return TableFillable(tpe)
 
         else:
             raise AssertionError(tpe)
@@ -95,7 +107,7 @@ class UnknownFillable(Fillable):
         return self.count
 
     def append(self, obj, tpe):
-        if obj is None:
+        if tpe is None:
             self.count += 1
             return self
 
@@ -123,7 +135,7 @@ class SimpleFillable(Fillable):
         return len(self.data)
 
     def append(self, obj, tpe):
-        if obj is None:
+        if tpe is None:
             return MaskedFillable(self, 0).append(obj, tpe)
 
         if self.matches(tpe):
@@ -160,7 +172,7 @@ class JaggedFillable(Fillable):
         return len(self.offsets) - 1
 
     def append(self, obj, tpe):
-        if obj is None:
+        if tpe is None:
             return MaskedFillable(self, 0).append(obj, tpe)
 
         if self.matches(tpe):
@@ -191,7 +203,7 @@ class TableFillable(Fillable):
         return isinstance(tpe, set) and self.fields == tpe
 
     def append(self, obj, tpe):
-        if obj is None:
+        if tpe is None:
             return MaskedFillable(self, 0).append(obj, tpe)
 
         if self.matches(tpe):
@@ -221,7 +233,7 @@ class MaskedFillable(Fillable):
         return len(self.content) + len(self.nullpos)
 
     def append(self, obj, tpe):
-        if obj is None:
+        if tpe is None:
             self.nullpos.append(len(self))
         else:
             self.content = self.content.append(obj, tpe)

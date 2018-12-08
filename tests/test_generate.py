@@ -278,6 +278,14 @@ class Test(unittest.TestCase):
         x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
 
+        assert awkward.fromiter([{}]).tolist() == [None]
+        assert awkward.fromiter([{}, {}, {}]).tolist() == [None, None, None]
+        assert awkward.fromiter([{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {}]).tolist() == [{"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, None]
+        assert awkward.fromiter([None, {"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, {}]).tolist() == [None, {"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}, None]
+        assert awkward.fromiter([{"a": 1, "b": 1.1}, None, {"a": 2, "b": 2.2}, {}]).tolist() == [{"a": 1, "b": 1.1}, None, {"a": 2, "b": 2.2}, None]
+        assert awkward.fromiter([{"a": 1, "b": 1.1}, {}, {"a": 2, "b": 2.2}]).tolist() == [{"a": 1, "b": 1.1}, None, {"a": 2, "b": 2.2}]
+        assert awkward.fromiter([{}, {"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}]).tolist() == [None, {"a": 1, "b": 1.1}, {"a": 2, "b": 2.2}]
+
     def test_generate_primitive_primitive(self):
         x = [1, 2, True]
         assert awkward.fromiter(x).tolist() == x
