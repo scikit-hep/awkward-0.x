@@ -148,6 +148,10 @@ def _valid(array, seen):
     if isinstance(array, awkward.array.base.AwkwardArray):
         array._valid(seen)
 
+def hasjagged(array):
+    import awkward.array.base
+    return isinstance(array, awkward.array.base.AwkwardArray) and array._hasjagged()
+
 def concatenate(arrays):
     if all(isinstance(x, numpy.ndarray) for x in arrays):
         return numpy.concatenate(arrays)
