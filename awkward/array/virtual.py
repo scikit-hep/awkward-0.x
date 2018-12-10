@@ -369,7 +369,10 @@ class VirtualArray(awkward.array.base.AwkwardArray):
                 inputs[i] = inputs[i].array
 
         return getattr(ufunc, method)(*inputs, **kwargs)
-        
+
+    def _hasjagged(self):
+        return awkward.util.hasjagged(self.array)
+
     def any(self):
         return self.array.any()
 

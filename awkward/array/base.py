@@ -118,7 +118,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return "[{0} ... {1}]".format(" ".join(awkward.util.array_str(x) for x in first), " ".join(awkward.util.array_str(x) for x in last))
 
     def __repr__(self):
-        return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
+        return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, str(self), id(self))
 
     @property
     def type(self):
@@ -288,11 +288,8 @@ class AwkwardArrayWithContent(AwkwardArray):
         else:
             raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
-    @property
-    def base(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            raise TypeError("array has no Table, and hence no base")
-        return self._content.base
+    def _hasjagged(self):
+        return awkward.util.hasjagged(self._content)
 
     @property
     def columns(self):

@@ -626,6 +626,9 @@ class Table(awkward.array.base.AwkwardArray):
 
         return out
 
+    def _hasjagged(self):
+        return False
+
     def any(self):
         return any(x.any() for x in self._contents.values())
 

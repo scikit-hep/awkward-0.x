@@ -586,6 +586,14 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     out[i] = awkward.array.objects.Methods.maybemixin(types[i], ChunkedArray)(chunks[i])
             return tuple(out)
 
+    def _hasjagged(self):
+        for chunkid in range(len(self._chunks)):
+            self.knowcounts(until=chunkid)
+            if self._counts[chunkid] > 0:
+                return awkward.util.hasjagged(self._chunks[chunkid])
+        else:
+            return False
+
     def any(self):
         return any(x.any() for x in self._chunks)
 
@@ -595,10 +603,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     @classmethod
     def concat(cls, first, *rest):
         raise NotImplementedError
-
-    @property
-    def base(self):
-        raise TypeError("ChunkedArray has no base")
 
     @property
     def columns(self):
@@ -772,6 +776,9 @@ class AppendableArray(ChunkedArray):
             self._chunks[-1][self._counts[-1] : self._counts[-1] + howmany] = values[:howmany]
             self._counts[-1] += howmany
             values = values[howmany:]
+
+    def _hasjagged(self):
+        return False
 
     def astype(self, dtype):
         chunks = []

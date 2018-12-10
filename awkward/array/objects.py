@@ -222,6 +222,12 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=result)
 
+    def _hasjagged(self):
+        return False
+
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
+        raise TypeError("cannot call reducer on object array")
+
     def any(self):
         return any(x for x in self)
 

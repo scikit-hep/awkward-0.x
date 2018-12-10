@@ -395,6 +395,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
                     out[i] = awkward.array.objects.Methods.maybemixin(types[i], UnionArray)(outtags, outindex, contents[i])
             return tuple(out)
 
+    def _hasjagged(self):
+        return all(awkward.util.hasjagged(x) for x in self._contents)
+
     def any(self):
         self._valid()
         index = self._index[:len(self._tag)]
