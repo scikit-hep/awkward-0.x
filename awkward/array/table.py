@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import re
 import types
 
 import awkward.array.base
@@ -53,7 +54,10 @@ class Table(awkward.array.base.AwkwardArray):
             self._index = index
 
         def __repr__(self):
-            return "<{0} {1}>".format(self._table.rowname, self._index)
+            if self._table.rowname == "tuple":
+                return "({0})".format(", ".join(repr(self[n]) for n in self._table.columns))
+            else:
+                return "<{0} {1}>".format(self._table.rowname, self._index)
 
         @property
         def at(self):

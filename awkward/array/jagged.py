@@ -887,7 +887,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         left = starts_parents + i
         right = starts_parents + k - n*i + (i*(i + 1) >> 1)
 
-        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table(left, right))
+        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right))
         out._parents = parents
 
         if not same:
@@ -903,7 +903,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         left = argpairs._content["0"]
         right = argpairs._content["1"]
 
-        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table(self._content[left], self._content[right]))
+        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]))
         out._parents = argpairs._parents
         return out
 
@@ -928,14 +928,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         left = self._starts[parents] + iop_ocp
         right = other._starts[parents] + iop - ocp * iop_ocp
 
-        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table(left, right))
+        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right))
         out._parents = parents
         return out
 
     def argcross(self, other):
         return self._argcross(other) - self._starts
 
-    def cross(self, other):
+    def cross(self, other, nested=False):
         import awkward.array.table
 
         argcross = self._argcross(other)
@@ -947,9 +947,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             fields = [self._content[left]] + fields
 
-        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table(*fields))
+        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table.named("tuple", *fields))
         out._parents = argcross._parents
         out._iscross = True
+
+        if nested:
+            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts(self._broadcast(other.counts).flatten(), out._content))
+
         return out
 
     def _canuseoffset(self):
