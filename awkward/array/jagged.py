@@ -971,15 +971,30 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def cross(self, other, nested=False):
         import awkward.array.table
 
-        argcross = self._argcross(other)
+        if hasattr(self, "_nestedcross"):
+            thyself = self._nestedcross
+        else:
+            thyself = self
+
+        argcross = thyself._argcross(other)
         left, right = argcross._content._contents.values()
 
-        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table.named("tuple", self._content[left], other._content[right]).flattentuple())
+        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table.named("tuple", thyself._content[left], other._content[right]).flattentuple())
         out._parents = argcross._parents
         out._iscross = True
 
         if nested:
-            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts(self._broadcast(other.counts).flatten(), out._content))
+            old = out
+            out = JaggedArray.fromcounts(thyself.counts, JaggedArray.fromcounts(thyself._broadcast(other.counts).flatten(), out._content))
+            out._nestedcross = old
+
+        if hasattr(self, "_nestedcross"):
+            counts = out.counts.copy()
+            mask = (self.counts != 0)
+            counts[mask] //= self.counts[mask]
+            old = out
+            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts(self._broadcast(counts).flatten(), out._content))
+            out._nestedcross = old
 
         return out
 

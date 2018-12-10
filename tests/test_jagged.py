@@ -273,6 +273,26 @@ class Test(unittest.TestCase):
         assert a.cross(b, nested=True).tolist() == [[[(1.1, 100), (1.1, 200)], [(2.2, 100), (2.2, 200)], [(3.3, 100), (3.3, 200)]], [], [[(4.4, 400)], [(5.5, 400)]]]
         assert a.argcross(b, nested=True).tolist() == [[[(0, 0), (0, 1)], [(1, 0), (1, 1)], [(2, 0), (2, 1)]], [], [[(0, 0)], [(1, 0)]]]
 
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[0] == [[[(ai, bi, ci) for ci in c[0]] for bi in b[0]] for ai in a[0]]
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[1] == [[[(ai, bi, ci) for ci in c[1]] for bi in b[1]] for ai in a[1]]
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[2] == [[[(ai, bi, ci) for ci in c[2]] for bi in b[2]] for ai in a[2]]
+
+        assert a.cross(b).cross(c).tolist() == [[(1.1, 100, 999), (1.1, 200, 999), (2.2, 100, 999), (2.2, 200, 999), (3.3, 100, 999), (3.3, 200, 999)], [], [(4.4, 400, 999), (4.4, 400, 888), (5.5, 400, 999), (5.5, 400, 888)]]
+        assert a.cross(b, nested=True).cross(c).tolist() == [[[(1.1, 100, 999), (1.1, 200, 999)], [(2.2, 100, 999), (2.2, 200, 999)], [(3.3, 100, 999), (3.3, 200, 999)]], [], [[(4.4, 400, 999), (4.4, 400, 888)], [(5.5, 400, 999), (5.5, 400, 888)]]]
+        assert a.cross(b).cross(c, nested=True).tolist() == [[[(1.1, 100, 999)], [(1.1, 200, 999)], [(2.2, 100, 999)], [(2.2, 200, 999)], [(3.3, 100, 999)], [(3.3, 200, 999)]], [], [[(4.4, 400, 999), (4.4, 400, 888)], [(5.5, 400, 999), (5.5, 400, 888)]]]
+
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        b = awkward.fromiter([[100, 200], [300], [400]])
+        c = awkward.fromiter([[999], [999], [999, 888, 777]])
+
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[0] == [[[(ai, bi, ci) for ci in c[0]] for bi in b[0]] for ai in a[0]]
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[1] == [[[(ai, bi, ci) for ci in c[1]] for bi in b[1]] for ai in a[1]]
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[2] == [[[(ai, bi, ci) for ci in c[2]] for bi in b[2]] for ai in a[2]]
+
+        assert a.cross(b).cross(c).tolist() == [[(1.1, 100, 999), (1.1, 200, 999), (2.2, 100, 999), (2.2, 200, 999), (3.3, 100, 999), (3.3, 200, 999)], [], [(4.4, 400, 999), (4.4, 400, 888), (4.4, 400, 777), (5.5, 400, 999), (5.5, 400, 888), (5.5, 400, 777)]]
+        assert a.cross(b, nested=True).cross(c).tolist() == [[[(1.1, 100, 999), (1.1, 200, 999)], [(2.2, 100, 999), (2.2, 200, 999)], [(3.3, 100, 999), (3.3, 200, 999)]], [], [[(4.4, 400, 999), (4.4, 400, 888), (4.4, 400, 777)], [(5.5, 400, 999), (5.5, 400, 888), (5.5, 400, 777)]]]
+        assert a.cross(b).cross(c, nested=True).tolist() == [[[(1.1, 100, 999)], [(1.1, 200, 999)], [(2.2, 100, 999)], [(2.2, 200, 999)], [(3.3, 100, 999)], [(3.3, 200, 999)]], [], [[(4.4, 400, 999), (4.4, 400, 888), (4.4, 400, 777)], [(5.5, 400, 999), (5.5, 400, 888), (5.5, 400, 777)]]]
+
     def test_jagged_pairs_argnested(self):
         a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         assert a.pairs().tolist() == [[(1.1, 1.1), (1.1, 2.2), (1.1, 3.3), (2.2, 2.2), (2.2, 3.3), (3.3, 3.3)], [], [(4.4, 4.4), (4.4, 5.5), (5.5, 5.5)]]
