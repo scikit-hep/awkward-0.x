@@ -55,7 +55,7 @@ class Table(awkward.array.base.AwkwardArray):
 
         def __repr__(self):
             if self._table.istuple:
-                return "({0})".format(", ".join(repr(self[n]) for n in self._table._contents))
+                return "({0})".format(", ".join(str(self[n]) for n in self._table._contents))
             else:
                 return "<{0} {1}>".format(self._table._rowname, self._index)
 
