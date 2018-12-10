@@ -861,13 +861,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             indexes += awkward.util.numpy.arange(count)
             return self._content[indexes]
 
-    def argdistincts(self):
-        return self.argpairs(same=False)
-
-    def distincts(self):
-        return self.pairs(same=False)
-
-    def _argpairs(self, same=True):
+    def _argpairs(self):
         import awkward.array.table
         self._valid()
         
@@ -889,21 +883,35 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right))
         out._parents = parents
-
-        if not same:
-            out = out[out["0"] != out["1"]]
-
         return out
 
-    def argpairs(self, same=True):
-        return self._argpairs(same=same) - self._starts
+    def argdistincts(self):
+        out = self._argpairs()
+        out["0"] = out["0"] - self._starts
+        out["1"] = out["1"] - self._starts
+        out = out[out["0"] != out["1"]]
+        return out
 
-    def pairs(self, same=True):
-        argpairs = self._argpairs(same=same)
+    def distincts(self):
+        argpairs = self._argpairs()
+        argpairs = argpairs[argpairs["0"] != argpairs["1"]]
+
+        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[argpairs._content["0"]], self._content[argpairs._content["1"]]).flattentuple())
+        out._parents = argpairs._parents
+        return out
+
+    def argpairs(self):
+        out = self._argpairs()
+        out["0"] = out["0"] - self._starts
+        out["1"] = out["1"] - self._starts
+        return out
+
+    def pairs(self):
+        argpairs = self._argpairs()
         left = argpairs._content["0"]
         right = argpairs._content["1"]
 
-        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]))
+        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
         out._parents = argpairs._parents
         return out
 
@@ -928,12 +936,19 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         left = self._starts[parents] + iop_ocp
         right = other._starts[parents] + iop - ocp * iop_ocp
 
-        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right))
+        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right).flattentuple())
         out._parents = parents
         return out
 
-    def argcross(self, other):
-        return self._argcross(other) - self._starts
+    def argcross(self, other, nested=False):
+        out = self._argcross(other)
+        out["0"] = out["0"] - self._starts
+        out["1"] = out["1"] - other._starts
+
+        if nested:
+            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts(self._broadcast(other.counts).flatten(), out._content))
+
+        return out
 
     def cross(self, other, nested=False):
         import awkward.array.table
@@ -941,13 +956,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         argcross = self._argcross(other)
         left, right = argcross._content._contents.values()
 
-        fields = [other._content[right]]
-        if getattr(self, "_iscross", False):
-            fields = [x[left] for x in self._content._contents.values()] + fields
-        else:
-            fields = [self._content[left]] + fields
-
-        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table.named("tuple", *fields))
+        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table.named("tuple", self._content[left], other._content[right]).flattentuple())
         out._parents = argcross._parents
         out._iscross = True
 

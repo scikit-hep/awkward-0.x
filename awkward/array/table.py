@@ -54,10 +54,10 @@ class Table(awkward.array.base.AwkwardArray):
             self._index = index
 
         def __repr__(self):
-            if self._table.rowname == "tuple":
-                return "({0})".format(", ".join(repr(self[n]) for n in self._table.columns))
+            if self._table.istuple:
+                return "({0})".format(", ".join(repr(self[n]) for n in self._table._contents))
             else:
-                return "<{0} {1}>".format(self._table.rowname, self._index)
+                return "<{0} {1}>".format(self._table._rowname, self._index)
 
         @property
         def at(self):
@@ -67,7 +67,10 @@ class Table(awkward.array.base.AwkwardArray):
             return name in self._table._contents
 
         def tolist(self):
-            return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._contents.items())
+            if self._table.istuple:
+                return tuple(self[n] for n in self._table._contents)
+            else:
+                return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._contents.items())
 
         def __getitem__(self, where):
             if isinstance(where, awkward.util.string):
@@ -484,7 +487,7 @@ class Table(awkward.array.base.AwkwardArray):
         else:
             out = self.copy(contents=self._contents)
             out._view = newslice
-            out._base = self._base
+            out._base = self
             return out
 
     def __setitem__(self, where, what):
@@ -587,6 +590,41 @@ class Table(awkward.array.base.AwkwardArray):
                 for i in range(tuplelen):
                     out[i][n] = newcolumns[n]
             return tuple(out)
+
+    @property
+    def istuple(self):
+        return self._rowname == "tuple" and list(self._contents) == [str(x) for x in range(len(self._contents))]
+
+    def flattentuple(self):
+        out = self.copy()
+        out._contents = awkward.util.OrderedDict([(n, x.flattentuple() if isinstance(x, Table) else x) for n, x in out._contents.items()])
+
+        if self.istuple:
+            contents = awkward.util.OrderedDict()
+            for n, x in out._contents.items():
+                if isinstance(x, Table) and x.istuple:
+                    if x._view is None:
+                        view = slice(x._length())
+
+                    elif isinstance(x._view, tuple):
+                        start, step, length = x._view
+                        stop = start + step*length
+                        if stop < 0:
+                            stop = None
+                        view = slice(start, stop, step)
+
+                    else:
+                        view = x._view
+
+                    for y in x._contents.values():
+                        contents[str(len(contents))] = y[view]
+
+                else:
+                    contents[str(len(contents))] = x
+
+            out._contents = contents
+
+        return out
 
     def any(self):
         return any(x.any() for x in self._contents.values())
