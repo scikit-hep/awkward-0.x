@@ -658,7 +658,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                     index[index < 0] = pluscounts[index < 0]
                     if (index < 0).any() or (index.reshape(-1, len(head)) >= node.counts.reshape(-1, 1)).any():
                         raise IndexError("index in jagged subdimension is out of bounds")
-                    index = (index.reshape(-1, len(head)) + self._starts.reshape(-1, 1)).reshape(-1)
+                    index = (index.reshape(-1, len(head)) + node._starts.reshape(-1, 1)).reshape(-1)
                     node = node._content[index].reshape(-1, len(head))
 
                 elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
