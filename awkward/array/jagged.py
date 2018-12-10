@@ -1014,249 +1014,299 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def __bool__(self):
         raise ValueError("The truth value of an array with more than one element is ambiguous. Use a.flatten().any() or a.flatten().all()")
 
-    def any(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self.BOOLTYPE)
-
-        if self._canuseoffset():
-            if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-                content = self._content
-            else:
-                content = self._content != 0
-
-            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=self.BOOLTYPE)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
-                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
-            out[:len(nonterminal)] = awkward.util.numpy.logical_or.reduceat(content, nonterminal)
-            out[self.offsets[1:] == self.offsets[:-1]] = False
-            return out
-            
-        else:
-            return self.count_nonzero() != 0
-
-    def all(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self.BOOLTYPE)
-
-        if self._canuseoffset():
-            if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-                content = self._content
-            else:
-                content = self._content != 0
-
-            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=self.BOOLTYPE)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
-                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
-            out[:len(nonterminal)] = awkward.util.numpy.logical_and.reduceat(content, nonterminal)
-            out[self.offsets[1:] == self.offsets[:-1]] = True
-            return out
-            
-        else:
-            return self.count_nonzero() == self.count
-
-    def count_nonzero(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self.INDEXTYPE)
-
-        if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-            return self.sum()
-        else:
-            return (self != 0).sum()
-
-    def sum(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self._content.dtype)
-
-        if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-            content = self._content.astype(awkward.util.numpy.int64)
-        else:
-            content = self._content
-
-        if self._canuseoffset():
-            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
-                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
-            out[:len(nonterminal)] = awkward.util.numpy.add.reduceat(content, nonterminal)
-            out[self.offsets[1:] == self.offsets[:-1]] = 0
-            return out
-
-        else:
-            contentsum = awkward.util.numpy.empty((len(content) + 1,) + content.shape[1:], dtype=content.dtype)
-            contentsum[0] = 0
-            awkward.util.numpy.cumsum(content, axis=0, out=contentsum[1:])
-
-            nonempty = (self._starts != self._stops)
-
-            out = awkward.util.numpy.zeros(self.shape + content.shape[1:], dtype=content.dtype)
-            out[nonempty] = contentsum[self._stops[nonempty]] - contentsum[self._starts[nonempty]]
-            return out
-
-    def prod(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self._content.dtype)
-
-        if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-            content = self._content.astype(numpy.int64)
-        else:
-            content = self._content
-
-        if self._canuseoffset():
-            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
-                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
-            out[:len(nonterminal)] = awkward.util.numpy.multiply.reduceat(content, nonterminal)
-            out[self.offsets[1:] == self.offsets[:-1]] = 1
-            return out
-
-        else:
-            out = awkward.util.numpy.ones(self.shape + content.shape[1:], dtype=content.dtype)
-            flatout = out.reshape((-1,) + content.shape[1:])
-
-            content = content
-            flatstops = self._stops.reshape(-1)
-            for i, flatstart in enumerate(self._starts.reshape(-1)):
-                flatstop = flatstops[i]
-                if flatstart != flatstop:
-                    flatout[i] *= content[flatstart:flatstop].prod(axis=0)
-            return out
-
-    def _argminmax(self, ismin):
-        if len(self._starts) == len(self._stops) == 0:
-            return self.copy()
-
-        if len(self._content.shape) != 1:
-            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
-
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
         self._valid()
-        contentmax = self._content.max()
-        shiftval = awkward.util.numpy.ceil(contentmax) + 1
-        if math.isnan(shiftval) or math.isinf(shiftval) or shiftval != contentmax:
-            return self._minmax_general(True, ismin)
 
-        flatstarts = self._starts.reshape(-1)
-        flatstops = self._stops.reshape(-1)
+        if isinstance(self._content, awkward.array.base.AwkwardArray):
+            offsets = counts2offsets(self.counts.reshape(-1))
+            return self.copy(starts=offsets[:-1], stops=offsets[1:], content=self._content._reduce(ufunc, identity, dtype, regularaxis))
 
-        nonempty = (flatstarts != flatstops)
-        nonterminal = (flatstarts < len(self._content))
-        flatstarts = flatstarts[nonterminal]
-        flatstops = flatstops[nonterminal]
-
-        shift = awkward.util.numpy.zeros(self._content.shape, dtype=self.INDEXTYPE)
-        shift[flatstarts] = shiftval
-        awkward.util.numpy.cumsum(shift, out=shift)
-
-        sortedindex = (self._content + shift).argsort()
-
-        if ismin:
-            flatout = sortedindex[flatstarts] - flatstarts
+        elif regularaxis is not None and regularaxis != 0:
+            return self.copy(content=ufunc.reduce(self._content, axis=regularaxis))
+        
+        if len(self._starts.shape) == 1:
+            thyself = self
         else:
-            flatout = sortedindex[flatstops - 1] - flatstarts
+            thyself = self.copy(starts=self._starts.reshape(-1), stops=self._stops.reshape(-1))
 
-        newstarts = awkward.util.numpy.arange(len(nonempty), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-        newstops = awkward.util.numpy.array(newstarts)
-        newstops.reshape(-1)[nonempty] += 1
-        return self.copy(starts=newstarts, stops=newstops, content=flatout)
-
-    def argmin(self):
-        return self._argminmax(True)
-
-    def argmax(self):
-        return self._argminmax(False)
-
-    def _minmax_offset(self, ismin):
-        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self._content.dtype)
-        nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-        if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
-            nonterminal = nonterminal.astype(awkward.util.numpy.int32)
-
-        if ismin:
-            out[:len(nonterminal)] = awkward.util.numpy.minimum.reduceat(self._content, nonterminal)
-            if issubclass(self._content.dtype.type, awkward.util.numpy.floating):
-                out[self.offsets[1:] == self.offsets[:-1]] = awkward.util.numpy.inf
-            else:
-                out[self.offsets[1:] == self.offsets[:-1]] = awkward.util.numpy.iinfo(self._content.dtype.type).max
-
-        else:
-            out[:len(nonterminal)] = awkward.util.numpy.maximum.reduceat(self._content, nonterminal)
-            if issubclass(self._content.dtype.type, awkward.util.numpy.floating):
-                out[self.offsets[1:] == self.offsets[:-1]] = -awkward.util.numpy.inf
-            else:
-                out[self.offsets[1:] == self.offsets[:-1]] = awkward.util.numpy.iinfo(self._content.dtype.type).min
-
-        return out
-
-    def _minmax_general(self, isarg, ismin):
-        # not a group; must iterate (in absence of modified Hillis-Steele)
-        if isarg:
-            if len(self._content.shape) != 1:
-                raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
-
-            if ismin:
-                optimum = awkward.util.numpy.argmin
-            else:
-                optimum = awkward.util.numpy.argmax
-
-            out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
-
-        else:
-            if ismin:
-                optimum = awkward.util.numpy.amin
-            else:
-                optimum = awkward.util.numpy.amax
-
-            if issubclass(self._content.dtype.type, awkward.util.numpy.floating):
-                if ismin:
-                    out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], awkward.util.numpy.inf, dtype=self._content.dtype)
-                else:
-                    out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], -awkward.util.numpy.inf, dtype=self._content.dtype)
-
-            elif issubclass(self._content.dtype.type, awkward.util.numpy.integer):
-                if ismin:
-                    out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], awkward.util.numpy.iinfo(self._content.dtype.type).max, dtype=self._content.dtype)
-                else:
-                    out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], awkward.util.numpy.iinfo(self._content.dtype.type).min, dtype=self._content.dtype)
-
-            else:
-                raise TypeError("only floating point and integer types can be minimized")
-
-        flatout = out.reshape((-1,) + self._content.shape[1:])
-        flatstarts = self._starts.reshape(-1)
-        flatstops = self._stops.reshape(-1)
-
-        content = self._content
-        for i, flatstart in enumerate(flatstarts):
-            flatstop = flatstops[i]
-            if flatstart != flatstop:
-                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
-
-        if isarg:
-            newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-            newstops = awkward.util.numpy.array(newstarts)
-            newstops.reshape(-1)[flatstarts != flatstops] += 1
-            return self.copy(starts=newstarts, stops=newstops, content=flatout)
-
-        else:
-            return out
-
-    def min(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self._content.dtype)
         if self._canuseoffset():
-            return self._minmax_offset(True)
+            thyself = self
         else:
-            return self._minmax_general(False, True)
+            offsets = counts2offsets(thyself.counts)
+            thyself = thyself._tojagged(offsets[:-1], offsets[1:], copy=False)
 
-    def max(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self._content.dtype)
-        if self._canuseoffset():
-            return self._minmax_offset(False)
+        if dtype is None:
+            dtype = thyself._content.dtype
+
+        if regularaxis is None:
+            out = awkward.util.numpy.empty(thyself._starts.shape[:1], dtype=dtype)
         else:
-            return self._minmax_general(False, False)
+            out = awkward.util.numpy.empty(thyself._starts.shape[:1] + thyself._content.shape[1:], dtype=dtype)
+
+        if len(out) != 0:
+            nonterminal = thyself.offsets[thyself.offsets != thyself.offsets[-1]]
+            if os.name == "nt":    # Windows Numpy reduceat requires 32-bit indexes
+                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
+
+            content = thyself._content
+            if regularaxis is None:
+                for axis in range(1, len(content.shape)):
+                    content = ufunc.reduce(content, axis=axis)
+
+            out[:len(nonterminal)] = ufunc.reduceat(content, nonterminal)
+            out[thyself.starts == thyself.stops] = identity
+
+        if regularaxis is None:
+            return out.reshape(self._starts.shape)
+        else:
+            return out.reshape(self._starts.shape + self._content.shape[1:])
+
+    def sum(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.add, 0, None, regularaxis)
+
+    # def any(self):
+    #     if len(self._starts) == len(self._stops) == 0:
+    #         return awkward.util.numpy.array([], dtype=self.BOOLTYPE)
+
+    #     if self._canuseoffset():
+    #         if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+    #             content = self._content
+    #         else:
+    #             content = self._content != 0
+
+    #         out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=self.BOOLTYPE)
+    #         nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+    #         if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
+    #             nonterminal = nonterminal.astype(awkward.util.numpy.int32)
+    #         out[:len(nonterminal)] = awkward.util.numpy.logical_or.reduceat(content, nonterminal)
+    #         out[self.offsets[1:] == self.offsets[:-1]] = False
+    #         return out
+            
+    #     else:
+    #         return self.count_nonzero() != 0
+
+    # def all(self):
+    #     if len(self._starts) == len(self._stops) == 0:
+    #         return awkward.util.numpy.array([], dtype=self.BOOLTYPE)
+
+    #     if self._canuseoffset():
+    #         if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+    #             content = self._content
+    #         else:
+    #             content = self._content != 0
+
+    #         out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=self.BOOLTYPE)
+    #         nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+    #         if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
+    #             nonterminal = nonterminal.astype(awkward.util.numpy.int32)
+    #         out[:len(nonterminal)] = awkward.util.numpy.logical_and.reduceat(content, nonterminal)
+    #         out[self.offsets[1:] == self.offsets[:-1]] = True
+    #         return out
+            
+    #     else:
+    #         return self.count_nonzero() == self.count
+
+    # def count_nonzero(self):
+    #     if len(self._starts) == len(self._stops) == 0:
+    #         return awkward.util.numpy.array([], dtype=self.INDEXTYPE)
+
+    #     if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+    #         return self.sum()
+    #     else:
+    #         return (self != 0).sum()
+
+    # def sum(self):
+    #     if len(self._starts) == len(self._stops) == 0:
+    #         return awkward.util.numpy.array([], dtype=self._content.dtype)
+
+    #     if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+    #         content = self._content.astype(awkward.util.numpy.int64)
+    #     else:
+    #         content = self._content
+
+    #     if self._canuseoffset():
+    #         out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
+    #         nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+    #         if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
+    #             nonterminal = nonterminal.astype(awkward.util.numpy.int32)
+    #         out[:len(nonterminal)] = awkward.util.numpy.add.reduceat(content, nonterminal)
+    #         out[self.offsets[1:] == self.offsets[:-1]] = 0
+    #         return out
+
+    #     else:
+    #         contentsum = awkward.util.numpy.empty((len(content) + 1,) + content.shape[1:], dtype=content.dtype)
+    #         contentsum[0] = 0
+    #         awkward.util.numpy.cumsum(content, axis=0, out=contentsum[1:])
+
+    #         nonempty = (self._starts != self._stops)
+
+    #         out = awkward.util.numpy.zeros(self.shape + content.shape[1:], dtype=content.dtype)
+    #         out[nonempty] = contentsum[self._stops[nonempty]] - contentsum[self._starts[nonempty]]
+    #         return out
+
+    # def prod(self):
+    #     if len(self._starts) == len(self._stops) == 0:
+    #         return awkward.util.numpy.array([], dtype=self._content.dtype)
+
+    #     if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+    #         content = self._content.astype(numpy.int64)
+    #     else:
+    #         content = self._content
+
+    #     if self._canuseoffset():
+    #         out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
+    #         nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+    #         if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
+    #             nonterminal = nonterminal.astype(awkward.util.numpy.int32)
+    #         out[:len(nonterminal)] = awkward.util.numpy.multiply.reduceat(content, nonterminal)
+    #         out[self.offsets[1:] == self.offsets[:-1]] = 1
+    #         return out
+
+    #     else:
+    #         out = awkward.util.numpy.ones(self.shape + content.shape[1:], dtype=content.dtype)
+    #         flatout = out.reshape((-1,) + content.shape[1:])
+
+    #         content = content
+    #         flatstops = self._stops.reshape(-1)
+    #         for i, flatstart in enumerate(self._starts.reshape(-1)):
+    #             flatstop = flatstops[i]
+    #             if flatstart != flatstop:
+    #                 flatout[i] *= content[flatstart:flatstop].prod(axis=0)
+    #         return out
+
+    # def _argminmax(self, ismin):
+    #     if len(self._starts) == len(self._stops) == 0:
+    #         return self.copy()
+
+    #     if len(self._content.shape) != 1:
+    #         raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
+
+    #     self._valid()
+    #     contentmax = self._content.max()
+    #     shiftval = awkward.util.numpy.ceil(contentmax) + 1
+    #     if math.isnan(shiftval) or math.isinf(shiftval) or shiftval != contentmax:
+    #         return self._minmax_general(True, ismin)
+
+    #     flatstarts = self._starts.reshape(-1)
+    #     flatstops = self._stops.reshape(-1)
+
+    #     nonempty = (flatstarts != flatstops)
+    #     nonterminal = (flatstarts < len(self._content))
+    #     flatstarts = flatstarts[nonterminal]
+    #     flatstops = flatstops[nonterminal]
+
+    #     shift = awkward.util.numpy.zeros(self._content.shape, dtype=self.INDEXTYPE)
+    #     shift[flatstarts] = shiftval
+    #     awkward.util.numpy.cumsum(shift, out=shift)
+
+    #     sortedindex = (self._content + shift).argsort()
+
+    #     if ismin:
+    #         flatout = sortedindex[flatstarts] - flatstarts
+    #     else:
+    #         flatout = sortedindex[flatstops - 1] - flatstarts
+
+    #     newstarts = awkward.util.numpy.arange(len(nonempty), dtype=self.INDEXTYPE).reshape(self._starts.shape)
+    #     newstops = awkward.util.numpy.array(newstarts)
+    #     newstops.reshape(-1)[nonempty] += 1
+    #     return self.copy(starts=newstarts, stops=newstops, content=flatout)
+
+    # def argmin(self):
+    #     return self._argminmax(True)
+
+    # def argmax(self):
+    #     return self._argminmax(False)
+
+    # def _minmax_offset(self, ismin):
+    #     out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self._content.dtype)
+    #     nonterminal = self.offsets[self.offsets != self.offsets[-1]]
+    #     if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
+    #         nonterminal = nonterminal.astype(awkward.util.numpy.int32)
+
+    #     if ismin:
+    #         out[:len(nonterminal)] = awkward.util.numpy.minimum.reduceat(self._content, nonterminal)
+    #         if issubclass(self._content.dtype.type, awkward.util.numpy.floating):
+    #             out[self.offsets[1:] == self.offsets[:-1]] = awkward.util.numpy.inf
+    #         else:
+    #             out[self.offsets[1:] == self.offsets[:-1]] = awkward.util.numpy.iinfo(self._content.dtype.type).max
+
+    #     else:
+    #         out[:len(nonterminal)] = awkward.util.numpy.maximum.reduceat(self._content, nonterminal)
+    #         if issubclass(self._content.dtype.type, awkward.util.numpy.floating):
+    #             out[self.offsets[1:] == self.offsets[:-1]] = -awkward.util.numpy.inf
+    #         else:
+    #             out[self.offsets[1:] == self.offsets[:-1]] = awkward.util.numpy.iinfo(self._content.dtype.type).min
+
+    #     return out
+
+    # def _minmax_general(self, isarg, ismin):
+    #     # not a group; must iterate (in absence of modified Hillis-Steele)
+    #     if isarg:
+    #         if len(self._content.shape) != 1:
+    #             raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
+
+    #         if ismin:
+    #             optimum = awkward.util.numpy.argmin
+    #         else:
+    #             optimum = awkward.util.numpy.argmax
+
+    #         out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
+
+    #     else:
+    #         if ismin:
+    #             optimum = awkward.util.numpy.amin
+    #         else:
+    #             optimum = awkward.util.numpy.amax
+
+    #         if issubclass(self._content.dtype.type, awkward.util.numpy.floating):
+    #             if ismin:
+    #                 out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], awkward.util.numpy.inf, dtype=self._content.dtype)
+    #             else:
+    #                 out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], -awkward.util.numpy.inf, dtype=self._content.dtype)
+
+    #         elif issubclass(self._content.dtype.type, awkward.util.numpy.integer):
+    #             if ismin:
+    #                 out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], awkward.util.numpy.iinfo(self._content.dtype.type).max, dtype=self._content.dtype)
+    #             else:
+    #                 out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], awkward.util.numpy.iinfo(self._content.dtype.type).min, dtype=self._content.dtype)
+
+    #         else:
+    #             raise TypeError("only floating point and integer types can be minimized")
+
+    #     flatout = out.reshape((-1,) + self._content.shape[1:])
+    #     flatstarts = self._starts.reshape(-1)
+    #     flatstops = self._stops.reshape(-1)
+
+    #     content = self._content
+    #     for i, flatstart in enumerate(flatstarts):
+    #         flatstop = flatstops[i]
+    #         if flatstart != flatstop:
+    #             flatout[i] = optimum(content[flatstart:flatstop], axis=0)
+
+    #     if isarg:
+    #         newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
+    #         newstops = awkward.util.numpy.array(newstarts)
+    #         newstops.reshape(-1)[flatstarts != flatstops] += 1
+    #         return self.copy(starts=newstarts, stops=newstops, content=flatout)
+
+    #     else:
+    #         return out
+
+    # def min(self):
+    #     if len(self._starts) == len(self._stops) == 0:
+    #         return awkward.util.numpy.array([], dtype=self._content.dtype)
+    #     if self._canuseoffset():
+    #         return self._minmax_offset(True)
+    #     else:
+    #         return self._minmax_general(False, True)
+
+    # def max(self):
+    #     if len(self._starts) == len(self._stops) == 0:
+    #         return awkward.util.numpy.array([], dtype=self._content.dtype)
+    #     if self._canuseoffset():
+    #         return self._minmax_offset(False)
+    #     else:
+    #         return self._minmax_general(False, False)
 
     @awkward.util.bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays):
