@@ -895,8 +895,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def distincts(self):
         argpairs = self._argpairs()
         argpairs = argpairs[argpairs["0"] != argpairs["1"]]
+        left = argpairs._content["0"]
+        right = argpairs._content["1"]
 
-        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[argpairs._content["0"]], self._content[argpairs._content["1"]]).flattentuple())
+        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
         out._parents = argpairs._parents
         return out
 
@@ -936,7 +938,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         left = self._starts[parents] + iop_ocp
         right = other._starts[parents] + iop - ocp * iop_ocp
 
-        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right).flattentuple())
+        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right))
         out._parents = parents
         return out
 
