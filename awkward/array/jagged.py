@@ -885,14 +885,18 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out._parents = parents
         return out
 
-    def argdistincts(self):
+    def argdistincts(self, nested=False):
         out = self._argpairs()
         out["0"] = out["0"] - self._starts
         out["1"] = out["1"] - self._starts
         out = out[out["0"] != out["1"]]
+
+        if nested:
+            out = JaggedArray.fromcounts(awkward.util.numpy.maximum(0, self.counts - 1), JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
+
         return out
 
-    def distincts(self):
+    def distincts(self, nested=False):
         argpairs = self._argpairs()
         argpairs = argpairs[argpairs["0"] != argpairs["1"]]
         left = argpairs._content["0"]
@@ -900,21 +904,33 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
         out._parents = argpairs._parents
+
+        if nested:
+            out = JaggedArray.fromcounts(awkward.util.numpy.maximum(0, self.counts - 1), JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
+
         return out
 
-    def argpairs(self):
+    def argpairs(self, nested=False):
         out = self._argpairs()
         out["0"] = out["0"] - self._starts
         out["1"] = out["1"] - self._starts
+
+        if nested:
+            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
+
         return out
 
-    def pairs(self):
+    def pairs(self, nested=False):
         argpairs = self._argpairs()
         left = argpairs._content["0"]
         right = argpairs._content["1"]
 
         out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
         out._parents = argpairs._parents
+
+        if nested:
+            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
+
         return out
 
     def _argcross(self, other):
