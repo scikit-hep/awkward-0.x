@@ -167,6 +167,30 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return True
 
+    def any(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.bitwise_or, False, self.BOOLTYPE, regularaxis)
+
+    def all(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.bitwise_and, True, self.BOOLTYPE, regularaxis)
+
+    def count(self, regularaxis=None):
+        return self._reduce(None, 0, None, regularaxis)
+
+    def count_nonzero(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.count_nonzero, 0, None, regularaxis)
+
+    def sum(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.add, 0, None, regularaxis)
+
+    def prod(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.multiply, 1, None, regularaxis)
+
+    def min(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.minimum, awkward.util.numpy.inf, None, regularaxis)
+
+    def max(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.maximum, -awkward.util.numpy.inf, None, regularaxis)
+
     def _argfields(self, function):
         if not isinstance(function, types.FunctionType):
             raise TypeError("function (or lambda) required")

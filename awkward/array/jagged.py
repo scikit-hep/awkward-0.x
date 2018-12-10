@@ -1027,7 +1027,24 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             thyself = self.copy(content=self._content._prepare(identity))
 
         elif regularaxis is not None and regularaxis != 0:
-            return self.copy(content=ufunc.reduce(self._content, axis=regularaxis))
+            if ufunc is None:
+                ufunc = awkward.util.numpy.add
+                if isinstance(self._content, (awkward.util.numpy.floating, awkward.util.numpy.complexfloating)):
+                    content = 1 - awkward.util.numpy.isnan(self._content).astype(self.INDEXTYPE)
+                else:
+                    content = awkward.util.numpy.ones(self._content.shape, dtype=self.INDEXTYPE)
+
+            elif ufunc is awkward.util.numpy.count_nonzero:
+                ufunc = awkward.util.numpy.add
+                content = 1 - (self._content == 0).astype(self.INDEXTYPE)
+
+            else:
+                content = self._content
+
+            if dtype is not None:
+                content = content.astype(dtype)
+
+            return self.copy(content=ufunc.reduce(content, axis=regularaxis))
 
         else:
             thyself = self.copy()
@@ -1043,8 +1060,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         content = thyself._content
         if ufunc is None:
             ufunc = awkward.util.numpy.add
-            if isinstance(content, (awkward.util.numpy.floating, awkward.util.numpy.complextfloating)):
-                content = awkward.util.numpy.isnan(content).astype(self.INDEXTYPE)
+            if isinstance(content, (awkward.util.numpy.floating, awkward.util.numpy.complexfloating)):
+                content = 1 - awkward.util.numpy.isnan(content).astype(self.INDEXTYPE)
             else:
                 content = awkward.util.numpy.ones(content.shape, dtype=self.INDEXTYPE)
 
@@ -1061,18 +1078,18 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if dtype is None:
             dtype = content.dtype
         else:
-            content = content.asdtype(dtype)
+            content = content.astype(dtype)
 
         if identity is awkward.util.numpy.inf:
-            if issubtype(dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+            if issubclass(dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
                 identity = True
-            elif issubtype(dtype.type, awkward.util.numpy.integer):
+            elif issubclass(dtype.type, awkward.util.numpy.integer):
                 identity = awkward.util.numpy.iinfo(dtype.type).max
 
         elif identity is -awkward.util.numpy.inf:
-            if issubtype(dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+            if issubclass(dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
                 identity = False
-            elif issubtype(dtype.type, awkward.util.numpy.integer):
+            elif issubclass(dtype.type, awkward.util.numpy.integer):
                 identity = awkward.util.numpy.iinfo(dtype.type).min
 
         if regularaxis is None:
@@ -1096,30 +1113,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return out.reshape(self._starts.shape)
         else:
             return out.reshape(self._starts.shape + self._content.shape[1:])
-
-    def any(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.bitwise_or, False, self.BOOLTYPE, regularaxis)
-
-    def all(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.bitwise_and, True, self.BOOLTYPE, regularaxis)
-
-    def count(self, regularaxis=None):
-        return self._reduce(None, 0, None, regularaxis)
-
-    def count_nonzero(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.count_nonzero, 0, None, regularaxis)
-
-    def sum(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.add, 0, None, regularaxis)
-
-    def prod(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.multiply, 1, None, regularaxis)
-
-    def min(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.minimum, numpy.inf, None, regularaxis)
-
-    def max(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.maximum, numpy.inf, None, regularaxis)
 
 
 
