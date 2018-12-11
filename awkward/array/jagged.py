@@ -572,8 +572,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 node = self.copy(starts=starts, stops=stops)
 
+        head = head[-1]
+
+        nslices = 0
         while isinstance(node, JaggedArray) and len(tail) > 0:
+            wasslice = isinstance(head, slice)
             head, tail = tail[0], tail[1:]
+
             original_head = head
             if isinstance(head, awkward.util.integer):
                 counts = node._stops - node._starts
@@ -584,6 +589,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 node = node._content[node._starts + head]
 
             elif isinstance(head, slice):
+                nslices += 1
+                if nslices >= 2:
+                    raise NotImplementedError("this implementation cannot slice a JaggedArray in more than two dimensions")
+
                 counts = node._stops - node._starts
                 step = 1 if head.step is None else head.step
 
@@ -653,13 +662,30 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 head = awkward.util.numpy.array(head, copy=False)
                 if len(head.shape) == 1 and issubclass(head.dtype.type, awkward.util.numpy.integer):
-                    index = awkward.util.numpy.tile(head, len(node))
-                    pluscounts = (index.reshape(-1, len(head)) + node.counts.reshape(-1, 1)).reshape(-1)
-                    index[index < 0] = pluscounts[index < 0]
-                    if (index < 0).any() or (index.reshape(-1, len(head)) >= node.counts.reshape(-1, 1)).any():
-                        raise IndexError("index in jagged subdimension is out of bounds")
-                    index = (index.reshape(-1, len(head)) + node._starts.reshape(-1, 1)).reshape(-1)
-                    node = node._content[index].reshape(-1, len(head))
+                    if wasslice:
+                        index = awkward.util.numpy.tile(head, len(node))
+                        mask = (index < 0)
+                        if mask.any():
+                            pluscounts = (index.reshape(-1, len(head)) + node.counts.reshape(-1, 1)).reshape(-1)
+                            index[mask] = pluscounts[mask]
+                        if (index < 0).any() or (index.reshape(-1, len(head)) >= node.counts.reshape(-1, 1)).any():
+                            raise IndexError("index in jagged subdimension is out of bounds")
+                        index = (index.reshape(-1, len(head)) + node._starts.reshape(-1, 1)).reshape(-1)
+                        # FIXME: what if node._content[index] is not Numpy?
+                        node = node._content[index].reshape(-1, len(head))
+
+                    else:
+                        if len(node) != len(head):
+                            raise IndexError("shape mismatch: indexing arrays could not be broadcast together with shapes {0} {1}".format(len(node), len(head)))
+                        index = head.copy() if head is original_head else head
+                        mask = (index < 0)
+                        if mask.any():
+                            index[mask] += head.counts
+                        if (index < 0).any() or (index >= node.counts).any():
+                            raise IndexError("index in jagged subdimension is out of bounds")
+                        index += node._starts
+                        node = node._content[index]
+                        # FIXME: need "IndexError: too many indices for array" somehow
 
                 elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
                     node = node.regular()[:, head]
