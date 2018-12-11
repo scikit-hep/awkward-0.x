@@ -202,7 +202,17 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         return getattr(ufunc, method)(*inputs, **kwargs)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        return ufunc.reduce(self._prepare(identity, dtype))
+        if awkward.util._hasjagged(self._content):
+            return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
+
+        elif isinstance(self._content, awkward.array.table.Table):
+            out = awkward.array.table.Table()
+            for n, x in self._content._contents.items():
+                out[n] = self.copy(content=x)
+            return out._reduce(ufunc, identity, dtype, regularaxis)
+
+        else:
+            return ufunc.reduce(self._prepare(identity, dtype))
 
     def _prepare(self, identity, dtype):
         if isinstance(self._content, awkward.util.numpy.ndarray):
@@ -583,7 +593,20 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         return getattr(ufunc, method)(*inputs, **kwargs)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        raise NotImplementedError
+        if awkward.util._hasjagged(self._content):
+            return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
+
+        elif isinstance(self._content, awkward.array.table.Table):
+            out = awkward.array.table.Table()
+            for n, x in self._content._contents.items():
+                out[n] = self.copy(content=x)
+            return out._reduce(ufunc, identity, dtype, regularaxis)
+
+        else:
+            return ufunc.reduce(self._prepare(identity, dtype))
 
     def _prepare(self, identity, dtype):
-        raise NotImplementedError
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self.dense
+        else:
+            return self.copy(content=self._content._prepare(identity, dtype)).dense

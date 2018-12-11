@@ -133,8 +133,15 @@ class Test(unittest.TestCase):
 
         a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4])
         assert a.sum() == 18.700000000000003
+        a = JaggedArray.fromcounts([3, 0, 2], IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4]))
+        assert a.sum().tolist() == [9.9, 0.0, 8.8]
+        a = IndexedArray([3, 2, 4, 2, 2, 4, 0], JaggedArray.fromcounts([3, 0, 2, 1, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        assert a.sum().tolist() == [5.5, 7.7, 33.0, 7.7, 7.7, 33.0, 3.3000000000000003]
+        a = IndexedArray([3, 2, 4, 2, 2, 4, 0], Table.named("tuple", [0.0, 1.1, 2.2, 3.3, 4.4], [0, 100, 200, 300, 400]))
+        assert a.sum().tolist() == {"0": 18.700000000000003, "1": 1700}
 
         a = SparseArray(10, [1, 3, 5, 7, 9], [100.0, 101.1, 102.2, 103.3, 104.4])
+        assert a.sum() == 511.0
 
         a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True)
 
