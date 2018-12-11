@@ -265,17 +265,10 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         maskindex[self.boolmask(maskedwhen=True)] = -1
         return IndexedMaskedArray(maskindex, self._content, maskedwhen=-1)
 
-    def any(self):
-        return self._content[self.boolmask(maskedwhen=False)].any()
-
-    def all(self):
-        return self._content[self.boolmask(maskedwhen=False)].all()
-
-    @classmethod
-    def concat(cls, first, *rest):
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def pandas(self):
+    def _prepare(self, identity):
         raise NotImplementedError
 
 class BitMaskedArray(MaskedArray):
@@ -510,11 +503,10 @@ class BitMaskedArray(MaskedArray):
             else:
                 return self.copy(mask=self.bool2bit(mask, lsborder=self._lsborder), content=self._content[(head,) + tail], lsborder=self._lsborder)
 
-    @classmethod
-    def concat(cls, first, *rest):
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def pandas(self):
+    def _prepare(self, identity):
         raise NotImplementedError
 
 class IndexedMaskedArray(MaskedArray):
@@ -657,9 +649,8 @@ class IndexedMaskedArray(MaskedArray):
     def indexed(self):
         return self
 
-    @classmethod
-    def concat(cls, first, *rest):
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def pandas(self):
+    def _prepare(self, identity):
         raise NotImplementedError

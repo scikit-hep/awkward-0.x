@@ -594,29 +594,18 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         else:
             return False
 
-    def any(self):
-        return any(x.any() for x in self._chunks)
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
+        raise NotImplementedError
 
-    def all(self):
-        return all(x.all() for x in self._chunks)
-
-    @classmethod
-    def concat(cls, first, *rest):
+    def _prepare(self, identity):
         raise NotImplementedError
 
     @property
     def columns(self):
-        if len(self._chunks) == 0 or isinstance(self.type.to, awkward.util.numpy.dtype):
-            return []
-        else:
-            return self._chunks[0].columns
-
-    @property
-    def allcolumns(self):
-        if len(self._chunks) == 0 or isinstance(self.type.to, awkward.util.numpy.dtype):
-            return []
-        else:
-            return self._chunks[0].allcolumns
+        for chunkid in range(len(self._chunks)):
+            self.knowcounts(until=chunkid)
+            if self._counts[chunkid] > 0:
+                return self._chunks[chunkid].columns
 
     def astype(self, dtype):
         chunks = []
@@ -627,9 +616,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             chunks.append(chunk.astype(dtype))
             counts.append(self._counts[i])
         return self.copy(chunks=chunks, counts=counts)
-
-    def pandas(self):
-        raise NotImplementedError
 
 class AppendableArray(ChunkedArray):
     """
@@ -779,6 +765,12 @@ class AppendableArray(ChunkedArray):
 
     def _hasjagged(self):
         return False
+
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
+        raise NotImplementedError
+
+    def _prepare(self, identity):
+        raise NotImplementedError
 
     def astype(self, dtype):
         chunks = []

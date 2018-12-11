@@ -373,30 +373,15 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def _hasjagged(self):
         return awkward.util.hasjagged(self.array)
 
-    def any(self):
-        return self.array.any()
-
-    def all(self):
-        return self.array.all()
-
-    @classmethod
-    def concat(cls, first, *rest):
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    @property
-    def base(self):
-        return self.array.base
+    def _prepare(self, identity):
+        raise NotImplementedError
 
     @property
     def columns(self):
         return self.array.columns
 
-    @property
-    def allcolumns(self):
-        return self.array.allcolumns
-
     def astype(self, dtype):
         return self.array.astype(dtype)
-
-    def pandas(self):
-        raise NotImplementedError

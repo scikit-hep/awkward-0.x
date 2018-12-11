@@ -228,18 +228,8 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise TypeError("cannot call reducer on object array")
 
-    def any(self):
-        return any(x for x in self)
-
-    def all(self):
-        return all(x for x in self)
-
-    @classmethod
-    def concat(cls, first, *rest):
-        raise NotImplementedError
-
-    def pandas(self):
-        raise NotImplementedError
+    def _prepare(self, identity):
+        raise TypeError("cannot call reducer on object array")
 
 ####################################################################### strings
 

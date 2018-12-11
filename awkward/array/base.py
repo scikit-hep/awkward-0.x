@@ -191,75 +191,75 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def max(self, regularaxis=None):
         return self._reduce(awkward.util.numpy.maximum, -awkward.util.numpy.inf, None, regularaxis)
 
-    def _argfields(self, function):
-        if not isinstance(function, types.FunctionType):
-            raise TypeError("function (or lambda) required")
+    # def _argfields(self, function):
+    #     if not isinstance(function, types.FunctionType):
+    #         raise TypeError("function (or lambda) required")
 
-        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
-            return None, None
+    #     if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
+    #         return None, None
 
-        required = function.__code__.co_varnames[:function.__code__.co_argcount]
-        has_varargs = (function.__code__.co_flags & 0x04) != 0
-        has_kwargs = (function.__code__.co_flags & 0x08) != 0
+    #     required = function.__code__.co_varnames[:function.__code__.co_argcount]
+    #     has_varargs = (function.__code__.co_flags & 0x04) != 0
+    #     has_kwargs = (function.__code__.co_flags & 0x08) != 0
 
-        args = []
-        kwargs = {}
+    #     args = []
+    #     kwargs = {}
 
-        order = self.columns
+    #     order = self.columns
 
-        for i, n in enumerate(required):
-            if n in self._content:
-                args.append(n)
-            elif str(i) in self._content:
-                args.append(str(i))
-            else:
-                args.append(order[i])
+    #     for i, n in enumerate(required):
+    #         if n in self._content:
+    #             args.append(n)
+    #         elif str(i) in self._content:
+    #             args.append(str(i))
+    #         else:
+    #             args.append(order[i])
 
-        if has_varargs:
-            while str(i) in self._content:
-                args.append(str(i))
-                i += 1
+    #     if has_varargs:
+    #         while str(i) in self._content:
+    #             args.append(str(i))
+    #             i += 1
 
-        if has_kwargs:
-            kwargs = [n for n in self._content if n not in required]
+    #     if has_kwargs:
+    #         kwargs = [n for n in self._content if n not in required]
 
-        return args, kwargs
+    #     return args, kwargs
 
-    def apply(self, function):
-        args, kwargs = self._argfields(function)
-        if args is None and kwargs is None:
-            return function(self)
-        else:
-            args = tuple(self[n] for n in args)
-            kwargs = dict((n, self[n]) for n in kwargs)
-            return function(*args, **kwargs)
+    # def apply(self, function):
+    #     args, kwargs = self._argfields(function)
+    #     if args is None and kwargs is None:
+    #         return function(self)
+    #     else:
+    #         args = tuple(self[n] for n in args)
+    #         kwargs = dict((n, self[n]) for n in kwargs)
+    #         return function(*args, **kwargs)
 
-    def filter(self, function):
-        args, kwargs = self._argfields(function)
-        if args is None and kwargs is None:
-            return self[function(self)]
-        else:
-            args = tuple(self[n] for n in args)
-            kwargs = dict((n, self[n]) for n in kwargs)
-            return self[function(*args, **kwargs)]
+    # def filter(self, function):
+    #     args, kwargs = self._argfields(function)
+    #     if args is None and kwargs is None:
+    #         return self[function(self)]
+    #     else:
+    #         args = tuple(self[n] for n in args)
+    #         kwargs = dict((n, self[n]) for n in kwargs)
+    #         return self[function(*args, **kwargs)]
 
-    def maxby(self, function):
-        args, kwargs = self._argfields(function)
-        if args is None and kwargs is None:
-            return self[function(self).argmax()]
-        else:
-            args = tuple(self[n] for n in args)
-            kwargs = dict((n, self[n]) for n in kwargs)
-            return self[function(*args, **kwargs).argmax()]
+    # def maxby(self, function):
+    #     args, kwargs = self._argfields(function)
+    #     if args is None and kwargs is None:
+    #         return self[function(self).argmax()]
+    #     else:
+    #         args = tuple(self[n] for n in args)
+    #         kwargs = dict((n, self[n]) for n in kwargs)
+    #         return self[function(*args, **kwargs).argmax()]
 
-    def minby(self, function):
-        args, kwargs = self._argfields(function)
-        if args is None and kwargs is None:
-            return self[function(self).argmin()]
-        else:
-            args = tuple(self[n] for n in args)
-            kwargs = dict((n, self[n]) for n in kwargs)
-            return self[function(*args, **kwargs).argmin()]
+    # def minby(self, function):
+    #     args, kwargs = self._argfields(function)
+    #     if args is None and kwargs is None:
+    #         return self[function(self).argmin()]
+    #     else:
+    #         args = tuple(self[n] for n in args)
+    #         kwargs = dict((n, self[n]) for n in kwargs)
+    #         return self[function(*args, **kwargs).argmin()]
 
 class AwkwardArrayWithContent(AwkwardArray):
     """
@@ -297,13 +297,6 @@ class AwkwardArrayWithContent(AwkwardArray):
             return []
         else:
             return self._content.columns
-
-    @property
-    def allcolumns(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return []
-        else:
-            return self._content.allcolumns
 
     def astype(self, dtype):
         return self.copy(content=self._content.astype(dtype))

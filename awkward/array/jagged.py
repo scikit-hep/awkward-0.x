@@ -1096,10 +1096,17 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return True
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
+        import awkward.array.table
         self._valid()
 
         if awkward.util.hasjagged(self._content):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
+
+        elif isinstance(self._content, awkward.array.table.Table):
+            out = awkward.array.table.Table()
+            for n, x in thyself._content._contents.items():
+                out[n] = self.copy(content=x)._reduce(ufunc, identity, dtype, regularaxis)
+            return out
 
         elif isinstance(self._content, awkward.array.base.AwkwardArray):
             thyself = self.copy(content=self._content._prepare(identity))

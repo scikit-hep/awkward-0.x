@@ -629,26 +629,14 @@ class Table(awkward.array.base.AwkwardArray):
     def _hasjagged(self):
         return False
 
-    def any(self):
-        return any(x.any() for x in self._contents.values())
-
-    def all(self):
-        return all(x.all() for x in self._contents.values())
-
-    @classmethod
-    def concat(cls, first, *rest):
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
-        return cls(columns1, *columns2, **columns3)
+    def _prepare(self, identity):
+        raise NotImplementedError
 
     @property
     def columns(self):
-        return [x for x in self._contents if awkward.util.isintstring(x)] + [x for x in self._contents if awkward.util.isidentifier(x)]
-
-    @property
-    def allcolumns(self):
         return list(self._contents)
 
     def astype(self, dtype):
@@ -656,7 +644,3 @@ class Table(awkward.array.base.AwkwardArray):
         for n, x in self._contents.items():
             out[n] = x.astype(dtype)
         return out
-
-    def pandas(self):
-        import pandas
-        return pandas.DataFrame(self._contents)

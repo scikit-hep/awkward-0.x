@@ -398,52 +398,21 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def _hasjagged(self):
         return all(awkward.util.hasjagged(x) for x in self._contents)
 
-    def any(self):
-        self._valid()
-        index = self._index[:len(self._tag)]
-        for tag in awkward.util.numpy.unique(self._tags):
-            if self._contents[tag][index[self._tags == tag]].any():
-                return True
-        return False
-
-    def all(self):
-        self._valid()
-        index = self._index[:len(self._tag)]
-        for tag in awkward.util.numpy.unique(self._tags):
-            if not self._contents[tag][index[self._tags == tag]].all():
-                return False
-        return True
-
-    @classmethod
-    def concat(cls, first, *rest):
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    @property
-    def base(self):
-        return self._base
+    def _prepare(self, identity):
+        raise NotImplementedError
 
     @property
     def columns(self):
         out = None
         for content in self._contents:
             if out is None:
-                out = content.columns
+                out = content.allcolumns
             else:
                 out = [x for x in content.columns if x in out]
         return out
 
-    @property
-    def allcolumns(self):
-        out = None
-        for content in self._contents:
-            if out is None:
-                out = content.allcolumns
-            else:
-                out = [x for x in content.allcolumns if x in out]
-        return out
-
     def astype(self, dtype):
         return self.copy(contents=[x.astype(dtype) for x in self._contents])
-
-    def pandas(self):
-        raise NotImplementedError

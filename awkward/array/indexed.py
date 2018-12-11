@@ -201,18 +201,11 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
         return getattr(ufunc, method)(*inputs, **kwargs)
 
-    @classmethod
-    def concat(cls, first, *rest):
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def pandas(self):
-        import pandas
-        self._valid()
-
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return pandas.DataFrame(self._content[self._index])
-        else:
-            return self._content[self._index].pandas()
+    def _prepare(self, identity):
+        raise NotImplementedError
 
 class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     """
@@ -586,9 +579,8 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
         return getattr(ufunc, method)(*inputs, **kwargs)
 
-    @classmethod
-    def concat(cls, first, *rest):
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def pandas(self):
+    def _prepare(self, identity):
         raise NotImplementedError
