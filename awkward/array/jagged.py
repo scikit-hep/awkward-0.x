@@ -518,7 +518,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if len(head) == 1 and isinstance(head[0], JaggedArray):
             head = head[0]
 
-            if issubclass(head._content.dtype.type, awkward.util.numpy.integer):
+            if isinstance(self._content, JaggedArray) and isinstance(head._content, JaggedArray):
+                return self.copy(content=self._content[head._content])
+
+            elif issubclass(head._content.dtype.type, awkward.util.numpy.integer):
                 if len(head.shape) == 1 and head._starts.shape != self._starts.shape:
                     raise ValueError("jagged array used as index has a different shape {0} from the jagged array it is selecting from {1}".format(head._starts.shape, self._starts.shape))
 
@@ -560,7 +563,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 headcontent[head.parents < 0] = False
 
                 return self.copy(starts=offsets[:-1].reshape(intheadsum.shape), stops=offsets[1:].reshape(intheadsum.shape), content=thyself._content[headcontent])
-
+            
             else:
                 raise TypeError("jagged index must be boolean (mask) or integer (fancy indexing)")
 
@@ -1080,7 +1083,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
         return offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and awkward.util.numpy.array_equal(self._starts[1:], self._stops[:-1]))
 
-    def flatten(self):
+    def flatten(self, axis=0):
+        if axis > 0:
+            if isinstance(self._content, JaggedArray):
+                counts = JaggedArray.fromcounts(self.counts, self._content.counts).sum()
+                return JaggedArray.fromcounts(counts, self._content.flatten(axis=axis - 1))
+
         if len(self) == 0:
             return self._content[0:0]
         elif self._canuseoffset():
@@ -1196,31 +1204,19 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return out.reshape(self._starts.shape + self._content.shape[1:])
 
-    def _argminmax_general(self, ismin):
-        if len(self._content.shape) != 1:
-            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
-
-        if ismin:
-            optimum = awkward.util.numpy.argmin
+    def argmin(self):
+        self._valid()
+        if awkward.util._hasjagged(self._content):
+            return self.copy(content=self._content.argmin())
         else:
-            optimum = awkward.util.numpy.argmax
+            return self._argminmax(True)
 
-        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
-
-        flatout = out.reshape((-1,) + self._content.shape[1:])
-        flatstarts = self._starts.reshape(-1)
-        flatstops = self._stops.reshape(-1)
-
-        content = self._content
-        for i, flatstart in enumerate(flatstarts):
-            flatstop = flatstops[i]
-            if flatstart != flatstop:
-                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
-
-        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-        newstops = awkward.util.numpy.array(newstarts)
-        newstops.reshape(-1)[flatstarts != flatstops] += 1
-        return self.copy(starts=newstarts, stops=newstops, content=flatout)
+    def argmax(self):
+        self._valid()
+        if awkward.util._hasjagged(self._content):
+            return self.copy(content=self._content.argmax())
+        else:
+            return self._argminmax(False)
 
     def _argminmax(self, ismin):
         if len(self._starts) == len(self._stops) == 0:
@@ -1229,7 +1225,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if len(self._content.shape) != 1:
             raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
 
-        self._valid()
         contentmax = self._content.max()
         shiftval = awkward.util.numpy.ceil(contentmax) + 1
         if math.isnan(shiftval) or math.isinf(shiftval) or shiftval != contentmax:
@@ -1259,11 +1254,31 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         newstops.reshape(-1)[nonempty] += 1
         return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
-    def argmin(self):
-        return self._argminmax(True)
+    def _argminmax_general(self, ismin):
+        if len(self._content.shape) != 1:
+            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
 
-    def argmax(self):
-        return self._argminmax(False)
+        if ismin:
+            optimum = awkward.util.numpy.argmin
+        else:
+            optimum = awkward.util.numpy.argmax
+
+        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
+
+        flatout = out.reshape((-1,) + self._content.shape[1:])
+        flatstarts = self._starts.reshape(-1)
+        flatstops = self._stops.reshape(-1)
+
+        content = self._content
+        for i, flatstart in enumerate(flatstarts):
+            flatstop = flatstops[i]
+            if flatstart != flatstop:
+                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
+
+        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
+        newstops = awkward.util.numpy.array(newstarts)
+        newstops.reshape(-1)[flatstarts != flatstops] += 1
+        return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
     @awkward.util.bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays):
