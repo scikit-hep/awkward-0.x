@@ -102,7 +102,7 @@ class Table(awkward.array.base.AwkwardArray):
 
         def __iter__(self, checkiter=True):
             if checkiter:
-                self._checkiter()
+                self._table._checkiter()
             i = 0
             while str(i) in self._table._contents:
                 yield self._table._contents[str(i)]
@@ -632,7 +632,7 @@ class Table(awkward.array.base.AwkwardArray):
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def _prepare(self, identity):
+    def _prepare(self, identity, dtype):
         raise NotImplementedError
 
     @property

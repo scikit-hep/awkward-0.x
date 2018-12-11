@@ -366,7 +366,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 try:
                     start_chunkid = self.global2chunkid(start)
                 except IndexError:
-                    if start > 0:
+                    if start >= 0:
                         # case A or B start was set beyond len(self), clamp it
                         start, start_chunkid = len(self), len(self._chunks)
                     if step < 0:
@@ -430,15 +430,15 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             if len(chunks) == 0 and len(self._chunks) > 0:
                 chunks.append(self._chunks[0][(slice(0, 0),) + tail])   # so that sliced.type == self.type
 
-            return self.__class__(chunks)
+            return self.copy(chunks=chunks)
 
         else:
             head = awkward.util.numpy.array(head, copy=False)
             if len(head.shape) == 1 and issubclass(head.dtype.type, awkward.util.numpy.integer):
                 if len(head) == 0 and len(self._chunks) == 0:
-                    return self.__class__([])[tail]
+                    return self.copy(chunks=[])[tail]
                 elif len(head) == 0:
-                    return self.__class__([self._chunks[0][(slice(0, 0),) + tail]])
+                    return self.copy(chunks=[self._chunks[0][(slice(0, 0),) + tail]])
 
                 chunkid, head = self.global2chunkid(head, return_normalized=True)
 
@@ -453,7 +453,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     for i, cid in enumerate(chunkid[mask]):
                         localindex = head[offsets[i]:offsets[i + 1]] - self.offsets[cid]
                         chunks.append(self._chunks[cid][localindex])
-                    return self.__class__(chunks)
+                    return self.copy(chunks=chunks)
 
                 elif awkward.util.isnumpy(self.type):
                     out = awkward.util.numpy.empty((len(head),) + self.type.shape[1:], dtype=self.type.dtype)
@@ -487,7 +487,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                         if len(x) > 0:
                             chunks.append(x)
 
-                return self.__class__(chunks)
+                return self.copy(chunks=chunks)
 
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
@@ -608,11 +608,12 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
         out = None
         for chunkid, chunk in enumerate(self._chunks):
-            this = awkward.util._reduce(chunk[:self._counts[chunkid]], ufunc, identity, dtype, regularaxis)
-            if out is None:
-                out = this
-            else:
-                out = ufunc(out, this)
+            if self._counts[chunkid] > 0:
+                this = awkward.util._reduce(chunk[:self._counts[chunkid]], ufunc, identity, dtype, regularaxis)
+                if out is None:
+                    out = this
+                else:
+                    out = ufunc(out, this)
 
         if out is None:
             if dtype is None:
@@ -622,8 +623,28 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         else:
             return out
 
-    def _prepare(self, identity):
-        raise NotImplementedError
+    def _prepare(self, identity, dtype):
+        self.knowcounts()
+        out = None
+        pos = 0
+        for chunkid, chunk in enumerate(self._chunks):
+            if self._counts[chunkid] > 0:
+                this = chunk[:self._counts[chunkid]]
+                if out is None:
+                    if dtype is None:
+                        dtype = this.dtype
+                    out = awkward.util.numpy.empty((sum(self._counts),) + this.shape[1:], dtype=dtype)
+
+                newpos = pos + this.shape[0]
+                out[pos:newpos] = this
+                pos = newpos
+
+        if out is None:
+            if dtype is None:
+                dtype = self.DEFAULTTYPE
+            return awkward.util.numpy.array([identity], dtype=dtype)
+        else:
+            return out
 
     @property
     def columns(self):
@@ -790,12 +811,6 @@ class AppendableArray(ChunkedArray):
 
     def _hasjagged(self):
         return False
-
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
-        raise NotImplementedError
-
-    def _prepare(self, identity):
-        raise NotImplementedError
 
     def astype(self, dtype):
         chunks = []

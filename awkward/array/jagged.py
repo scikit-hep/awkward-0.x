@@ -1109,7 +1109,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return out
 
         elif isinstance(self._content, awkward.array.base.AwkwardArray):
-            thyself = self.copy(content=self._content._prepare(identity))
+            thyself = self.copy(content=self._content._prepare(identity, dtype))
 
         elif regularaxis is not None and regularaxis != 0:
             if ufunc is None:

@@ -204,7 +204,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def _prepare(self, identity):
+    def _prepare(self, identity, dtype):
         raise NotImplementedError
 
 class SparseArray(awkward.array.base.AwkwardArrayWithContent):
@@ -582,5 +582,5 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def _prepare(self, identity):
+    def _prepare(self, identity, dtype):
         raise NotImplementedError

@@ -268,7 +268,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def _prepare(self, identity):
+    def _prepare(self, identity, dtype):
         raise NotImplementedError
 
 class BitMaskedArray(MaskedArray):
@@ -506,7 +506,7 @@ class BitMaskedArray(MaskedArray):
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def _prepare(self, identity):
+    def _prepare(self, identity, dtype):
         raise NotImplementedError
 
 class IndexedMaskedArray(MaskedArray):
@@ -652,5 +652,5 @@ class IndexedMaskedArray(MaskedArray):
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def _prepare(self, identity):
+    def _prepare(self, identity, dtype):
         raise NotImplementedError

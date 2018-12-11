@@ -376,7 +376,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
 
-    def _prepare(self, identity):
+    def _prepare(self, identity, dtype):
         raise NotImplementedError
 
     @property

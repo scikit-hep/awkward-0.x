@@ -228,7 +228,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise TypeError("cannot call reducer on object array")
 
-    def _prepare(self, identity):
+    def _prepare(self, identity, dtype):
         raise TypeError("cannot call reducer on object array")
 
 ####################################################################### strings

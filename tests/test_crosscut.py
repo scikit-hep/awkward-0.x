@@ -112,14 +112,27 @@ class Test(unittest.TestCase):
         assert a.sum() == 49.5
         a = ChunkedArray([JaggedArray.fromiter([[0.0, 1.1, 2.2], [], [3.3, 4.4]]), JaggedArray.fromiter([]), JaggedArray.fromiter([[5.5, 6.6]]), JaggedArray.fromiter([[7.7, 8.8], [9.9]])])
         assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, 12.1, 16.5, 9.9]
+        a = JaggedArray.fromcounts([3, 0, 3, 1, 2, 1], ChunkedArray([[], [0.0, 1.1, 2.2, 3.3, 4.4], [5.5, 6.6], [], [7.7, 8.8, 9.9], []]))
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 13.2, 6.6, 16.5, 9.9]
 
         a = AppendableArray(3, numpy.float64)
         a.append(0.0)
         a.append(1.1)
         a.append(2.2)
         a.append(3.3)
+        assert a.sum() == 6.6
+        a = AppendableArray(3, numpy.float64)
+        a.append(0.0)
+        a.append(1.1)
+        a.append(2.2)
+        a.append(3.3)
+        a = JaggedArray.fromcounts([2, 0, 2], a)
+        assert a.sum().tolist() == [1.1, 0.0, 5.5]
 
         a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4])
+        # print()
+        # print(a.tolist())
+        # print(a.sum())
 
         a = SparseArray(10, [1, 3, 5, 7, 9], [100.0, 101.1, 102.2, 103.3, 104.4])
 
