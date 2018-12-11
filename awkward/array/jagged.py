@@ -1099,7 +1099,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         import awkward.array.table
         self._valid()
 
-        if awkward.util.hasjagged(self._content):
+        if awkward.util._hasjagged(self._content):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
 
         elif isinstance(self._content, awkward.array.table.Table):

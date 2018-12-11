@@ -104,3 +104,46 @@ class Test(unittest.TestCase):
         a.materialize()
         assert a.astype(int).tolist() == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
+    def test_crosscut_reduce(self):
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, 38.5]
+
+        a = ChunkedArray([[], [0.0, 1.1, 2.2, 3.3, 4.4], [5.5, 6.6], [], [7.7, 8.8, 9.9], []])
+        assert a.sum() == 49.5
+        a = ChunkedArray([JaggedArray.fromiter([[0.0, 1.1, 2.2], [], [3.3, 4.4]]), JaggedArray.fromiter([]), JaggedArray.fromiter([[5.5, 6.6]]), JaggedArray.fromiter([[7.7, 8.8], [9.9]])])
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, 12.1, 16.5, 9.9]
+
+        a = AppendableArray(3, numpy.float64)
+        a.append(0.0)
+        a.append(1.1)
+        a.append(2.2)
+        a.append(3.3)
+
+        a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4])
+
+        a = SparseArray(10, [1, 3, 5, 7, 9], [100.0, 101.1, 102.2, 103.3, 104.4])
+
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True)
+
+        a = BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True, lsborder=True)
+
+        a = IndexedMaskedArray([-1, 0, -1, 1, -1, 2, -1, 4, -1, 3], [0.0, 1.1, 2.2, 3.3, 4.4])
+
+        class Point(object):
+            def __init__(self, array):
+                self.x, self.y, self.z = array
+            def __repr__(self):
+                return "<Point {0} {1} {2}>".format(self.x, self.y, self.z)
+            def __eq__(self, other):
+                return isinstance(other, Point) and self.x == other.x and self.y == other.y and self.z == other.z
+
+        a = ObjectArray([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.9]], Point)
+
+        a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+
+        a = UnionArray([0, 1, 0, 1, 0, 1, 0, 1, 0, 1], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]])
+
+        a = VirtualArray(lambda: [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+
+        a = VirtualArray(lambda: [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a.materialize()

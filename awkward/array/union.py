@@ -396,7 +396,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
             return tuple(out)
 
     def _hasjagged(self):
-        return all(awkward.util.hasjagged(x) for x in self._contents)
+        return all(awkward.util._hasjagged(x) for x in self._contents)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError

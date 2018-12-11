@@ -289,7 +289,7 @@ class AwkwardArrayWithContent(AwkwardArray):
             raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
     def _hasjagged(self):
-        return awkward.util.hasjagged(self._content)
+        return awkward.util._hasjagged(self._content)
 
     @property
     def columns(self):

@@ -148,9 +148,32 @@ def _valid(array, seen):
     if isinstance(array, awkward.array.base.AwkwardArray):
         array._valid(seen)
 
-def hasjagged(array):
+def _hasjagged(array):
     import awkward.array.base
     return isinstance(array, awkward.array.base.AwkwardArray) and array._hasjagged()
+
+def _reduce(array, ufunc, identity, dtype, regularaxis):
+    import awkward.array.base
+
+    if isinstance(array, awkward.array.base.AwkwardArray):
+        return array._reduce(ufunc, identity, dtype, regularaxis)
+
+    elif len(array) == 0:
+        if dtype is None:
+            dtype = array.dtype
+        return ufunc.reduce(numpy.full((1,) + array.shape[1:], identity, dtype=dtype), axis=regularaxis)
+
+    else:
+        original = array
+        if dtype is not None:
+            array = numpy.array(array, dtype=dtype, copy=False)
+        if issubclass(array.dtype.type, (numpy.floating, numpy.complexfloating)):
+            mask = numpy.isnan(array)
+            if mask.any():
+                if array is original:
+                    array = array.copy()
+                array[mask] = identity
+        return ufunc.reduce(array, axis=regularaxis)
 
 def concatenate(arrays):
     if all(isinstance(x, numpy.ndarray) for x in arrays):

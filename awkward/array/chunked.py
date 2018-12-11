@@ -590,12 +590,37 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         for chunkid in range(len(self._chunks)):
             self.knowcounts(until=chunkid)
             if self._counts[chunkid] > 0:
-                return awkward.util.hasjagged(self._chunks[chunkid])
+                return awkward.util._hasjagged(self._chunks[chunkid])
         else:
             return False
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        raise NotImplementedError
+        self.knowcounts()
+        self._valid()
+
+        if awkward.util._hasjagged(self):
+            chunks = []
+            for chunkid, chunk in enumerate(self._chunks):
+                this = chunk._reduce(ufunc, identity, dtype, regularaxis)
+                if len(this) > 0:
+                    chunks.append(this)
+            return self.copy(chunks=chunks)
+
+        out = None
+        for chunkid, chunk in enumerate(self._chunks):
+            this = awkward.util._reduce(chunk[:self._counts[chunkid]], ufunc, identity, dtype, regularaxis)
+            if out is None:
+                out = this
+            else:
+                out = ufunc(out, this)
+
+        if out is None:
+            if dtype is None:
+                return identity
+            else:
+                return dtype.type(identity)
+        else:
+            return out
 
     def _prepare(self, identity):
         raise NotImplementedError

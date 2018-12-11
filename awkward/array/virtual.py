@@ -371,7 +371,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         return getattr(ufunc, method)(*inputs, **kwargs)
 
     def _hasjagged(self):
-        return awkward.util.hasjagged(self.array)
+        return awkward.util._hasjagged(self.array)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise NotImplementedError
