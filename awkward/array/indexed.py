@@ -202,10 +202,13 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         return getattr(ufunc, method)(*inputs, **kwargs)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        raise NotImplementedError
+        return ufunc.reduce(self._prepare(identity, dtype))
 
     def _prepare(self, identity, dtype):
-        raise NotImplementedError
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return self._content[self._index]
+        else:
+            return self._content._prepare(identity, dtype)[self._index]
 
 class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     """

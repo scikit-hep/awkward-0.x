@@ -132,9 +132,7 @@ class Test(unittest.TestCase):
         assert a.sum().tolist() == [1.1, 0.0, 5.5]
 
         a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4])
-        # print()
-        # print(a.tolist())
-        # print(a.sum())
+        assert a.sum() == 18.700000000000003
 
         a = SparseArray(10, [1, 3, 5, 7, 9], [100.0, 101.1, 102.2, 103.3, 104.4])
 
