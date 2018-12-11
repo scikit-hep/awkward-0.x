@@ -399,20 +399,53 @@ class UnionArray(awkward.array.base.AwkwardArray):
         return all(awkward.util._hasjagged(x) for x in self._contents)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        raise NotImplementedError
+        if self._hasjagged():
+            return self.copy(contents=[x._reduce(ufunc, identity, dtype, regularaxis) for x in self._contents])
+
+        elif self.columns != []:
+            out = awkward.array.table.Table()
+            for n in self.columns:
+                out[n] = self.copy(content=self[n])
+            return out._reduce(ufunc, identity, dtype, regularaxis)
+
+        else:
+            return ufunc.reduce(self._prepare(identity, dtype))
 
     def _prepare(self, identity, dtype):
-        raise NotImplementedError
+        if dtype is None:
+            dtype = self.dtype
+
+        out = None
+        index = self._index[:len(self._tags)]
+        for tag, content in enumerate(self._contents):
+            if not isinstance(content, awkward.util.numpy.ndarray):
+                content = content._prepare(identity, dtype)
+
+            mask = (self._tags == tag)
+            c = content[index[mask]]
+
+            if out is None:
+                out = awkward.util.numpy.full(self._tags.shape[:1] + c.shape[1:], identity, dtype=dtype)
+            out[mask] = c
+
+        return out
 
     @property
     def columns(self):
         out = None
         for content in self._contents:
+            if isinstance(content, awkward.util.numpy.ndarray):
+                return []
+
             if out is None:
-                out = content.allcolumns
+                out = content.columns
             else:
                 out = [x for x in content.columns if x in out]
-        return out
+
+        if out is None:
+            return []
+        else:
+            return out
 
     def astype(self, dtype):
         return self.copy(contents=[x.astype(dtype) for x in self._contents])

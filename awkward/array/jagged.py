@@ -1103,8 +1103,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
 
         elif isinstance(self._content, awkward.array.table.Table):
-            out = awkward.array.table.Table()
-            for n, x in thyself._content._contents.items():
+            out = self._content.copy(contents=[])
+            for n, x in self._content._contents.items():
                 out[n] = self.copy(content=x)._reduce(ufunc, identity, dtype, regularaxis)
             return out
 
@@ -1301,7 +1301,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return cls(starts, stops, content)
 
     @classmethod
-    def allconcat(cls, first, *rest):    # each item in first followed by second, etc.
+    def stack(cls, first, *rest):    # each item in first followed by second, etc.
         raise NotImplementedError
 
     @classmethod

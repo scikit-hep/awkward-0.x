@@ -667,14 +667,14 @@ class Table(awkward.array.base.AwkwardArray):
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         out = Table.named({
-            awkward.util.numpy.bitwise_or: "any",
-            awkward.util.numpy.bitwise_and: "all",
-            None: "count",
-            awkward.util.numpy.count_nonzero: "count_nonzero",
-            awkward.util.numpy.add: "sum",
-            awkward.util.numpy.multiply: "prod",
-            awkward.util.numpy.minimum: "min",
-            awkward.util.numpy.maximum: "max"
+            awkward.util.numpy.bitwise_or: "Any",
+            awkward.util.numpy.bitwise_and: "All",
+            None: "Count",
+            awkward.util.numpy.count_nonzero: "CountNonzero",
+            awkward.util.numpy.add: "Sum",
+            awkward.util.numpy.multiply: "Prod",
+            awkward.util.numpy.minimum: "Min",
+            awkward.util.numpy.maximum: "Max"
             }[ufunc])
         out._showdict = True
         for n in self._contents:

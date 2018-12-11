@@ -374,10 +374,17 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         return awkward.util._hasjagged(self.array)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        raise NotImplementedError
+        return awkward.util._reduce(self.array, ufunc, identity, dtype, regularaxis)
 
     def _prepare(self, identity, dtype):
-        raise NotImplementedError
+        array = self.array
+        if isinstance(array, awkward.util.numpy.ndarray):
+            if dtype is None:
+                return array
+            else:
+                return array.astype(dtype)
+        else:
+            return array._prepare(identity, dtype)
 
     @property
     def columns(self):
