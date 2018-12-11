@@ -30,6 +30,10 @@
 
 import re
 import types
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 import awkward.array.base
 import awkward.type
@@ -42,7 +46,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     ##################### class Row
 
-    class Row(object):
+    class Row(awkward.util.NDArrayOperatorsMixin):
         """
         Table.Row
         """
@@ -56,6 +60,8 @@ class Table(awkward.array.base.AwkwardArray):
         def __repr__(self):
             if self._table.istuple:
                 return "({0})".format(", ".join(str(self[n]) for n in self._table._contents))
+            elif getattr(self._table, "_showdict", False):
+                return "<{0} {{{1}}}>".format(self._table._rowname, ", ".join("{0}: {1}".format(repr(n), str(self[n])) for n in self._table._contents))
             else:
                 return "<{0} {1}>".format(self._table._rowname, self._index)
 
@@ -71,6 +77,20 @@ class Table(awkward.array.base.AwkwardArray):
                 return tuple(self[n].tolist() for n in self._table._contents)
             else:
                 return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._contents.items())
+
+        def __len__(self):
+            i = 0
+            while str(i) in self._table._contents:
+                i += 1
+            return i
+
+        def __iter__(self, checkiter=True):
+            if checkiter:
+                self._table._checkiter()
+            i = 0
+            while str(i) in self._table._contents:
+                yield self._table._contents[str(i)]
+                i += 1
 
         def __getitem__(self, where):
             if isinstance(where, awkward.util.string):
@@ -97,22 +117,38 @@ class Table(awkward.array.base.AwkwardArray):
                     where = (where,)
                 return self._table.Row(table, index + where)
 
-        def __dir__(self):
-            return ["at", "tolist"]
+        def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+            if method != "__call__":
+                return NotImplemented
 
-        def __iter__(self, checkiter=True):
-            if checkiter:
-                self._table._checkiter()
-            i = 0
-            while str(i) in self._table._contents:
-                yield self._table._contents[str(i)]
-                i += 1
+            torow = not any(not isinstance(x, Table.Row) and isinstance(x, Iterable) for x in inputs)
 
-        def __len__(self):
-            i = 0
-            while str(i) in self._table._contents:
-                i += 1
-            return i
+            inputs = list(inputs)
+            for i in range(len(inputs)):
+                if isinstance(inputs[i], Table.Row):
+                    inputs[i] = inputs[i]._table[inputs[i]._index : inputs[i]._index + 1]
+
+            result = getattr(ufunc, method)(*inputs, **kwargs)
+
+            if torow:
+                if isinstance(result, tuple):
+                    out = []
+                    for x in result:
+                        if isinstance(x, Table):
+                            out.append(awkward.array.objects.Methods.maybemixin(type(x), Table.Row)(x, 0))
+                            out[-1]._table._showdict = True
+                        else:
+                            out.append(x)
+                    return tuple(out)
+                elif method == "at":
+                    return None
+                else:
+                    out = awkward.array.objects.Methods.maybemixin(type(result), Table.Row)(result, 0)
+                    out._table._showdict = True
+                    return out
+
+            else:
+                return result
 
         def __eq__(self, other):
             if not isinstance(other, Table.Row):
@@ -630,10 +666,25 @@ class Table(awkward.array.base.AwkwardArray):
         return False
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        raise NotImplementedError
-
-    def _prepare(self, identity, dtype):
-        raise NotImplementedError
+        out = Table.named({
+            awkward.util.numpy.bitwise_or: "any",
+            awkward.util.numpy.bitwise_and: "all",
+            None: "count",
+            awkward.util.numpy.count_nonzero: "count_nonzero",
+            awkward.util.numpy.add: "sum",
+            awkward.util.numpy.multiply: "prod",
+            awkward.util.numpy.minimum: "min",
+            awkward.util.numpy.maximum: "max"
+            }[ufunc])
+        out._showdict = True
+        for n in self._contents:
+            index = self._index()
+            if index is None:
+                x = self._contents[n][:self._length()]
+            else:
+                x = self._contents[n][index]
+            out[n] = awkward.util.numpy.array([awkward.util._reduce(x, ufunc, identity, dtype, regularaxis)])
+        return out.Row(out, 0)
 
     @property
     def columns(self):
