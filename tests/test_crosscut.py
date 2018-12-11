@@ -144,20 +144,31 @@ class Test(unittest.TestCase):
         assert a.sum() == 511.0
 
         a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True)
+        assert a.sum() == 27.5
+        a = JaggedArray.fromcounts([3, 0, 2, 1, 1, 3], MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True))
+        assert a.sum().tolist() == [1.1, 0.0, 3.3, 5.5, 0.0, 17.6]
+        a = MaskedArray([False, False, False, True, True, False], JaggedArray.fromcounts([3, 0, 2, 1, 0, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]), maskedwhen=True)
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, None, None, 33.0]
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], Table.named("tuple", [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]), maskedwhen=True)
+        assert a.sum().tolist() == {"0": 27.5, "1": 2500}
 
         a = BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True, lsborder=True)
+        assert a.sum() == 27.5
+        a = JaggedArray.fromcounts([3, 0, 2, 1, 1, 3], BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True, lsborder=True))
+        assert a.sum().tolist() == [1.1, 0.0, 3.3, 5.5, 0.0, 17.6]
+        a = BitMaskedArray.fromboolmask([False, False, False, True, True, False], JaggedArray.fromcounts([3, 0, 2, 1, 0, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]), maskedwhen=True, lsborder=True)
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, None, None, 33.0]
+        a = BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], Table.named("tuple", [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]), maskedwhen=True, lsborder=True)
+        assert a.sum().tolist() == {"0": 27.5, "1": 2500}
 
-        a = IndexedMaskedArray([-1, 0, -1, 1, -1, 2, -1, 4, -1, 3], [0.0, 1.1, 2.2, 3.3, 4.4])
-
-        class Point(object):
-            def __init__(self, array):
-                self.x, self.y, self.z = array
-            def __repr__(self):
-                return "<Point {0} {1} {2}>".format(self.x, self.y, self.z)
-            def __eq__(self, other):
-                return isinstance(other, Point) and self.x == other.x and self.y == other.y and self.z == other.z
-
-        a = ObjectArray([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.9]], Point)
+        a = IndexedMaskedArray([-1, 1, -1, 3, -1, 5, -1, 7, -1, 8], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 9.9])
+        assert a.sum() == 27.5
+        a = JaggedArray.fromcounts([3, 0, 2, 1, 1, 3], IndexedMaskedArray([-1, 1, -1, 3, -1, 5, -1, 7, -1, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        assert a.sum().tolist() == [1.1, 0.0, 3.3, 5.5, 0.0, 17.6]
+        a = IndexedMaskedArray([0, 1, 2, -1, -1, 5], JaggedArray.fromcounts([3, 0, 2, 1, 0, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, None, None, 33.0]
+        a = IndexedMaskedArray([-1, 1, -1, 3, -1, 5, -1, 7, -1, 9], Table.named("tuple", [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]))
+        assert a.sum().tolist() == {"0": 27.5, "1": 2500}
 
         a = Table.named("tuple", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         assert a.sum().tolist() == {"0": 45, "1": 49.50000000000001}
