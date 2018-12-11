@@ -57,7 +57,7 @@ class Test(unittest.TestCase):
         pairing = gen.cross(reco, nested=True)
 
         quality = pairing.i0.delta_r(pairing.i1)
-
         best_pairing_index = quality.argmin()
+        best_pairing = pairing[best_pairing_index].flatten(axis=1)
 
-        print(pairing[best_pairing_index].flatten(axis=1))
+        

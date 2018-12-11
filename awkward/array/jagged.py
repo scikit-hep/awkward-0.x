@@ -1084,6 +1084,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and awkward.util.numpy.array_equal(self._starts[1:], self._stops[:-1]))
 
     def flatten(self, axis=0):
+        if not isinstance(axis, (numbers.Integral, awkward.util.numpy.integer)) or axis < 0:
+            raise TypeError("axis must be a non-negative integer (can't count from the end)")
         if axis > 0:
             if isinstance(self._content, JaggedArray):
                 counts = JaggedArray.fromcounts(self.counts, self._content.counts).sum()
