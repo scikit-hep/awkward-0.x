@@ -1089,9 +1089,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             offsets = counts2offsets(self.counts.reshape(-1))
             return self._tojagged(offsets[:-1], offsets[1:], copy=False)._content
 
-    def __bool__(self):
-        raise ValueError("The truth value of an array with more than one element is ambiguous. Use a.flatten().any() or a.flatten().all()")
-
     def _hasjagged(self):
         return True
 

@@ -34,27 +34,10 @@ import awkward.persist
 import awkward.type
 import awkward.util
 
-class At(object):
-    def __init__(self, array):
-        self._array = array
-
-    def __repr__(self):
-        return "<at accessor for {0}".format(repr(self._array)[1:])
-
-    def __getattr__(self, where):
-        return self._array[where]
-
-    def __call__(self, where):
-        return self._array[str(where)]
-
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     """
     AwkwardArray: abstract base class
     """
-
-    @property
-    def at(self):
-        return At(self)
 
     allow_tonumpy = True
     allow_iter = True
@@ -194,75 +177,45 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def max(self, regularaxis=None):
         return self._reduce(awkward.util.numpy.maximum, -awkward.util.numpy.inf, None, regularaxis)
 
-    # def _argfields(self, function):
-    #     if not isinstance(function, types.FunctionType):
-    #         raise TypeError("function (or lambda) required")
+    @property
+    def i0(self):
+        return self["0"]
 
-    #     if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
-    #         return None, None
+    @property
+    def i1(self):
+        return self["1"]
 
-    #     required = function.__code__.co_varnames[:function.__code__.co_argcount]
-    #     has_varargs = (function.__code__.co_flags & 0x04) != 0
-    #     has_kwargs = (function.__code__.co_flags & 0x08) != 0
+    @property
+    def i2(self):
+        return self["2"]
 
-    #     args = []
-    #     kwargs = {}
+    @property
+    def i3(self):
+        return self["3"]
 
-    #     order = self.columns
+    @property
+    def i4(self):
+        return self["4"]
 
-    #     for i, n in enumerate(required):
-    #         if n in self._content:
-    #             args.append(n)
-    #         elif str(i) in self._content:
-    #             args.append(str(i))
-    #         else:
-    #             args.append(order[i])
+    @property
+    def i5(self):
+        return self["5"]
 
-    #     if has_varargs:
-    #         while str(i) in self._content:
-    #             args.append(str(i))
-    #             i += 1
+    @property
+    def i6(self):
+        return self["6"]
 
-    #     if has_kwargs:
-    #         kwargs = [n for n in self._content if n not in required]
+    @property
+    def i7(self):
+        return self["7"]
 
-    #     return args, kwargs
+    @property
+    def i8(self):
+        return self["8"]
 
-    # def apply(self, function):
-    #     args, kwargs = self._argfields(function)
-    #     if args is None and kwargs is None:
-    #         return function(self)
-    #     else:
-    #         args = tuple(self[n] for n in args)
-    #         kwargs = dict((n, self[n]) for n in kwargs)
-    #         return function(*args, **kwargs)
-
-    # def filter(self, function):
-    #     args, kwargs = self._argfields(function)
-    #     if args is None and kwargs is None:
-    #         return self[function(self)]
-    #     else:
-    #         args = tuple(self[n] for n in args)
-    #         kwargs = dict((n, self[n]) for n in kwargs)
-    #         return self[function(*args, **kwargs)]
-
-    # def maxby(self, function):
-    #     args, kwargs = self._argfields(function)
-    #     if args is None and kwargs is None:
-    #         return self[function(self).argmax()]
-    #     else:
-    #         args = tuple(self[n] for n in args)
-    #         kwargs = dict((n, self[n]) for n in kwargs)
-    #         return self[function(*args, **kwargs).argmax()]
-
-    # def minby(self, function):
-    #     args, kwargs = self._argfields(function)
-    #     if args is None and kwargs is None:
-    #         return self[function(self).argmin()]
-    #     else:
-    #         args = tuple(self[n] for n in args)
-    #         kwargs = dict((n, self[n]) for n in kwargs)
-    #         return self[function(*args, **kwargs).argmin()]
+    @property
+    def i9(self):
+        return self["9"]
 
 class AwkwardArrayWithContent(AwkwardArray):
     """

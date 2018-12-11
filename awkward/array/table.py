@@ -65,10 +65,6 @@ class Table(awkward.array.base.AwkwardArray):
             else:
                 return "<{0} {1}>".format(self._table._rowname, self._index)
 
-        @property
-        def at(self):
-            return awkward.array.base.At(self)
-
         def __contains__(self, name):
             return name in self._table._contents
 
@@ -160,6 +156,46 @@ class Table(awkward.array.base.AwkwardArray):
 
         def __ne__(self, other):
             return not self.__eq__(other)
+
+        @property
+        def i0(self):
+            return self["0"]
+
+        @property
+        def i1(self):
+            return self["1"]
+
+        @property
+        def i2(self):
+            return self["2"]
+
+        @property
+        def i3(self):
+            return self["3"]
+
+        @property
+        def i4(self):
+            return self["4"]
+
+        @property
+        def i5(self):
+            return self["5"]
+
+        @property
+        def i6(self):
+            return self["6"]
+
+        @property
+        def i7(self):
+            return self["7"]
+
+        @property
+        def i8(self):
+            return self["8"]
+
+        @property
+        def i9(self):
+            return self["9"]
 
     ##################### class Table
 
