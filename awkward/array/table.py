@@ -28,7 +28,12 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import re
 import types
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 import awkward.array.base
 import awkward.type
@@ -41,7 +46,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     ##################### class Row
 
-    class Row(object):
+    class Row(awkward.util.NDArrayOperatorsMixin):
         """
         Table.Row
         """
@@ -53,17 +58,35 @@ class Table(awkward.array.base.AwkwardArray):
             self._index = index
 
         def __repr__(self):
-            return "<{0} {1}>".format(self._table.rowname, self._index)
-
-        @property
-        def at(self):
-            return awkward.array.base.At(self)
+            if self._table.istuple:
+                return "({0})".format(", ".join(str(self[n]) for n in self._table._contents))
+            elif getattr(self._table, "_showdict", False):
+                return "<{0} {{{1}}}>".format(self._table._rowname, ", ".join("{0}: {1}".format(repr(n), str(self[n])) for n in self._table._contents))
+            else:
+                return "<{0} {1}>".format(self._table._rowname, self._index)
 
         def __contains__(self, name):
             return name in self._table._contents
 
         def tolist(self):
-            return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._contents.items())
+            if self._table.istuple:
+                return tuple(self[n].tolist() for n in self._table._contents)
+            else:
+                return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._contents.items())
+
+        def __len__(self):
+            i = 0
+            while str(i) in self._table._contents:
+                i += 1
+            return i
+
+        def __iter__(self, checkiter=True):
+            if checkiter:
+                self._table._checkiter()
+            i = 0
+            while str(i) in self._table._contents:
+                yield self._table._contents[str(i)]
+                i += 1
 
         def __getitem__(self, where):
             if isinstance(where, awkward.util.string):
@@ -90,22 +113,38 @@ class Table(awkward.array.base.AwkwardArray):
                     where = (where,)
                 return self._table.Row(table, index + where)
 
-        def __dir__(self):
-            return ["at", "tolist"]
+        def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+            if method != "__call__":
+                return NotImplemented
 
-        def __iter__(self, checkiter=True):
-            if checkiter:
-                self._checkiter()
-            i = 0
-            while str(i) in self._table._contents:
-                yield self._table._contents[str(i)]
-                i += 1
+            torow = not any(not isinstance(x, Table.Row) and isinstance(x, Iterable) for x in inputs)
 
-        def __len__(self):
-            i = 0
-            while str(i) in self._table._contents:
-                i += 1
-            return i
+            inputs = list(inputs)
+            for i in range(len(inputs)):
+                if isinstance(inputs[i], Table.Row):
+                    inputs[i] = inputs[i]._table[inputs[i]._index : inputs[i]._index + 1]
+
+            result = getattr(ufunc, method)(*inputs, **kwargs)
+
+            if torow:
+                if isinstance(result, tuple):
+                    out = []
+                    for x in result:
+                        if isinstance(x, Table):
+                            out.append(awkward.array.objects.Methods.maybemixin(type(x), Table.Row)(x, 0))
+                            out[-1]._table._showdict = True
+                        else:
+                            out.append(x)
+                    return tuple(out)
+                elif method == "at":
+                    return None
+                else:
+                    out = awkward.array.objects.Methods.maybemixin(type(result), Table.Row)(result, 0)
+                    out._table._showdict = True
+                    return out
+
+            else:
+                return result
 
         def __eq__(self, other):
             if not isinstance(other, Table.Row):
@@ -117,6 +156,46 @@ class Table(awkward.array.base.AwkwardArray):
 
         def __ne__(self, other):
             return not self.__eq__(other)
+
+        @property
+        def i0(self):
+            return self["0"]
+
+        @property
+        def i1(self):
+            return self["1"]
+
+        @property
+        def i2(self):
+            return self["2"]
+
+        @property
+        def i3(self):
+            return self["3"]
+
+        @property
+        def i4(self):
+            return self["4"]
+
+        @property
+        def i5(self):
+            return self["5"]
+
+        @property
+        def i6(self):
+            return self["6"]
+
+        @property
+        def i7(self):
+            return self["7"]
+
+        @property
+        def i8(self):
+            return self["8"]
+
+        @property
+        def i9(self):
+            return self["9"]
 
     ##################### class Table
 
@@ -480,7 +559,7 @@ class Table(awkward.array.base.AwkwardArray):
         else:
             out = self.copy(contents=self._contents)
             out._view = newslice
-            out._base = self._base
+            out._base = self
             return out
 
     def __setitem__(self, where, what):
@@ -584,26 +663,67 @@ class Table(awkward.array.base.AwkwardArray):
                     out[i][n] = newcolumns[n]
             return tuple(out)
 
-    def any(self):
-        return any(x.any() for x in self._contents.values())
+    @property
+    def istuple(self):
+        return self._rowname == "tuple" and list(self._contents) == [str(x) for x in range(len(self._contents))]
 
-    def all(self):
-        return all(x.all() for x in self._contents.values())
+    def flattentuple(self):
+        out = self.copy()
+        out._contents = awkward.util.OrderedDict([(n, x.flattentuple() if isinstance(x, Table) else x) for n, x in out._contents.items()])
 
-    @classmethod
-    def concat(cls, first, *rest):
-        raise NotImplementedError
+        if self.istuple:
+            contents = awkward.util.OrderedDict()
+            for n, x in out._contents.items():
+                if isinstance(x, Table) and x.istuple:
+                    if x._view is None:
+                        view = slice(x._length())
 
-    @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
-        return cls(columns1, *columns2, **columns3)
+                    elif isinstance(x._view, tuple):
+                        start, step, length = x._view
+                        stop = start + step*length
+                        if stop < 0:
+                            stop = None
+                        view = slice(start, stop, step)
+
+                    else:
+                        view = x._view
+
+                    for y in x._contents.values():
+                        contents[str(len(contents))] = y[view]
+
+                else:
+                    contents[str(len(contents))] = x
+
+            out._contents = contents
+
+        return out
+
+    def _hasjagged(self):
+        return False
+
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
+        out = Table.named({
+            awkward.util.numpy.bitwise_or: "Any",
+            awkward.util.numpy.bitwise_and: "All",
+            None: "Count",
+            awkward.util.numpy.count_nonzero: "CountNonzero",
+            awkward.util.numpy.add: "Sum",
+            awkward.util.numpy.multiply: "Prod",
+            awkward.util.numpy.minimum: "Min",
+            awkward.util.numpy.maximum: "Max"
+            }[ufunc])
+        out._showdict = True
+        for n in self._contents:
+            index = self._index()
+            if index is None:
+                x = self._contents[n][:self._length()]
+            else:
+                x = self._contents[n][index]
+            out[n] = awkward.util.numpy.array([awkward.util._reduce(x, ufunc, identity, dtype, regularaxis)])
+        return out.Row(out, 0)
 
     @property
     def columns(self):
-        return [x for x in self._contents if awkward.util.isintstring(x)] + [x for x in self._contents if awkward.util.isidentifier(x)]
-
-    @property
-    def allcolumns(self):
         return list(self._contents)
 
     def astype(self, dtype):
@@ -611,7 +731,3 @@ class Table(awkward.array.base.AwkwardArray):
         for n, x in self._contents.items():
             out[n] = x.astype(dtype)
         return out
-
-    def pandas(self):
-        import pandas
-        return pandas.DataFrame(self._contents)

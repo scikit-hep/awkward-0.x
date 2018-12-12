@@ -147,4 +147,4 @@ class Test(unittest.TestCase):
         JaggedTypeArray = awkward.Methods.mixin(TypeArrayMethods, awkward.JaggedArray)
         jagged_array = JaggedTypeArray.fromcounts(counts, array)
         assert np.all(jagged_array.x.flatten() == x)
-        assert np.all(jagged_array.pairs().at(0).x.counts == counts*(counts+1)//2)
+        assert np.all(jagged_array.pairs().i0.x.counts == counts*(counts+1)//2)

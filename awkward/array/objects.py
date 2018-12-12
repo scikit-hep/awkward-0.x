@@ -222,18 +222,14 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=result)
 
-    def any(self):
-        return any(x for x in self)
+    def _hasjagged(self):
+        return False
 
-    def all(self):
-        return all(x for x in self)
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
+        raise TypeError("cannot call reducer on object array")
 
-    @classmethod
-    def concat(cls, first, *rest):
-        raise NotImplementedError
-
-    def pandas(self):
-        raise NotImplementedError
+    def _prepare(self, identity, dtype):
+        raise TypeError("cannot call reducer on object array")
 
 ####################################################################### strings
 

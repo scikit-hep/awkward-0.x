@@ -34,27 +34,10 @@ import awkward.persist
 import awkward.type
 import awkward.util
 
-class At(object):
-    def __init__(self, array):
-        self._array = array
-
-    def __repr__(self):
-        return "<at accessor for {0}".format(repr(self._array)[1:])
-
-    def __getattr__(self, where):
-        return self._array[where]
-
-    def __call__(self, where):
-        return self._array[str(where)]
-
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     """
     AwkwardArray: abstract base class
     """
-
-    @property
-    def at(self):
-        return At(self)
 
     allow_tonumpy = True
     allow_iter = True
@@ -118,7 +101,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return "[{0} ... {1}]".format(" ".join(awkward.util.array_str(x) for x in first), " ".join(awkward.util.array_str(x) for x in last))
 
     def __repr__(self):
-        return "<{0} {1} at {2:012x}>".format(self.__class__.__name__, str(self), id(self))
+        return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, str(self), id(self))
 
     @property
     def type(self):
@@ -152,7 +135,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         out = []
         for x in self:
             if isinstance(x, awkward.array.table.Table.Row):
-                out.append(dict((n, self._try_tolist(x[n])) for n in x._table._contents))
+                if x._table.istuple:
+                    out.append(tuple(x[n].tolist() for n in x._table._contents))
+                else:
+                    out.append(dict((n, self._try_tolist(x[n])) for n in x._table._contents))
             elif isinstance(x, awkward.util.numpy.ma.core.MaskedConstant):
                 out.append(None)
             else:
@@ -167,75 +153,69 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return True
 
-    def _argfields(self, function):
-        if not isinstance(function, types.FunctionType):
-            raise TypeError("function (or lambda) required")
+    def any(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.bitwise_or, False, self.BOOLTYPE, regularaxis)
 
-        if (isinstance(function, types.FunctionType) and function.__code__.co_argcount == 1) or isinstance(self._content, awkward.util.numpy.ndarray):
-            return None, None
+    def all(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.bitwise_and, True, self.BOOLTYPE, regularaxis)
 
-        required = function.__code__.co_varnames[:function.__code__.co_argcount]
-        has_varargs = (function.__code__.co_flags & 0x04) != 0
-        has_kwargs = (function.__code__.co_flags & 0x08) != 0
+    def count(self, regularaxis=None):
+        return self._reduce(None, 0, None, regularaxis)
 
-        args = []
-        kwargs = {}
+    def count_nonzero(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.count_nonzero, 0, None, regularaxis)
 
-        order = self.columns
+    def sum(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.add, 0, None, regularaxis)
 
-        for i, n in enumerate(required):
-            if n in self._content:
-                args.append(n)
-            elif str(i) in self._content:
-                args.append(str(i))
-            else:
-                args.append(order[i])
+    def prod(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.multiply, 1, None, regularaxis)
 
-        if has_varargs:
-            while str(i) in self._content:
-                args.append(str(i))
-                i += 1
+    def min(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.minimum, awkward.util.numpy.inf, None, regularaxis)
 
-        if has_kwargs:
-            kwargs = [n for n in self._content if n not in required]
+    def max(self, regularaxis=None):
+        return self._reduce(awkward.util.numpy.maximum, -awkward.util.numpy.inf, None, regularaxis)
 
-        return args, kwargs
+    @property
+    def i0(self):
+        return self["0"]
 
-    def apply(self, function):
-        args, kwargs = self._argfields(function)
-        if args is None and kwargs is None:
-            return function(self)
-        else:
-            args = tuple(self[n] for n in args)
-            kwargs = dict((n, self[n]) for n in kwargs)
-            return function(*args, **kwargs)
+    @property
+    def i1(self):
+        return self["1"]
 
-    def filter(self, function):
-        args, kwargs = self._argfields(function)
-        if args is None and kwargs is None:
-            return self[function(self)]
-        else:
-            args = tuple(self[n] for n in args)
-            kwargs = dict((n, self[n]) for n in kwargs)
-            return self[function(*args, **kwargs)]
+    @property
+    def i2(self):
+        return self["2"]
 
-    def maxby(self, function):
-        args, kwargs = self._argfields(function)
-        if args is None and kwargs is None:
-            return self[function(self).argmax()]
-        else:
-            args = tuple(self[n] for n in args)
-            kwargs = dict((n, self[n]) for n in kwargs)
-            return self[function(*args, **kwargs).argmax()]
+    @property
+    def i3(self):
+        return self["3"]
 
-    def minby(self, function):
-        args, kwargs = self._argfields(function)
-        if args is None and kwargs is None:
-            return self[function(self).argmin()]
-        else:
-            args = tuple(self[n] for n in args)
-            kwargs = dict((n, self[n]) for n in kwargs)
-            return self[function(*args, **kwargs).argmin()]
+    @property
+    def i4(self):
+        return self["4"]
+
+    @property
+    def i5(self):
+        return self["5"]
+
+    @property
+    def i6(self):
+        return self["6"]
+
+    @property
+    def i7(self):
+        return self["7"]
+
+    @property
+    def i8(self):
+        return self["8"]
+
+    @property
+    def i9(self):
+        return self["9"]
 
 class AwkwardArrayWithContent(AwkwardArray):
     """
@@ -264,11 +244,8 @@ class AwkwardArrayWithContent(AwkwardArray):
         else:
             raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
-    @property
-    def base(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            raise TypeError("array has no Table, and hence no base")
-        return self._content.base
+    def _hasjagged(self):
+        return awkward.util._hasjagged(self._content)
 
     @property
     def columns(self):
@@ -276,13 +253,6 @@ class AwkwardArrayWithContent(AwkwardArray):
             return []
         else:
             return self._content.columns
-
-    @property
-    def allcolumns(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return []
-        else:
-            return self._content.allcolumns
 
     def astype(self, dtype):
         return self.copy(content=self._content.astype(dtype))

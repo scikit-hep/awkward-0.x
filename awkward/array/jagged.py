@@ -518,7 +518,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if len(head) == 1 and isinstance(head[0], JaggedArray):
             head = head[0]
 
-            if issubclass(head._content.dtype.type, awkward.util.numpy.integer):
+            if isinstance(self._content, JaggedArray) and isinstance(head._content, JaggedArray):
+                return self.copy(content=self._content[head._content])
+
+            elif issubclass(head._content.dtype.type, awkward.util.numpy.integer):
                 if len(head.shape) == 1 and head._starts.shape != self._starts.shape:
                     raise ValueError("jagged array used as index has a different shape {0} from the jagged array it is selecting from {1}".format(head._starts.shape, self._starts.shape))
 
@@ -560,7 +563,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 headcontent[head.parents < 0] = False
 
                 return self.copy(starts=offsets[:-1].reshape(intheadsum.shape), stops=offsets[1:].reshape(intheadsum.shape), content=thyself._content[headcontent])
-
+            
             else:
                 raise TypeError("jagged index must be boolean (mask) or integer (fancy indexing)")
 
@@ -572,10 +575,20 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 node = self.copy(starts=starts, stops=stops)
 
+        head = head[-1]
+
+        nslices = 0
         while isinstance(node, JaggedArray) and len(tail) > 0:
+            wasslice = isinstance(head, slice)
             head, tail = tail[0], tail[1:]
+
             original_head = head
             if isinstance(head, awkward.util.integer):
+                stack = []
+                for x in range(nslices):
+                    stack.insert(0, node.counts)
+                    node = node.flatten()
+
                 counts = node._stops - node._starts
                 if head < 0:
                     head = counts + head
@@ -583,7 +596,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                     raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
                 node = node._content[node._starts + head]
 
+                for oldcounts in stack:
+                    node = type(self).fromcounts(oldcounts, node)
+
             elif isinstance(head, slice):
+                nslices += 1
+                if nslices >= 2:
+                    raise NotImplementedError("this implementation cannot slice a JaggedArray in more than two dimensions")
+
                 counts = node._stops - node._starts
                 step = 1 if head.step is None else head.step
 
@@ -653,19 +673,80 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 head = awkward.util.numpy.array(head, copy=False)
                 if len(head.shape) == 1 and issubclass(head.dtype.type, awkward.util.numpy.integer):
-                    index = awkward.util.numpy.tile(head, len(node))
-                    pluscounts = (index.reshape(-1, len(head)) + node.counts.reshape(-1, 1)).reshape(-1)
-                    index[index < 0] = pluscounts[index < 0]
-                    if (index < 0).any() or (index.reshape(-1, len(head)) >= node.counts.reshape(-1, 1)).any():
-                        raise IndexError("index in jagged subdimension is out of bounds")
-                    index = (index.reshape(-1, len(head)) + self._starts.reshape(-1, 1)).reshape(-1)
-                    node = node._content[index].reshape(-1, len(head))
+                    if wasslice:
+                        stack = []
+                        for x in range(nslices):
+                            stack.insert(0, node.counts)
+                            node = node.flatten()
+
+                        index = awkward.util.numpy.tile(head, len(node))
+                        mask = (index < 0)
+                        if mask.any():
+                            pluscounts = (index.reshape(-1, len(head)) + node.counts.reshape(-1, 1)).reshape(-1)
+                            index[mask] = pluscounts[mask]
+                        if (index < 0).any() or (index.reshape(-1, len(head)) >= node.counts.reshape(-1, 1)).any():
+                            raise IndexError("index in jagged subdimension is out of bounds")
+                        index = (index.reshape(-1, len(head)) + node._starts.reshape(-1, 1)).reshape(-1)
+                        node = node._content[index]
+                        if isinstance(node, JaggedArray):
+                            node._starts = node._starts.reshape(-1, len(head))
+                            node._stops = node._stops.reshape(-1, len(head))
+                        elif isinstance(node, awkward.util.numpy.ndarray):
+                            node = node.reshape(-1, len(head))
+                        else:
+                            raise NotImplementedError
+
+                        for oldcounts in stack:
+                            node = type(self).fromcounts(oldcounts, node)
+
+                    else:
+                        if len(node) != len(head):
+                            raise IndexError("shape mismatch: indexing arrays could not be broadcast together with shapes {0} {1}".format(len(node), len(head)))
+                        index = head.copy() if head is original_head else head
+                        mask = (index < 0)
+                        if mask.any():
+                            index[mask] += head.counts
+                        if (index < 0).any() or (index >= node.counts).any():
+                            raise IndexError("index in jagged subdimension is out of bounds")
+                        index += node._starts
+                        node = node._content[index]
 
                 elif len(head.shape) == 1 and issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-                    node = node.regular()[:, head]
+                    if wasslice:
+                        stack = []
+                        for x in range(nslices):
+                            stack.insert(0, node.counts)
+                            node = node.flatten()
+
+                        if len(node) != 0 and not (node.counts == len(head)).all():
+                            raise IndexError("jagged subdimension is not regular and cannot match boolean shape {0}".format(len(head)))
+                        head = awkward.util.numpy.nonzero(head)[0]
+                        index = awkward.util.numpy.tile(head, len(node))
+                        index = (index.reshape(-1, len(node)) + node._starts.reshape(-1, 1)).reshape(-1)
+                        node = node._content[index]
+                        if isinstance(node, JaggedArray):
+                            node._starts = node._starts.reshape(-1, len(head))
+                            node._stops = node._stops.reshape(-1, len(head))
+                        elif isinstance(node, awkward.util.numpy.ndarray):
+                            node = node.reshape(-1, len(head))
+                        else:
+                            raise NotImplementedError
+
+                        for oldcounts in stack:
+                            node = type(self).fromcounts(oldcounts, node)
+
+                    else:
+                        index = awkward.util.numpy.nonzero(head)[0]
+                        if len(node) != len(index):
+                            raise IndexError("shape mismatch: indexing arrays could not be broadcast together with shapes {0} {1}".format(len(node), len(index)))
+                        index += node._starts
+                        node = node._content[index]
 
                 else:
                     raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))
+
+            if isinstance(node, awkward.util.numpy.ndarray) and len(node.shape) < sum(0 if isinstance(x, slice) else 1 for x in tail):
+                raise IndexError("IndexError: too many indices for array")
 
         return node[tail]
 
@@ -861,13 +942,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             indexes += awkward.util.numpy.arange(count)
             return self._content[indexes]
 
-    def argdistincts(self):
-        return self.argpairs(same=False)
-
-    def distincts(self):
-        return self.pairs(same=False)
-
-    def _argpairs(self, same=True):
+    def _argpairs(self):
         import awkward.array.table
         self._valid()
         
@@ -887,24 +962,56 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         left = starts_parents + i
         right = starts_parents + k - n*i + (i*(i + 1) >> 1)
 
-        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table(left, right))
+        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right))
         out._parents = parents
+        return out
 
-        if not same:
-            out = out[out["0"] != out["1"]]
+    def argdistincts(self, nested=False):
+        out = self._argpairs()
+        out["0"] = out["0"] - self._starts
+        out["1"] = out["1"] - self._starts
+        out = out[out["0"] != out["1"]]
+
+        if nested:
+            out = JaggedArray.fromcounts(awkward.util.numpy.maximum(0, self.counts - 1), JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
 
         return out
 
-    def argpairs(self, same=True):
-        return self._argpairs(same=same) - self._starts
-
-    def pairs(self, same=True):
-        argpairs = self._argpairs(same=same)
+    def distincts(self, nested=False):
+        argpairs = self._argpairs()
+        argpairs = argpairs[argpairs["0"] != argpairs["1"]]
         left = argpairs._content["0"]
         right = argpairs._content["1"]
 
-        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table(self._content[left], self._content[right]))
+        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
         out._parents = argpairs._parents
+
+        if nested:
+            out = JaggedArray.fromcounts(awkward.util.numpy.maximum(0, self.counts - 1), JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
+
+        return out
+
+    def argpairs(self, nested=False):
+        out = self._argpairs()
+        out["0"] = out["0"] - self._starts
+        out["1"] = out["1"] - self._starts
+
+        if nested:
+            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
+
+        return out
+
+    def pairs(self, nested=False):
+        argpairs = self._argpairs()
+        left = argpairs._content["0"]
+        right = argpairs._content["1"]
+
+        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
+        out._parents = argpairs._parents
+
+        if nested:
+            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
+
         return out
 
     def _argcross(self, other):
@@ -928,35 +1035,62 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         left = self._starts[parents] + iop_ocp
         right = other._starts[parents] + iop - ocp * iop_ocp
 
-        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table(left, right))
+        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right))
         out._parents = parents
         return out
 
-    def argcross(self, other):
-        return self._argcross(other) - self._starts
+    def argcross(self, other, nested=False):
+        out = self._argcross(other)
+        out["0"] = out["0"] - self._starts
+        out["1"] = out["1"] - other._starts
 
-    def cross(self, other):
+        if nested:
+            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts(self._broadcast(other.counts).flatten(), out._content))
+
+        return out
+
+    def cross(self, other, nested=False):
         import awkward.array.table
 
-        argcross = self._argcross(other)
+        if hasattr(self, "_nestedcross"):
+            thyself = self._nestedcross
+        else:
+            thyself = self
+
+        argcross = thyself._argcross(other)
         left, right = argcross._content._contents.values()
 
-        fields = [other._content[right]]
-        if getattr(self, "_iscross", False):
-            fields = [x[left] for x in self._content._contents.values()] + fields
-        else:
-            fields = [self._content[left]] + fields
-
-        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table(*fields))
+        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table.named("tuple", thyself._content[left], other._content[right]).flattentuple())
         out._parents = argcross._parents
         out._iscross = True
+
+        if nested:
+            old = out
+            out = JaggedArray.fromcounts(thyself.counts, JaggedArray.fromcounts(thyself._broadcast(other.counts).flatten(), out._content))
+            out._nestedcross = old
+
+        if hasattr(self, "_nestedcross"):
+            counts = out.counts.copy()
+            mask = (self.counts != 0)
+            counts[mask] //= self.counts[mask]
+            old = out
+            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts(self._broadcast(counts).flatten(), out._content))
+            out._nestedcross = old
+
         return out
 
     def _canuseoffset(self):
         self._valid()
         return offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and awkward.util.numpy.array_equal(self._starts[1:], self._stops[:-1]))
 
-    def flatten(self):
+    def flatten(self, axis=0):
+        if not isinstance(axis, (numbers.Integral, awkward.util.numpy.integer)) or axis < 0:
+            raise TypeError("axis must be a non-negative integer (can't count from the end)")
+        if axis > 0:
+            if isinstance(self._content, JaggedArray):
+                counts = JaggedArray.fromcounts(self.counts, self._content.counts).sum()
+                return JaggedArray.fromcounts(counts, self._content.flatten(axis=axis - 1))
+
         if len(self) == 0:
             return self._content[0:0]
         elif self._canuseoffset():
@@ -965,118 +1099,126 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             offsets = counts2offsets(self.counts.reshape(-1))
             return self._tojagged(offsets[:-1], offsets[1:], copy=False)._content
 
-    def __bool__(self):
-        raise ValueError("The truth value of an array with more than one element is ambiguous. Use a.flatten().any() or a.flatten().all()")
+    def _hasjagged(self):
+        return True
 
-    def any(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self.BOOLTYPE)
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
+        import awkward.array.table
+        self._valid()
 
-        if self._canuseoffset():
-            if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-                content = self._content
+        if awkward.util._hasjagged(self._content):
+            return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
+
+        elif isinstance(self._content, awkward.array.table.Table):
+            out = self._content.copy(contents=[])
+            for n, x in self._content._contents.items():
+                out[n] = self.copy(content=x)._reduce(ufunc, identity, dtype, regularaxis)
+            return out
+
+        elif isinstance(self._content, awkward.array.base.AwkwardArray):
+            thyself = self.copy(content=self._content._prepare(identity, dtype))
+
+        elif regularaxis is not None and regularaxis != 0:
+            if ufunc is None:
+                ufunc = awkward.util.numpy.add
+                if isinstance(self._content, (awkward.util.numpy.floating, awkward.util.numpy.complexfloating)):
+                    content = 1 - awkward.util.numpy.isnan(self._content).astype(self.INDEXTYPE)
+                else:
+                    content = awkward.util.numpy.ones(self._content.shape, dtype=self.INDEXTYPE)
+
+            elif ufunc is awkward.util.numpy.count_nonzero:
+                ufunc = awkward.util.numpy.add
+                content = 1 - (self._content == 0).astype(self.INDEXTYPE)
+
             else:
-                content = self._content != 0
-
-            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=self.BOOLTYPE)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
-                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
-            out[:len(nonterminal)] = awkward.util.numpy.logical_or.reduceat(content, nonterminal)
-            out[self.offsets[1:] == self.offsets[:-1]] = False
-            return out
-            
-        else:
-            return self.count_nonzero() != 0
-
-    def all(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self.BOOLTYPE)
-
-        if self._canuseoffset():
-            if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
                 content = self._content
+
+            if dtype is not None:
+                content = content.astype(dtype)
+
+            return self.copy(content=ufunc.reduce(content, axis=regularaxis))
+
+        else:
+            thyself = self.copy()
+
+        if len(thyself._starts.shape) > 1:
+            thyself._starts = thyself._starts.reshape(-1)
+            thyself._stops = thyself._stops.reshape(-1)
+
+        if not thyself._canuseoffset():
+            offsets = counts2offsets(thyself.counts)
+            thyself = thyself._tojagged(offsets[:-1], offsets[1:], copy=False)
+
+        content = thyself._content
+        if ufunc is None:
+            ufunc = awkward.util.numpy.add
+            if isinstance(content, (awkward.util.numpy.floating, awkward.util.numpy.complexfloating)):
+                content = 1 - awkward.util.numpy.isnan(content).astype(self.INDEXTYPE)
             else:
-                content = self._content != 0
+                content = awkward.util.numpy.ones(content.shape, dtype=self.INDEXTYPE)
 
-            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=self.BOOLTYPE)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
+        elif ufunc is awkward.util.numpy.count_nonzero:
+            ufunc = awkward.util.numpy.add
+            content = 1 - (content == 0).astype(self.INDEXTYPE)
+
+        elif isinstance(content, (awkward.util.numpy.floating, awkward.util.numpy.complexfloating)):
+            mask = awkward.util.numpy.isnan(content)
+            if mask.any():
+                content = content.copy()
+                content[mask] = identity
+
+        if dtype is None:
+            dtype = content.dtype
+        else:
+            content = content.astype(dtype)
+
+        if identity is awkward.util.numpy.inf:
+            if issubclass(dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+                identity = True
+            elif issubclass(dtype.type, awkward.util.numpy.integer):
+                identity = awkward.util.numpy.iinfo(dtype.type).max
+
+        elif identity is -awkward.util.numpy.inf:
+            if issubclass(dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+                identity = False
+            elif issubclass(dtype.type, awkward.util.numpy.integer):
+                identity = awkward.util.numpy.iinfo(dtype.type).min
+
+        if regularaxis is None:
+            out = awkward.util.numpy.empty(thyself._starts.shape[:1], dtype=dtype)
+        else:
+            out = awkward.util.numpy.empty(thyself._starts.shape[:1] + content.shape[1:], dtype=dtype)
+
+        if len(out) != 0:
+            nonterminal = thyself.offsets[thyself.offsets != thyself.offsets[-1]]
+            if os.name == "nt":    # Windows Numpy reduceat requires 32-bit indexes
                 nonterminal = nonterminal.astype(awkward.util.numpy.int32)
-            out[:len(nonterminal)] = awkward.util.numpy.logical_and.reduceat(content, nonterminal)
-            out[self.offsets[1:] == self.offsets[:-1]] = True
-            return out
-            
+
+            if regularaxis is None:
+                for axis in range(1, len(content.shape)):
+                    content = ufunc.reduce(content, axis=axis)
+
+            out[:len(nonterminal)] = ufunc.reduceat(content, nonterminal)
+            out[thyself.starts == thyself.stops] = identity
+
+        if regularaxis is None:
+            return out.reshape(self._starts.shape)
         else:
-            return self.count_nonzero() == self.count
+            return out.reshape(self._starts.shape + self._content.shape[1:])
 
-    def count_nonzero(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self.INDEXTYPE)
-
-        if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-            return self.sum()
+    def argmin(self):
+        self._valid()
+        if awkward.util._hasjagged(self._content):
+            return self.copy(content=self._content.argmin())
         else:
-            return (self != 0).sum()
+            return self._argminmax(True)
 
-    def sum(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self._content.dtype)
-
-        if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-            content = self._content.astype(awkward.util.numpy.int64)
+    def argmax(self):
+        self._valid()
+        if awkward.util._hasjagged(self._content):
+            return self.copy(content=self._content.argmax())
         else:
-            content = self._content
-
-        if self._canuseoffset():
-            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
-                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
-            out[:len(nonterminal)] = awkward.util.numpy.add.reduceat(content, nonterminal)
-            out[self.offsets[1:] == self.offsets[:-1]] = 0
-            return out
-
-        else:
-            contentsum = awkward.util.numpy.empty((len(content) + 1,) + content.shape[1:], dtype=content.dtype)
-            contentsum[0] = 0
-            awkward.util.numpy.cumsum(content, axis=0, out=contentsum[1:])
-
-            nonempty = (self._starts != self._stops)
-
-            out = awkward.util.numpy.zeros(self.shape + content.shape[1:], dtype=content.dtype)
-            out[nonempty] = contentsum[self._stops[nonempty]] - contentsum[self._starts[nonempty]]
-            return out
-
-    def prod(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self._content.dtype)
-
-        if issubclass(self._content.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
-            content = self._content.astype(numpy.int64)
-        else:
-            content = self._content
-
-        if self._canuseoffset():
-            out = awkward.util.numpy.empty(self._starts.shape + content.shape[1:], dtype=content.dtype)
-            nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-            if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
-                nonterminal = nonterminal.astype(awkward.util.numpy.int32)
-            out[:len(nonterminal)] = awkward.util.numpy.multiply.reduceat(content, nonterminal)
-            out[self.offsets[1:] == self.offsets[:-1]] = 1
-            return out
-
-        else:
-            out = awkward.util.numpy.ones(self.shape + content.shape[1:], dtype=content.dtype)
-            flatout = out.reshape((-1,) + content.shape[1:])
-
-            content = content
-            flatstops = self._stops.reshape(-1)
-            for i, flatstart in enumerate(self._starts.reshape(-1)):
-                flatstop = flatstops[i]
-                if flatstart != flatstop:
-                    flatout[i] *= content[flatstart:flatstop].prod(axis=0)
-            return out
+            return self._argminmax(False)
 
     def _argminmax(self, ismin):
         if len(self._starts) == len(self._stops) == 0:
@@ -1085,11 +1227,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if len(self._content.shape) != 1:
             raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
 
-        self._valid()
         contentmax = self._content.max()
         shiftval = awkward.util.numpy.ceil(contentmax) + 1
         if math.isnan(shiftval) or math.isinf(shiftval) or shiftval != contentmax:
-            return self._minmax_general(True, ismin)
+            return self._argminmax_general(ismin)
 
         flatstarts = self._starts.reshape(-1)
         flatstops = self._stops.reshape(-1)
@@ -1115,67 +1256,16 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         newstops.reshape(-1)[nonempty] += 1
         return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
-    def argmin(self):
-        return self._argminmax(True)
-
-    def argmax(self):
-        return self._argminmax(False)
-
-    def _minmax_offset(self, ismin):
-        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self._content.dtype)
-        nonterminal = self.offsets[self.offsets != self.offsets[-1]]
-        if os.name == "nt":   # Windows Numpy reduceat requires 32-bit indexes
-            nonterminal = nonterminal.astype(awkward.util.numpy.int32)
+    def _argminmax_general(self, ismin):
+        if len(self._content.shape) != 1:
+            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
 
         if ismin:
-            out[:len(nonterminal)] = awkward.util.numpy.minimum.reduceat(self._content, nonterminal)
-            if issubclass(self._content.dtype.type, awkward.util.numpy.floating):
-                out[self.offsets[1:] == self.offsets[:-1]] = awkward.util.numpy.inf
-            else:
-                out[self.offsets[1:] == self.offsets[:-1]] = awkward.util.numpy.iinfo(self._content.dtype.type).max
-
+            optimum = awkward.util.numpy.argmin
         else:
-            out[:len(nonterminal)] = awkward.util.numpy.maximum.reduceat(self._content, nonterminal)
-            if issubclass(self._content.dtype.type, awkward.util.numpy.floating):
-                out[self.offsets[1:] == self.offsets[:-1]] = -awkward.util.numpy.inf
-            else:
-                out[self.offsets[1:] == self.offsets[:-1]] = awkward.util.numpy.iinfo(self._content.dtype.type).min
+            optimum = awkward.util.numpy.argmax
 
-        return out
-
-    def _minmax_general(self, isarg, ismin):
-        # not a group; must iterate (in absence of modified Hillis-Steele)
-        if isarg:
-            if len(self._content.shape) != 1:
-                raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
-
-            if ismin:
-                optimum = awkward.util.numpy.argmin
-            else:
-                optimum = awkward.util.numpy.argmax
-
-            out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
-
-        else:
-            if ismin:
-                optimum = awkward.util.numpy.amin
-            else:
-                optimum = awkward.util.numpy.amax
-
-            if issubclass(self._content.dtype.type, awkward.util.numpy.floating):
-                if ismin:
-                    out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], awkward.util.numpy.inf, dtype=self._content.dtype)
-                else:
-                    out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], -awkward.util.numpy.inf, dtype=self._content.dtype)
-
-            elif issubclass(self._content.dtype.type, awkward.util.numpy.integer):
-                if ismin:
-                    out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], awkward.util.numpy.iinfo(self._content.dtype.type).max, dtype=self._content.dtype)
-                else:
-                    out = awkward.util.numpy.full(self._starts.shape + self._content.shape[1:], awkward.util.numpy.iinfo(self._content.dtype.type).min, dtype=self._content.dtype)
-
-            else:
-                raise TypeError("only floating point and integer types can be minimized")
+        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
 
         flatout = out.reshape((-1,) + self._content.shape[1:])
         flatstarts = self._starts.reshape(-1)
@@ -1187,30 +1277,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             if flatstart != flatstop:
                 flatout[i] = optimum(content[flatstart:flatstop], axis=0)
 
-        if isarg:
-            newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-            newstops = awkward.util.numpy.array(newstarts)
-            newstops.reshape(-1)[flatstarts != flatstops] += 1
-            return self.copy(starts=newstarts, stops=newstops, content=flatout)
-
-        else:
-            return out
-
-    def min(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self._content.dtype)
-        if self._canuseoffset():
-            return self._minmax_offset(True)
-        else:
-            return self._minmax_general(False, True)
-
-    def max(self):
-        if len(self._starts) == len(self._stops) == 0:
-            return awkward.util.numpy.array([], dtype=self._content.dtype)
-        if self._canuseoffset():
-            return self._minmax_offset(False)
-        else:
-            return self._minmax_general(False, False)
+        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
+        newstops = awkward.util.numpy.array(newstarts)
+        newstops.reshape(-1)[flatstarts != flatstops] += 1
+        return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
     @awkward.util.bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays):
@@ -1245,7 +1315,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return cls(starts, stops, content)
 
     @classmethod
-    def allconcat(cls, first, *rest):    # each item in first followed by second, etc.
+    def stack(cls, first, *rest):    # each item in first followed by second, etc.
         raise NotImplementedError
 
     @classmethod

@@ -263,18 +263,62 @@ class Test(unittest.TestCase):
             assert c[2]["0"].tolist() == [x for x, y in zip(left, right) if x != y]
             assert c[2]["1"].tolist() == [y for x, y in zip(left, right) if x != y]
 
+    def test_jagged_cross_argnested(self):
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        b = awkward.fromiter([[100, 200], [300], [400]])
+        c = awkward.fromiter([[999], [999], [999, 888]])
+
+        assert a.cross(b).tolist() == [[(1.1, 100), (1.1, 200), (2.2, 100), (2.2, 200), (3.3, 100), (3.3, 200)], [], [(4.4, 400), (5.5, 400)]]
+        assert a.argcross(b).tolist() == [[(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)], [], [(0, 0), (1, 0)]]
+        assert a.cross(b, nested=True).tolist() == [[[(1.1, 100), (1.1, 200)], [(2.2, 100), (2.2, 200)], [(3.3, 100), (3.3, 200)]], [], [[(4.4, 400)], [(5.5, 400)]]]
+        assert a.argcross(b, nested=True).tolist() == [[[(0, 0), (0, 1)], [(1, 0), (1, 1)], [(2, 0), (2, 1)]], [], [[(0, 0)], [(1, 0)]]]
+
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[0] == [[[(ai, bi, ci) for ci in c[0]] for bi in b[0]] for ai in a[0]]
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[1] == [[[(ai, bi, ci) for ci in c[1]] for bi in b[1]] for ai in a[1]]
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[2] == [[[(ai, bi, ci) for ci in c[2]] for bi in b[2]] for ai in a[2]]
+
+        assert a.cross(b).cross(c).tolist() == [[(1.1, 100, 999), (1.1, 200, 999), (2.2, 100, 999), (2.2, 200, 999), (3.3, 100, 999), (3.3, 200, 999)], [], [(4.4, 400, 999), (4.4, 400, 888), (5.5, 400, 999), (5.5, 400, 888)]]
+        assert a.cross(b, nested=True).cross(c).tolist() == [[[(1.1, 100, 999), (1.1, 200, 999)], [(2.2, 100, 999), (2.2, 200, 999)], [(3.3, 100, 999), (3.3, 200, 999)]], [], [[(4.4, 400, 999), (4.4, 400, 888)], [(5.5, 400, 999), (5.5, 400, 888)]]]
+        assert a.cross(b).cross(c, nested=True).tolist() == [[[(1.1, 100, 999)], [(1.1, 200, 999)], [(2.2, 100, 999)], [(2.2, 200, 999)], [(3.3, 100, 999)], [(3.3, 200, 999)]], [], [[(4.4, 400, 999), (4.4, 400, 888)], [(5.5, 400, 999), (5.5, 400, 888)]]]
+
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        b = awkward.fromiter([[100, 200], [300], [400]])
+        c = awkward.fromiter([[999], [999], [999, 888, 777]])
+
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[0] == [[[(ai, bi, ci) for ci in c[0]] for bi in b[0]] for ai in a[0]]
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[1] == [[[(ai, bi, ci) for ci in c[1]] for bi in b[1]] for ai in a[1]]
+        assert a.cross(b, nested=True).cross(c, nested=True).tolist()[2] == [[[(ai, bi, ci) for ci in c[2]] for bi in b[2]] for ai in a[2]]
+
+        assert a.cross(b).cross(c).tolist() == [[(1.1, 100, 999), (1.1, 200, 999), (2.2, 100, 999), (2.2, 200, 999), (3.3, 100, 999), (3.3, 200, 999)], [], [(4.4, 400, 999), (4.4, 400, 888), (4.4, 400, 777), (5.5, 400, 999), (5.5, 400, 888), (5.5, 400, 777)]]
+        assert a.cross(b, nested=True).cross(c).tolist() == [[[(1.1, 100, 999), (1.1, 200, 999)], [(2.2, 100, 999), (2.2, 200, 999)], [(3.3, 100, 999), (3.3, 200, 999)]], [], [[(4.4, 400, 999), (4.4, 400, 888), (4.4, 400, 777)], [(5.5, 400, 999), (5.5, 400, 888), (5.5, 400, 777)]]]
+        assert a.cross(b).cross(c, nested=True).tolist() == [[[(1.1, 100, 999)], [(1.1, 200, 999)], [(2.2, 100, 999)], [(2.2, 200, 999)], [(3.3, 100, 999)], [(3.3, 200, 999)]], [], [[(4.4, 400, 999), (4.4, 400, 888), (4.4, 400, 777)], [(5.5, 400, 999), (5.5, 400, 888), (5.5, 400, 777)]]]
+
+    def test_jagged_pairs_argnested(self):
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        assert a.pairs().tolist() == [[(1.1, 1.1), (1.1, 2.2), (1.1, 3.3), (2.2, 2.2), (2.2, 3.3), (3.3, 3.3)], [], [(4.4, 4.4), (4.4, 5.5), (5.5, 5.5)]]
+        assert a.argpairs().tolist() == [[(0, 0), (0, 1), (0, 2), (1, 1), (1, 2), (2, 2)], [], [(0, 0), (0, 1), (1, 1)]]
+        assert a.pairs(nested=True).tolist() == [[[(1.1, 1.1), (1.1, 2.2), (1.1, 3.3)], [(2.2, 2.2), (2.2, 3.3)], [(3.3, 3.3)]], [], [[(4.4, 4.4), (4.4, 5.5)], [(5.5, 5.5)]]]
+        assert a.argpairs(nested=True).tolist() == [[[(0, 0), (0, 1), (0, 2)], [(1, 1), (1, 2)], [(2, 2)]], [], [[(0, 0), (0, 1)], [(1, 1)]]]
+
+    def test_jagged_distincts_argnested(self):
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        assert a.distincts().tolist() == [[(1.1, 2.2), (1.1, 3.3), (2.2, 3.3)], [], [(4.4, 5.5)]]
+        assert a.argdistincts().tolist() == [[(0, 1), (0, 2), (1, 2)], [], [(0, 1)]]
+        assert a.distincts(nested=True).tolist() == [[[(1.1, 2.2), (1.1, 3.3)], [(2.2, 3.3)]], [], [[(4.4, 5.5)]]]
+        assert a.argdistincts(nested=True).tolist() == [[[(0, 1), (0, 2)], [(1, 2)]], [], [[(0, 1)]]]
+
     def test_jagged_sum(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, 38.5]
 
         a = JaggedArray([[0, 3], [3, 5]], [[3, 3], [5, 10]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        assert a.sum().tolist() == [[3.3000000000000003, 0.0], [7.699999999999999, 38.5]]
+        assert a.sum(regularaxis=0).tolist() == [[3.3000000000000003, 0.0], [7.7, 38.5]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
-        assert a.sum().tolist() == [[3.3000000000000003], [0.0], [7.7], [38.5]]
+        assert a.sum(regularaxis=0).tolist() == [[3.3000000000000003], [0.0], [7.7], [38.5]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2], [3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7], [8.8, 8.8], [9.9, 9.9]])
-        assert a.sum().tolist() == [[3.3000000000000003, 3.3000000000000003], [0.0, 0.0], [7.7, 7.7], [38.5, 38.5]]
+        assert a.sum(regularaxis=0).tolist() == [[3.3000000000000003, 3.3000000000000003], [0.0, 0.0], [7.7, 7.7], [38.5, 38.5]]
 
     def test_jagged_prod(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
@@ -284,10 +328,10 @@ class Test(unittest.TestCase):
         assert a.prod().tolist() == [[0.0, 1.0], [14.52, 24350.911200000002]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
-        assert a.prod().tolist() == [[0.0], [1.0], [14.52], [24350.911200000002]]
+        assert a.prod(regularaxis=0).tolist() == [[0.0], [1.0], [14.52], [24350.911200000002]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2], [3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7], [8.8, 8.8], [9.9, 9.9]])
-        assert a.prod().tolist() == [[0.0, 0.0], [1.0, 1.0], [14.52, 14.52], [24350.911200000002, 24350.911200000002]]
+        assert a.prod(regularaxis=0).tolist() == [[0.0, 0.0], [1.0, 1.0], [14.52, 14.52], [24350.911200000002, 24350.911200000002]]
 
     def test_jagged_argmin(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
@@ -311,10 +355,10 @@ class Test(unittest.TestCase):
         assert a.min().tolist() == [[0.0, numpy.inf], [3.3, 5.5]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
-        assert a.min().tolist() == [[0.0], [numpy.inf], [3.3], [5.5]]
+        assert a.min(regularaxis=0).tolist() == [[0.0], [numpy.inf], [3.3], [5.5]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2], [3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7], [8.8, 8.8], [9.9, 9.9]])
-        assert a.min().tolist() == [[0.0, 0.0], [numpy.inf, numpy.inf], [3.3, 3.3], [5.5, 5.5]]
+        assert a.min(regularaxis=0).tolist() == [[0.0, 0.0], [numpy.inf, numpy.inf], [3.3, 3.3], [5.5, 5.5]]
 
     def test_jagged_max(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
@@ -324,10 +368,10 @@ class Test(unittest.TestCase):
         assert a.max().tolist() == [[2.2, -numpy.inf], [4.4, 9.9]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
-        assert a.max().tolist() == [[2.2], [-numpy.inf], [4.4], [9.9]]
+        assert a.max(regularaxis=0).tolist() == [[2.2], [-numpy.inf], [4.4], [9.9]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2], [3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7], [8.8, 8.8], [9.9, 9.9]])
-        assert a.max().tolist() == [[2.2, 2.2], [-numpy.inf, -numpy.inf], [4.4, 4.4], [9.9, 9.9]]
+        assert a.max(regularaxis=0).tolist() == [[2.2, 2.2], [-numpy.inf, -numpy.inf], [4.4, 4.4], [9.9, 9.9]]
 
     def test_jagged_concatenate(self):
         lst = [[1, 2, 3], [], [4, 5], [6, 7], [8], [], [9], [10, 11], [12]]

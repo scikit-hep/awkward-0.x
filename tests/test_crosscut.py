@@ -104,3 +104,85 @@ class Test(unittest.TestCase):
         a.materialize()
         assert a.astype(int).tolist() == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
+    def test_crosscut_reduce(self):
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, 38.5]
+
+        a = ChunkedArray([[], [0.0, 1.1, 2.2, 3.3, 4.4], [5.5, 6.6], [], [7.7, 8.8, 9.9], []])
+        assert a.sum() == 49.5
+        a = ChunkedArray([JaggedArray.fromiter([[0.0, 1.1, 2.2], [], [3.3, 4.4]]), JaggedArray.fromiter([]), JaggedArray.fromiter([[5.5, 6.6]]), JaggedArray.fromiter([[7.7, 8.8], [9.9]])])
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, 12.1, 16.5, 9.9]
+        a = JaggedArray.fromcounts([3, 0, 3, 1, 2, 1], ChunkedArray([[], [0.0, 1.1, 2.2, 3.3, 4.4], [5.5, 6.6], [], [7.7, 8.8, 9.9], []]))
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 13.2, 6.6, 16.5, 9.9]
+        a = ChunkedArray([Table.named("tuple", [0.0, 1.1, 2.2], [0, 100, 200]), Table.named("tuple", []), Table.named("tuple", [3.3, 4.4, 5.5], [300, 400, 500])])
+        assert a.sum().tolist() == {"0": 16.5, "1": 1500}
+
+        a = AppendableArray(3, numpy.float64)
+        a.append(0.0)
+        a.append(1.1)
+        a.append(2.2)
+        a.append(3.3)
+        assert a.sum() == 6.6
+        a = AppendableArray(3, numpy.float64)
+        a.append(0.0)
+        a.append(1.1)
+        a.append(2.2)
+        a.append(3.3)
+        a = JaggedArray.fromcounts([2, 0, 2], a)
+        assert a.sum().tolist() == [1.1, 0.0, 5.5]
+
+        a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4])
+        assert a.sum() == 18.700000000000003
+        a = JaggedArray.fromcounts([3, 0, 2], IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4]))
+        assert a.sum().tolist() == [9.9, 0.0, 8.8]
+        a = IndexedArray([3, 2, 4, 2, 2, 4, 0], JaggedArray.fromcounts([3, 0, 2, 1, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        assert a.sum().tolist() == [5.5, 7.7, 33.0, 7.7, 7.7, 33.0, 3.3000000000000003]
+        a = IndexedArray([3, 2, 4, 2, 2, 4, 0], Table.named("tuple", [0.0, 1.1, 2.2, 3.3, 4.4], [0, 100, 200, 300, 400]))
+        assert a.sum().tolist() == {"0": 18.700000000000003, "1": 1700}
+
+        a = SparseArray(10, [1, 3, 5, 7, 9], [100.0, 101.1, 102.2, 103.3, 104.4])
+        assert a.sum() == 511.0
+
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True)
+        assert a.sum() == 27.5
+        a = JaggedArray.fromcounts([3, 0, 2, 1, 1, 3], MaskedArray([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True))
+        assert a.sum().tolist() == [1.1, 0.0, 3.3, 5.5, 0.0, 17.6]
+        a = MaskedArray([False, False, False, True, True, False], JaggedArray.fromcounts([3, 0, 2, 1, 0, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]), maskedwhen=True)
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, None, None, 33.0]
+        a = MaskedArray([True, False, True, False, True, False, True, False, True, False], Table.named("tuple", [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]), maskedwhen=True)
+        assert a.sum().tolist() == {"0": 27.5, "1": 2500}
+
+        a = BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True, lsborder=True)
+        assert a.sum() == 27.5
+        a = JaggedArray.fromcounts([3, 0, 2, 1, 1, 3], BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], maskedwhen=True, lsborder=True))
+        assert a.sum().tolist() == [1.1, 0.0, 3.3, 5.5, 0.0, 17.6]
+        a = BitMaskedArray.fromboolmask([False, False, False, True, True, False], JaggedArray.fromcounts([3, 0, 2, 1, 0, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]), maskedwhen=True, lsborder=True)
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, None, None, 33.0]
+        a = BitMaskedArray.fromboolmask([True, False, True, False, True, False, True, False, True, False], Table.named("tuple", [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]), maskedwhen=True, lsborder=True)
+        assert a.sum().tolist() == {"0": 27.5, "1": 2500}
+
+        a = IndexedMaskedArray([-1, 1, -1, 3, -1, 5, -1, 7, -1, 8], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 9.9])
+        assert a.sum() == 27.5
+        a = JaggedArray.fromcounts([3, 0, 2, 1, 1, 3], IndexedMaskedArray([-1, 1, -1, 3, -1, 5, -1, 7, -1, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        assert a.sum().tolist() == [1.1, 0.0, 3.3, 5.5, 0.0, 17.6]
+        a = IndexedMaskedArray([0, 1, 2, -1, -1, 5], JaggedArray.fromcounts([3, 0, 2, 1, 0, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, None, None, 33.0]
+        a = IndexedMaskedArray([-1, 1, -1, 3, -1, 5, -1, 7, -1, 9], Table.named("tuple", [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]))
+        assert a.sum().tolist() == {"0": 27.5, "1": 2500}
+
+        a = Table.named("tuple", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        assert a.sum().tolist() == {"0": 45, "1": 49.50000000000001}
+        a = JaggedArray.fromcounts([3, 0, 2, 1, 4], Table.named("tuple", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        assert a.sum().tolist() == [(3, 3.3000000000000003), (0, 0.0), (7, 7.7), (5, 5.5), (30, 33.0)]
+        a = Table.named("tuple", JaggedArray.fromcounts([3, 0, 2, 1, 4], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]), [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        assert a.sum().tolist() == {"0": [3, 0, 7, 5, 30], "1": 11.0}
+
+        a = UnionArray([0, 1, 0, 1, 0, 1, 0, 1, 0, 1], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]])
+        assert a.sum() == 2522.0
+
+        a = VirtualArray(lambda: [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        assert a.sum() == 49.50000000000001
+
+        a = VirtualArray(lambda: [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a.materialize()
+        assert a.sum() == 49.50000000000001

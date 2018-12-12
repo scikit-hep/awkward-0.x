@@ -198,7 +198,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
             elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64)) for x in self._contents):
                 self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float64)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64, awkward.util.numpy.float128)) for x in self._contents):
+            elif hasattr(awkward.util.numpy, "float128") and all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64, awkward.util.numpy.float128)) for x in self._contents):
                 self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float128)
 
             elif all(issubclass(x.dtype.type, (awkward.util.numpy.integer, awkward.util.numpy.floating)) for x in self._contents):
@@ -210,11 +210,11 @@ class UnionArray(awkward.array.base.AwkwardArray):
             elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128)) for x in self._contents):
                 self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex128)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128, awkward.util.numpy.complex256)) for x in self._contents):
+            elif hasattr(awkward.util.numpy, "complex256") and all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128, awkward.util.numpy.complex256)) for x in self._contents):
                 self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex256)
 
             elif all(issubclass(x.dtype.type, (awkward.util.numpy.integer, awkward.util.numpy.floating, awkward.util.numpy.complexfloating)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex256)
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex128)
 
             else:
                 self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.object_)
@@ -395,52 +395,57 @@ class UnionArray(awkward.array.base.AwkwardArray):
                     out[i] = awkward.array.objects.Methods.maybemixin(types[i], UnionArray)(outtags, outindex, contents[i])
             return tuple(out)
 
-    def any(self):
-        self._valid()
-        index = self._index[:len(self._tag)]
-        for tag in awkward.util.numpy.unique(self._tags):
-            if self._contents[tag][index[self._tags == tag]].any():
-                return True
-        return False
+    def _hasjagged(self):
+        return all(awkward.util._hasjagged(x) for x in self._contents)
 
-    def all(self):
-        self._valid()
-        index = self._index[:len(self._tag)]
-        for tag in awkward.util.numpy.unique(self._tags):
-            if not self._contents[tag][index[self._tags == tag]].all():
-                return False
-        return True
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
+        if self._hasjagged():
+            return self.copy(contents=[x._reduce(ufunc, identity, dtype, regularaxis) for x in self._contents])
 
-    @classmethod
-    def concat(cls, first, *rest):
-        raise NotImplementedError
+        elif self.columns != []:
+            out = awkward.array.table.Table()
+            for n in self.columns:
+                out[n] = self.copy(content=self[n])
+            return out._reduce(ufunc, identity, dtype, regularaxis)
 
-    @property
-    def base(self):
-        return self._base
+        else:
+            return ufunc.reduce(self._prepare(identity, dtype))
+
+    def _prepare(self, identity, dtype):
+        if dtype is None:
+            dtype = self.dtype
+
+        out = None
+        index = self._index[:len(self._tags)]
+        for tag, content in enumerate(self._contents):
+            if not isinstance(content, awkward.util.numpy.ndarray):
+                content = content._prepare(identity, dtype)
+
+            mask = (self._tags == tag)
+            c = content[index[mask]]
+
+            if out is None:
+                out = awkward.util.numpy.full(self._tags.shape[:1] + c.shape[1:], identity, dtype=dtype)
+            out[mask] = c
+
+        return out
 
     @property
     def columns(self):
         out = None
         for content in self._contents:
+            if isinstance(content, awkward.util.numpy.ndarray):
+                return []
+
             if out is None:
                 out = content.columns
             else:
                 out = [x for x in content.columns if x in out]
-        return out
 
-    @property
-    def allcolumns(self):
-        out = None
-        for content in self._contents:
-            if out is None:
-                out = content.allcolumns
-            else:
-                out = [x for x in content.allcolumns if x in out]
-        return out
+        if out is None:
+            return []
+        else:
+            return out
 
     def astype(self, dtype):
         return self.copy(contents=[x.astype(dtype) for x in self._contents])
-
-    def pandas(self):
-        raise NotImplementedError

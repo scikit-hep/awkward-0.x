@@ -369,31 +369,26 @@ class VirtualArray(awkward.array.base.AwkwardArray):
                 inputs[i] = inputs[i].array
 
         return getattr(ufunc, method)(*inputs, **kwargs)
-        
-    def any(self):
-        return self.array.any()
 
-    def all(self):
-        return self.array.all()
+    def _hasjagged(self):
+        return awkward.util._hasjagged(self.array)
 
-    @classmethod
-    def concat(cls, first, *rest):
-        raise NotImplementedError
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
+        return awkward.util._reduce(self.array, ufunc, identity, dtype, regularaxis)
 
-    @property
-    def base(self):
-        return self.array.base
+    def _prepare(self, identity, dtype):
+        array = self.array
+        if isinstance(array, awkward.util.numpy.ndarray):
+            if dtype is None:
+                return array
+            else:
+                return array.astype(dtype)
+        else:
+            return array._prepare(identity, dtype)
 
     @property
     def columns(self):
         return self.array.columns
 
-    @property
-    def allcolumns(self):
-        return self.array.allcolumns
-
     def astype(self, dtype):
         return self.array.astype(dtype)
-
-    def pandas(self):
-        raise NotImplementedError

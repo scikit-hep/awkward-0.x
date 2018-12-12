@@ -265,18 +265,33 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         maskindex[self.boolmask(maskedwhen=True)] = -1
         return IndexedMaskedArray(maskindex, self._content, maskedwhen=-1)
 
-    def any(self):
-        return self._content[self.boolmask(maskedwhen=False)].any()
+    def _reduce(self, ufunc, identity, dtype, regularaxis):
+        if awkward.util._hasjagged(self._content):
+            return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
 
-    def all(self):
-        return self._content[self.boolmask(maskedwhen=False)].all()
+        elif isinstance(self._content, awkward.array.table.Table):
+            out = awkward.array.table.Table()
+            for n, x in self._content._contents.items():
+                out[n] = self.copy(content=x)
+            return out._reduce(ufunc, identity, dtype, regularaxis)
 
-    @classmethod
-    def concat(cls, first, *rest):
-        raise NotImplementedError
+        else:
+            return ufunc.reduce(self._prepare(identity, dtype))
 
-    def pandas(self):
-        raise NotImplementedError
+    def _prepare(self, identity, dtype):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            if dtype is not None:
+                content = self._content.astype(dtype)
+            else:
+                content = self._content
+        else:
+            content = self._content._prepare(identity, dtype)
+
+        if content is self._content or not content.flags.owndata:
+            content = content.copy()
+
+        content[self.ismasked] = identity
+        return content
 
 class BitMaskedArray(MaskedArray):
     """
@@ -510,13 +525,6 @@ class BitMaskedArray(MaskedArray):
             else:
                 return self.copy(mask=self.bool2bit(mask, lsborder=self._lsborder), content=self._content[(head,) + tail], lsborder=self._lsborder)
 
-    @classmethod
-    def concat(cls, first, *rest):
-        raise NotImplementedError
-
-    def pandas(self):
-        raise NotImplementedError
-
 class IndexedMaskedArray(MaskedArray):
     """
     IndexedMaskedArray
@@ -657,9 +665,15 @@ class IndexedMaskedArray(MaskedArray):
     def indexed(self):
         return self
 
-    @classmethod
-    def concat(cls, first, *rest):
-        raise NotImplementedError
+    def _prepare(self, identity, dtype):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            if dtype is not None:
+                content = self._content.astype(dtype)
+            else:
+                content = self._content
+        else:
+            content = self._content._prepare(identity, dtype)
 
-    def pandas(self):
-        raise NotImplementedError
+        out = awkward.util.numpy.full(self._mask.shape + content.shape[1:], identity, dtype=content.dtype)
+        out[self.isunmasked] = content[self.mask[self.mask >= 0]]
+        return out
