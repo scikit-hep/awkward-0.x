@@ -198,7 +198,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
             elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64)) for x in self._contents):
                 self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float64)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64, awkward.util.numpy.float128)) for x in self._contents):
+            elif hasattr(awkward.util.numpy, "float128") and all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64, awkward.util.numpy.float128)) for x in self._contents):
                 self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float128)
 
             elif all(issubclass(x.dtype.type, (awkward.util.numpy.integer, awkward.util.numpy.floating)) for x in self._contents):
@@ -210,11 +210,11 @@ class UnionArray(awkward.array.base.AwkwardArray):
             elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128)) for x in self._contents):
                 self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex128)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128, awkward.util.numpy.complex256)) for x in self._contents):
+            elif hasattr(awkward.util.numpy, "complex256") and all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128, awkward.util.numpy.complex256)) for x in self._contents):
                 self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex256)
 
             elif all(issubclass(x.dtype.type, (awkward.util.numpy.integer, awkward.util.numpy.floating, awkward.util.numpy.complexfloating)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex256)
+                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex128)
 
             else:
                 self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.object_)
