@@ -88,5 +88,3 @@ class Test(unittest.TestCase):
 
         ("genrecos.i0.pt", genrecos.i0.pt)
         ("genrecos.i1.pt", genrecos.i1.pt)
-
-
