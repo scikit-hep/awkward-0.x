@@ -41,6 +41,30 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
+    def test_physics_jetcleaning(self):
+        jet_m   = awkward.fromiter([[60.0, 70.0, 80.0],       [],     [90.0, 100.0]])
+
+        jet_pt  = awkward.fromiter([[10.0, 20.0, 30.0],       [],     [40.0, 50.0]])
+        e_pt    = awkward.fromiter([[20.2, 50.5],             [50.5], [50.5]])
+
+        jet_eta = awkward.fromiter([[-3.0, -2.0, 2.0],        [],     [-1.0, 1.0]])
+        e_eta   = awkward.fromiter([[-2.2, 0.0],              [0.0],  [1.1]])
+
+        jet_phi = awkward.fromiter([[-1.5,  0.0, 1.5],        [],     [0.78, -0.78]])
+        e_phi   = awkward.fromiter([[ 0.1, 0.78],             [0.78], [-0.77]])
+
+        jets      = uproot_methods.TLorentzVectorArray.from_ptetaphim(jet_pt, jet_eta, jet_phi, jet_m)
+        electrons = uproot_methods.TLorentzVectorArray.from_ptetaphim(e_pt, e_eta, e_phi, 0.000511)
+
+        combinations = jets.cross(electrons, nested=True)
+
+        def delta_r(one, two):
+            return one.delta_r(two)
+
+        assert (~(delta_r(combinations.i0, combinations.i1) < 0.5).any()).tolist() == [[True, False, True], [], [True, False]]
+
+        (jets[~(delta_r(combinations.i0, combinations.i1) < 0.5).any()])
+
     def test_physics_matching(self):
         gen_pt   = awkward.fromiter([[10.0, 20.0, 30.0],       [],     [40.0, 50.0]])
         reco_pt  = awkward.fromiter([[20.2, 10.1, 30.3, 50.5], [50.5], [50.5]])
