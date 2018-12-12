@@ -54,35 +54,39 @@ class Test(unittest.TestCase):
         gen  = uproot_methods.TLorentzVectorArray.from_ptetaphim(gen_pt, gen_eta, gen_phi, 0.2)
         reco = uproot_methods.TLorentzVectorArray.from_ptetaphim(reco_pt, reco_eta, reco_phi, 0.2)
 
-        print("gen", gen)
-        print("reco", reco)
+        ("gen", gen)
+        ("reco", reco)
 
-        print("gen.cross(reco)", gen.cross(reco))
+        ("gen.cross(reco)", gen.cross(reco))
 
         pairing = gen.cross(reco, nested=True)
-        print("pairing = gen.cross(reco, nested=True)", gen.cross(reco))
+        ("pairing = gen.cross(reco, nested=True)", gen.cross(reco, nested=True))
 
         metric = pairing.i0.delta_r(pairing.i1)
-        print("metric = pairing.i0.delta_r(pairing.i1", metric)
+        ("metric = pairing.i0.delta_r(pairing.i1)", metric)
 
         index_of_minimized = metric.argmin()
-        print("index_of_minimized = metric.argmin()", index_of_minimized)
+        ("index_of_minimized = metric.argmin()", index_of_minimized)
+        assert index_of_minimized.tolist() == [[[1], [0], [2]], [], [[0], [0]]]
 
-        print("metric[index_of_minimized]", metric[index_of_minimized])
+        ("metric[index_of_minimized]", metric[index_of_minimized])
 
         passes_cut = (metric[index_of_minimized] < 0.5)
-        print("passes_cut = (metric[index_of_minimized] < 0.5)", passes_cut)
+        ("passes_cut = (metric[index_of_minimized] < 0.5)", passes_cut)
+        assert passes_cut.tolist() == [[[True], [True], [True]], [], [[False], [True]]]
 
         best_pairings_that_pass_cut = pairing[index_of_minimized][passes_cut]
-        print("best_pairings_that_pass_cut = pairing[index_of_minimized][passes_cut]", best_pairings_that_pass_cut)
+        ("best_pairings_that_pass_cut = pairing[index_of_minimized][passes_cut]", best_pairings_that_pass_cut)
 
         genrecos = best_pairings_that_pass_cut.flatten(axis=1)
-        print("genrecos = best_pairings_that_pass_cut.flatten(axis=1)", genrecos)
+        ("genrecos = best_pairings_that_pass_cut.flatten(axis=1)", genrecos)
 
-        print("genrecos.counts", genrecos.counts)
-        print("gen.counts", gen.counts)
+        ("genrecos.counts", genrecos.counts)
+        ("gen.counts", gen.counts)
+        assert genrecos.counts.tolist() == [3, 0, 1]
+        assert gen.counts.tolist() == [3, 0, 2]
 
-        print("genrecos.i0.pt", genrecos.i0.pt)
-        print("genrecos.i1.pt", genrecos.i1.pt)
+        ("genrecos.i0.pt", genrecos.i0.pt)
+        ("genrecos.i1.pt", genrecos.i1.pt)
 
 
