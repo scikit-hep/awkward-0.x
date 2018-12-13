@@ -222,7 +222,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
                 self.knowcounts(chunkid.max() + 1)
                 self._valid()
-                counts = numpy.array(self._counts, dtype=self.INDEXTYPE)
+                counts = awkward.util.numpy.array(self._counts, dtype=self.INDEXTYPE)
                 mask = (index < 0)
                 index[mask] += counts[mask]
                 if not ((0 <= index) & (index < counts)).all():
