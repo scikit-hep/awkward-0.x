@@ -43,13 +43,13 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     allow_iter = True
     # TODO for 1.0: add check_prop_valid and check_whole_valid parameters
 
-    DEFAULTTYPE = awkward.util.DEFAULTTYPE
-    CHARTYPE    = awkward.util.CHARTYPE
-    INDEXTYPE   = awkward.util.INDEXTYPE
-    TAGTYPE     = awkward.util.TAGTYPE
-    MASKTYPE    = awkward.util.MASKTYPE
-    BITMASKTYPE = awkward.util.BITMASKTYPE
-    BOOLTYPE    = awkward.util.BOOLTYPE
+    DEFAULTTYPE = awkward.util.numpy.dtype(awkward.util.numpy.float64)
+    CHARTYPE    = awkward.util.numpy.dtype(awkward.util.numpy.uint8)
+    INDEXTYPE   = awkward.util.numpy.dtype(awkward.util.numpy.int64)
+    TAGTYPE     = awkward.util.numpy.dtype(awkward.util.numpy.uint8)
+    MASKTYPE    = awkward.util.numpy.dtype(awkward.util.numpy.bool_)
+    BITMASKTYPE = awkward.util.numpy.dtype(awkward.util.numpy.uint8)
+    BOOLTYPE    = awkward.util.numpy.dtype(awkward.util.numpy.bool_)
 
     def _checktonumpy(self):
         if not self.allow_tonumpy:

@@ -54,7 +54,7 @@ partner = {
     zlib.compress: ("zlib", "decompress"),
     }
 
-whitelist = [["numpy", "frombuffer"],
+whitelist = [["awkward.util", "frombuffer"],
              ["zlib", "decompress"],
              ["awkward", "*Array"],
              ["awkward", "Table"],
@@ -313,7 +313,7 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
                     storage[prefix + str(ident) + suffix] = compress(obj)
 
                     return {"id": ident,
-                            "call": ["numpy", "frombuffer"],
+                            "call": ["awkward.util", "frombuffer"],
                             "args": [{"call": decompress, "args": [{"read": str(ident) + suffix}]},
                                      {"dtype": dtype2json(dtype)},
                                      {"json": len(obj)}]}
@@ -321,7 +321,7 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
             else:
                 storage[prefix + str(ident) + suffix] = obj.tostring()
                 return {"id": ident,
-                        "call": ["numpy", "frombuffer"],
+                        "call": ["awkward.util", "frombuffer"],
                         "args": [{"read": str(ident) + suffix},
                                  {"dtype": dtype2json(dtype)},
                                  {"json": len(obj)}]}

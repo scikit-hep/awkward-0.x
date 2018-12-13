@@ -86,13 +86,7 @@ if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVe
 
 integer = (numbers.Integral, numpy.integer)
 
-DEFAULTTYPE = numpy.dtype(numpy.float64)
-CHARTYPE    = numpy.dtype(numpy.uint8)
-INDEXTYPE   = numpy.dtype(numpy.int64)
-TAGTYPE     = numpy.dtype(numpy.uint8)
-MASKTYPE    = numpy.dtype(numpy.bool_)
-BITMASKTYPE = numpy.dtype(numpy.uint8)
-BOOLTYPE    = numpy.dtype(numpy.bool_)
+frombuffer = numpy.frombuffer
 
 def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
