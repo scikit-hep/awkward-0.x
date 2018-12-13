@@ -1167,6 +1167,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 content = content.copy()
                 content[mask] = identity
 
+        if dtype is None and issubclass(content.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+            dtype = awkward.util.numpy.dtype(type(identity))
         if dtype is None:
             dtype = content.dtype
         else:

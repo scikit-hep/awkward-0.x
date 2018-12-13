@@ -379,6 +379,8 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def _prepare(self, identity, dtype):
         array = self.array
         if isinstance(array, awkward.util.numpy.ndarray):
+            if dtype is None and issubclass(array.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+                dtype = awkward.util.numpy.dtype(type(identity))
             if dtype is None:
                 return array
             else:

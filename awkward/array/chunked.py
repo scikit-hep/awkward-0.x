@@ -631,6 +631,8 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             if self._counts[chunkid] > 0:
                 this = chunk[:self._counts[chunkid]]
                 if out is None:
+                    if dtype is None and issubclass(this.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+                        dtype = awkward.util.numpy.dtype(type(identity))
                     if dtype is None:
                         dtype = this.dtype
                     out = awkward.util.numpy.empty((sum(self._counts),) + this.shape[1:], dtype=dtype)

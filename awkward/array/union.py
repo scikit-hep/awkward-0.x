@@ -412,6 +412,8 @@ class UnionArray(awkward.array.base.AwkwardArray):
             return ufunc.reduce(self._prepare(identity, dtype))
 
     def _prepare(self, identity, dtype):
+        if dtype is None and issubclass(self.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+            dtype = awkward.util.numpy.dtype(type(identity))
         if dtype is None:
             dtype = self.dtype
 

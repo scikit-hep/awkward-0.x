@@ -280,10 +280,12 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _prepare(self, identity, dtype):
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            if dtype is not None:
-                content = self._content.astype(dtype)
-            else:
+            if dtype is None and issubclass(self._content.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+                dtype = awkward.util.numpy.dtype(type(identity))
+            if dtype is None:
                 content = self._content
+            else:
+                content = self._content.astype(dtype)
         else:
             content = self._content._prepare(identity, dtype)
 
@@ -667,10 +669,12 @@ class IndexedMaskedArray(MaskedArray):
 
     def _prepare(self, identity, dtype):
         if isinstance(self._content, awkward.util.numpy.ndarray):
-            if dtype is not None:
-                content = self._content.astype(dtype)
-            else:
+            if dtype is None and issubclass(self._content.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+                dtype = awkward.util.numpy.dtype(type(identity))
+            if dtype is None:
                 content = self._content
+            else:
+                content = self._content.astype(dtype)
         else:
             content = self._content._prepare(identity, dtype)
 
