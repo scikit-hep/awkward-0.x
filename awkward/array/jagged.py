@@ -848,17 +848,26 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if method != "__call__":
             return NotImplemented
 
-        inputs = list(inputs)
         starts, stops = None, None
         for i in range(len(inputs)):
             if isinstance(inputs[i], JaggedArray):
-                inputs[i]._valid()
-
-                if starts is stops is None:
-                    inputs[i] = inputs[i]._tojagged(copy=False)
-                    starts, stops = inputs[i]._starts, inputs[i]._stops
+                try:
+                    offsets = inputs[i].offsets   # calls _valid()
+                except ValueError:
+                    counts = inputs[i].counts
+                    offsets = counts2offsets(counts.reshape(-1))
+                    starts, stops = offsets[:-1], offsets[1:]
+                    starts = starts.reshape(counts.shape)
+                    stops = stops.reshape(counts.shape)
                 else:
-                    inputs[i] = inputs[i]._tojagged(starts, stops, copy=False)
+                    starts, stops = offsets[:-1], offsets[1:]
+
+        assert starts is not None and stops is not None
+
+        inputs = list(inputs)
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], JaggedArray):
+                inputs[i] = inputs[i]._tojagged(starts, stops, copy=False)
 
             elif isinstance(inputs[i], (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
                 pass
