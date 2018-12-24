@@ -114,6 +114,9 @@ class Table(awkward.array.base.AwkwardArray):
                 return self._table.Row(table, index + where)
 
         def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+            if "out" in kwargs:
+                raise NotImplementedError("in-place operations not supported")
+
             if method != "__call__":
                 return NotImplemented
 
@@ -591,6 +594,9 @@ class Table(awkward.array.base.AwkwardArray):
             raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if "out" in kwargs:
+            raise NotImplementedError("in-place operations not supported")
+
         if method != "__call__":
             return NotImplemented
 

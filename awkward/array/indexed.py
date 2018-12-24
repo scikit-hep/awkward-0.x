@@ -190,6 +190,9 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if "out" in kwargs:
+            raise NotImplementedError("in-place operations not supported")
+
         if method != "__call__":
             return NotImplemented
 
@@ -581,6 +584,9 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if "out" in kwargs:
+            raise NotImplementedError("in-place operations not supported")
+
         if method != "__call__":
             return NotImplemented
 

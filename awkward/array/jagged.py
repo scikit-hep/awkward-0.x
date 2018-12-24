@@ -845,6 +845,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         import awkward.array.objects
         import awkward.array.table
 
+        if "out" in kwargs:
+            raise NotImplementedError("in-place operations not supported")
+
         if method != "__call__":
             return NotImplemented
 

@@ -215,6 +215,9 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         import awkward.array.objects
 
+        if "out" in kwargs:
+            raise NotImplementedError("in-place operations not supported")
+
         if method != "__call__":
             return NotImplemented
 

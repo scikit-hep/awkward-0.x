@@ -204,6 +204,9 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
             return [x[tail] for x in content]   # FIXME: in self.copy(content=content), right?
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if "out" in kwargs:
+            raise NotImplementedError("in-place operations not supported")
+
         if method != "__call__":
             return NotImplemented
 
@@ -240,6 +243,9 @@ class StringMethods(object):
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         import awkward.array.jagged
+
+        if "out" in kwargs:
+            raise NotImplementedError("in-place operations not supported")
 
         if method != "__call__":
             raise NotImplemented

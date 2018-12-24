@@ -359,6 +359,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             self._delitem.append(where)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if "out" in kwargs:
+            raise NotImplementedError("in-place operations not supported")
+
         if method != "__call__":
             return NotImplemented
 
