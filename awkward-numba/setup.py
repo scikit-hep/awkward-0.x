@@ -64,7 +64,7 @@ See the `project homepage <https://github.com/scikit-hep/awkward-array>`__ for a
 
     return description[start:stop].strip() # before + + after
 
-setup(name = "awkward_numba",
+setup(name = "awkward.numba",
       version = get_version(),
       packages = find_packages(exclude = ["tests"]),
       scripts = [],

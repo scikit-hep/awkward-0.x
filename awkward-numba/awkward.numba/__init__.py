@@ -29,7 +29,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-try:
-    __import__('pkg_resources').declare_namespace(__name__)
-except ImportError:
-    __path__ = __import__('pkgutil').extend_path(__path__, __name__)
+# try:
+#     __import__('pkg_resources').declare_namespace(__name__)
+# except ImportError:
+#     __path__ = __import__('pkgutil').extend_path(__path__, __name__)
+
+print("This is the __init__ inside of awkward.numba")
