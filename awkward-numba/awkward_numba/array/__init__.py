@@ -27,27 +27,3 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-try:
-    __import__('pkg_resources').declare_namespace(__name__)
-except ImportError:
-    __path__ = __import__('pkgutil').extend_path(__path__, __name__)
-
-from awkward_numba.array.chunked import ChunkedArray, AppendableArray as ca
-from awkward_numba.array.indexed import IndexedArray, SparseArray
-from awkward_numba.array.jagged import JaggedArray
-from awkward_numba.array.masked import MaskedArray, BitMaskedArray, IndexedMaskedArray
-from awkward_numba.array.objects import Methods, ObjectArray, StringArray
-from awkward_numba.array.table import Table
-from awkward_numba.array.union import UnionArray
-from awkward_numba.array.virtual import VirtualArray
-
-from awkward_numba.generate import fromiter, fromiterchunks
-
-from awkward_numba.persist import serialize, deserialize, save, load, hdf5
-
-__all__ = ["ca", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "fromiterchunks", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]
-
-def _argminmax_new(self):
-    return "Hello World"
-
-JaggedArray._argminmax = _argminmax_new
