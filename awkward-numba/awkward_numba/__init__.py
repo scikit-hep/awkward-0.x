@@ -41,10 +41,6 @@ from awkward_numba.array.table import Table
 from awkward_numba.array.union import UnionArray
 from awkward_numba.array.virtual import VirtualArray
 
-from awkward_numba.generate import fromiter, fromiterchunks
-
-from awkward_numba.persist import serialize, deserialize, save, load, hdf5
-
 __all__ = ["ca", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "fromiterchunks", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]
 
 def _argminmax_new(self):
