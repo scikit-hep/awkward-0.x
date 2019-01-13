@@ -39,9 +39,28 @@ import awkward.util
 
 import numba
 
+def enumerate1(it, start=0):
+    count = start
+    for elem in it:
+        yield (count, elem)
+        count += 1
 
 @numba.jit(nopython=True)
-def enumerate1(it, start=0):
+def enumerate_nopython(it, start=0):
+    count = start
+    for elem in it:
+        yield (count, elem)
+        count += 1
+
+@numba.jit(nopython=True, parallel=True)
+def enumerate_parallel(it, start=0):
+    count = start
+    for elem in it:
+        yield (count, elem)
+        count += 1
+
+@numba.jit(nopython=True, fastmath=True)
+def enumerate_fastmath(it, start=0):
     count = start
     for elem in it:
         yield (count, elem)
@@ -1296,11 +1315,16 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         flatstops = self._stops.reshape(-1)
 
         content = self._content
-        for i, flatstart in enumerate(flatstarts):
+        for i, flatstart in enumerate1(flatstarts):
             flatstop = flatstops[i]
             if flatstart != flatstop:
                 flatout[i] = optimum(content[flatstart:flatstop], axis=0)
+        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
+        newstops = awkward.util.numpy.array(newstarts)
+        newstops.reshape(-1)[flatstarts != flatstops] += 1
+        return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
+    @numba.jit(nopython=True)
     def _argminmax_general_numba(self, ismin):
         if len(self._content.shape) != 1:
             raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
@@ -1317,7 +1341,84 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         flatstops = self._stops.reshape(-1)
 
         content = self._content
-        for i, flatstart in enumerate1(flatstarts):
+        for i, flatstart in enumerate(flatstarts):
+            flatstop = flatstops[i]
+            if flatstart != flatstop:
+                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
+        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
+        newstops = awkward.util.numpy.array(newstarts)
+        newstops.reshape(-1)[flatstarts != flatstops] += 1
+        return self.copy(starts=newstarts, stops=newstops, content=flatout)
+
+    def _argminmax_general_numba_nopython(self, ismin):
+        if len(self._content.shape) != 1:
+            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
+
+        if ismin:
+            optimum = awkward.util.numpy.argmin
+        else:
+            optimum = awkward.util.numpy.argmax
+
+        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
+
+        flatout = out.reshape((-1,) + self._content.shape[1:])
+        flatstarts = self._starts.reshape(-1)
+        flatstops = self._stops.reshape(-1)
+
+        content = self._content
+        for i, flatstart in enumerate_nopython(flatstarts):
+            flatstop = flatstops[i]
+            if flatstart != flatstop:
+                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
+
+        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
+        newstops = awkward.util.numpy.array(newstarts)
+        newstops.reshape(-1)[flatstarts != flatstops] += 1
+        return self.copy(starts=newstarts, stops=newstops, content=flatout)
+
+    def _argminmax_general_numba_parallel(self, ismin):
+        if len(self._content.shape) != 1:
+            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
+
+        if ismin:
+            optimum = awkward.util.numpy.argmin
+        else:
+            optimum = awkward.util.numpy.argmax
+
+        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
+
+        flatout = out.reshape((-1,) + self._content.shape[1:])
+        flatstarts = self._starts.reshape(-1)
+        flatstops = self._stops.reshape(-1)
+
+        content = self._content
+        for i, flatstart in enumerate_parallel(flatstarts):
+            flatstop = flatstops[i]
+            if flatstart != flatstop:
+                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
+
+        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
+        newstops = awkward.util.numpy.array(newstarts)
+        newstops.reshape(-1)[flatstarts != flatstops] += 1
+        return self.copy(starts=newstarts, stops=newstops, content=flatout)
+
+    def _argminmax_general_numba_fastmath(self, ismin):
+        if len(self._content.shape) != 1:
+            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
+
+        if ismin:
+            optimum = awkward.util.numpy.argmin
+        else:
+            optimum = awkward.util.numpy.argmax
+
+        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
+
+        flatout = out.reshape((-1,) + self._content.shape[1:])
+        flatstarts = self._starts.reshape(-1)
+        flatstops = self._stops.reshape(-1)
+
+        content = self._content
+        for i, flatstart in enumerate_fastmath(flatstarts):
             flatstop = flatstops[i]
             if flatstart != flatstop:
                 flatout[i] = optimum(content[flatstart:flatstop], axis=0)

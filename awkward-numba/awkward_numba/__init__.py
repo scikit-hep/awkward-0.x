@@ -44,7 +44,3 @@ from awkward.array.virtual import VirtualArray
 
 __all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "fromiterchunks", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]
 
-def _argminmax_new(self):
-    return "Hello World"
-
-JaggedArray._argminmax_general = _argminmax_new
