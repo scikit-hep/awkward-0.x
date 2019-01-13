@@ -36,7 +36,7 @@ from setuptools import setup
 
 def get_version():
     g = {}
-    exec(open(os.path.join("../awkward", "version.py")).read(), g)
+    exec(open(os.path.join(r"..\awkward", "version.py")).read(), g)
     return g["__version__"]
 
 def get_description():
