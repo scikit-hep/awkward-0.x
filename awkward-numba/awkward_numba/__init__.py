@@ -47,4 +47,4 @@ __all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "Ja
 def _argminmax_new(self):
     return "Hello World"
 
-JaggedArray._argminmax = _argminmax_new
+JaggedArray._argminmax_general = _argminmax_new

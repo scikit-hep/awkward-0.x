@@ -37,6 +37,16 @@ import awkward.persist
 import awkward.type
 import awkward.util
 
+import numba
+
+
+@numba.jit(nopython=True)
+def enumerate1(it, start=0):
+    count = start
+    for elem in it:
+        yield (count, elem)
+        count += 1
+
 def offsetsaliased(starts, stops):
     return (isinstance(starts, awkward.util.numpy.ndarray) and isinstance(stops, awkward.util.numpy.ndarray) and
             starts.base is not None and stops.base is not None and starts.base is stops.base and
@@ -1287,6 +1297,27 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         content = self._content
         for i, flatstart in enumerate(flatstarts):
+            flatstop = flatstops[i]
+            if flatstart != flatstop:
+                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
+
+    def _argminmax_general_numba(self, ismin):
+        if len(self._content.shape) != 1:
+            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
+
+        if ismin:
+            optimum = awkward.util.numpy.argmin
+        else:
+            optimum = awkward.util.numpy.argmax
+
+        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
+
+        flatout = out.reshape((-1,) + self._content.shape[1:])
+        flatstarts = self._starts.reshape(-1)
+        flatstops = self._stops.reshape(-1)
+
+        content = self._content
+        for i, flatstart in enumerate1(flatstarts):
             flatstop = flatstops[i]
             if flatstart != flatstop:
                 flatout[i] = optimum(content[flatstart:flatstop], axis=0)
