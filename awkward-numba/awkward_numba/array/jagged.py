@@ -169,7 +169,7 @@ def aligned(*jaggedarrays):
 
     return True
 
-class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
+class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
     """
     JaggedArray
     """
@@ -1320,7 +1320,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         flatstops = self._stops.reshape(-1)
 
         content = self._content
+        count = 0
         for i, flatstart in enumerate(flatstarts):
+            count +=1
             flatstop = flatstops[i]
             if flatstart != flatstop:
                 flatout[i] = optimum(content[flatstart:flatstop], axis=0)

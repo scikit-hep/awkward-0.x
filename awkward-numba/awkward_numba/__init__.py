@@ -35,7 +35,7 @@ except ImportError:
 from awkward.array.chunked import ChunkedArray
 from awkward.array.chunked import AppendableArray
 from awkward.array.indexed import IndexedArray, SparseArray
-from awkward_numba.array.jagged import JaggedArray   #from awkward_numba.array.jagged import JaggedArrayNumba as JaggedArray
+from awkward_numba.array.jagged import JaggedArrayNumba as JaggedArray   #from awkward_numba.array.jagged import JaggedArrayNumba as JaggedArray
 from awkward.array.masked import MaskedArray, BitMaskedArray, IndexedMaskedArray
 from awkward.array.objects import Methods, ObjectArray, StringArray
 from awkward.array.table import Table
