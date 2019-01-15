@@ -37,39 +37,9 @@ import awkward.persist
 import awkward.type
 import awkward.util
 
-import numpy as np
 import numba
 
-def nrange(stop):
-    return np.arange(stop)
 
-@numba.jit
-def enumerate1(it, start=0):
-    count = start
-    for elem in it:
-        yield (count, elem)
-        count += 1
-
-@numba.jit(nopython=True)
-def enumerate_nopython(it, start=0):
-    count = start
-    for elem in it:
-        yield (count, elem)
-        count += 1
-
-@numba.jit(nopython=True, parallel=True)
-def enumerate_parallel(it, start=0):
-    count = start
-    for elem in it:
-        yield (count, elem)
-        count += 1
-
-@numba.jit(nopython=True, fastmath=True)
-def enumerate_fastmath(it, start=0):
-    count = start
-    for elem in it:
-        yield (count, elem)
-        count += 1
 
 def offsetsaliased(starts, stops):
     return (isinstance(starts, awkward.util.numpy.ndarray) and isinstance(stops, awkward.util.numpy.ndarray) and
@@ -80,13 +50,13 @@ def offsetsaliased(starts, stops):
             len(stops) == len(stops.base) - 1)
 
 def counts2offsets(counts):
-    offsets = awkward.util.numpy.empty(len(counts) + 1, dtype=JaggedArray.INDEXTYPE)
+    offsets = awkward.util.numpy.empty(len(counts) + 1, dtype=JaggedArrayNumba.INDEXTYPE)
     offsets[0] = 0
     awkward.util.numpy.cumsum(counts, out=offsets[1:])
     return offsets
 
 def offsets2parents(offsets):
-    out = awkward.util.numpy.zeros(offsets[-1], dtype=JaggedArray.INDEXTYPE)
+    out = awkward.util.numpy.zeros(offsets[-1], dtype=JaggedArrayNumba.INDEXTYPE)
     awkward.util.numpy.add.at(out, offsets[offsets != offsets[-1]][1:], 1)
     awkward.util.numpy.cumsum(out, out=out)
     if offsets[0] > 0:
@@ -94,7 +64,7 @@ def offsets2parents(offsets):
     return out
 
 def startsstops2parents(starts, stops):
-    out = awkward.util.numpy.full(stops.max(), -1, dtype=JaggedArray.INDEXTYPE)
+    out = awkward.util.numpy.full(stops.max(), -1, dtype=JaggedArrayNumba.INDEXTYPE)
     lenstarts = len(starts)
     i = 0
     while i < lenstarts:
@@ -106,14 +76,14 @@ def parents2startsstops(parents, length=None):
     # FIXME for 1.0: use length to add empty lists at the end of the jagged array or truncate
     # assumes that children are contiguous, but not necessarily in order or fully covering (allows empty lists)
     tmp = awkward.util.numpy.nonzero(parents[1:] != parents[:-1])[0] + 1
-    changes = awkward.util.numpy.empty(len(tmp) + 2, dtype=JaggedArray.INDEXTYPE)
+    changes = awkward.util.numpy.empty(len(tmp) + 2, dtype=JaggedArrayNumba.INDEXTYPE)
     changes[0] = 0
     changes[-1] = len(parents)
     changes[1:-1] = tmp
 
     length = parents.max() + 1
-    starts = awkward.util.numpy.zeros(length, dtype=JaggedArray.INDEXTYPE)
-    counts = awkward.util.numpy.zeros(length, dtype=JaggedArray.INDEXTYPE)
+    starts = awkward.util.numpy.zeros(length, dtype=JaggedArrayNumba.INDEXTYPE)
+    counts = awkward.util.numpy.zeros(length, dtype=JaggedArrayNumba.INDEXTYPE)
 
     where = parents[changes[:-1]]
     real = (where >= 0)
@@ -128,19 +98,19 @@ def uniques2offsetsparents(uniques):
     # values are ignored, apart from uniqueness
     changes = awkward.util.numpy.nonzero(uniques[1:] != uniques[:-1])[0] + 1
 
-    offsets = awkward.util.numpy.empty(len(changes) + 2, dtype=JaggedArray.INDEXTYPE)
+    offsets = awkward.util.numpy.empty(len(changes) + 2, dtype=JaggedArrayNumba.INDEXTYPE)
     offsets[0] = 0
     offsets[-1] = len(uniques)
     offsets[1:-1] = changes
 
-    parents = awkward.util.numpy.zeros(len(uniques), dtype=JaggedArray.INDEXTYPE)
+    parents = awkward.util.numpy.zeros(len(uniques), dtype=JaggedArrayNumba.INDEXTYPE)
     parents[changes] = 1
     awkward.util.numpy.cumsum(parents, out=parents)
 
     return offsets, parents
 
 def aligned(*jaggedarrays):
-    if not all(isinstance(x, JaggedArray) for x in jaggedarrays):
+    if not all(isinstance(x, JaggedArrayNumba) for x in jaggedarrays):
         raise TypeError("all objects passed to aligned must be JaggedArrays")
 
     if len(jaggedarrays) == 0:
@@ -171,7 +141,7 @@ def aligned(*jaggedarrays):
 
 class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
     """
-    JaggedArray
+    JaggedArrayNumba a sublcass of JaggedArray
     """
 
     def __init__(self, starts, stops, content):
@@ -250,9 +220,9 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
 
     @classmethod
     def fromindex(cls, index, content, validate=True):
-        index = awkward.util.toarray(index, cls.INDEXTYPE, (awkward.util.numpy.ndarray, JaggedArray))
+        index = awkward.util.toarray(index, cls.INDEXTYPE, (awkward.util.numpy.ndarray, JaggedArrayNumba))
         original_counts = None
-        if isinstance(index, JaggedArray):
+        if isinstance(index, JaggedArrayNumba):
             if validate:
                 original_counts = index.counts
             index = index.flatten()
@@ -300,6 +270,36 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         if len(offsets) > 0:
             offsets[-1] = len(content)
         return cls.fromoffsets(offsets, content)
+
+    @staticmethod
+    @numba.jit(nopython=True)
+    def _argminmax_fillmin(starts, stops, content, output):
+        k = 0
+        for i in range(len(starts)):
+            if stops[i] != starts[i]:
+                best = content[starts[i]]
+                bestj = 0
+                for j in range(starts[i] + 1, stops[i]):
+                    if content[j] < best:
+                        best = content[j]
+                        bestj = j - starts[i]
+                output[k] = bestj
+                k += 1
+
+    @staticmethod
+    @numba.jit(nopython=True)
+    def _argminmax_fillmax(starts, stops, content, output):
+        k = 0
+        for i in range(len(starts)):
+            if stops[i] != starts[i]:
+                best = content[starts[i]]
+                bestj = 0
+                for j in range(starts[i] + 1, stops[i]):
+                    if content[j] > best:
+                        best = content[j]
+                        bestj = j - starts[i]
+                output[k] = bestj
+                k += 1
 
     def copy(self, starts=None, stops=None, content=None):
         out = self.__class__.__new__(self.__class__)
@@ -524,7 +524,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
             self._checkiter()
         self._valid()
         if len(self._starts.shape) != 1:
-            for x in super(JaggedArray, self).__iter__(checkiter=checkiter):
+            for x in super(JaggedArrayNumba, self).__iter__(checkiter=checkiter):
                 yield x
         else:
             stops = self._stops
@@ -537,7 +537,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
 
         if awkward.util.isstringslice(where):
             content = self._content[where]
-            cls = awkward.array.objects.Methods.maybemixin(type(content), JaggedArray)
+            cls = awkward.array.objects.Methods.maybemixin(type(content), JaggedArrayNumba)
             out = cls.__new__(cls)
             out.__dict__.update(self.__dict__)
             out._content = content
@@ -549,10 +549,10 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
             where = (where,)
         head, tail = where[:len(self._starts.shape)], where[len(self._starts.shape):]
 
-        if len(head) == 1 and isinstance(head[0], JaggedArray):
+        if len(head) == 1 and isinstance(head[0], JaggedArrayNumba):
             head = head[0]
 
-            if isinstance(self._content, JaggedArray) and isinstance(head._content, JaggedArray):
+            if isinstance(self._content, JaggedArrayNumba) and isinstance(head._content, JaggedArrayNumba):
                 return self.copy(content=self._content[head._content])
 
             elif issubclass(head._content.dtype.type, awkward.util.numpy.integer):
@@ -612,7 +612,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         head = head[-1]
 
         nslices = 0
-        while isinstance(node, JaggedArray) and len(tail) > 0:
+        while isinstance(node, JaggedArrayNumba) and len(tail) > 0:
             wasslice = isinstance(head, slice)
             head, tail = tail[0], tail[1:]
 
@@ -722,7 +722,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
                             raise IndexError("index in jagged subdimension is out of bounds")
                         index = (index.reshape(-1, len(head)) + node._starts.reshape(-1, 1)).reshape(-1)
                         node = node._content[index]
-                        if isinstance(node, JaggedArray):
+                        if isinstance(node, JaggedArrayNumba):
                             node._starts = node._starts.reshape(-1, len(head))
                             node._stops = node._stops.reshape(-1, len(head))
                         elif isinstance(node, awkward.util.numpy.ndarray):
@@ -758,7 +758,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
                         index = awkward.util.numpy.tile(head, len(node))
                         index = (index.reshape(-1, len(node)) + node._starts.reshape(-1, 1)).reshape(-1)
                         node = node._content[index]
-                        if isinstance(node, JaggedArray):
+                        if isinstance(node, JaggedArrayNumba):
                             node._starts = node._starts.reshape(-1, len(head))
                             node._stops = node._stops.reshape(-1, len(head))
                         elif isinstance(node, awkward.util.numpy.ndarray):
@@ -786,7 +786,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
 
     def __setitem__(self, where, what):
         if isinstance(where, awkward.util.string):
-            if isinstance(what, JaggedArray):
+            if isinstance(what, JaggedArrayNumba):
                 self._content[where] = what._tojagged(self._starts, self._stops, copy=False)._content
             else:
                 self._content[where] = self._broadcast(what)._content
@@ -795,7 +795,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
-                if isinstance(y, JaggedArray):
+                if isinstance(y, JaggedArrayNumba):
                     self._content[x] = y._tojagged(self._starts, self._stops, copy=False)._content
                 else:
                     self._content[x] = self._broadcast(y)._content
@@ -887,7 +887,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
 
         starts, stops = None, None
         for i in range(len(inputs)):
-            if isinstance(inputs[i], JaggedArray):
+            if isinstance(inputs[i], JaggedArrayNumba):
                 try:
                     offsets = inputs[i].offsets   # calls _valid()
                 except ValueError:
@@ -903,7 +903,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
 
         inputs = list(inputs)
         for i in range(len(inputs)):
-            if isinstance(inputs[i], JaggedArray):
+            if isinstance(inputs[i], JaggedArrayNumba):
                 inputs[i] = inputs[i]._tojagged(starts, stops, copy=False)
 
             elif isinstance(inputs[i], (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
@@ -919,23 +919,23 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
                     if "first" not in locals() or isinstance(first, (numbers.Number, awkward.util.numpy.bool_, awkward.util.numpy.bool, awkward.util.numpy.number)):
                         inputs[i] = awkward.util.numpy.array(inputs[i], copy=False)
                     else:
-                        inputs[i] = JaggedArray.fromiter(inputs[i])
+                        inputs[i] = JaggedArrayNumba.fromiter(inputs[i])
 
         for jaggedarray in inputs:
-            if isinstance(jaggedarray, JaggedArray):
-                starts, stops, parents, good = jaggedarray._starts, jaggedarray._stops, None, None
+            if isinstance(jaggedarray, JaggedArrayNumba):
+                starts, stops, parents, good = JaggedArrayNumba._starts, JaggedArrayNumba._stops, None, None
                 break
         else:
             assert False
 
         for i in range(len(inputs)):
-            if isinstance(inputs[i], (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)) and not isinstance(inputs[i], JaggedArray):
+            if isinstance(inputs[i], (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)) and not isinstance(inputs[i], JaggedArrayNumba):
                 data = awkward.util.toarray(inputs[i], inputs[i].dtype)
                 if starts.shape != data.shape:
                     raise ValueError("cannot broadcast JaggedArray of shape {0} with array of shape {1}".format(starts.shape, data.shape))
 
                 if parents is None:
-                    parents = jaggedarray.parents
+                    parents = JaggedArrayNumba.parents
                     good = (parents >= 0)
 
                 def recurse(x):
@@ -961,18 +961,18 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
                 inputs[i] = JaggedArray(starts, stops, content)
 
         for i in range(len(inputs)):
-            if isinstance(inputs[i], JaggedArray):
+            if isinstance(inputs[i], JaggedArrayNumba):
                 inputs[i] = inputs[i].flatten()
 
         result = getattr(ufunc, method)(*inputs, **kwargs)
 
         counts = stops - starts
         if isinstance(result, tuple):
-            return tuple(awkward.array.objects.Methods.maybemixin(type(x), JaggedArray).fromcounts(counts, x) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+            return tuple(awkward.array.objects.Methods.maybemixin(type(x), JaggedArrayNumba).fromcounts(counts, x) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
         elif method == "at":
             return None
         else:
-            return awkward.array.objects.Methods.maybemixin(type(result), JaggedArray).fromcounts(counts, result)
+            return awkward.array.objects.Methods.maybemixin(type(result), JaggedArrayNumba).fromcounts(counts, result)
 
     def regular(self):
         if len(self) > 0 and not (self.counts.reshape(-1)[0] == self.counts).all():
@@ -1008,7 +1008,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         left = starts_parents + i
         right = starts_parents + k - n*i + (i*(i + 1) >> 1)
 
-        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right))
+        out = JaggedArrayNumba.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right))
         out._parents = parents
         return out
 
@@ -1019,7 +1019,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         out = out[out["0"] != out["1"]]
 
         if nested:
-            out = JaggedArray.fromcounts(awkward.util.numpy.maximum(0, self.counts - 1), JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
+            out = JaggedArrayNumba.fromcounts(awkward.util.numpy.maximum(0, self.counts - 1), JaggedArrayNumba.fromcounts(self.index[:, :0:-1].flatten(), out._content))
 
         return out
 
@@ -1029,11 +1029,11 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         left = argpairs._content["0"]
         right = argpairs._content["1"]
 
-        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
+        out = JaggedArrayNumba.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
         out._parents = argpairs._parents
 
         if nested:
-            out = JaggedArray.fromcounts(awkward.util.numpy.maximum(0, self.counts - 1), JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
+            out = JaggedArrayNumba.fromcounts(awkward.util.numpy.maximum(0, self.counts - 1), JaggedArrayNumba.fromcounts(self.index[:, :0:-1].flatten(), out._content))
 
         return out
 
@@ -1043,7 +1043,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         out["1"] = out["1"] - self._starts
 
         if nested:
-            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
+            out = JaggedArrayNumba.fromcounts(self.counts, JaggedArrayNumba.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
 
         return out
 
@@ -1052,11 +1052,11 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         left = argpairs._content["0"]
         right = argpairs._content["1"]
 
-        out = JaggedArray.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
+        out = JaggedArrayNumba.fromoffsets(argpairs.offsets, awkward.array.table.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
         out._parents = argpairs._parents
 
         if nested:
-            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
+            out = JaggedArrayNumba.fromcounts(self.counts, JaggedArrayNumba.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
 
         return out
 
@@ -1064,8 +1064,8 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         import awkward.array.table
         self._valid()
 
-        if not isinstance(other, JaggedArray):
-            raise TypeError("both arrays must be JaggedArrays")
+        if not isinstance(other, JaggedArrayNumba):
+            raise TypeError("both arrays must be JaggedArrayNumbas")
         
         if len(self) != len(other):
             raise ValueError("both JaggedArrays must have the same length")
@@ -1081,7 +1081,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         left = self._starts[parents] + iop_ocp
         right = other._starts[parents] + iop - ocp * iop_ocp
 
-        out = JaggedArray.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right))
+        out = JaggedArrayNumba.fromoffsets(offsets, awkward.array.table.Table.named("tuple", left, right))
         out._parents = parents
         return out
 
@@ -1091,7 +1091,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         out["1"] = out["1"] - other._starts
 
         if nested:
-            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts(self._broadcast(other.counts).flatten(), out._content))
+            out = JaggedArrayNumba.fromcounts(self.counts, JaggedArrayNumba.fromcounts(self._broadcast(other.counts).flatten(), out._content))
 
         return out
 
@@ -1106,13 +1106,13 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         argcross = thyself._argcross(other)
         left, right = argcross._content._contents.values()
 
-        out = JaggedArray.fromoffsets(argcross._offsets, awkward.array.table.Table.named("tuple", thyself._content[left], other._content[right]).flattentuple())
+        out = JaggedArrayNumba.fromoffsets(argcross._offsets, awkward.array.table.Table.named("tuple", thyself._content[left], other._content[right]).flattentuple())
         out._parents = argcross._parents
         out._iscross = True
 
         if nested:
             old = out
-            out = JaggedArray.fromcounts(thyself.counts, JaggedArray.fromcounts(thyself._broadcast(other.counts).flatten(), out._content))
+            out = JaggedArrayNumba.fromcounts(thyself.counts, JaggedArrayNumba.fromcounts(thyself._broadcast(other.counts).flatten(), out._content))
             out._nestedcross = old
 
         if hasattr(self, "_nestedcross"):
@@ -1120,7 +1120,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
             mask = (self.counts != 0)
             counts[mask] //= self.counts[mask]
             old = out
-            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts(self._broadcast(counts).flatten(), out._content))
+            out = JaggedArrayNumba.fromcounts(self.counts, JaggedArrayNumba.fromcounts(self._broadcast(counts).flatten(), out._content))
             out._nestedcross = old
 
         return out
@@ -1133,9 +1133,9 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         if not isinstance(axis, (numbers.Integral, awkward.util.numpy.integer)) or axis < 0:
             raise TypeError("axis must be a non-negative integer (can't count from the end)")
         if axis > 0:
-            if isinstance(self._content, JaggedArray):
-                counts = JaggedArray.fromcounts(self.counts, self._content.counts).sum()
-                return JaggedArray.fromcounts(counts, self._content.flatten(axis=axis - 1))
+            if isinstance(self._content, JaggedArrayNumba):
+                counts = JaggedArrayNumba.fromcounts(self.counts, self._content.counts).sum()
+                return JaggedArrayNumba.fromcounts(counts, self._content.flatten(axis=axis - 1))
 
         if len(self) == 0:
             return self._content[0:0]
@@ -1308,174 +1308,64 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         if len(self._content.shape) != 1:
             raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
 
-        if ismin:
-            optimum = awkward.util.numpy.argmin
-        else:
-            optimum = awkward.util.numpy.argmax
+        # subarray with counts > 0 --> counts = 1
+        counts = (self.counts != 0).astype(self.INDEXTYPE)
 
-        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
+        # offsets for these 0 or 1 counts (involves a cumsum)
+        offsets = awkward.array.jagged.counts2offsets(counts)
 
-        flatout = out.reshape((-1,) + self._content.shape[1:])
-        flatstarts = self._starts.reshape(-1)
-        flatstops = self._stops.reshape(-1)
+        # starts and stops derived from offsets and reshaped to original starts and stops (see specification)
+        starts, stops = offsets[:-1], offsets[1:]
+        starts.reshape(self._starts.shape[:-1] + (-1,))
+        stops.reshape(self._starts.shape[:-1] + (-1,))
 
-        content = self._content
-        count = 0
-        for i, flatstart in enumerate(flatstarts):
-            count +=1
-            flatstop = flatstops[i]
-            if flatstart != flatstop:
-                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
-        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-        newstops = awkward.util.numpy.array(newstarts)
-        newstops.reshape(-1)[flatstarts != flatstops] += 1
-        return self.copy(starts=newstarts, stops=newstops, content=flatout)
-
-    
-    def _argminmax_general_numba(self, ismin):
-        if len(self._content.shape) != 1:
-            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
-
-        if ismin:
-            optimum = awkward.util.numpy.argmin
-        else:
-            optimum = awkward.util.numpy.argmax
-
-        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
-
-        flatout = out.reshape((-1,) + self._content.shape[1:])
-        flatstarts = self._starts.reshape(-1)
-        flatstops = self._stops.reshape(-1)
+        # content to fit the new offsets
+        content = awkward.util.numpy.empty(offsets[-1], dtype=self.INDEXTYPE)
         
-        content = self._content
-        for i, flatstart in enumerate1(flatstarts):
-            flatstop = flatstops[i]
-            if flatstart != flatstop:
-                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
-        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-        newstops = awkward.util.numpy.array(newstarts)
-        newstops.reshape(-1)[flatstarts != flatstops] += 1
-        return self.copy(starts=newstarts, stops=newstops, content=flatout)
-
-    
-    def _argminmax_general_numba_nopython(self, ismin):
-        if len(self._content.shape) != 1:
-            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
-
+        # fill the new content
         if ismin:
-            optimum = awkward.util.numpy.argmin
+            self._argminmax_fillmin(self._starts.reshape(-1), self._stops.reshape(-1), self._content, content)
         else:
-            optimum = awkward.util.numpy.argmax
+            self._argminmax_fillmax(self._starts.reshape(-1), self._stops.reshape(-1), self._content, content)
+        return self.copy(starts=starts, stops=stops, content=content)
 
-        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
 
-        flatout = out.reshape((-1,) + self._content.shape[1:])
-        flatstarts = self._starts.reshape(-1)
-        flatstops = self._stops.reshape(-1)
+    # def _argminmax_general(self, ismin):
+    #     if len(self._content.shape) != 1:
+    #         raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
 
-        content = self._content
-        for i, flatstart in enumerate_nopython(flatstarts):
-            flatstop = flatstops[i]
-            if flatstart != flatstop:
-                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
+    #     if ismin:
+    #         optimum = awkward.util.numpy.argmin
+    #     else:
+    #         optimum = awkward.util.numpy.argmax
 
-        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-        newstops = awkward.util.numpy.array(newstarts)
-        newstops.reshape(-1)[flatstarts != flatstops] += 1
-        return self.copy(starts=newstarts, stops=newstops, content=flatout)
+    #     out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
 
-    def _argminmax_general_numba_custom(self, ismin):
-        if len(self._content.shape) != 1:
-            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
+    #     flatout = out.reshape((-1,) + self._content.shape[1:])
+    #     flatstarts = self._starts.reshape(-1)
+    #     flatstops = self._stops.reshape(-1)
 
-        if ismin:
-            optimum = awkward.util.numpy.argmin
-        else:
-            optimum = awkward.util.numpy.argmax
-
-        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
-
-        flatout = out.reshape((-1,) + self._content.shape[1:])
-        flatstarts = self._starts.reshape(-1)
-        flatstops = self._stops.reshape(-1)
-        indices = np.arange(len(flatstarts))
-        content = self._content
-        for i, flatstart in zip(indices,flatstarts):
-            flatstop = flatstops[i]
-            if flatstart != flatstop:
-                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
-        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-        newstops = awkward.util.numpy.array(newstarts)
-        newstops.reshape(-1)[flatstarts != flatstops] += 1
-        return self.copy(starts=newstarts, stops=newstops, content=flatout),out
-
-    def _argminmax_general_numba_(self, ismin):
-        if len(self._content.shape) != 1:
-            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
-
-        if ismin:
-            optimum = awkward.util.numpy.argmin
-        else:
-            optimum = awkward.util.numpy.argmax
-
-        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
-
-        flatout = out.reshape((-1,) + self._content.shape[1:])
-        flatstarts = self._starts.reshape(-1)
-        flatstops = self._stops.reshape(-1)
-
-        content = self._content
-        # for i, flatstart in enumerate_parallel(flatstarts):
-        #     flatstop = flatstops[i]
-        #     if flatstart != flatstop:
-        #         flatout[i] = optimum(content[flatstart:flatstop], axis=0)
-        for i in nrange(len(flatstarts)):
-            flatstop = flatstops[i]
-            if flatstarts[i] != flatstop:
-                flatout[i] = optimum(content[flatstarts[i]:flatstop], axis=0)
-
-        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-        newstops = awkward.util.numpy.array(newstarts)
-        newstops.reshape(-1)[flatstarts != flatstops] += 1
-        return self.copy(starts=newstarts, stops=newstops, content=flatout)
-
-    def _argminmax_general_numba_fastmath(self, ismin):
-        if len(self._content.shape) != 1:
-            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
-
-        if ismin:
-            optimum = awkward.util.numpy.argmin
-        else:
-            optimum = awkward.util.numpy.argmax
-
-        out = awkward.util.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
-
-        flatout = out.reshape((-1,) + self._content.shape[1:])
-        flatstarts = self._starts.reshape(-1)
-        flatstops = self._stops.reshape(-1)
-
-        content = self._content
-        for i, flatstart in enumerate_fastmath(flatstarts):
-            flatstop = flatstops[i]
-            if flatstart != flatstop:
-                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
-
-        newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-        newstops = awkward.util.numpy.array(newstarts)
-        newstops.reshape(-1)[flatstarts != flatstops] += 1
-        return self.copy(starts=newstarts, stops=newstops, content=flatout)
+    #     content = self._content
+    #     for i, flatstart in enumerate(flatstarts):
+    #         flatstop = flatstops[i]
+    #         if flatstart != flatstop:
+    #             flatout[i] = optimum(content[flatstart:flatstop], axis=0)
+    #     newstarts = awkward.util.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
+    #     newstops = awkward.util.numpy.array(newstarts)
+    #     newstops.reshape(-1)[flatstarts != flatstops] += 1
+    #     return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
     @awkward.util.bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays):
         if isclassmethod: 
             cls = cls_or_self
-            if not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
+            if not all(isinstance(x, JaggedArrayNumba) for x in arrays):
+                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArrayNumba.concatenate")
         else:
             self = cls_or_self
             cls = self.__class__
-            if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
+            if not isinstance(self, JaggedArrayNumba) or not all(isinstance(x, JaggedArrayNumba) for x in arrays):
+                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArrayNumba.concatenate")
             arrays = (self,) + tuple(arrays)
 
         for x in arrays:
@@ -1510,7 +1400,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
 
         first = None
         for i in range(len(inputs)):
-            if isinstance(inputs[i], JaggedArray):
+            if isinstance(inputs[i], JaggedArrayNumba):
                 if first is None:
                     first = inputs[i] = inputs[i]._tojagged(copy=False)
                 else:
@@ -1520,7 +1410,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
             return table
 
         for i in range(len(inputs)):
-            if not isinstance(inputs[i], JaggedArray):
+            if not isinstance(inputs[i], JaggedArrayNumba):
                 inputs[i] = first._broadcast(inputs[i])
 
         newtable = awkward.array.table.Table(awkward.util.OrderedDict(zip(table._content, [x._content for x in inputs])))
@@ -1535,7 +1425,7 @@ class  JaggedArrayNumba(awkward.array.jagged.JaggedArray):
         else:
             out = self._content.pandas()
 
-        if isinstance(self._content, JaggedArray):
+        if isinstance(self._content, JaggedArrayNumba):
             parents = self._content._broadcast(self.parents)._content
             index = self._content._broadcast(self.index._content)._content
             out.index = pandas.MultiIndex.from_arrays([parents, index] + out.index.labels[1:])
