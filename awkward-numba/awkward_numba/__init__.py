@@ -35,16 +35,14 @@ except ImportError:
 from awkward.array.chunked import ChunkedArray
 from awkward.array.chunked import AppendableArray
 from awkward.array.indexed import IndexedArray, SparseArray
-from awkward_numba.array.jagged import JaggedArray   #from awkward_numba.array.jagged import JaggedArrayNumba as JaggedArray
+from awkward_numba.array.jagged import JaggedArrayNumba as JaggedArray
 from awkward.array.masked import MaskedArray, BitMaskedArray, IndexedMaskedArray
 from awkward.array.objects import Methods, ObjectArray, StringArray
 from awkward.array.table import Table
 from awkward.array.union import UnionArray
 from awkward.array.virtual import VirtualArray
+import numba
+import numpy as np
+import awkward
 
 __all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "fromiterchunks", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]
-
-def _argminmax_new(self):
-    return "Hello World"
-
-JaggedArray._argminmax_general = _argminmax_new
