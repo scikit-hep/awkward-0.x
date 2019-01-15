@@ -41,8 +41,8 @@ from awkward.array.objects import Methods, ObjectArray, StringArray
 from awkward.array.table import Table
 from awkward.array.union import UnionArray
 from awkward.array.virtual import VirtualArray
-import numba
-import numpy as np
-import awkward
+
+from awkward.generate import fromiter, fromiterchunks
+from awkward.persist import serialize, deserialize, save, load, hdf5
 
 __all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "fromiterchunks", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]
