@@ -57,7 +57,7 @@ partner = {
 
 whitelist = [["awkward.util", "frombuffer"],
              ["zlib", "decompress"],
-             ["awkward_numba", "*Array"],
+             ['awkward', 'JaggedArrayNumba', 'fromcounts'],
              ["awkward", "*Array"],
              ["awkward", "Table"],
              ["awkward.persist", "*"],
