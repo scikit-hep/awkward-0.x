@@ -45,6 +45,7 @@ except ImportError:
 import awkward.type
 import awkward.util
 import awkward.version
+import awkward_numba
 
 compression = [
     {"minsize": 8192, "types": [awkward.util.numpy.bool_, awkward.util.numpy.bool, awkward.util.numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
@@ -56,6 +57,7 @@ partner = {
 
 whitelist = [["awkward.util", "frombuffer"],
              ["zlib", "decompress"],
+             ["awkward_numba", "*Array"],
              ["awkward", "*Array"],
              ["awkward", "Table"],
              ["awkward.persist", "*"],
