@@ -34,10 +34,10 @@ from awkward import version
 from setuptools import find_packages
 from setuptools import setup
 
-def get_version():
-    g = {}
-    exec(open(os.path.join(r"..\awkward", "version.py")).read(), g)
-    return g["__version__"]
+# def get_version():
+#     g = {}
+#     exec(open(os.path.join(r"..\awkward", "version.py")).read(), g)
+#     return g["__version__"]
 
 def get_description():
     description = open("README.rst", "rb").read().decode("utf8", "ignore")
@@ -62,7 +62,8 @@ See the `project homepage <https://github.com/scikit-hep/awkward-array>`__ for a
 """
 
 setup(name = "awkward_numba",
-      version = get_version(),
+    #   version = get_version(),
+      version = version.__version__,
       packages = find_packages(exclude = ["tests"]),
       scripts = [],
       data_files = ["README.rst"],
