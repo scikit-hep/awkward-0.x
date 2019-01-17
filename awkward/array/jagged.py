@@ -530,7 +530,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
                 counts = head._broadcast(self.counts)._content
 
-                indexes = awkward.util.numpy.array(head._content, copy=True)
+                indexes = awkward.util.numpy.array(head._content[:headoffsets[-1]], copy=True)
 
                 negatives = (indexes < 0)
                 indexes[negatives] += counts[negatives]
