@@ -45,7 +45,6 @@ except ImportError:
 import awkward.type
 import awkward.util
 import awkward.version
-import awkward_numba
 
 compression = [
     {"minsize": 8192, "types": [awkward.util.numpy.bool_, awkward.util.numpy.bool, awkward.util.numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
@@ -57,7 +56,6 @@ partner = {
 
 whitelist = [["awkward.util", "frombuffer"],
              ["zlib", "decompress"],
-             ['awkward', 'JaggedArrayNumba', 'fromcounts'],
              ["awkward", "*Array"],
              ["awkward", "Table"],
              ["awkward.persist", "*"],
@@ -642,6 +640,7 @@ class hdf5(MutableMapping):
             def __init__(self):
                 self.g = group
             def __getitem__(self, where):
+                # print("The return is: ",type(self.g[where]))
                 return self.g[where].value
             def __setitem__(self, where, what):
                 self.g[where] = awkward.util.numpy.frombuffer(what, dtype=awkward.util.numpy.uint8)
