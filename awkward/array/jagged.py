@@ -1186,13 +1186,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             content = content.astype(dtype)
 
-        if identity is awkward.util.numpy.inf:
+        if identity == awkward.util.numpy.inf:
             if issubclass(dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
                 identity = True
             elif issubclass(dtype.type, awkward.util.numpy.integer):
                 identity = awkward.util.numpy.iinfo(dtype.type).max
 
-        elif identity is -awkward.util.numpy.inf:
+        elif identity == -awkward.util.numpy.inf:
             if issubclass(dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
                 identity = False
             elif issubclass(dtype.type, awkward.util.numpy.integer):
