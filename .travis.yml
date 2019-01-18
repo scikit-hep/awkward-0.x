@@ -38,7 +38,7 @@ script:
 install:
   - pip install --upgrade setuptools_scm
   - pip install $NUMPY
-    # FIXME: pypy bug in numpy
+  # FIXME: pypy bug in numpy
   - if [[ $TRAVIS_PYTHON_VERSION = pypy* ]] ; then pip install "numpy<1.16.0" ; fi
   - python -c 'import numpy; print(numpy.__version__)'
   - pip install pytest pytest-runner
