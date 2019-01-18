@@ -531,7 +531,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
                 counts = head._broadcast(self.counts)._content
 
-                # indexes = awkward.util.numpy.array(head._content, copy=True)
                 indexes = awkward.util.numpy.array(head._content[:headoffsets[-1]], copy=True)
 
                 negatives = (indexes < 0)
@@ -1272,37 +1271,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         newstops.reshape(-1)[nonempty] += 1
         return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
-    
-    # @staticmethod
-    # @numba.jit(nopython=True)
-    # def _argminmax_fillmin(starts, stops, content, output):
-    #     k = 0
-    #     for i in range(len(starts)):
-    #         if stops[i] != starts[i]:
-    #             best = content[starts[i]]
-    #             bestj = 0
-    #             for j in range(starts[i] + 1, stops[i]):
-    #                 if content[j] < best:
-    #                     best = content[j]
-    #                     bestj = j - starts[i]
-    #             output[k] = bestj
-    #             k += 1
-
-    # @staticmethod            
-    # @numba.jit(nopython=True)
-    # def _argminmax_fillmax(starts, stops, content, output):
-    #     k = 0
-    #     for i in range(len(starts)):
-    #         if stops[i] != starts[i]:
-    #             best = content[starts[i]]
-    #             bestj = 0
-    #             for j in range(starts[i] + 1, stops[i]):
-    #                 if content[j] > best:
-    #                     best = content[j]
-    #                     bestj = j - starts[i]
-    #             output[k] = bestj
-    #             k += 1
-
     def _argminmax_general(self, ismin):
         if len(self._content.shape) != 1:
             raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
@@ -1328,30 +1296,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         newstops = awkward.util.numpy.array(newstarts)
         newstops.reshape(-1)[flatstarts != flatstops] += 1
         return self.copy(starts=newstarts, stops=newstops, content=flatout)
-
-    # def _argminmax_general_numba(self, ismin):
-    #     if len(self._content.shape) != 1:
-    #         raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
-
-    #     # subarray with counts > 0 --> counts = 1
-    #     counts = (self.counts != 0).astype(self.INDEXTYPE)
-
-    #     # offsets for these 0 or 1 counts (involves a cumsum)
-    #     offsets = awkward.array.jagged.counts2offsets(counts)
-    #     # starts and stops derived from offsets and reshaped to original starts and stops (see specification)
-    #     starts, stops = offsets[:-1], offsets[1:]
-    #     starts.reshape(self._starts.shape[:-1] + (-1,))
-    #     stops.reshape(self._starts.shape[:-1] + (-1,))
-
-    #     # content to fit the new offsets
-    #     content = awkward.util.numpy.empty(offsets[-1], dtype=self.INDEXTYPE)
-        
-    #     # fill the new content
-    #     if ismin:
-    #         self._argminmax_fillmin(self._starts.reshape(-1), self._stops.reshape(-1), self._content, content)
-    #     else:
-    #         self._argminmax_fillmax(self._starts.reshape(-1), self._stops.reshape(-1), self._content, content)
-    #     return self.copy(starts=starts, stops=stops, content=content)
 
     @awkward.util.bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays):
