@@ -640,8 +640,8 @@ class hdf5(MutableMapping):
             def __init__(self):
                 self.g = group
             def __getitem__(self, where):
-                # print("The return is: ",type(self.g[where]))
-                return self.g[where].value
+                # return self.g[where].value
+                return self.g[where][()]
             def __setitem__(self, where, what):
                 self.g[where] = awkward.util.numpy.frombuffer(what, dtype=awkward.util.numpy.uint8)
 
