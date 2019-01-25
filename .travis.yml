@@ -50,10 +50,12 @@ notifications:
 
 before_deploy:
   - |
-    if [[ $AWKWARD_DEPLOYMENT == base ]] then
+    if [[ $AWKWARD_DEPLOYMENT == base ]]
+    then
         echo "DEPLOYING base"
         export AWKWARD_DEPLOYMENT=numba
-    elif [[ $AWKWARD_DEPLOYMENT == numba ]] then
+    elif [[ $AWKWARD_DEPLOYMENT == numba ]]
+    then
         echo "DEPLOYING numba"
         cd awkward-numba
         export AWKWARD_DEPLOYMENT=none
