@@ -299,23 +299,21 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 return self.copy(tags=tags, index=index)
     
     def __setitem__(self, where, what):
-        import awkward.array.index
-
         if what.shape[:len(self._tags.shape)] != self._tags.shape:
             raise ValueError("array to assign does not have the same starting shape as tags")
 
         if isinstance(where, awkward.util.string):
             for tag in awkward.util.numpy.unique(self._tags):
-                inverseindex = awkward.array.index.invert(self._index[:len(self._tags)][self._tags == tag])
-                self._contents[tag][where] = awkward.array.index.IndexedArray(inverseindex, what)
+                inverseindex = self.IndexedArray.invert(self._index[:len(self._tags)][self._tags == tag])
+                self._contents[tag][where] = self.IndexedArray(inverseindex, what)
 
         elif awkward.util.isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for tag in awkward.util.numpy.unique(self._tags):
-                inverseindex = awkward.array.index.invert(self._index[:len(self._tags)][self._tags == tag])
+                inverseindex = self.IndexedArray.invert(self._index[:len(self._tags)][self._tags == tag])
                 for x, y in zip(where, what):
-                    self._contents[tag][x] = awkward.array.index.IndexedArray(inverseindex, y)
+                    self._contents[tag][x] = self.IndexedArray(inverseindex, y)
 
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
@@ -334,8 +332,6 @@ class UnionArray(awkward.array.base.AwkwardArray):
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        import awkward.array.objects
-
         if "out" in kwargs:
             raise NotImplementedError("in-place operations not supported")
 
@@ -389,13 +385,13 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
         if out is None:
             if None in contents:
-                return awkward.array.objects.Methods.maybemixin(types[None], UnionArray)(outtags, outindex, contents[None])
+                return self.Methods.maybemixin(types[None], UnionArray)(outtags, outindex, contents[None])
             else:
                 return None
         else:
             for i in range(len(out)):
                 if i in contents:
-                    out[i] = awkward.array.objects.Methods.maybemixin(types[i], UnionArray)(outtags, outindex, contents[i])
+                    out[i] = self.Methods.maybemixin(types[i], UnionArray)(outtags, outindex, contents[i])
             return tuple(out)
 
     def _hasjagged(self):

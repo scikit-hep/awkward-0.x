@@ -213,8 +213,6 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
                 return self.copy(mask=mask, content=self._content[:len(self._mask)][(head,) + tail])
         
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        import awkward.array.objects
-
         if "out" in kwargs:
             raise NotImplementedError("in-place operations not supported")
 
@@ -257,11 +255,11 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         index[tokeep] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(tokeep))
 
         if isinstance(result, tuple):
-            return tuple(awkward.array.objects.Methods.maybemixin(type(x), IndexedMaskedArray)(index, x, maskedwhen=-1) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+            return tuple(self.Methods.maybemixin(type(x), IndexedMaskedArray)(index, x, maskedwhen=-1) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
         elif method == "at":
             return None
         else:
-            return awkward.array.objects.Methods.maybemixin(type(result), IndexedMaskedArray)(index, result, maskedwhen=-1)
+            return self.Methods.maybemixin(type(result), IndexedMaskedArray)(index, result, maskedwhen=-1)
 
     def indexed(self):
         maskindex = awkward.util.numpy.arange(len(self), dtype=self.INDEXTYPE)

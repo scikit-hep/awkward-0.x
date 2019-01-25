@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.virtual
+import awkward.numba.array.base
 
-class VirtualArrayNumba(awkward.array.virtual.VirtualArray):
+class VirtualArrayNumba(awkward.array.virtual.VirtualArray, awkward.numba.array.base.NumbaMethods):
     pass

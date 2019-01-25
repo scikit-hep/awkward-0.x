@@ -36,19 +36,20 @@ import awkward.persist
 import awkward.type
 import awkward.util
 
-def invert(permutation):
-    permutation = permutation.reshape(-1)
-    out = awkward.util.numpy.zeros(permutation.max() + 1, dtype=IndexedArray.INDEXTYPE)
-    identity = awkward.util.numpy.arange(len(permutation))
-    out[permutation] = identity
-    if not awkward.util.numpy.array_equal(out[permutation], identity):
-        raise ValueError("cannot invert index; it contains duplicates")
-    return out
-
 class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     """
     IndexedArray
     """
+
+    @staticmethod
+    def invert(permutation):
+        permutation = permutation.reshape(-1)
+        out = awkward.util.numpy.zeros(permutation.max() + 1, dtype=IndexedArray.INDEXTYPE)
+        identity = awkward.util.numpy.arange(len(permutation))
+        out[permutation] = identity
+        if not awkward.util.numpy.array_equal(out[permutation], identity):
+            raise ValueError("cannot invert index; it contains duplicates")
+        return out
 
     def __init__(self, index, content):
         self.index = index
@@ -170,7 +171,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _invert(self, what):
         if self._inverse is None:
-            self._inverse = invert(self._index)
+            self._inverse = self.invert(self._index)
         return IndexedArray(self._inverse, what)
 
     def __setitem__(self, where, what):
@@ -353,7 +354,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
         if self._default is None:
             if isinstance(self._content, awkward.array.jagged.JaggedArray):
-                return awkward.array.jagged.JaggedArray([0], [0], self._content.content)
+                return self.JaggedArray([0], [0], self._content.content)
             elif self._content.shape[1:] == ():
                 return self._content.dtype.type(0)
             else:
@@ -406,7 +407,6 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             i += 1
 
     def __getitem__(self, where):
-        import awkward.array.union
         self._valid()
 
         if awkward.util.isstringslice(where):
@@ -520,7 +520,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
                 content = self._content[match[explicit]]
                 default = awkward.util.numpy.array([self.default])
-                return awkward.array.union.UnionArray(tags, index, [default, content])[tail]
+                return self.UnionArray(tags, index, [default, content])[tail]
 
             else:
                 raise TypeError("cannot interpret shape {0}, dtype {1} as a fancy index or mask".format(head.shape, head.dtype))

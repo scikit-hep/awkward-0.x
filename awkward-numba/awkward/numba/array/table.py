@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.table
+import awkward.numba.array.base
 
-class TableNumba(awkward.array.table.Table):
+class TableNumba(awkward.array.table.Table, awkward.numba.array.base.NumbaMethods):
     pass

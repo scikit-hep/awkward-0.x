@@ -29,9 +29,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.chunked
+import awkward.numba.array.base
 
-class ChunkedArrayNumba(awkward.array.chunked.ChunkedArray):
+class ChunkedArrayNumba(awkward.array.chunked.ChunkedArray, awkward.numba.array.base.NumbaMethods):
     pass
 
-class AppendableArrayNumba(awkward.array.chunked.AppendableArray):
+class AppendableArrayNumba(awkward.array.chunked.AppendableArray, awkward.numba.array.base.NumbaMethods):
     pass

@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.union
+import awkward.numba.array.base
 
-class UnionArrayNumba(awkward.array.union.UnionArray):
+class UnionArrayNumba(awkward.array.union.UnionArray, awkward.numba.array.base.NumbaMethods):
     pass

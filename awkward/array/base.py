@@ -256,3 +256,73 @@ class AwkwardArrayWithContent(AwkwardArray):
 
     def astype(self, dtype):
         return self.copy(content=self._content.astype(dtype))
+
+    @property
+    def ChunkedArray(self):
+        import awkward.array.chunked
+        return awkward.array.chunked.ChunkedArray
+
+    @property
+    def AppendableArray(self):
+        import awkward.array.chunked
+        return awkward.array.chunked.AppendableArray
+
+    @property
+    def IndexedArray(self):
+        import awkward.array.indexed
+        return awkward.array.indexed.IndexedArray
+
+    @property
+    def SparseArray(self):
+        import awkward.array.indexed
+        return awkward.array.indexed.SparseArray
+
+    @property
+    def JaggedArray(self):
+        import awkward.array.jagged
+        return awkward.array.jagged.JaggedArray
+
+    @property
+    def MaskedArray(self):
+        import awkward.array.masked
+        return awkward.array.masked.MaskedArray
+
+    @property
+    def BitMaskedArray(self):
+        import awkward.array.masked
+        return awkward.array.masked.BitMaskedArray
+
+    @property
+    def IndexedMaskedArray(self):
+        import awkward.array.masked
+        return awkward.array.masked.IndexedMaskedArray
+
+    @property
+    def Methods(self):
+        import awkward.array.objects
+        return awkward.array.objects.Methods
+
+    @property
+    def ObjectArray(self):
+        import awkward.array.objects
+        return awkward.array.objects.ObjectArray
+
+    @property
+    def StringArray(self):
+        import awkward.array.objects
+        return awkward.array.objects.StringArray
+
+    @property
+    def Table(self):
+        import awkward.array.table
+        return awkward.array.table.Table
+
+    @property
+    def UnionArray(self):
+        import awkward.array.union
+        return awkward.array.union.UnionArray
+
+    @property
+    def VirtualArray(self):
+        import awkward.array.virtual
+        return awkward.array.virtual.VirtualArray

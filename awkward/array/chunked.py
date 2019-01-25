@@ -118,9 +118,8 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     @property
     def offsets(self):
-        import awkward.array.jagged
         if self._offsets is None or len(self._offsets) != len(self._counts) + 1:
-            self._offsets = awkward.array.jagged.counts2offsets(self._counts)
+            self._offsets = self.JaggedArray.counts2offsets(self._counts)
         return self._offsets
 
     @property
@@ -306,7 +305,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             return super(ChunkedArray, self).__array__(*args, **kwargs)
 
     def __getitem__(self, where):
-        import awkward.array.indexed
         self._valid()
 
         if awkward.util.isstringslice(where):
@@ -470,7 +468,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                         return out[(slice(None),) + tail]
 
                 elif tail == ():
-                    return awkward.array.indexed.IndexedArray(head, self)
+                    return self.IndexedArray(head, self)
 
                 else:
                     raise NotImplementedError
@@ -516,8 +514,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        import awkward.array.objects
-
         if "out" in kwargs:
             raise NotImplementedError("in-place operations not supported")
 
@@ -580,13 +576,13 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
         if out is None:
             if None in chunks:
-                return awkward.array.objects.Methods.maybemixin(types[None], ChunkedArray)(chunks[None])
+                return self.Methods.maybemixin(types[None], ChunkedArray)(chunks[None])
             else:
                 return None
         else:
             for i in range(len(out)):
                 if i in chunks:
-                    out[i] = awkward.array.objects.Methods.maybemixin(types[i], ChunkedArray)(chunks[i])
+                    out[i] = self.Methods.maybemixin(types[i], ChunkedArray)(chunks[i])
             return tuple(out)
 
     def _hasjagged(self):
@@ -775,8 +771,7 @@ class AppendableArray(ChunkedArray):
 
     @property
     def offsets(self):
-        import awkward.array.jagged
-        return awkward.array.jagged.counts2offsets(self._counts)
+        return self.JaggedArray.counts2offsets(self._counts)
 
     def _gettype(self, seen):
         return self._dtype

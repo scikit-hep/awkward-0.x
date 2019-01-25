@@ -242,8 +242,6 @@ class StringMethods(object):
     """
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        import awkward.array.jagged
-
         if "out" in kwargs:
             raise NotImplementedError("in-place operations not supported")
 
@@ -273,8 +271,8 @@ class StringMethods(object):
             elif not isinstance(right, StringMethods):
                 return awkward.util.numpy.zeros(len(left), dtype=self.BOOLTYPE)
 
-            left = awkward.array.jagged.JaggedArray(left.starts, left.stops, left.content)
-            right = awkward.array.jagged.JaggedArray(right.starts, right.stops, right.content)
+            left = self.JaggedArray(left.starts, left.stops, left.content)
+            right = self.JaggedArray(right.starts, right.stops, right.content)
 
             maybeequal = (left.counts == right.counts)
 
@@ -306,8 +304,7 @@ class StringArray(StringMethods, ObjectArray):
     """
 
     def __init__(self, starts, stops, content, encoding="utf-8"):
-        import awkward.array.jagged
-        self._content = awkward.array.jagged.JaggedArray(starts, stops, content)
+        self._content = self.JaggedArray(starts, stops, content)
         self._generator = tostring
         self._kwargs = {}
         self.encoding = encoding
@@ -326,8 +323,6 @@ class StringArray(StringMethods, ObjectArray):
 
     @classmethod
     def fromnumpy(cls, array):
-        import awkward.array.jagged
-
         if array.dtype.kind == "S":
             encoding = None
         elif array.dtype.kind == "U":
@@ -357,7 +352,7 @@ class StringArray(StringMethods, ObjectArray):
                     break
 
         out = cls.__new__(cls)
-        out._content = awkward.array.jagged.JaggedArray(starts, stops, content)
+        out._content = self.JaggedArray(starts, stops, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -380,9 +375,8 @@ class StringArray(StringMethods, ObjectArray):
 
     @classmethod
     def fromoffsets(cls, offsets, content, encoding="utf-8"):
-        import awkward.array.jagged
         out = cls.__new__(cls)
-        out._content = awkward.array.jagged.JaggedArray.fromoffsets(offsets, content)
+        out._content = self.JaggedArray.fromoffsets(offsets, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -390,9 +384,8 @@ class StringArray(StringMethods, ObjectArray):
 
     @classmethod
     def fromcounts(cls, counts, content, encoding="utf-8"):
-        import awkward.array.jagged
         out = cls.__new__(cls)
-        out._content = awkward.array.jagged.JaggedArray.fromcounts(counts, content)
+        out._content = self.JaggedArray.fromcounts(counts, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -400,9 +393,8 @@ class StringArray(StringMethods, ObjectArray):
 
     @classmethod
     def fromparents(cls, parents, content, encoding="utf-8"):
-        import awkward.array.jagged
         out = cls.__new__(cls)
-        out._content = awkward.array.jagged.JaggedArray.fromparents(parents, content)
+        out._content = self.JaggedArray.fromparents(parents, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -410,9 +402,8 @@ class StringArray(StringMethods, ObjectArray):
 
     @classmethod
     def fromuniques(cls, uniques, content, encoding="utf-8"):
-        import awkward.array.jagged
         out = cls.__new__(cls)
-        out._content = awkward.array.jagged.JaggedArray.fromuniques(uniques, content)
+        out._content = self.JaggedArray.fromuniques(uniques, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -430,9 +421,8 @@ class StringArray(StringMethods, ObjectArray):
         return out
 
     def copy(self, starts=None, stops=None, content=None, encoding=None):
-        import awkward.array.jagged
         out = self.__class__.__new__(self.__class__)
-        out._content = awkward.array.jagged.JaggedArray(self.starts, self.stops, self.content)
+        out._content = self.JaggedArray(self.starts, self.stops, self.content)
         out._generator = self._generator
         out._args = self._args
         out._kwargs = self._kwargs
@@ -473,10 +463,9 @@ class StringArray(StringMethods, ObjectArray):
         return self.copy(jagged.starts, jagged.stops, jagged.content, **mine)
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
-        import awkward.array.jagged
         self._valid()
         n = self.__class__.__name__
-        if awkward.array.jagged.offsetsaliased(self.starts, self.stops) and len(self.starts) > 0 and self.starts[0] == 0:
+        if self_content.offsetsaliased(self.starts, self.stops) and len(self.starts) > 0 and self.starts[0] == 0:
             return {"id": ident,
                     "call": ["awkward", n, "fromcounts"],
                     "args": [fill(self.counts, n + ".counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
