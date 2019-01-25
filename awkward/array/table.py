@@ -255,7 +255,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     @classmethod
     def fromrec(cls, recarray):
-        if not isinstance(recarray, awkward.util.numpy.ndarray) or recarray.dtype.names is None:
+        if not isinstance(recarray, cls.numpy.ndarray) or recarray.dtype.names is None:
             raise TypeError("recarray must be a Numpy structured array")
         out = cls()
         for n in recarray.dtype.names:
@@ -281,7 +281,7 @@ class Table(awkward.array.base.AwkwardArray):
             out._base = base
             return out
 
-        elif isinstance(view, awkward.util.numpy.ndarray) and issubclass(view.dtype.type, awkward.util.integer):
+        elif isinstance(view, cls.numpy.ndarray) and issubclass(view.dtype.type, awkward.util.integer):
             out = base.copy()
             out._view = view
             out._base = base
@@ -326,8 +326,8 @@ class Table(awkward.array.base.AwkwardArray):
     def zeros_like(self, **overrides):
         out = self.empty_like(**overrides)
         for n, x in self._contents.items():
-            if isinstance(x, awkward.util.numpy.ndarray):
-                out[n] = awkward.util.numpy.zeros_like(x)
+            if isinstance(x, self.numpy.ndarray):
+                out[n] = self.numpy.zeros_like(x)
             else:
                 out[n] = x.zeros_like(**overrides)
         return out
@@ -335,8 +335,8 @@ class Table(awkward.array.base.AwkwardArray):
     def ones_like(self, **overrides):
         out = self.empty_like(**overrides)
         for n, x in self._contents.items():
-            if isinstance(x, awkward.util.numpy.ndarray):
-                out[n] = awkward.util.numpy.ones_like(x)
+            if isinstance(x, self.numpy.ndarray):
+                out[n] = self.numpy.ones_like(x)
             else:
                 out[n] = x.ones_like(**overrides)
         return out
@@ -350,7 +350,7 @@ class Table(awkward.array.base.AwkwardArray):
             out = {"call": ["awkward", self.__class__.__name__, "fromview"],
                    "args": [{"tuple": [{"json": start}, {"json": step}, {"json": length}]}, out]}
 
-        elif isinstance(self._view, awkward.util.numpy.ndarray):
+        elif isinstance(self._view, self.numpy.ndarray):
             out = {"call": ["awkward", self.__class__.__name__, "fromview"],
                    "args": [fill(self._view, self.__class__.__name__ + ".view", prefix, suffix, schemasuffix, storage, compression, **kwargs), out]}
 
@@ -465,12 +465,12 @@ class Table(awkward.array.base.AwkwardArray):
 
         else:
             head = awkward.util.toarray(head, self.INDEXTYPE)
-            if issubclass(head.dtype.type, awkward.util.numpy.integer):
+            if issubclass(head.dtype.type, self.numpy.integer):
                 length = self._length()
                 negative = (head < 0)
                 if negative.any():
                     head[negative] += length
-                if not awkward.util.numpy.bitwise_and(0 <= head, head < length).all():
+                if not self.numpy.bitwise_and(0 <= head, head < length).all():
                     raise IndexError("some indexes out of bounds for length {0}".format(length))
 
                 if self._view is None:
@@ -478,22 +478,22 @@ class Table(awkward.array.base.AwkwardArray):
 
                 elif isinstance(self._view, tuple):
                     mystart, mystep, mylength = self._view
-                    return awkward.util.numpy.arange(mystart, mystart + mystep*mylength, mystep)[head]
+                    return self.numpy.arange(mystart, mystart + mystep*mylength, mystep)[head]
 
                 else:
                     return self._view[head]
 
-            elif issubclass(head.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+            elif issubclass(head.dtype.type, (self.numpy.bool, self.numpy.bool_)):
                 length = self._length()
                 if len(head) != length:
                     raise IndexError("boolean index of length {0} does not fit array of length {1}".format(len(head), length))
 
                 if self._view is None:
-                    return awkward.util.numpy.arange(length)[head]
+                    return self.numpy.arange(length)[head]
 
                 elif isinstance(self._view, tuple):
                     mystart, mystep, mylength = self._view
-                    return awkward.util.numpy.arange(mystart, mystart + mystep*mylength, mystep)[head]
+                    return self.numpy.arange(mystart, mystart + mystep*mylength, mystep)[head]
 
                 else:
                     return self._view[head]
@@ -644,12 +644,12 @@ class Table(awkward.array.base.AwkwardArray):
         if awkward.util.iscomparison(ufunc):
             out = None
             for x in newcolumns.values():
-                assert isinstance(x, awkward.util.numpy.ndarray)
-                assert issubclass(x.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool))
+                assert isinstance(x, self.numpy.ndarray)
+                assert issubclass(x.dtype.type, (self.numpy.bool_, self.numpy.bool))
                 if out is None:
                     out = x
                 else:
-                    out = awkward.util.numpy.bitwise_and(out, x, out=out)
+                    out = self.numpy.bitwise_and(out, x, out=out)
             assert out is not None
             return out
 
@@ -709,14 +709,14 @@ class Table(awkward.array.base.AwkwardArray):
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         out = Table.named({
-            awkward.util.numpy.bitwise_or: "Any",
-            awkward.util.numpy.bitwise_and: "All",
+            self.numpy.bitwise_or: "Any",
+            self.numpy.bitwise_and: "All",
             None: "Count",
-            awkward.util.numpy.count_nonzero: "CountNonzero",
-            awkward.util.numpy.add: "Sum",
-            awkward.util.numpy.multiply: "Prod",
-            awkward.util.numpy.minimum: "Min",
-            awkward.util.numpy.maximum: "Max"
+            self.numpy.count_nonzero: "CountNonzero",
+            self.numpy.add: "Sum",
+            self.numpy.multiply: "Prod",
+            self.numpy.minimum: "Min",
+            self.numpy.maximum: "Max"
             }[ufunc])
         out._showdict = True
         for n in self._contents:
@@ -725,7 +725,7 @@ class Table(awkward.array.base.AwkwardArray):
                 x = self._contents[n][:self._length()]
             else:
                 x = self._contents[n][index]
-            out[n] = awkward.util.numpy.array([awkward.util._reduce(x, ufunc, identity, dtype, regularaxis)])
+            out[n] = self.numpy.array([awkward.util._reduce(x, ufunc, identity, dtype, regularaxis)])
         return out.Row(out, 0)
 
     @property

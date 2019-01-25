@@ -93,8 +93,8 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         mine["generator"] = overrides.pop("generator", self._generator)
         mine["args"] = overrides.pop("args", self._args)
         mine["kwargs"] = overrides.pop("kwargs", self._kwargs)
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.empty_like(self._content), **mine)
+        if isinstance(self._content, self.numpy.ndarray):
+            return self.copy(content=self.numpy.empty_like(self._content), **mine)
         else:
             return self.copy(content=self._content.empty_like(**overrides), **mine)
 
@@ -103,8 +103,8 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         mine["generator"] = overrides.pop("generator", self._generator)
         mine["args"] = overrides.pop("args", self._args)
         mine["kwargs"] = overrides.pop("kwargs", self._kwargs)
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.zeros_like(self._content), **mine)
+        if isinstance(self._content, self.numpy.ndarray):
+            return self.copy(content=self.numpy.zeros_like(self._content), **mine)
         else:
             return self.copy(content=self._content.zeros_like(**overrides), **mine)
 
@@ -113,8 +113,8 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         mine["generator"] = overrides.pop("generator", self._generator)
         mine["args"] = overrides.pop("args", self._args)
         mine["kwargs"] = overrides.pop("kwargs", self._kwargs)
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
+        if isinstance(self._content, self.numpy.ndarray):
+            return self.copy(content=self.numpy.ones_like(self._content), **mine)
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
@@ -248,28 +248,28 @@ class StringMethods(object):
         if method != "__call__":
             raise NotImplemented
 
-        if ufunc is awkward.util.numpy.equal or ufunc is awkward.util.numpy.not_equal:
+        if ufunc is self.numpy.equal or ufunc is self.numpy.not_equal:
             if len(inputs) < 2:
                 raise ValueError("invalid number of arguments")
             left, right = inputs[0], inputs[1]
 
             if isinstance(left, (str, bytes)):
                 left = StringArray.fromstr(len(right), left)
-            elif isinstance(left, awkward.util.numpy.ndarray) and (left.dtype.kind == "U" or left.dtype.kind == "S"):
+            elif isinstance(left, self.numpy.ndarray) and (left.dtype.kind == "U" or left.dtype.kind == "S"):
                 left = StringArray.fromnumpy(left)
-            elif isinstance(left, awkward.util.numpy.ndarray) and left.dtype == awkward.util.numpy.dtype(object):
+            elif isinstance(left, self.numpy.ndarray) and left.dtype == self.numpy.dtype(object):
                 left = StringArray.fromiter(left)
             elif not isinstance(left, StringMethods):
-                return awkward.util.numpy.zeros(len(right), dtype=self.BOOLTYPE)
+                return self.numpy.zeros(len(right), dtype=self.BOOLTYPE)
 
             if isinstance(right, (str, bytes)):
                 right = StringArray.fromstr(len(left), right)
-            elif isinstance(right, awkward.util.numpy.ndarray) and (right.dtype.kind == "U" or right.dtype.kind == "S"):
+            elif isinstance(right, self.numpy.ndarray) and (right.dtype.kind == "U" or right.dtype.kind == "S"):
                 right = StringArray.fromnumpy(right)
-            elif isinstance(right, awkward.util.numpy.ndarray) and right.dtype == awkward.util.numpy.dtype(object):
+            elif isinstance(right, self.numpy.ndarray) and right.dtype == self.numpy.dtype(object):
                 right = StringArray.fromiter(right)
             elif not isinstance(right, StringMethods):
-                return awkward.util.numpy.zeros(len(left), dtype=self.BOOLTYPE)
+                return self.numpy.zeros(len(left), dtype=self.BOOLTYPE)
 
             left = self.JaggedArray(left.starts, left.stops, left.content)
             right = self.JaggedArray(right.starts, right.stops, right.content)
@@ -281,13 +281,13 @@ class StringMethods(object):
 
             reallyequal = (leftmask == rightmask).count_nonzero() == leftmask.counts
 
-            out = awkward.util.numpy.zeros(len(left), dtype=self.BOOLTYPE)
+            out = self.numpy.zeros(len(left), dtype=self.BOOLTYPE)
             out[maybeequal] = reallyequal
 
-            if ufunc is awkward.util.numpy.equal:
+            if ufunc is self.numpy.equal:
                 return out
             else:
-                return awkward.util.numpy.logical_not(out)
+                return self.numpy.logical_not(out)
 
         else:
             return super(StringMethods, self).__array_ufunc__(ufunc, method, *inputs, **kwargs)
@@ -314,10 +314,10 @@ class StringArray(StringMethods, ObjectArray):
         if encoding is not None:
             encoder = codecs.getencoder(encoding)
             string = encoder(string)[0]
-        content = awkward.util.numpy.empty(length * len(string), dtype=cls.CHARTYPE)
+        content = cls.numpy.empty(length * len(string), dtype=cls.CHARTYPE)
         for i, x in string:
             content[0::length] = ord(x)                   # FIXME: use numpy.tile!
-        counts = awkward.util.numpy.empty(length, dtype=cls.INDEXTYPE)
+        counts = cls.numpy.empty(length, dtype=cls.INDEXTYPE)
         counts[:] = length
         return cls.fromcounts(counts, content, encoding)
 
@@ -330,11 +330,11 @@ class StringArray(StringMethods, ObjectArray):
         else:
             raise TypeError("not a string array")
 
-        starts = awkward.util.numpy.arange(                   0,  len(array)      * array.dtype.itemsize, array.dtype.itemsize)
-        stops  = awkward.util.numpy.arange(array.dtype.itemsize, (len(array) + 1) * array.dtype.itemsize, array.dtype.itemsize)
+        starts = cls.numpy.arange(                   0,  len(array)      * array.dtype.itemsize, array.dtype.itemsize)
+        stops  = cls.numpy.arange(array.dtype.itemsize, (len(array) + 1) * array.dtype.itemsize, array.dtype.itemsize)
         content = array.view(cls.CHARTYPE)
 
-        shorter = awkward.util.numpy.ones(len(array), dtype=cls.BOOLTYPE)
+        shorter = cls.numpy.ones(len(array), dtype=cls.BOOLTYPE)
         if array.dtype.kind == "S":
             for checkat in range(array.dtype.itemsize - 1, -1, -1):
                 shorter &= (content[checkat::array.dtype.itemsize] == 0)
@@ -343,7 +343,7 @@ class StringArray(StringMethods, ObjectArray):
                     break
 
         elif array.dtype.kind == "U":
-            content2 = content.view(awkward.util.numpy.uint32)
+            content2 = content.view(cls.numpy.uint32)
             itemsize2 = array.dtype.itemsize >> 2                 # itemsize // 4
             for checkat in range(itemsize2 - 1, -1, -1):
                 shorter &= (content2[checkat::itemsize2] == 0)    # all four bytes are zero
@@ -366,10 +366,10 @@ class StringArray(StringMethods, ObjectArray):
             encoder = codecs.getencoder(encoding)
             encoded = [encoder(x)[0] for x in iterable]
         counts = [len(x) for x in encoded]
-        content = awkward.util.numpy.empty(sum(counts), dtype=cls.CHARTYPE)
+        content = cls.numpy.empty(sum(counts), dtype=cls.CHARTYPE)
         i = 0
         for x in encoded:
-            content[i : i + len(x)] = awkward.util.numpy.frombuffer(x, dtype=cls.CHARTYPE)
+            content[i : i + len(x)] = cls.numpy.frombuffer(x, dtype=cls.CHARTYPE)
             i += len(x)
         return cls.fromcounts(counts, content, encoding)
 

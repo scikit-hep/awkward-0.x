@@ -30,6 +30,8 @@
 
 import types
 
+import numpy
+
 import awkward.persist
 import awkward.type
 import awkward.util
@@ -43,13 +45,14 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     allow_iter = True
     # TODO for 1.0: add check_prop_valid and check_whole_valid parameters
 
-    DEFAULTTYPE = awkward.util.numpy.dtype(awkward.util.numpy.float64)
-    CHARTYPE    = awkward.util.numpy.dtype(awkward.util.numpy.uint8)
-    INDEXTYPE   = awkward.util.numpy.dtype(awkward.util.numpy.int64)
-    TAGTYPE     = awkward.util.numpy.dtype(awkward.util.numpy.uint8)
-    MASKTYPE    = awkward.util.numpy.dtype(awkward.util.numpy.bool_)
-    BITMASKTYPE = awkward.util.numpy.dtype(awkward.util.numpy.uint8)
-    BOOLTYPE    = awkward.util.numpy.dtype(awkward.util.numpy.bool_)
+    numpy = numpy
+    DEFAULTTYPE = numpy.dtype(numpy.float64)
+    CHARTYPE    = numpy.dtype(numpy.uint8)
+    INDEXTYPE   = numpy.dtype(numpy.int64)
+    TAGTYPE     = numpy.dtype(numpy.uint8)
+    MASKTYPE    = numpy.dtype(numpy.bool_)
+    BITMASKTYPE = numpy.dtype(numpy.uint8)
+    BOOLTYPE    = numpy.dtype(numpy.bool_)
 
     def _checktonumpy(self):
         if not self.allow_tonumpy:
@@ -60,11 +63,11 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
         if dtype is None:
             dtype = self.dtype
-        
-        if dtype == awkward.util.numpy.dtype(object):
-            return awkward.util.numpy.array(list(self), dtype=dtype)
+
+        if dtype == self.numpy.dtype(object):
+            return self.numpy.array(list(self), dtype=dtype)
         else:
-            return awkward.util.numpy.fromiter(self, dtype=dtype, count=len(self))
+            return self.numpy.fromiter(self, dtype=dtype, count=len(self))
 
     def __getstate__(self):
         state = {}
@@ -139,7 +142,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                     out.append(tuple(x[n].tolist() for n in x._table._contents))
                 else:
                     out.append(dict((n, self._try_tolist(x[n])) for n in x._table._contents))
-            elif isinstance(x, awkward.util.numpy.ma.core.MaskedConstant):
+            elif isinstance(x, self.numpy.ma.core.MaskedConstant):
                 out.append(None)
             else:
                 out.append(self._try_tolist(x))
@@ -154,28 +157,28 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return True
 
     def any(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.bitwise_or, False, self.BOOLTYPE, regularaxis)
+        return self._reduce(self.numpy.bitwise_or, False, self.BOOLTYPE, regularaxis)
 
     def all(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.bitwise_and, True, self.BOOLTYPE, regularaxis)
+        return self._reduce(self.numpy.bitwise_and, True, self.BOOLTYPE, regularaxis)
 
     def count(self, regularaxis=None):
         return self._reduce(None, 0, None, regularaxis)
 
     def count_nonzero(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.count_nonzero, 0, None, regularaxis)
+        return self._reduce(self.numpy.count_nonzero, 0, None, regularaxis)
 
     def sum(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.add, 0, None, regularaxis)
+        return self._reduce(self.numpy.add, 0, None, regularaxis)
 
     def prod(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.multiply, 1, None, regularaxis)
+        return self._reduce(self.numpy.multiply, 1, None, regularaxis)
 
     def min(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.minimum, awkward.util.numpy.inf, None, regularaxis)
+        return self._reduce(self.numpy.minimum, self.numpy.inf, None, regularaxis)
 
     def max(self, regularaxis=None):
-        return self._reduce(awkward.util.numpy.maximum, -awkward.util.numpy.inf, None, regularaxis)
+        return self._reduce(self.numpy.maximum, -self.numpy.inf, None, regularaxis)
 
     @property
     def i0(self):
@@ -319,7 +322,7 @@ class AwkwardArrayWithContent(AwkwardArray):
 
     @property
     def columns(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
+        if isinstance(self._content, self.numpy.ndarray):
             return []
         else:
             return self._content.columns

@@ -112,20 +112,20 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         return out
 
     def empty_like(self, **overrides):
-        if isinstance(self.array, awkward.util.numpy.ndarray):
-            return awkward.util.numpy.empty_like(array)
+        if isinstance(self.array, self.numpy.ndarray):
+            return self.numpy.empty_like(array)
         else:
             return self.array.empty_like(**overrides)
 
     def zeros_like(self, **overrides):
-        if isinstance(self.array, awkward.util.numpy.ndarray):
-            return awkward.util.numpy.zeros_like(array)
+        if isinstance(self.array, self.numpy.ndarray):
+            return self.numpy.zeros_like(array)
         else:
             return self.array.zeros_like(**overrides)
 
     def ones_like(self, **overrides):
-        if isinstance(self.array, awkward.util.numpy.ndarray):
-            return awkward.util.numpy.ones_like(array)
+        if isinstance(self.array, self.numpy.ndarray):
+            return self.numpy.ones_like(array)
         else:
             return self.array.ones_like(**overrides)
 
@@ -212,7 +212,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @persistvirtual.setter
     def persistvirtual(self, value):
-        if not isinstance(value, (bool, awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+        if not isinstance(value, (bool, self.numpy.bool_, self.numpy.bool)):
             raise TypeError("persistvirtual must be boolean")
         self._persistvirtual = bool(value)
 
@@ -289,7 +289,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     @property
     def ismaterialized(self):
         if self._cache is None:
-            return isinstance(self._array, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+            return isinstance(self._array, (self.numpy.ndarray, awkward.array.base.AwkwardArray))
         else:
             return self._array is not None and self._array in self._cache
 
@@ -334,7 +334,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def __array__(self, *args, **kwargs):
         self._checktonumpy()
-        return awkward.util.numpy.array(self.array, *args, **kwargs)
+        return self.numpy.array(self.array, *args, **kwargs)
 
     def __getitem__(self, where):
         return self.array[where]
@@ -381,9 +381,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def _prepare(self, identity, dtype):
         array = self.array
-        if isinstance(array, awkward.util.numpy.ndarray):
-            if dtype is None and issubclass(array.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
-                dtype = awkward.util.numpy.dtype(type(identity))
+        if isinstance(array, self.numpy.ndarray):
+            if dtype is None and issubclass(array.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                dtype = self.numpy.dtype(type(identity))
             if dtype is None:
                 return array
             else:
