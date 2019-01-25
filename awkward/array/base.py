@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import types
+import numbers
 
 import numpy
 
@@ -289,6 +290,14 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def VirtualArray(self):
         import awkward.array.virtual
         return awkward.array.virtual.VirtualArray
+
+    @classmethod
+    def _util_isinteger(cls, x):
+        return isinstance(x, (numbers.Integral, cls.numpy.integer)) and not isinstance(x, (bool, cls.numpy.bool_, cls.numpy.bool))
+
+    @classmethod
+    def _util_isintegertype(cls, x):
+        return issubclass(x, cls.numpy.integer) and not issubclass(x, (cls.numpy.bool_, cls.numpy.bool))
 
 class AwkwardArrayWithContent(AwkwardArray):
     """

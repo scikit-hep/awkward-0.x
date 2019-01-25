@@ -106,7 +106,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     @index.setter
     def index(self, value):
         value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not issubclass(value.dtype.type, self.numpy.integer):
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("index must have integer dtype")
         if (value < 0).any():
             raise ValueError("index must be a non-negative array")
@@ -294,7 +294,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         
         if self._default is None:
             default = {"json": self._default}
-        elif isinstance(self._default, (numbers.Integral, self.numpy.integer)):
+        elif self._util_isinteger(self._default):
             default = {"json": int(self._default)}
         elif isinstance(self._default, (numbers.Real, self.numpy.floating)) and self.numpy.isfinite(self._default):
             default = {"json": float(self._default)}
@@ -314,7 +314,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     @length.setter
     def length(self, value):
-        if not isinstance(value, awkward.util.integer):
+        if not self._util_isinteger(value):
             raise TypeError("length must be an integer")
         if value < 0:
             raise ValueError("length must be a non-negative integer") 
@@ -327,7 +327,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     @index.setter
     def index(self, value):
         value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not issubclass(value.dtype.type, self.numpy.integer):
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("index must have integer dtype")
         if len(value.shape) != 1:
             raise ValueError("index must be one-dimensional")
@@ -423,7 +423,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, awkward.util.integer):
+        if self._util_isinteger(head):
             original_head = head
             if head < 0:
                 head += self._length
@@ -502,7 +502,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
                 head = self.numpy.arange(self._length, dtype=self.INDEXTYPE)[head]
 
-            if len(head.shape) == 1 and issubclass(head.dtype.type, self.numpy.integer):
+            if len(head.shape) == 1 and self._util_isintegertype(head.dtype.type):
                 mask = (head < 0)
                 if mask.any():
                     head[mask] += self._length

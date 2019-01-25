@@ -121,7 +121,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
     @tags.setter
     def tags(self, value):
         value = awkward.util.toarray(value, self.TAGTYPE, self.numpy.ndarray)
-        if not issubclass(value.dtype.type, self.numpy.integer):
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("tags must have integer dtype")
         if (value < 0).any():
             raise ValueError("tags must be a non-negative array")
@@ -135,7 +135,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
     @index.setter
     def index(self, value):
         value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not issubclass(value.dtype.type, self.numpy.integer):
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("index must have integer dtype")
         if (value < 0).any():
             raise ValueError("index must be a non-negative array")

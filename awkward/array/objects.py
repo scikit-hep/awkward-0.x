@@ -191,7 +191,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         head, tail = where[0], where[1:]
 
         content = self._content[head]
-        if isinstance(head, awkward.util.integer):
+        if self._util_isinteger(head):
             if isinstance(tail, tuple) and tail == ():
                 return self.generator(content, *self._args, **self._kwargs)
             else:
@@ -556,7 +556,7 @@ class StringArray(StringMethods, ObjectArray):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, awkward.util.integer):
+        if self._util_isinteger(head):
             return super(StringArray, self).__getitem__(where)
 
         elif tail == ():

@@ -274,14 +274,14 @@ class Table(awkward.array.base.AwkwardArray):
         if view is None:
             return base
 
-        elif isinstance(view, tuple) and len(view) == 3 and all(isinstance(x, awkward.util.integer) for x in view):
+        elif isinstance(view, tuple) and len(view) == 3 and all(cls._util_isinteger(x) for x in view):
             start, step, length = view
             out = base.copy()
             out._view = int(start), int(step), int(length)
             out._base = base
             return out
 
-        elif isinstance(view, cls.numpy.ndarray) and issubclass(view.dtype.type, awkward.util.integer):
+        elif isinstance(view, cls.numpy.ndarray) and cls._util_isintegertype(view.dtype.type):
             out = base.copy()
             out._view = view
             out._base = base
@@ -411,7 +411,7 @@ class Table(awkward.array.base.AwkwardArray):
             return self._view
 
     def _newslice(self, head):
-        if isinstance(head, awkward.util.integer):
+        if self._util_isinteger(head):
             original_head = head
 
             if self._view is None:
@@ -465,7 +465,7 @@ class Table(awkward.array.base.AwkwardArray):
 
         else:
             head = awkward.util.toarray(head, self.INDEXTYPE)
-            if issubclass(head.dtype.type, self.numpy.integer):
+            if self._util_isintegertype(head.dtype.type):
                 length = self._length()
                 negative = (head < 0)
                 if negative.any():
@@ -556,7 +556,7 @@ class Table(awkward.array.base.AwkwardArray):
 
         newslice = self._newslice(head)
 
-        if isinstance(newslice, awkward.util.integer):
+        if self._util_isinteger(newslice):
             return self.Row(self, newslice)
 
         else:

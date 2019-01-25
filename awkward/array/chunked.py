@@ -109,7 +109,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     @counts.setter
     def counts(self, value):
         try:
-            if not all(isinstance(x, awkward.util.integer) and x >= 0 for x in value):
+            if not all(self._util_isinteger(x) and x >= 0 for x in value):
                 raise ValueError("counts must contain only non-negative integers")
         except TypeError:
             raise TypeError("counts must be iterable")
@@ -151,7 +151,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def global2chunkid(self, index, return_normalized=False):
         self._valid()
 
-        if isinstance(index, awkward.util.integer):
+        if self._util_isinteger(index):
             original_index = index
             if index < 0:
                 index += len(self)
@@ -170,7 +170,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
         else:
             index = self.numpy.array(index, copy=False)
-            if len(index.shape) == 1 and issubclass(index.dtype.type, self.numpy.integer):
+            if len(index.shape) == 1 and self._util_isintegertype(index.dtype.type):
                 if len(index) == 0:
                     out = self.numpy.empty(0, dtype=self.INDEXTYPE)
 
@@ -196,13 +196,13 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def global2local(self, index):
         chunkid, index = self.global2chunkid(index, return_normalized=True)
 
-        if isinstance(index, awkward.util.integer):
+        if self._util_isinteger(index):
             return self._chunks[chunkid], index - self.offsets[chunkid]
         else:
             return self.numpy.array(self._chunks, dtype=self.numpy.object)[chunkid], index - self.offsets[chunkid]
 
     def local2global(self, index, chunkid):
-        if isinstance(chunkid, awkward.util.integer):
+        if self._util_isinteger(chunkid):
             self.knowcounts(chunkid + 1)
             self._valid()
             original_index = index
@@ -215,7 +215,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         else:
             index = self.numpy.array(index, copy=False)
             chunkid = self.numpy.array(chunkid, copy=False)
-            if len(index.shape) == 1 and issubclass(index.dtype.type, self.numpy.integer) and len(chunkid.shape) == 1 and issubclass(chunkid.dtype.type, self.numpy.integer):
+            if len(index.shape) == 1 and self._util_isintegertype(index.dtype.type) and len(chunkid.shape) == 1 and self._util_isintegertype(chunkid.dtype.type):
                 if len(index) != len(chunkid):
                     raise ValueError("len(index) is {0} and len(chunkid) is {1}, but they should be equal".format(len(index), len(chunkid)))
 
@@ -331,7 +331,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, awkward.util.integer):
+        if self._util_isinteger(head):
             chunk, localhead = self.global2local(head)
             return chunk[(localhead,) + tail]
 
@@ -432,7 +432,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
         else:
             head = self.numpy.array(head, copy=False)
-            if len(head.shape) == 1 and issubclass(head.dtype.type, self.numpy.integer):
+            if len(head.shape) == 1 and self._util_isintegertype(head.dtype.type):
                 if len(head) == 0 and len(self._chunks) == 0:
                     return self.copy(chunks=[])[tail]
                 elif len(head) == 0:
@@ -717,12 +717,12 @@ class AppendableArray(ChunkedArray):
 
     @chunkshape.setter
     def chunkshape(self, value):
-        if isinstance(value, awkward.util.integer) and value > 0:
+        if self._util_isinteger(value) and value > 0:
             self._chunkshape = (value,)
         else:
             try:
                 for x in value:
-                    assert isinstance(x, awkward.util.integer) and x > 0
+                    assert self._util_isinteger(x) and x > 0
             except TypeError:
                 raise TypeError("chunkshape must be a positive integer or a tuple of integers")
             except AssertionError:

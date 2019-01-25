@@ -197,7 +197,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, awkward.util.integer):
+        if self._util_isinteger(head):
             if self._mask[head] == self._maskedwhen:
                 if tail != ():
                     raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
@@ -467,7 +467,7 @@ class BitMaskedArray(MaskedArray):
         return bytepos, bitmask
 
     def _maskwhere(self, where):
-        if isinstance(where, awkward.util.integer):
+        if self._util_isinteger(where):
             bytepos, bitmask = self._maskat(where)
             return self.numpy.bitwise_and(self._mask[bytepos], bitmask) != 0
 
@@ -477,7 +477,7 @@ class BitMaskedArray(MaskedArray):
 
         else:
             where = self.numpy.array(where, copy=False)
-            if len(where.shape) == 1 and issubclass(where.dtype.type, self.numpy.integer):
+            if len(where.shape) == 1 and self._util_isintegertype(where.dtype.type):
                 byteposes, bitmasks = self._maskat(where)
                 self.numpy.bitwise_and(bitmasks, self._mask[byteposes], bitmasks)
                 return bitmasks.astype(self.numpy.bool_)
@@ -513,7 +513,7 @@ class BitMaskedArray(MaskedArray):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, awkward.util.integer):
+        if self._util_isinteger(head):
             if self._maskwhere(head) == self._maskedwhen:
                 if tail != ():
                     raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
@@ -568,7 +568,7 @@ class IndexedMaskedArray(MaskedArray):
     @mask.setter
     def mask(self, value):
         value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not issubclass(value.dtype.type, self.numpy.integer):
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("starts must have integer dtype")
         if len(value.shape) != 1:
             raise ValueError("mask must have 1-dimensional shape")
@@ -590,7 +590,7 @@ class IndexedMaskedArray(MaskedArray):
 
     @maskedwhen.setter
     def maskedwhen(self, value):
-        if not isinstance(value, awkward.util.integer):
+        if not self._util_isinteger(value):
             raise TypeError("maskedwhen must be an integer for IndexedMaskedArray")
         self._maskedwhen = value
 
@@ -649,7 +649,7 @@ class IndexedMaskedArray(MaskedArray):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, awkward.util.integer):
+        if self._util_isinteger(head):
             maskindex = self._mask[head]
             if maskindex == self._maskedwhen:
                 if tail != ():

@@ -124,7 +124,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             self._counts, self._parents = None, None
             self._isvalid = False
 
-            if not issubclass(self._offsets.dtype.type, self.numpy.integer):
+            if not self._util_isintegertype(self._offsets.dtype.type):
                 raise TypeError("offsets must have integer dtype")
             if len(self._offsets.shape) != 1:
                 raise ValueError("offsets must be a one-dimensional array")
@@ -156,7 +156,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @classmethod
     def fromcounts(cls, counts, content):
         counts = awkward.util.toarray(counts, cls.INDEXTYPE, cls.numpy.ndarray)
-        if not issubclass(counts.dtype.type, cls.numpy.integer):
+        if not cls._util_isintegertype(counts.dtype.type):
             raise TypeError("counts must have integer dtype")
         if (counts < 0).any():
             raise ValueError("counts must be a non-negative array")
@@ -169,7 +169,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @classmethod
     def fromparents(cls, parents, content, length=None):
         parents = awkward.util.toarray(parents, cls.INDEXTYPE, cls.numpy.ndarray)
-        if not issubclass(parents.dtype.type, cls.numpy.integer):
+        if not cls._util_isintegertype(parents.dtype.type):
             raise TypeError("parents must have integer dtype")
         if len(parents.shape) != 1 or len(parents) != len(content):
             raise ValueError("parents array must be one-dimensional with the same length as content")
@@ -181,7 +181,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @classmethod
     def fromuniques(cls, uniques, content):
         uniques = awkward.util.toarray(uniques, cls.INDEXTYPE, cls.numpy.ndarray)
-        if not issubclass(uniques.dtype.type, cls.numpy.integer):
+        if not cls._util_isintegertype(uniques.dtype.type):
             raise TypeError("uniques must have integer dtype")
         if len(uniques.shape) != 1 or len(uniques) != len(content):
             raise ValueError("uniques array must be one-dimensional with the same length as content")
@@ -199,7 +199,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 original_counts = index.counts
             index = index.flatten()
 
-        if not issubclass(index.dtype.type, cls.numpy.integer):
+        if not cls._util_isintegertype(index.dtype.type):
             raise TypeError("index must have integer dtype")
         if len(index.shape) != 1 or len(index) != len(content):
             raise ValueError("index array must be one-dimensional with the same length as content")
@@ -309,7 +309,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @starts.setter
     def starts(self, value):
         value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not issubclass(value.dtype.type, self.numpy.integer):
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("starts must have integer dtype")
         if len(value.shape) == 0:
             raise ValueError("starts must have at least one dimension")
@@ -326,7 +326,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @stops.setter
     def stops(self, value):
         value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not issubclass(value.dtype.type, self.numpy.integer):
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("stops must have integer dtype")
         if len(value.shape) == 0:
             raise ValueError("stops must have at least one dimension")
@@ -363,7 +363,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @offsets.setter
     def offsets(self, value):
         value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not issubclass(value.dtype.type, self.numpy.integer):
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("offsets must have integer dtype")
         if len(value.shape) != 1 or (value < 0).any():
             raise ValueError("offsets must be a one-dimensional, non-negative array")
@@ -385,7 +385,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @counts.setter
     def counts(self, value):
         value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not issubclass(value.dtype.type, self.numpy.integer):
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("counts must have integer dtype")
         if len(value.shape) == 0:
             raise ValueError("counts must have at least one dimension")
@@ -412,7 +412,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @parents.setter
     def parents(self, value):
         value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not issubclass(value.dtype.type, self.numpy.integer):
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("parents must have integer dtype")
         if len(value.shape) == 0:
             raise ValueError("parents must have at least one dimension")
@@ -497,7 +497,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             if isinstance(self._content, JaggedArray) and isinstance(head._content, JaggedArray):
                 return self.copy(content=self._content[head._content])
 
-            elif issubclass(head._content.dtype.type, self.numpy.integer):
+            elif self._util_isintegertype(head._content.dtype.type):
                 if len(head.shape) == 1 and head._starts.shape != self._starts.shape:
                     raise ValueError("jagged array used as index has a different shape {0} from the jagged array it is selecting from {1}".format(head._starts.shape, self._starts.shape))
 
@@ -559,7 +559,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             head, tail = tail[0], tail[1:]
 
             original_head = head
-            if isinstance(head, awkward.util.integer):
+            if self._util_isinteger(head):
                 stack = []
                 for x in range(nslices):
                     stack.insert(0, node.counts)
@@ -648,7 +648,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
             else:
                 head = self.numpy.array(head, copy=False)
-                if len(head.shape) == 1 and issubclass(head.dtype.type, self.numpy.integer):
+                if len(head.shape) == 1 and self._util_isintegertype(head.dtype.type):
                     if wasslice:
                         stack = []
                         for x in range(nslices):
@@ -1068,7 +1068,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return self.offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and self.numpy.array_equal(self._starts[1:], self._stops[:-1]))
 
     def flatten(self, axis=0):
-        if not isinstance(axis, (numbers.Integral, self.numpy.integer)) or axis < 0:
+        if not self._util_isinteger(axis) or axis < 0:
             raise TypeError("axis must be a non-negative integer (can't count from the end)")
         if axis > 0:
             if isinstance(self._content, JaggedArray):
@@ -1161,13 +1161,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if identity == self.numpy.inf:
             if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
                 identity = True
-            elif issubclass(dtype.type, self.numpy.integer):
+            elif self._util_isintegertype(dtype.type):
                 identity = self.numpy.iinfo(dtype.type).max
 
         elif identity == -self.numpy.inf:
             if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
                 identity = False
-            elif issubclass(dtype.type, self.numpy.integer):
+            elif self._util_isintegertype(dtype.type):
                 identity = self.numpy.iinfo(dtype.type).min
 
         if regularaxis is None:

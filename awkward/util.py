@@ -84,8 +84,6 @@ import numpy
 if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVersion("1.13.1"):
     raise ImportError("Numpy 1.13.1 or later required")
 
-integer = (numbers.Integral, numpy.integer)
-
 frombuffer = numpy.frombuffer
 
 def toarray(value, defaultdtype, passthrough=None):
