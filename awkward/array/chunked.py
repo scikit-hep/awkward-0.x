@@ -608,7 +608,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         out = None
         for chunkid, chunk in enumerate(self._chunks):
             if self._counts[chunkid] > 0:
-                this = awkward.util._reduce(chunk[:self._counts[chunkid]], ufunc, identity, dtype, regularaxis)
+                this = self._util_reduce(chunk[:self._counts[chunkid]], ufunc, identity, dtype, regularaxis)
                 if out is None:
                     out = this
                 else:

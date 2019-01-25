@@ -377,7 +377,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         return self._util_hasjagged(self.array)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        return awkward.util._reduce(self.array, ufunc, identity, dtype, regularaxis)
+        return self._util_reduce(self.array, ufunc, identity, dtype, regularaxis)
 
     def _prepare(self, identity, dtype):
         array = self.array

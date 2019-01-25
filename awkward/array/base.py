@@ -356,6 +356,28 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def _util_hasjagged(cls, array):
         return isinstance(array, AwkwardArray) and array._hasjagged()
 
+    @classmethod
+    def _util_reduce(cls, array, ufunc, identity, dtype, regularaxis):
+        if isinstance(array, AwkwardArray):
+            return array._reduce(ufunc, identity, dtype, regularaxis)
+
+        elif len(array) == 0:
+            if dtype is None:
+                dtype = array.dtype
+            return ufunc.reduce(cls.numpy.full((1,) + array.shape[1:], identity, dtype=dtype), axis=regularaxis)
+
+        else:
+            original = array
+            if dtype is not None:
+                array = cls.numpy.array(array, dtype=dtype, copy=False)
+            if issubclass(array.dtype.type, (cls.numpy.floating, cls.numpy.complexfloating)):
+                mask = cls.numpy.isnan(array)
+                if mask.any():
+                    if array is original:
+                        array = array.copy()
+                    array[mask] = identity
+            return ufunc.reduce(array, axis=regularaxis)
+
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class

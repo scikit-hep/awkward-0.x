@@ -725,7 +725,7 @@ class Table(awkward.array.base.AwkwardArray):
                 x = self._contents[n][:self._length()]
             else:
                 x = self._contents[n][index]
-            out[n] = self.numpy.array([awkward.util._reduce(x, ufunc, identity, dtype, regularaxis)])
+            out[n] = self.numpy.array([self._util_reduce(x, ufunc, identity, dtype, regularaxis)])
         return out.Row(out, 0)
 
     @property
