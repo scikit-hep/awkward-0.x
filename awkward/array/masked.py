@@ -107,7 +107,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @mask.setter
     def mask(self, value):
-        value = awkward.util.toarray(value, self.MASKTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.MASKTYPE, self.numpy.ndarray)
         if len(value.shape) != 1:
             raise ValueError("mask must have 1-dimensional shape")
         if not issubclass(value.dtype.type, (self.numpy.bool_, self.numpy.bool)):
@@ -137,7 +137,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, self.DEFAULTTYPE)
+        self._content = self._util_toarray(value, self.DEFAULTTYPE)
         self._isvalid = False
 
     @property
@@ -339,7 +339,7 @@ class BitMaskedArray(MaskedArray):
 
     @mask.setter
     def mask(self, value):
-        value = awkward.util.toarray(value, self.BITMASKTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.BITMASKTYPE, self.numpy.ndarray)
         if len(value.shape) != 1:
             raise ValueError("mask must have 1-dimensional shape")
         self._mask = value.view(self.BITMASKTYPE)
@@ -361,7 +361,7 @@ class BitMaskedArray(MaskedArray):
         
     @classmethod
     def bool2bit(cls, boolmask, lsborder=False):
-        boolmask = awkward.util.toarray(boolmask, MaskedArray.MASKTYPE, cls.numpy.ndarray)
+        boolmask = cls._util_toarray(boolmask, MaskedArray.MASKTYPE, cls.numpy.ndarray)
         if len(boolmask.shape) != 1:
             raise ValueError("boolmask must have 1-dimensional shape")
         if not issubclass(boolmask.dtype.type, (cls.numpy.bool_, cls.numpy.bool)):
@@ -567,7 +567,7 @@ class IndexedMaskedArray(MaskedArray):
 
     @mask.setter
     def mask(self, value):
-        value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
         if not self._util_isintegertype(value.dtype.type):
             raise TypeError("starts must have integer dtype")
         if len(value.shape) != 1:
@@ -581,7 +581,7 @@ class IndexedMaskedArray(MaskedArray):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, self.DEFAULTTYPE)
+        self._content = self._util_toarray(value, self.DEFAULTTYPE)
         self._isvalid = False
 
     @property

@@ -86,20 +86,10 @@ if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVe
 
 frombuffer = numpy.frombuffer
 
+# FIXME: this goes away once everything starts depending on 0.8.0
 def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
-    if passthrough is None:
-        passthrough = (numpy.ndarray, awkward.array.base.AwkwardArray)
-    if isinstance(value, passthrough):
-        return value
-    else:
-        try:
-            return numpy.frombuffer(value, dtype=getattr(value, "dtype", defaultdtype)).reshape(getattr(value, "shape", -1))
-        except AttributeError:
-            if len(value) == 0:
-                return numpy.array(value, dtype=defaultdtype, copy=False)
-            else:
-                return numpy.array(value, copy=False)
+    return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
 
 def _draw(x):
     if isinstance(x, list):

@@ -105,7 +105,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @index.setter
     def index(self, value):
-        value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
         if not self._util_isintegertype(value.dtype.type):
             raise TypeError("index must have integer dtype")
         if (value < 0).any():
@@ -120,7 +120,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, self.DEFAULTTYPE)
+        self._content = self._util_toarray(value, self.DEFAULTTYPE)
         self._isvalid = False
 
     def __len__(self):
@@ -326,7 +326,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     @index.setter
     def index(self, value):
-        value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
         if not self._util_isintegertype(value.dtype.type):
             raise TypeError("index must have integer dtype")
         if len(value.shape) != 1:
@@ -345,7 +345,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, self.DEFAULTTYPE)
+        self._content = self._util_toarray(value, self.DEFAULTTYPE)
         self._isvalid = False
 
     @property
@@ -495,7 +495,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(length=length, index=index, content=content)
 
         else:
-            head = awkward.util.toarray(head, self.INDEXTYPE)
+            head = self._util_toarray(head, self.INDEXTYPE)
             if len(head.shape) == 1 and issubclass(head.dtype.type, (self.numpy.bool, self.numpy.bool_)):
                 if self._length != len(head):
                     raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(self._length, len(head)))

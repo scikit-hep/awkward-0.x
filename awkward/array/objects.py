@@ -133,7 +133,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, self.DEFAULTTYPE)
+        self._content = self._util_toarray(value, self.DEFAULTTYPE)
 
     @property
     def generator(self):

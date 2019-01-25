@@ -120,7 +120,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @tags.setter
     def tags(self, value):
-        value = awkward.util.toarray(value, self.TAGTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.TAGTYPE, self.numpy.ndarray)
         if not self._util_isintegertype(value.dtype.type):
             raise TypeError("tags must have integer dtype")
         if (value < 0).any():
@@ -134,7 +134,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @index.setter
     def index(self, value):
-        value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
         if not self._util_isintegertype(value.dtype.type):
             raise TypeError("index must have integer dtype")
         if (value < 0).any():
@@ -152,7 +152,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
             iter(value)
         except TypeError:
             raise TypeError("contents must be iterable")
-        value = tuple(awkward.util.toarray(x, self.DEFAULTTYPE) for x in value)
+        value = tuple(self._util_toarray(x, self.DEFAULTTYPE) for x in value)
         if len(value) == 0:
             raise ValueError("contents must be non-empty")
         self._contents = value

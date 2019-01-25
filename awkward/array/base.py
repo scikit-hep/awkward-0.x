@@ -299,6 +299,22 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def _util_isintegertype(cls, x):
         return issubclass(x, cls.numpy.integer) and not issubclass(x, (cls.numpy.bool_, cls.numpy.bool))
 
+    @classmethod
+    def _util_toarray(cls, value, defaultdtype, passthrough=None):
+        import awkward.array.base
+        if passthrough is None:
+            passthrough = (cls.numpy.ndarray, AwkwardArray)
+        if isinstance(value, passthrough):
+            return value
+        else:
+            try:
+                return cls.numpy.frombuffer(value, dtype=getattr(value, "dtype", defaultdtype)).reshape(getattr(value, "shape", -1))
+            except AttributeError:
+                if len(value) == 0:
+                    return cls.numpy.array(value, dtype=defaultdtype, copy=False)
+                else:
+                    return cls.numpy.array(value, copy=False)
+
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class

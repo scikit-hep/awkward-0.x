@@ -99,7 +99,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             iter(value)
         except TypeError:
             raise TypeError("chunks must be iterable")
-        self._chunks = [awkward.util.toarray(x, self.DEFAULTTYPE) for x in value]
+        self._chunks = [self._util_toarray(x, self.DEFAULTTYPE) for x in value]
         self._types = [None] * len(self._chunks)
 
     @property
@@ -748,7 +748,7 @@ class AppendableArray(ChunkedArray):
             iter(value)
         except TypeError:
             raise TypeError("chunks must be iterable")
-        chunks = [awkward.util.toarray(x, self.DEFAULTTYPE, self.numpy.ndarray) for x in value]
+        chunks = [self._util_toarray(x, self.DEFAULTTYPE, self.numpy.ndarray) for x in value]
         for chunk in chunks:
             if chunk.dtype != self._dtype:
                 raise ValueError("cannot assign chunk with dtype ({0}) to an AppendableArray with dtype ({1})".format(chunk.dtype, self._dtype))

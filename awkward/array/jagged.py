@@ -150,12 +150,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromoffsets(cls, offsets, content):
-        offsets = awkward.util.toarray(offsets, cls.INDEXTYPE, cls.numpy.ndarray)
+        offsets = cls._util_toarray(offsets, cls.INDEXTYPE, cls.numpy.ndarray)
         return cls(offsets[:-1], offsets[1:], content)
 
     @classmethod
     def fromcounts(cls, counts, content):
-        counts = awkward.util.toarray(counts, cls.INDEXTYPE, cls.numpy.ndarray)
+        counts = cls._util_toarray(counts, cls.INDEXTYPE, cls.numpy.ndarray)
         if not cls._util_isintegertype(counts.dtype.type):
             raise TypeError("counts must have integer dtype")
         if (counts < 0).any():
@@ -168,7 +168,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromparents(cls, parents, content, length=None):
-        parents = awkward.util.toarray(parents, cls.INDEXTYPE, cls.numpy.ndarray)
+        parents = cls._util_toarray(parents, cls.INDEXTYPE, cls.numpy.ndarray)
         if not cls._util_isintegertype(parents.dtype.type):
             raise TypeError("parents must have integer dtype")
         if len(parents.shape) != 1 or len(parents) != len(content):
@@ -180,7 +180,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromuniques(cls, uniques, content):
-        uniques = awkward.util.toarray(uniques, cls.INDEXTYPE, cls.numpy.ndarray)
+        uniques = cls._util_toarray(uniques, cls.INDEXTYPE, cls.numpy.ndarray)
         if not cls._util_isintegertype(uniques.dtype.type):
             raise TypeError("uniques must have integer dtype")
         if len(uniques.shape) != 1 or len(uniques) != len(content):
@@ -192,7 +192,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromindex(cls, index, content, validate=True):
-        index = awkward.util.toarray(index, cls.INDEXTYPE, (cls.numpy.ndarray, JaggedArray))
+        index = cls._util_toarray(index, cls.INDEXTYPE, (cls.numpy.ndarray, JaggedArray))
         original_counts = None
         if isinstance(index, JaggedArray):
             if validate:
@@ -225,7 +225,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromregular(cls, regular):
-        regular = awkward.util.toarray(regular, cls.DEFAULTTYPE, cls.numpy.ndarray)
+        regular = cls._util_toarray(regular, cls.DEFAULTTYPE, cls.numpy.ndarray)
         shape = regular.shape
         if len(shape) <= 1:
             raise ValueError("regular array must have more than one dimension")
@@ -236,7 +236,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromfolding(cls, content, size):
-        content = awkward.util.toarray(content, cls.DEFAULTTYPE)
+        content = cls._util_toarray(content, cls.DEFAULTTYPE)
         quotient = -(-len(content) // size)
         offsets = cls.numpy.arange(0, quotient * size + 1, size, dtype=cls.INDEXTYPE)
         if len(offsets) > 0:
@@ -308,7 +308,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @starts.setter
     def starts(self, value):
-        value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
         if not self._util_isintegertype(value.dtype.type):
             raise TypeError("starts must have integer dtype")
         if len(value.shape) == 0:
@@ -325,7 +325,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @stops.setter
     def stops(self, value):
-        value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
         if not self._util_isintegertype(value.dtype.type):
             raise TypeError("stops must have integer dtype")
         if len(value.shape) == 0:
@@ -342,7 +342,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, self.DEFAULTTYPE)
+        self._content = self._util_toarray(value, self.DEFAULTTYPE)
         self._isvalid = False
 
     @property
@@ -362,7 +362,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @offsets.setter
     def offsets(self, value):
-        value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
         if not self._util_isintegertype(value.dtype.type):
             raise TypeError("offsets must have integer dtype")
         if len(value.shape) != 1 or (value < 0).any():
@@ -384,7 +384,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @counts.setter
     def counts(self, value):
-        value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
         if not self._util_isintegertype(value.dtype.type):
             raise TypeError("counts must have integer dtype")
         if len(value.shape) == 0:
@@ -411,7 +411,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @parents.setter
     def parents(self, value):
-        value = awkward.util.toarray(value, self.INDEXTYPE, self.numpy.ndarray)
+        value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
         if not self._util_isintegertype(value.dtype.type):
             raise TypeError("parents must have integer dtype")
         if len(value.shape) == 0:
@@ -746,7 +746,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def _broadcast(self, data):
-        data = awkward.util.toarray(data, self._content.dtype)
+        data = self._util_toarray(data, self._content.dtype)
         good = (self.parents >= 0)
         content = self.numpy.empty(len(self.parents), dtype=data.dtype)
         if len(data.shape) == 0:
@@ -765,7 +765,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 starts, stops = self._starts, self._stops
 
         elif stops is None:
-            starts = awkward.util.toarray(starts, self.INDEXTYPE)
+            starts = self._util_toarray(starts, self.INDEXTYPE)
             if len(self) != len(starts):
                 raise ValueError("cannot fit JaggedArray of length {0} into starts of length {1}".format(len(self), len(starts)))
 
@@ -775,7 +775,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 raise ValueError("cannot fit contents of JaggedArray into the given starts array")
 
         elif starts is None:
-            stops = awkward.util.toarray(stops, self.INDEXTYPE)
+            stops = self._util_toarray(stops, self.INDEXTYPE)
             if len(self) != len(stops):
                 raise ValueError("cannot fit JaggedArray of length {0} into stops of length {1}".format(len(self), len(stops)))
 
@@ -872,7 +872,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         for i in range(len(inputs)):
             if isinstance(inputs[i], (self.numpy.ndarray, awkward.array.base.AwkwardArray)) and not isinstance(inputs[i], JaggedArray):
-                data = awkward.util.toarray(inputs[i], inputs[i].dtype)
+                data = self._util_toarray(inputs[i], inputs[i].dtype)
                 if starts.shape != data.shape:
                     raise ValueError("cannot broadcast JaggedArray of shape {0} with array of shape {1}".format(starts.shape, data.shape))
 
