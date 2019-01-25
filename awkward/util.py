@@ -91,11 +91,6 @@ def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
     return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
 
-def _valid(array, seen):
-    import awkward.array.base
-    if isinstance(array, awkward.array.base.AwkwardArray):
-        array._valid(seen)
-
 def _hasjagged(array):
     import awkward.array.base
     return isinstance(array, awkward.array.base.AwkwardArray) and array._hasjagged()
