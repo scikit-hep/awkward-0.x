@@ -95,7 +95,7 @@ class Table(awkward.array.base.AwkwardArray):
                 except KeyError:
                     raise ValueError("no column named {0}".format(repr(where)))
 
-            elif awkward.util.isstringslice(where):
+            elif self._util_isstringslice(where):
                 contents = awkward.util.OrderedDict()
                 for n in where:
                     try:
@@ -526,7 +526,7 @@ class Table(awkward.array.base.AwkwardArray):
                 yield self.Row(self, i)
 
     def __getitem__(self, where):
-        if awkward.util.isstringslice(where):
+        if self._util_isstringslice(where):
             if isinstance(where, awkward.util.string):
                 index = self._index()
                 try:
@@ -572,7 +572,7 @@ class Table(awkward.array.base.AwkwardArray):
         if isinstance(where, awkward.util.string):
             self._contents[where] = self._util_toarray(what, self.DEFAULTTYPE)
 
-        elif awkward.util.isstringslice(where):
+        elif self._util_isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
@@ -587,7 +587,7 @@ class Table(awkward.array.base.AwkwardArray):
 
         if isinstance(where, awkward.util.string):
             del self._contents[where]
-        elif awkward.util.isstringslice(where):
+        elif self._util_isstringslice(where):
             for x in where:
                 del self._contents[x]
         else:

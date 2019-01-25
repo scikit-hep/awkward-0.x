@@ -477,7 +477,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def __getitem__(self, where):
         self._valid()
 
-        if awkward.util.isstringslice(where):
+        if self._util_isstringslice(where):
             content = self._content[where]
             cls = awkward.array.objects.Methods.maybemixin(type(content), JaggedArray)
             out = cls.__new__(cls)
@@ -733,7 +733,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 self._content[where] = self._broadcast(what)._content
 
-        elif awkward.util.isstringslice(where):
+        elif self._util_isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):

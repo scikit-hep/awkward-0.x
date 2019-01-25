@@ -269,7 +269,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def __getitem__(self, where):
         self._valid()
 
-        if awkward.util.isstringslice(where):
+        if self._util_isstringslice(where):
             contents = []
             for tag in self.numpy.unique(self._tags):
                 contents.append(self._contents[tag][where])
@@ -307,7 +307,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 inverseindex = self.IndexedArray.invert(self._index[:len(self._tags)][self._tags == tag])
                 self._contents[tag][where] = self.IndexedArray(inverseindex, what)
 
-        elif awkward.util.isstringslice(where):
+        elif self._util_isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for tag in self.numpy.unique(self._tags):
@@ -323,7 +323,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
             for tag in self.numpy.unique(self._tags):
                 del self._contents[tag][where]
 
-        elif awkward.util.isstringslice(where):
+        elif self._util_isstringslice(where):
             for tag in self.numpy.unique(self._tags):
                 for x in where:
                     del self._contents[tag][x]

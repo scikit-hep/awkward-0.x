@@ -307,7 +307,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def __getitem__(self, where):
         self._valid()
 
-        if awkward.util.isstringslice(where):
+        if self._util_isstringslice(where):
             if isinstance(where, awkward.util.string):
                 if not self.type.hascolumn(where):
                     raise ValueError("no column named {0}".format(repr(where)))
@@ -506,7 +506,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         if isinstance(where, awkward.util.string):
             for chunk in self._chunks:
                 del chunk[where]
-        elif awkward.util.isstringslice(where):
+        elif self._util_isstringslice(where):
             for chunk in self._chunks:
                 for x in where:
                     del chunk[x]

@@ -181,7 +181,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
             yield self.generator(x, *self._args, **self._kwargs)
 
     def __getitem__(self, where):
-        if awkward.util.isstringslice(where):
+        if self._util_isstringslice(where):
             return self._content[where]
 
         if isinstance(where, tuple) and where == ():
@@ -547,7 +547,7 @@ class StringArray(StringMethods, ObjectArray):
             return str
 
     def __getitem__(self, where):
-        if awkward.util.isstringslice(where):
+        if self._util_isstringslice(where):
             raise IndexError("cannot index StringArray with string or sequence of strings")
 
         if isinstance(where, tuple) and len(where) == 0:

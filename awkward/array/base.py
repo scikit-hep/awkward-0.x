@@ -385,6 +385,25 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return arrays[0].concatenate(arrays[1:])
 
+    @classmethod
+    def _util_isstringslice(cls, where):
+        if isinstance(where, awkward.util.string):
+            return True
+        elif isinstance(where, tuple):
+            return False
+        elif isinstance(where, (cls.numpy.ndarray, AwkwardArray)) and issubclass(where.dtype.type, (numpy.str, numpy.str_)):
+            return True
+        elif isinstance(where, (cls.numpy.ndarray, AwkwardArray)) and issubclass(where.dtype.type, (numpy.object, numpy.object_)) and not issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
+            return len(where) > 0 and all(isinstance(x, awkward.util.string) for x in where)
+        elif isinstance(where, (cls.numpy.ndarray, AwkwardArray)):
+            return False
+        try:
+            assert len(where) > 0 and all(isinstance(x, awkward.util.string) for x in where)
+        except (TypeError, AssertionError):
+            return False
+        else:
+            return True
+
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class
@@ -394,7 +413,7 @@ class AwkwardArrayWithContent(AwkwardArray):
         if isinstance(where, awkward.util.string):
             self._content[where] = what
 
-        elif awkward.util.isstringslice(where):
+        elif self._util_isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
@@ -406,7 +425,7 @@ class AwkwardArrayWithContent(AwkwardArray):
     def __delitem__(self, where):
         if isinstance(where, awkward.util.string):
             del self._content[where]
-        elif awkward.util.isstringslice(where):
+        elif self._util_isstringslice(where):
             for x in where:
                 del self._content[x]
         else:

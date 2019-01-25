@@ -91,25 +91,6 @@ def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
     return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
 
-def isstringslice(where):
-    import awkward.array.base
-    if isinstance(where, string):
-        return True
-    elif isinstance(where, tuple):
-        return False
-    elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)) and issubclass(where.dtype.type, (numpy.str, numpy.str_)):
-        return True
-    elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)) and issubclass(where.dtype.type, (numpy.object, numpy.object_)) and not issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
-        return len(where) > 0 and all(isinstance(x, string) for x in where)
-    elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)):
-        return False
-    try:
-        assert len(where) > 0 and all(isinstance(x, string) for x in where)
-    except (TypeError, AssertionError):
-        return False
-    else:
-        return True
-
 def iscomparison(ufunc):
     return (ufunc is numpy.less or
             ufunc is numpy.less_equal or
