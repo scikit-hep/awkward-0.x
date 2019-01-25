@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2019, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -46,15 +46,15 @@ setup(name = "awkward-numba",
       data_files = [],
       description = "Override awkward-array algorithms with Numba implementations.",
       long_description = "",
-      author = "Jim Pivarski (DIANA-HEP)",
-      author_email = "pivarski@fnal.gov",
-      maintainer = "Jim Pivarski (DIANA-HEP)",
-      maintainer_email = "pivarski@fnal.gov",
+      author = "Jim Pivarski (IRIS-HEP)",
+      author_email = "pivarski@princeton.edu",
+      maintainer = "Jim Pivarski (IRIS-HEP)",
+      maintainer_email = "pivarski@princeton.edu",
       url = "https://github.com/scikit-hep/awkward-array",
       download_url = "https://github.com/scikit-hep/awkward-array/releases",
       license = "BSD 3-clause",
       test_suite = "tests",
-      install_requires = ["numpy>=1.13.1", "numba"],
+      install_requires = ["awkward" + get_version(), "numba"],
       setup_requires = ["pytest-runner"],
       tests_require = ["pytest"],
       classifiers = [

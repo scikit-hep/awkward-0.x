@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2018, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -78,10 +78,10 @@ setup(name = "awkward",
       data_files = ["README.rst"],
       description = "Manipulate arrays of complex data structures as easily as Numpy.",
       long_description = get_description(),
-      author = "Jim Pivarski (DIANA-HEP)",
-      author_email = "pivarski@fnal.gov",
-      maintainer = "Jim Pivarski (DIANA-HEP)",
-      maintainer_email = "pivarski@fnal.gov",
+      author = "Jim Pivarski (IRIS-HEP)",
+      author_email = "pivarski@princeton.edu",
+      maintainer = "Jim Pivarski (IRIS-HEP)",
+      maintainer_email = "pivarski@princeton.edu",
       url = "https://github.com/scikit-hep/awkward-array",
       download_url = "https://github.com/scikit-hep/awkward-array/releases",
       license = "BSD 3-clause",
