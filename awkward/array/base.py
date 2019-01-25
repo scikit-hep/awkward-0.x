@@ -378,6 +378,13 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                     array[mask] = identity
             return ufunc.reduce(array, axis=regularaxis)
 
+    @classmethod
+    def _util_concatenate(cls, arrays):
+        if all(isinstance(x, cls.numpy.ndarray) for x in arrays):
+            return cls.numpy.concatenate(arrays)
+        else:
+            return arrays[0].concatenate(arrays[1:])
+
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class

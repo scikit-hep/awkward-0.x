@@ -91,12 +91,6 @@ def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
     return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
 
-def concatenate(arrays):
-    if all(isinstance(x, numpy.ndarray) for x in arrays):
-        return numpy.concatenate(arrays)
-    else:
-        return arrays[0].concatenate(arrays[1:])
-
 def isstringslice(where):
     import awkward.array.base
     if isinstance(where, string):

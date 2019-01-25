@@ -1286,7 +1286,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         starts = cls.numpy.concatenate([x._starts for x in arrays])
         stops = cls.numpy.concatenate([x._stops for x in arrays])
-        content = awkward.util.concatenate([x._content for x in arrays])
+        content = cls._util_concatenate([x._content for x in arrays])
 
         startsi = 0
         contenti = 0
