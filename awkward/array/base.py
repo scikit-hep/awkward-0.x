@@ -217,46 +217,6 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def i9(self):
         return self["9"]
 
-class AwkwardArrayWithContent(AwkwardArray):
-    """
-    AwkwardArrayWithContent: abstract base class
-    """
-
-    def __setitem__(self, where, what):
-        if isinstance(where, awkward.util.string):
-            self._content[where] = what
-
-        elif awkward.util.isstringslice(where):
-            if len(where) != len(what):
-                raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
-            for x, y in zip(where, what):
-                self._content[x] = y
-
-        else:
-            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
-
-    def __delitem__(self, where):
-        if isinstance(where, awkward.util.string):
-            del self._content[where]
-        elif awkward.util.isstringslice(where):
-            for x in where:
-                del self._content[x]
-        else:
-            raise TypeError("invalid index for removing column from Table: {0}".format(where))
-
-    def _hasjagged(self):
-        return awkward.util._hasjagged(self._content)
-
-    @property
-    def columns(self):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return []
-        else:
-            return self._content.columns
-
-    def astype(self, dtype):
-        return self.copy(content=self._content.astype(dtype))
-
     @property
     def ChunkedArray(self):
         import awkward.array.chunked
@@ -326,3 +286,43 @@ class AwkwardArrayWithContent(AwkwardArray):
     def VirtualArray(self):
         import awkward.array.virtual
         return awkward.array.virtual.VirtualArray
+
+class AwkwardArrayWithContent(AwkwardArray):
+    """
+    AwkwardArrayWithContent: abstract base class
+    """
+
+    def __setitem__(self, where, what):
+        if isinstance(where, awkward.util.string):
+            self._content[where] = what
+
+        elif awkward.util.isstringslice(where):
+            if len(where) != len(what):
+                raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
+            for x, y in zip(where, what):
+                self._content[x] = y
+
+        else:
+            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+
+    def __delitem__(self, where):
+        if isinstance(where, awkward.util.string):
+            del self._content[where]
+        elif awkward.util.isstringslice(where):
+            for x in where:
+                del self._content[x]
+        else:
+            raise TypeError("invalid index for removing column from Table: {0}".format(where))
+
+    def _hasjagged(self):
+        return awkward.util._hasjagged(self._content)
+
+    @property
+    def columns(self):
+        if isinstance(self._content, awkward.util.numpy.ndarray):
+            return []
+        else:
+            return self._content.columns
+
+    def astype(self, dtype):
+        return self.copy(content=self._content.astype(dtype))

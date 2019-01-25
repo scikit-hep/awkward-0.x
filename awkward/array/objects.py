@@ -352,7 +352,7 @@ class StringArray(StringMethods, ObjectArray):
                     break
 
         out = cls.__new__(cls)
-        out._content = self.JaggedArray(starts, stops, content)
+        out._content = cls.JaggedArray.fget(None)(starts, stops, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -376,7 +376,7 @@ class StringArray(StringMethods, ObjectArray):
     @classmethod
     def fromoffsets(cls, offsets, content, encoding="utf-8"):
         out = cls.__new__(cls)
-        out._content = self.JaggedArray.fromoffsets(offsets, content)
+        out._content = cls.JaggedArray.fget(None).fromoffsets(offsets, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -385,7 +385,7 @@ class StringArray(StringMethods, ObjectArray):
     @classmethod
     def fromcounts(cls, counts, content, encoding="utf-8"):
         out = cls.__new__(cls)
-        out._content = self.JaggedArray.fromcounts(counts, content)
+        out._content = cls.JaggedArray.fget(None).fromcounts(counts, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -394,7 +394,7 @@ class StringArray(StringMethods, ObjectArray):
     @classmethod
     def fromparents(cls, parents, content, encoding="utf-8"):
         out = cls.__new__(cls)
-        out._content = self.JaggedArray.fromparents(parents, content)
+        out._content = cls.JaggedArray.fget(None).fromparents(parents, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
@@ -403,7 +403,7 @@ class StringArray(StringMethods, ObjectArray):
     @classmethod
     def fromuniques(cls, uniques, content, encoding="utf-8"):
         out = cls.__new__(cls)
-        out._content = self.JaggedArray.fromuniques(uniques, content)
+        out._content = cls.JaggedArray.fget(None).fromuniques(uniques, content)
         out._generator = tostring
         out._kwargs = {}
         out.encoding = encoding
