@@ -352,6 +352,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return array.deepcopy()
 
+    @classmethod
+    def _util_hasjagged(cls, array):
+        return isinstance(array, AwkwardArray) and array._hasjagged()
+
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class
@@ -380,7 +384,7 @@ class AwkwardArrayWithContent(AwkwardArray):
             raise TypeError("invalid index for removing column from Table: {0}".format(where))
 
     def _hasjagged(self):
-        return awkward.util._hasjagged(self._content)
+        return self._util_hasjagged(self._content)
 
     @property
     def columns(self):

@@ -589,7 +589,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         for chunkid in range(len(self._chunks)):
             self.knowcounts(until=chunkid)
             if self._counts[chunkid] > 0:
-                return awkward.util._hasjagged(self._chunks[chunkid])
+                return self._util_hasjagged(self._chunks[chunkid])
         else:
             return False
 
@@ -597,7 +597,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         self.knowcounts()
         self._valid()
 
-        if awkward.util._hasjagged(self):
+        if self._util_hasjagged(self):
             chunks = []
             for chunkid, chunk in enumerate(self._chunks):
                 this = chunk._reduce(ufunc, identity, dtype, regularaxis)

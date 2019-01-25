@@ -267,7 +267,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         return IndexedMaskedArray(maskindex, self._content, maskedwhen=-1)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        if awkward.util._hasjagged(self._content):
+        if self._util_hasjagged(self._content):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
 
         elif isinstance(self._content, awkward.array.table.Table):

@@ -1090,7 +1090,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         import awkward.array.table
         self._valid()
 
-        if awkward.util._hasjagged(self._content):
+        if self._util_hasjagged(self._content):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
 
         elif isinstance(self._content, awkward.array.table.Table):
@@ -1194,14 +1194,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def argmin(self):
         self._valid()
-        if awkward.util._hasjagged(self._content):
+        if self._util_hasjagged(self._content):
             return self.copy(content=self._content.argmin())
         else:
             return self._argminmax(True)
 
     def argmax(self):
         self._valid()
-        if awkward.util._hasjagged(self._content):
+        if self._util_hasjagged(self._content):
             return self.copy(content=self._content.argmax())
         else:
             return self._argminmax(False)
