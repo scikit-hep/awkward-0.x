@@ -54,7 +54,7 @@ setup(name = "awkward-numba",
       download_url = "https://github.com/scikit-hep/awkward-array/releases",
       license = "BSD 3-clause",
       test_suite = "tests",
-      install_requires = ["awkward" + get_version(), "numba"],
+      install_requires = ["awkward==" + get_version(), "numba"],
       setup_requires = ["pytest-runner"],
       tests_require = ["pytest"],
       classifiers = [
