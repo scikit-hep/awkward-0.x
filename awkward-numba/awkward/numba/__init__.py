@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import numpy
+
 from awkward.numba.array.chunked import ChunkedArrayNumba as ChunkedArray
 from awkward.numba.array.chunked import AppendableArrayNumba as AppendableArray
 from awkward.numba.array.indexed import IndexedArrayNumba as IndexedArray

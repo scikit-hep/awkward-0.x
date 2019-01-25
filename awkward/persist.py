@@ -59,6 +59,7 @@ whitelist = [["awkward.util", "frombuffer"],
              ["zlib", "decompress"],
              ["awkward", "*Array"],
              ["awkward", "Table"],
+             ["awkward", "numpy", "frombuffer"],
              ["awkward.persist", "*"],
              ["awkward.arrow", "ParquetFile", "fromjson"]]
 
@@ -68,12 +69,14 @@ def frompython(obj):
 def topython(string):
     return pickle.loads(base64.b64decode(string.encode("ascii")))
 
-def spec2function(obj, whitelist=whitelist):
+def spec2function(obj, awkwardlib="awkward", whitelist=whitelist):
     for white in whitelist:
         for n, p in zip(obj, white):
             if not fnmatch.fnmatchcase(n, p):
                 break
         else:
+            if obj[0] == "awkward":
+                obj = [awkwardlib] + obj[1:]
             gen, genname = importlib.import_module(obj[0]), obj[1:]
             while len(genname) > 0:
                 gen, genname = getattr(gen, genname[0]), genname[1:]
@@ -314,7 +317,7 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
                     storage[prefix + str(ident) + suffix] = compress(obj)
 
                     return {"id": ident,
-                            "call": ["awkward.util", "frombuffer"],
+                            "call": ["awkward", "numpy", "frombuffer"],
                             "args": [{"call": decompress, "args": [{"read": str(ident) + suffix}]},
                                      {"dtype": dtype2json(dtype)},
                                      {"json": len(obj)}]}
@@ -322,7 +325,7 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
             else:
                 storage[prefix + str(ident) + suffix] = obj.tostring()
                 return {"id": ident,
-                        "call": ["awkward.util", "frombuffer"],
+                        "call": ["awkward", "numpy", "frombuffer"],
                         "args": [{"read": str(ident) + suffix},
                                  {"dtype": dtype2json(dtype)},
                                  {"json": len(obj)}]}
@@ -369,7 +372,7 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
     storage[name + schemasuffix] = json.dumps(schema).encode("ascii")
     return schema
 
-def deserialize(storage, name="", whitelist=whitelist, cache=None):
+def deserialize(storage, name="", awkwardlib="awkward", whitelist=whitelist, cache=None):
     import awkward.array.virtual
 
     schema = storage[name]
@@ -393,7 +396,7 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
     def unfill(schema):
         if isinstance(schema, dict):
             if "call" in schema and isinstance(schema["call"], list) and len(schema["call"]) > 0:
-                gen = spec2function(schema["call"], whitelist=whitelist)
+                gen = spec2function(schema["call"], awkwardlib=awkwardlib, whitelist=whitelist)
                 args = [unfill(x) for x in schema.get("args", [])]
 
                 kwargs = {}
@@ -428,7 +431,7 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None):
                 out = json2dtype(schema["dtype"])
 
             elif "function" in schema:
-                out = spec2function(schema["function"], whitelist=whitelist)
+                out = spec2function(schema["function"], awkwardlib=awkwardlib, whitelist=whitelist)
 
             elif "json" in schema:
                 out = schema["json"]
@@ -594,13 +597,13 @@ class Load(Mapping):
 
         self._file = Wrap()
 
-        alloptions = {"schemasuffix": ".json", "whitelist": whitelist, "cache": None}
+        alloptions = {"schemasuffix": ".json", "awkwardlib": "awkward", "whitelist": whitelist, "cache": None}
         alloptions.update(options)
         self.schemasuffix = alloptions.pop("schemasuffix")
         self.options = alloptions
 
     def __getitem__(self, where):
-        return deserialize(self._file, name=where + self.schemasuffix, whitelist=self.options["whitelist"], cache=self.options["cache"])
+        return deserialize(self._file, name=where + self.schemasuffix, awkwardlib=self.options["awkwardlib"], whitelist=self.options["whitelist"], cache=self.options["cache"])
 
     def __iter__(self):
         for n in self._file.f.namelist():
@@ -631,7 +634,7 @@ class Load(Mapping):
 
 class hdf5(MutableMapping):
     def __init__(self, group, **options):
-        alloptions = {"compression": compression, "whitelist": whitelist, "cache": None}
+        alloptions = {"compression": compression, "awkwardlib": "awkward", "whitelist": whitelist, "cache": None}
         alloptions.update(options)
         self.options = alloptions
         self.options["delimiter"] = "/"
@@ -648,10 +651,12 @@ class hdf5(MutableMapping):
         self._group = Wrap()
 
     def __getitem__(self, where):
-        return deserialize(self._group, name=where + self.options["schemasuffix"], whitelist=self.options["whitelist"], cache=self.options["cache"])
+        return deserialize(self._group, name=where + self.options["schemasuffix"], awkwardlib=self.options["awkwardlib"], whitelist=self.options["whitelist"], cache=self.options["cache"])
 
     def __setitem__(self, where, what):
         options = dict(self.options)
+        if "awkwardlib" in options:
+            del options["awkwardlib"]
         if "whitelist" in options:
             del options["whitelist"]
         if "cache" in options:

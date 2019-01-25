@@ -35,7 +35,9 @@ import re
 import sys
 import types
 from collections import OrderedDict
-    
+
+import numpy
+
 if sys.version_info[0] <= 2:
     izip = itertools.izip
     string = basestring
@@ -44,6 +46,14 @@ else:
     izip = zip
     string = str
     unicode = str
+
+# FIXME: this goes away once everything starts depending on 0.8.0
+frombuffer = numpy.frombuffer
+
+# FIXME: this goes away once everything starts depending on 0.8.0
+def toarray(value, defaultdtype, passthrough=None):
+    import awkward.array.base
+    return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
 
 def isidentifier(x):
     if not isinstance(x, string):
@@ -78,19 +88,6 @@ class bothmethod(object):
             return lambda *args, **kwargs: self.fcn(False, ins, *args, **kwargs)
 
 ################################################################ array helpers
-
-import distutils.version
-
-import numpy
-if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVersion("1.13.1"):
-    raise ImportError("Numpy 1.13.1 or later required")
-
-frombuffer = numpy.frombuffer
-
-# FIXME: this goes away once everything starts depending on 0.8.0
-def toarray(value, defaultdtype, passthrough=None):
-    import awkward.array.base
-    return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
 
 try:
     NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin

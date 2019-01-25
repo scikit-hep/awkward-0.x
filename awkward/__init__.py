@@ -28,6 +28,12 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import distutils.version
+
+import numpy
+if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVersion("1.13.1"):
+    raise ImportError("Numpy 1.13.1 or later required")
+
 from awkward.array.chunked import ChunkedArray, AppendableArray
 from awkward.array.indexed import IndexedArray, SparseArray
 from awkward.array.jagged import JaggedArray
@@ -44,6 +50,6 @@ from awkward.persist import serialize, deserialize, save, load, hdf5
 # convenient access to the version number
 from awkward.version import __version__
 
-__all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "fromiterchunks", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]
+__all__ = ["numpy", "ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "fromiterchunks", "serialize", "deserialize", "save", "load", "hdf5", "__version__"]
 
 __path__ = __import__("pkgutil").extend_path(__path__, __name__)
