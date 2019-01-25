@@ -57,7 +57,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     def deepcopy(self, chunks=None, counts=None):
         out = self.copy(chunks=chunks, counts=counts)
-        out._chunks = [awkward.util.deepcopy(out._chunks) for x in out._chunks]
+        out._chunks = [self._util_deepcopy(out._chunks) for x in out._chunks]
         return out
 
     def _mine(self, overrides):
@@ -177,7 +177,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 else:
                     mask = (index < 0)
                     if mask.any():
-                        index = awkward.util.deepcopy(index)
+                        index = self._util_deepcopy(index)
                         index[mask] += len(self)
                     if (index < 0).any():
                         raise IndexError("index out of bounds for length {0}".format(len(self)))

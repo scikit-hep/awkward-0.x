@@ -69,9 +69,9 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def deepcopy(self, index=None, content=None):
         out = self.copy(index=index, content=content)
-        out._index   = awkward.util.deepcopy(out._index)
-        out._content = awkward.util.deepcopy(out._content)
-        out._inverse = awkward.util.deepcopy(out._inverse)
+        out._index   = self._util_deepcopy(out._index)
+        out._content = self._util_deepcopy(out._content)
+        out._inverse = self._util_deepcopy(out._inverse)
         return out
 
     def empty_like(self, **overrides):
@@ -257,9 +257,9 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     def deepcopy(self, length=None, index=None, content=None, default=None):
         out = self.copy(length=length, index=index, content=content, default=default)
-        out._index = awkward.util.deepcopy(out._index)
-        out._content = awkward.util.deepcopy(out._content)
-        out._inverse = awkward.util.deepcopy(out._inverse)
+        out._index = self._util_deepcopy(out._index)
+        out._content = self._util_deepcopy(out._content)
+        out._inverse = self._util_deepcopy(out._inverse)
         return out
 
     def empty_like(self, **overrides):

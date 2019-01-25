@@ -85,7 +85,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
     def deepcopy(self, content=None, generator=None, args=None, kwargs=None):
         out = self.copy(content=content, generator=generator, args=args, kwargs=kwargs)
-        out._content = awkward.util.deepcopy(out._content)
+        out._content = self._util_deepcopy(out._content)
         return out
 
     def empty_like(self, **overrides):
@@ -439,9 +439,9 @@ class StringArray(StringMethods, ObjectArray):
 
     def deepcopy(self, starts=None, stops=None, content=None, encoding=None):
         out = self.copy(starts=starts, stops=stops, content=content, encoding=encoding)
-        out._content._starts = awkward.util.deepcopy(out._content._starts)
-        out._content._stops = awkward.util.deepcopy(out._content._stops)
-        out._content._content = awkward.util.deepcopy(out._content._content)
+        out._content._starts = self._util_deepcopy(out._content._starts)
+        out._content._stops = self._util_deepcopy(out._content._stops)
+        out._content._content = self._util_deepcopy(out._content._content)
         return out
 
     def empty_like(self, **overrides):

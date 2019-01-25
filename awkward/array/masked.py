@@ -63,8 +63,8 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def deepcopy(self, mask=None, content=None):
         out = self.copy(mask=mask, content=content)
-        out._mask = awkward.util.deepcopy(out._mask)
-        out._content = awkward.util.deepcopy(out._content)
+        out._mask = self._util_deepcopy(out._mask)
+        out._content = self._util_deepcopy(out._content)
         return out
 
     def _mine(self, overrides):

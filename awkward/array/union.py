@@ -76,9 +76,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     def deepcopy(self, tags=None, index=None, contents=None):
         out = self.copy(tags=tags, index=index, contents=contents)
-        out._tags = awkward.util.deepcopy(out._tags)
-        out._index = awkward.util.deepcopy(out._index)
-        out._contents = [awkward.util.deepcopy(x) for x in out._contents]            
+        out._tags = self._util_deepcopy(out._tags)
+        out._index = self._util_deepcopy(out._index)
+        out._contents = [self._util_deepcopy(x) for x in out._contents]            
         return out
 
     def empty_like(self, **overrides):

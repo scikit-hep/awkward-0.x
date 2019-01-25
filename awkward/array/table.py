@@ -308,9 +308,9 @@ class Table(awkward.array.base.AwkwardArray):
         out = self.copy(contents=contents)
         index = out._index()
         if index is None:
-            out._contents = awkward.util.OrderedDict([(n, awkward.util.deepcopy(x)) for n, x in out._contents.items()])
+            out._contents = awkward.util.OrderedDict([(n, self._util_deepcopy(x)) for n, x in out._contents.items()])
         else:
-            out._contents = awkward.util.OrderedDict([(n, awkward.util.deepcopy(x[index])) for n, x in out._contents.items()])
+            out._contents = awkward.util.OrderedDict([(n, self._util_deepcopy(x[index])) for n, x in out._contents.items()])
             out._view = None
             out._base = None
         return out

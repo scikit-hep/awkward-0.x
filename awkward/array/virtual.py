@@ -105,10 +105,10 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def deepcopy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, persistvirtual=None):
         out = self.copy(generator=generator, args=arge, kwargs=kwargs, cache=cache, persistentkey=persistentkey, type=type, persistvirtual=persistvirtual)
-        out._array = awkward.util.deepcopy(out._array)
+        out._array = self._util_deepcopy(out._array)
         if out._setitem is not None:
             for n in list(out._setitem):
-                out._setitem[n] = awkward.util.deepcopy(out._setitem[n])
+                out._setitem[n] = self._util_deepcopy(out._setitem[n])
         return out
 
     def empty_like(self, **overrides):

@@ -343,6 +343,15 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return dtype.isnumpy
 
+    @classmethod
+    def _util_deepcopy(cls, array):
+        if array is None:
+            return None
+        elif isinstance(array, cls.numpy.ndarray):
+            return array.copy()
+        else:
+            return array.deepcopy()
+
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class

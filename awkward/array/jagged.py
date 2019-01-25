@@ -262,12 +262,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def deepcopy(self, starts=None, stops=None, content=None):
         out = self.copy(starts=starts, stops=stops, content=content)
-        out._starts  = awkward.util.deepcopy(out._starts)
-        out._stops   = awkward.util.deepcopy(out._stops)
-        out._content = awkward.util.deepcopy(out._content)
-        out._offsets = awkward.util.deepcopy(out._offsets)
-        out._counts  = awkward.util.deepcopy(out._counts)
-        out._parents = awkward.util.deepcopy(out._parents)
+        out._starts  = self._util_deepcopy(out._starts)
+        out._stops   = self._util_deepcopy(out._stops)
+        out._content = self._util_deepcopy(out._content)
+        out._offsets = self._util_deepcopy(out._offsets)
+        out._counts  = self._util_deepcopy(out._counts)
+        out._parents = self._util_deepcopy(out._parents)
         return out
 
     def empty_like(self, **overrides):
@@ -760,7 +760,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def _tojagged(self, starts=None, stops=None, copy=True):
         if starts is None and stops is None:
             if copy:
-                starts, stops = awkward.util.deepcopy(self._starts), awkward.util.deepcopy(self._stops)
+                starts, stops = self._util_deepcopy(self._starts), self._util_deepcopy(self._stops)
             else:
                 starts, stops = self._starts, self._stops
 
@@ -794,7 +794,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self
 
         elif (starts is self._starts or self.numpy.array_equal(starts, self._starts)) and (stops is self._stops or self.numpy.array_equal(stops, self._stops)):
-            return self.copy(starts=starts, stops=stops, content=(awkward.util.deepcopy(self._content) if copy else self._content))
+            return self.copy(starts=starts, stops=stops, content=(self._util_deepcopy(self._content) if copy else self._content))
 
         else:
             if self.offsetsaliased(starts, stops):
