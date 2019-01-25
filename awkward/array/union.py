@@ -103,16 +103,16 @@ class UnionArray(awkward.array.base.AwkwardArray):
         self._valid()
         if self.issequential:
             return {"id": ident,
-                    "call": ["awkward", self.__class__.__name__, "fromtags"],
-                    "args": [fill(self._tags, self.__class__.__name__ + ".tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"list": [fill(x, self.__class__.__name__ + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
+                    "call": ["awkward", "UnionArray", "fromtags"],
+                    "args": [fill(self._tags, "UnionArray.tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             {"list": [fill(x, "UnionArray.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
 
         else:
             return {"id": ident,
-                    "call": ["awkward", self.__class__.__name__],
-                    "args": [fill(self._tags, self.__class__.__name__ + ".tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"list": [fill(x, self.__class__.__name__ + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
+                    "call": ["awkward", "UnionArray"],
+                    "args": [fill(self._tags, "UnionArray.tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._index, "UnionArray.index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             {"list": [fill(x, "UnionArray.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
 
     @property
     def tags(self):

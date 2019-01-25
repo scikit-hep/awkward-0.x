@@ -343,16 +343,16 @@ class Table(awkward.array.base.AwkwardArray):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        out = {"call": ["awkward", self.__class__.__name__, "frompairs"],
-               "args": [{"pairs": [[n, fill(x, self.__class__.__name__ + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs)] for n, x in self._contents.items()]}]}
+        out = {"call": ["awkward", "Table", "frompairs"],
+               "args": [{"pairs": [[n, fill(x, "Table.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs)] for n, x in self._contents.items()]}]}
         if isinstance(self._view, tuple):
             start, step, length = self._view
-            out = {"call": ["awkward", self.__class__.__name__, "fromview"],
+            out = {"call": ["awkward", "Table", "fromview"],
                    "args": [{"tuple": [{"json": start}, {"json": step}, {"json": length}]}, out]}
 
         elif isinstance(self._view, self.numpy.ndarray):
-            out = {"call": ["awkward", self.__class__.__name__, "fromview"],
-                   "args": [fill(self._view, self.__class__.__name__ + ".view", prefix, suffix, schemasuffix, storage, compression, **kwargs), out]}
+            out = {"call": ["awkward", "Table", "fromview"],
+                   "args": [fill(self._view, "Table" + ".view", prefix, suffix, schemasuffix, storage, compression, **kwargs), out]}
 
         out["id"] = ident
         return out

@@ -134,10 +134,10 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         
         if self._persistvirtual:
             out = {"id": ident,
-                   "call": ["awkward", self.__class__.__name__],
-                   "args": [fill(self._generator, self.__class__.__name__ + ".generator", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                            {"tuple": [fill(x, self.__class__.__name__ + ".args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
-                            {"dict": {n: fill(x, self.__class__.__name__ + ".kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}],
+                   "call": ["awkward", "VirtualArray"],
+                   "args": [fill(self._generator, "VirtualArray.generator", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                            {"tuple": [fill(x, "VirtualArray.args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
+                            {"dict": {n: fill(x, "VirtualArray.kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}],
                    "cacheable": True}
             others = {}
             if self._persistentkey is not None:
@@ -153,7 +153,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             return out
 
         else:
-            return fill(self.array, self.__class__.__name__ + ".array", prefix, suffix, schemasuffix, storage, compression, **kwargs)
+            return fill(self.array, "VirtualArray.array", prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
     @property
     def generator(self):

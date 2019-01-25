@@ -96,9 +96,9 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         return {"id": ident,
-                "call": ["awkward", self.__class__.__name__],
-                "args": [fill(self._mask, self.__class__.__name__ + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                "call": ["awkward", "MaskedArray"],
+                "args": [fill(self._mask, "MaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, "MaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          {"json": bool(self._maskedwhen)}]}
 
     @property
@@ -327,9 +327,9 @@ class BitMaskedArray(MaskedArray):
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         return {"id": ident,
-                "call": ["awkward", self.__class__.__name__],
-                "args": [fill(self._mask, self.__class__.__name__ + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                "call": ["awkward", "BitMaskedArray"],
+                "args": [fill(self._mask, "BitMaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, "BitMaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          {"json": bool(self._maskedwhen)},
                          {"json": bool(self._lsborder)}]}
 
@@ -556,9 +556,9 @@ class IndexedMaskedArray(MaskedArray):
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         return {"id": ident,
-                "call": ["awkward", self.__class__.__name__],
-                "args": [fill(self._mask, self.__class__.__name__ + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                "call": ["awkward", "IndexedMaskedArray"],
+                "args": [fill(self._mask, "IndexedMaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, "IndexedMaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          {"json": int(self._maskedwhen)}]}
 
     @property

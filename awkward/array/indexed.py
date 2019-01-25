@@ -95,9 +95,9 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         return {"id": ident,
-                "call": ["awkward", self.__class__.__name__],
-                "args": [fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
+                "call": ["awkward", "IndexedArray"],
+                "args": [fill(self._index, "IndexedArray.index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, "IndexedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
 
     @property
     def index(self):
@@ -299,13 +299,13 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         elif isinstance(self._default, (numbers.Real, self.numpy.floating)) and self.numpy.isfinite(self._default):
             default = {"json": float(self._default)}
         else:
-            default = fill(self._default, self.__class__.__name__ + ".default", prefix, suffix, schemasuffix, storage, compression, **kwargs)
+            default = fill(self._default, "SparseArray.default", prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
         return {"id": ident,
-                "call": ["awkward", self.__class__.__name__],
+                "call": ["awkward", "SparseArray"],
                 "args": [{"json": int(self._length)},
-                         fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._index, "SparseArray.index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, "SparseArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          default]}
 
     @property

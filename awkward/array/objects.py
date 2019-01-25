@@ -121,11 +121,11 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         return {"id": ident,
-                "call": ["awkward", self.__class__.__name__],
-                "args": [fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._generator, self.__class__.__name__ + ".generator", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         {"tuple": [fill(x, self.__class__.__name__ + ".args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
-                         {"dict": {n: fill(x, self.__class__.__name__ + ".kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}]}
+                "call": ["awkward", "ObjectArray"],
+                "args": [fill(self._content, "ObjectArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._generator, "ObjectArray.generator", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         {"tuple": [fill(x, "ObjectArray.args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
+                         {"dict": {n: fill(x, "ObjectArray.kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}]}
 
     @property
     def content(self):
@@ -464,19 +464,18 @@ class StringArray(StringMethods, ObjectArray):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        n = self.__class__.__name__
         if self_content.offsetsaliased(self.starts, self.stops) and len(self.starts) > 0 and self.starts[0] == 0:
             return {"id": ident,
-                    "call": ["awkward", n, "fromcounts"],
-                    "args": [fill(self.counts, n + ".counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self.content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                    "call": ["awkward", "StringArray", "fromcounts"],
+                    "args": [fill(self.counts, "StringArray.counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self.content, "StringArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                              self._encoding]}
         else:
             return {"id": ident,
-                    "call": ["awkward", n],
-                    "args": [fill(self.starts, n + ".starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self.stops, n + ".stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self.content, n + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                    "call": ["awkward", "StringArray"],
+                    "args": [fill(self.starts, "StringArray.starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self.stops, "StringArray.stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self.content, "StringArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                              self._encoding]}
 
     @property

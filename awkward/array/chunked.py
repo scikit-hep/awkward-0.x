@@ -85,8 +85,8 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         self.knowcounts()
         self._valid()
         return {"id": ident,
-                "call": ["awkward", self.__class__.__name__],
-                "args": [{"list": [fill(x, self.__class__.__name__ + ".chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for c, x in zip(self._counts, self._chunks) if c > 0]},
+                "call": ["awkward", "ChunkedArray"],
+                "args": [{"list": [fill(x, "ChunkedArray.chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for c, x in zip(self._counts, self._chunks) if c > 0]},
                          {"json": [int(c) for c in self._counts if c > 0]}]}
 
     @property
@@ -706,10 +706,10 @@ class AppendableArray(ChunkedArray):
                 chunks.append(x)
 
         return {"id": ident,
-                "call": ["awkward", self.__class__.__name__],
+                "call": ["awkward", "AppendableArray"],
                 "args": [{"tuple": [{"json": int(x)} for x in self._chunkshape]},
                          {"dtype": awkward.persist.dtype2json(self._dtype)},
-                         {"list": [fill(x, self.__class__.__name__ + ".chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in chunks]}]}
+                         {"list": [fill(x, "AppendableArray.chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in chunks]}]}
 
     @property
     def chunkshape(self):

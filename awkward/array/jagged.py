@@ -292,15 +292,15 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
         if self.offsetsaliased(self._starts, self._stops) and len(self._starts) > 0 and self._starts[0] == 0:
             return {"id": ident,
-                    "call": ["awkward", self.__class__.__name__, "fromcounts"],
-                    "args": [fill(self.counts, self.__class__.__name__ + ".counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
+                    "call": ["awkward", "JaggedArray", "fromcounts"],
+                    "args": [fill(self.counts, "JaggedArray.counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._content, "JaggedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
         else:
             return {"id": ident,
-                    "call": ["awkward", self.__class__.__name__],
-                    "args": [fill(self._starts, self.__class__.__name__ + ".starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._stops, self.__class__.__name__ + ".stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
+                    "call": ["awkward", "JaggedArray"],
+                    "args": [fill(self._starts, "JaggedArray.starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._stops, "JaggedArray.stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._content, "JaggedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
 
     @property
     def starts(self):
