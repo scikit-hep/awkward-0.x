@@ -43,9 +43,13 @@ install:
   - python -c 'import numpy; print(numpy.__version__)'
   - pip install pytest pytest-runner
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install h5py ; fi
+  - export AWKWARD_DEPLOYMENT=base
 
 notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
+
+before_deploy:
+  - if [[ $AWKWARD_DEPLOYMENT == base ]] ; then echo "DEPLOYING base" ; export AWKWARD_DEPLOYMENT=numba ; else echo "DEPLOYING numba" ; fi
 
 deploy:
   - provider: pypi
@@ -61,7 +65,6 @@ deploy:
     user: pivarski
     password:
       secure: "GRE/YTl10fGZVQOHiWNEfuLxNnJxtrW5zW9as420yfSO8FeZ83pdjcKc4aADhf5YeRfEPbInZ0oseRyXujqw/cGpZL6LDMKmgjmcpL5dKF4u82pS3HYKMg/AdEHozsmQeJbOQdBn1RHknSyg38bswwwgBy5F5fP9RC7glax3sK7iScT+aVAW1KbHzMjtzNb+RDyFC87THkdWwJf/TgevslEMW6SBMWrE87Yf2Tu77Payz/eSMZ8lXcVmD6kyO3/GwIiygyLJojaC1RH0aw+zM+FSP2EKJb9MdXDGINRzyoaiWO43rvtE01z7OCUipYD8wEv4SuGy9UNbc7ALg3hQjLDmKMqyTCK6Y7mQ7zbSF9vaYyHzP2etnnz5djji/e4j88PQqmJVLDmsll/Af5+6apENn3VPM4SW2GEgECp7Y5f0CW+IceRY8eS2P1v1V+LPTwxOx4IWW3xjxI5GPz3XfUTA/tF0uGgvmkR97vcL7AzkvyOip+OL10YY1bj7+ZGYDt07UqIutn0uhHtGqb6gBm90CC4aWpykDqlnyBe6UHH9qcI3wNpAiy3VgeakB/1umkWmKmYSx92rRQvm9gd9FFQO9QMIddnlQ2f8FR4nEyF8K+/RDH/zKduGeiQbep86EcILkkuGCVhF/Z51AlFtHA9K7XBQMhvSyKn6NVjENCY="
-    local-dir: awkward-numba
     distributions: "sdist bdist_wheel --universal"
     on:
       # tags: true
