@@ -91,26 +91,6 @@ def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
     return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
 
-def _draw(x):
-    if isinstance(x, list):
-        if len(x) > 6:
-            return "[" + " ".join(_draw(y) for y in x[:3]) + " ... " + " ".join(_draw(y) for y in x[-3:]) + "]"
-        else:
-            return "[" + " ".join(_draw(y) for y in x) + "]"
-    elif isinstance(x, tuple):
-        return "(" + ", ".join(_draw(y) for y in x) + ")"
-    else:
-        return repr(x)
-
-def array_str(array):
-    import awkward.array.base
-    if isinstance(array, numpy.ndarray):
-        return _draw(array.tolist())
-    elif isinstance(array, awkward.array.base.AwkwardArray):
-        return str(array).replace("\n", "")
-    else:
-        return repr(array)
-
 def isnumpy(dtype):
     if isinstance(dtype, numpy.dtype):
         return True

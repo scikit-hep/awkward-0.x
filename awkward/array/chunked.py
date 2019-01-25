@@ -275,7 +275,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         if self.countsknown:
             return super(ChunkedArray, self).__str__()
         else:
-            strs = [awkward.util.array_str(x) for x in self[:7].__iter__(checkiter=False)]
+            strs = [self._util_arraystr(x) for x in self[:7].__iter__(checkiter=False)]
             if len(strs) < 7:
                 return super(ChunkedArray, self).__str__()
             else:

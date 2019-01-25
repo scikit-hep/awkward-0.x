@@ -92,7 +92,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     def __str__(self):
         if len(self) <= 6:
-            return "[{0}]".format(" ".join(awkward.util.array_str(x) for x in self.__iter__(checkiter=False)))
+            return "[{0}]".format(" ".join(self._util_arraystr(x) for x in self.__iter__(checkiter=False)))
 
         else:
             first = self[:3]
@@ -102,7 +102,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             if isinstance(first, AwkwardArray):
                 last = last.__iter__(checkiter=False)
 
-            return "[{0} ... {1}]".format(" ".join(awkward.util.array_str(x) for x in first), " ".join(awkward.util.array_str(x) for x in last))
+            return "[{0} ... {1}]".format(" ".join(self._util_arraystr(x) for x in first), " ".join(self._util_arraystr(x) for x in last))
 
     def __repr__(self):
         return "<{0} {1} at 0x{2:012x}>".format(self.__class__.__name__, str(self), id(self))
@@ -314,6 +314,27 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                     return cls.numpy.array(value, dtype=defaultdtype, copy=False)
                 else:
                     return cls.numpy.array(value, copy=False)
+
+    @classmethod
+    def _util_arraystr_draw(cls, x):
+        if isinstance(x, list):
+            if len(x) > 6:
+                return "[" + " ".join(cls._util_arraystr_draw(y) for y in x[:3]) + " ... " + " ".join(cls._util_arraystr_draw(y) for y in x[-3:]) + "]"
+            else:
+                return "[" + " ".join(cls._util_arraystr_draw(y) for y in x) + "]"
+        elif isinstance(x, tuple):
+            return "(" + ", ".join(cls._util_arraystr_draw(y) for y in x) + ")"
+        else:
+            return repr(x)
+
+    @classmethod
+    def _util_arraystr(cls, array):
+        if isinstance(array, cls.numpy.ndarray):
+            return cls._util_arraystr_draw(array.tolist())
+        elif isinstance(array, AwkwardArray):
+            return str(array).replace("\n", "")
+        else:
+            return repr(array)
 
 class AwkwardArrayWithContent(AwkwardArray):
     """
