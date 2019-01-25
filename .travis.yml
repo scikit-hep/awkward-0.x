@@ -49,7 +49,15 @@ notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
 
 before_deploy:
-  - if [[ $AWKWARD_DEPLOYMENT == base ]] ; then echo "DEPLOYING base" ; export AWKWARD_DEPLOYMENT=numba ; else echo "DEPLOYING numba" ; fi
+  - |
+    if [[ $AWKWARD_DEPLOYMENT == base ]] then
+        echo "DEPLOYING base"
+        export AWKWARD_DEPLOYMENT=numba
+    elif [[ $AWKWARD_DEPLOYMENT == numba ]] then
+        echo "DEPLOYING numba"
+        cd awkward-numba
+        export AWKWARD_DEPLOYMENT=none
+    fi
 
 deploy:
   - provider: pypi
