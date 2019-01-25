@@ -91,12 +91,6 @@ def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
     return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
 
-def isnumpy(dtype):
-    if isinstance(dtype, numpy.dtype):
-        return True
-    else:
-        return dtype.isnumpy
-
 def deepcopy(array):
     if array is None:
         return None

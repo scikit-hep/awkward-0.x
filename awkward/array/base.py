@@ -336,6 +336,13 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return repr(array)
 
+    @classmethod
+    def _util_isnumpy(cls, dtype):
+        if isinstance(dtype, cls.numpy.dtype):
+            return True
+        else:
+            return dtype.isnumpy
+
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class

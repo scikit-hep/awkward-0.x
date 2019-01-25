@@ -453,7 +453,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                         chunks.append(self._chunks[cid][localindex])
                     return self.copy(chunks=chunks)
 
-                elif awkward.util.isnumpy(self.type):
+                elif self._util_isnumpy(self.type):
                     out = self.numpy.empty((len(head),) + self.type.shape[1:], dtype=self.type.dtype)
                     self.knowcounts(chunkid.max())
                     offsets = self.offsets
