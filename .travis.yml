@@ -56,7 +56,7 @@ deploy:
     distributions: "sdist bdist_wheel --universal"
     on:
       # tags: true
-      # branch: master
+      branch: overriding-subpackages
       condition: '$TRAVIS_PYTHON_VERSION = "3.6" && $NUMPY = "numpy>=1.15"'
   - provider: pypi
     user: pivarski
@@ -66,5 +66,5 @@ deploy:
     distributions: "sdist bdist_wheel --universal"
     on:
       # tags: true
-      # branch: master
+      branch: overriding-subpackages
       condition: '$TRAVIS_PYTHON_VERSION = "3.6" && $NUMPY = "numpy>=1.15"'
