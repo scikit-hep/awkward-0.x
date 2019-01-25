@@ -29,7 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.virtual
-import awkward.numba.array.base
+from .base import NumbaMethods
 
-class VirtualArrayNumba(awkward.array.virtual.VirtualArray, awkward.numba.array.base.NumbaMethods):
+class VirtualArrayNumba(awkward.array.virtual.VirtualArray, NumbaMethods):
     pass

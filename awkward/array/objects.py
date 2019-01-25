@@ -220,7 +220,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
         result = getattr(ufunc, method)(*contents, **kwargs)
 
-        if awkward.util.iscomparison(ufunc):
+        if self._util_iscomparison(ufunc):
             return result
         else:
             return self.copy(content=result)

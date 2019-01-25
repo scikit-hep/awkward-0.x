@@ -641,7 +641,7 @@ class Table(awkward.array.base.AwkwardArray):
         assert len(newcolumns) != 0
         assert tuplelen is not None
 
-        if awkward.util.iscomparison(ufunc):
+        if self._util_iscomparison(ufunc):
             out = None
             for x in newcolumns.values():
                 assert isinstance(x, self.numpy.ndarray)

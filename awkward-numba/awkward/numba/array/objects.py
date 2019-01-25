@@ -29,13 +29,13 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.objects
-import awkward.numba.array.base
+from .base import NumbaMethods
 
-class MethodsNumba(awkward.array.objects.Methods, awkward.numba.array.base.NumbaMethods):
+class MethodsNumba(awkward.array.objects.Methods, NumbaMethods):
     pass
 
-class ObjectArrayNumba(awkward.array.objects.ObjectArray, awkward.numba.array.base.NumbaMethods):
+class ObjectArrayNumba(awkward.array.objects.ObjectArray, NumbaMethods):
     pass
 
-class StringArrayNumba(awkward.array.objects.StringArray, awkward.numba.array.base.NumbaMethods):
+class StringArrayNumba(awkward.array.objects.StringArray, NumbaMethods):
     pass

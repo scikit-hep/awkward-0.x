@@ -80,6 +80,7 @@ class bothmethod(object):
 ################################################################ array helpers
 
 import distutils.version
+
 import numpy
 if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVersion("1.13.1"):
     raise ImportError("Numpy 1.13.1 or later required")
@@ -90,14 +91,6 @@ frombuffer = numpy.frombuffer
 def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
     return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
-
-def iscomparison(ufunc):
-    return (ufunc is numpy.less or
-            ufunc is numpy.less_equal or
-            ufunc is numpy.equal or
-            ufunc is numpy.not_equal or
-            ufunc is numpy.greater or
-            ufunc is numpy.greater_equal)
 
 try:
     NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin

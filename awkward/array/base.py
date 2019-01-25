@@ -404,6 +404,15 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return True
 
+    @classmethod
+    def _util_iscomparison(cls, ufunc):
+        return (ufunc is cls.numpy.less or
+                ufunc is cls.numpy.less_equal or
+                ufunc is cls.numpy.equal or
+                ufunc is cls.numpy.not_equal or
+                ufunc is cls.numpy.greater or
+                ufunc is cls.numpy.greater_equal)
+
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class

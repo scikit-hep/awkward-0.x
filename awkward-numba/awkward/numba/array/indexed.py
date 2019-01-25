@@ -29,10 +29,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.indexed
-import awkward.numba.array.base
+from .base import NumbaMethods
 
-class IndexedArrayNumba(awkward.array.indexed.IndexedArray, awkward.numba.array.base.NumbaMethods):
+class IndexedArrayNumba(awkward.array.indexed.IndexedArray, NumbaMethods):
     pass
 
-class SparseArrayNumba(awkward.array.indexed.SparseArray, awkward.numba.array.base.NumbaMethods):
+class SparseArrayNumba(awkward.array.indexed.SparseArray, NumbaMethods):
     pass

@@ -29,7 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import awkward.array.jagged
-import awkward.numba.array.base
+from .base import NumbaMethods
 
-class JaggedArrayNumba(awkward.array.jagged.JaggedArray, awkward.numba.array.base.NumbaMethods):
+class JaggedArrayNumba(awkward.array.jagged.JaggedArray, NumbaMethods):
     pass
