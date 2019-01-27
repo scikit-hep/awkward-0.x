@@ -28,12 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import ast
 import itertools
-import numbers
-import re
 import sys
-import types
 from collections import OrderedDict
 
 import numpy
@@ -54,29 +50,6 @@ frombuffer = numpy.frombuffer
 def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
     return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
-
-def isidentifier(x):
-    if not isinstance(x, string):
-        return False
-
-    if sys.version_info[0] <= 2:
-        try:
-            node = ast.parse(x)
-        except SyntaxError:
-            return False
-        else:
-            return isinstance(node, ast.Module) and len(node.body) == 1 and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Name) and node.body[0].value.id == x
-
-    else:
-        return x.isidentifier()
-
-def isintstring(x):
-    return isinstance(x, string) and isintstring._pattern.match(x) is not None
-isintstring._pattern = re.compile("^(0|[1-9]+[0-9]*)$")
-
-def is_intstring(x):
-    return isinstance(x, string) and is_intstring._pattern.match(x) is not None
-is_intstring._pattern = re.compile("^_(0|[1-9]+[0-9]*)$")
 
 class bothmethod(object):
     def __init__(self, fcn):

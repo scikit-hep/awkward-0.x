@@ -68,8 +68,8 @@ deploy:
       secure: "UV299wmXqrZHCDSeXgMqfqFi91KvEVG9V8OCKJT3H2ZVk9LJ6QEfmd5jhnU+5K+8WsIgiyhdoIE5Vn5rtkYnW0iYnow6rLMWGPfDTSt7KMtJlXuJxpbBaD46pLXS9nF2UGYJwy4Tg8OzYzjozFNht+s2xqhcmLLCTal+94lvs9b9J9k27nVdzQFgO8c9JE5rwkO5gAMGOPqlyumAElOVyTLBsqHkWY9rvKO0hesX/QhtiLZ5IVYsYgdy62+BOFepiJP0PzTaPJJmN2UxarOPyTTlIDE8odxTWrrcIW1Sw1Xff09Rsq+ZU48rMUfIWBOKdkWY8sFsj+NiPt5XdqAki84nrnjscjfbPAX0pYoOFg/HcEgBkd4t7IqzeKGq4lN9A8DbaANXllHeVc1UgYPiNxqfVX3msoiGCcKweKiA9ok3jtepnOsSYTSiCWLKSx+ojlWxQE/1g4q1pfH9xTliKcPXX9eQenCmmWP1Z+EzvZc1F4YoMaOq4whofzv8Y2MPjMj13+toWfE7/t5qOMeIm8Q7iK3xIYa8pJOGXQ5b9GMu58CyIGQ1ekSrluitD+STn0xevT2dldi9++3aZzVHmC14zCCMRI7mmIcP80dOcDT1uoSv1HC/r1ccUcQYtpBjWg2l3Rp+IOPUcYJgtFZrfeBrAorwGZcm7SGn96ailrM="
     distributions: "sdist bdist_wheel --universal"
     on:
-      # tags: true
-      branch: overriding-subpackages
+      tags: true
+      branch: master
       condition: '$TRAVIS_PYTHON_VERSION = "3.6" && $NUMPY = "numpy>=1.15"'
   - provider: pypi
     user: pivarski
@@ -77,6 +77,6 @@ deploy:
       secure: "GRE/YTl10fGZVQOHiWNEfuLxNnJxtrW5zW9as420yfSO8FeZ83pdjcKc4aADhf5YeRfEPbInZ0oseRyXujqw/cGpZL6LDMKmgjmcpL5dKF4u82pS3HYKMg/AdEHozsmQeJbOQdBn1RHknSyg38bswwwgBy5F5fP9RC7glax3sK7iScT+aVAW1KbHzMjtzNb+RDyFC87THkdWwJf/TgevslEMW6SBMWrE87Yf2Tu77Payz/eSMZ8lXcVmD6kyO3/GwIiygyLJojaC1RH0aw+zM+FSP2EKJb9MdXDGINRzyoaiWO43rvtE01z7OCUipYD8wEv4SuGy9UNbc7ALg3hQjLDmKMqyTCK6Y7mQ7zbSF9vaYyHzP2etnnz5djji/e4j88PQqmJVLDmsll/Af5+6apENn3VPM4SW2GEgECp7Y5f0CW+IceRY8eS2P1v1V+LPTwxOx4IWW3xjxI5GPz3XfUTA/tF0uGgvmkR97vcL7AzkvyOip+OL10YY1bj7+ZGYDt07UqIutn0uhHtGqb6gBm90CC4aWpykDqlnyBe6UHH9qcI3wNpAiy3VgeakB/1umkWmKmYSx92rRQvm9gd9FFQO9QMIddnlQ2f8FR4nEyF8K+/RDH/zKduGeiQbep86EcILkkuGCVhF/Z51AlFtHA9K7XBQMhvSyKn6NVjENCY="
     distributions: "sdist bdist_wheel --universal"
     on:
-      # tags: true
-      branch: overriding-subpackages
+      tags: true
+      branch: master
       condition: '$TRAVIS_PYTHON_VERSION = "3.6" && $NUMPY = "numpy>=1.15"'
