@@ -361,7 +361,7 @@ class BitMaskedArray(MaskedArray):
         
     @classmethod
     def bool2bit(cls, boolmask, lsborder=False):
-        boolmask = cls._util_toarray(boolmask, MaskedArray.MASKTYPE, cls.numpy.ndarray)
+        boolmask = cls._util_toarray(boolmask, cls.MaskedArray.fget(None).MASKTYPE, cls.numpy.ndarray)
         if len(boolmask.shape) != 1:
             raise ValueError("boolmask must have 1-dimensional shape")
         if not issubclass(boolmask.dtype.type, (cls.numpy.bool_, cls.numpy.bool)):

@@ -254,20 +254,20 @@ class StringMethods(object):
             left, right = inputs[0], inputs[1]
 
             if isinstance(left, (str, bytes)):
-                left = StringArray.fromstr(len(right), left)
+                left = self.StringArray.fromstr(len(right), left)
             elif isinstance(left, self.numpy.ndarray) and (left.dtype.kind == "U" or left.dtype.kind == "S"):
-                left = StringArray.fromnumpy(left)
+                left = self.StringArray.fromnumpy(left)
             elif isinstance(left, self.numpy.ndarray) and left.dtype == self.numpy.dtype(object):
-                left = StringArray.fromiter(left)
+                left = self.StringArray.fromiter(left)
             elif not isinstance(left, StringMethods):
                 return self.numpy.zeros(len(right), dtype=self.BOOLTYPE)
 
             if isinstance(right, (str, bytes)):
-                right = StringArray.fromstr(len(left), right)
+                right = self.StringArray.fromstr(len(left), right)
             elif isinstance(right, self.numpy.ndarray) and (right.dtype.kind == "U" or right.dtype.kind == "S"):
-                right = StringArray.fromnumpy(right)
+                right = self.StringArray.fromnumpy(right)
             elif isinstance(right, self.numpy.ndarray) and right.dtype == self.numpy.dtype(object):
-                right = StringArray.fromiter(right)
+                right = self.StringArray.fromiter(right)
             elif not isinstance(right, StringMethods):
                 return self.numpy.zeros(len(left), dtype=self.BOOLTYPE)
 

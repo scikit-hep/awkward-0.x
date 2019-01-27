@@ -134,7 +134,7 @@ class Table(awkward.array.base.AwkwardArray):
                     out = []
                     for x in result:
                         if isinstance(x, Table):
-                            out.append(awkward.array.objects.Methods.maybemixin(type(x), Table.Row)(x, 0))
+                            out.append(awkward.array.objects.Methods.maybemixin(type(x), self._table.Table.Row)(x, 0))
                             out[-1]._table._showdict = True
                         else:
                             out.append(x)
@@ -142,7 +142,7 @@ class Table(awkward.array.base.AwkwardArray):
                 elif method == "at":
                     return None
                 else:
-                    out = awkward.array.objects.Methods.maybemixin(type(result), Table.Row)(result, 0)
+                    out = awkward.array.objects.Methods.maybemixin(type(result), self._table.Table.Row)(result, 0)
                     out._table._showdict = True
                     return out
 
@@ -708,7 +708,7 @@ class Table(awkward.array.base.AwkwardArray):
         return False
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        out = Table.named({
+        out = self.Table.named({
             self.numpy.bitwise_or: "Any",
             self.numpy.bitwise_and: "All",
             None: "Count",

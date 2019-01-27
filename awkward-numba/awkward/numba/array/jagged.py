@@ -33,6 +33,16 @@ import numba
 import awkward.array.jagged
 from .base import NumbaMethods
 
+@numba.njit(["void(i8[:], i8[:])"])
+def _offsets2parents_fill(offsets, parents):
+    j = 0
+    k = -1
+    for i in offsets:
+        while j < i:
+            parents[j] = k
+            j += 1
+        k += 1
+
 @numba.njit(["void(i8[:], i8[:], f8[:], i8[:])"])
 def _argminmax_fillmin(starts, stops, content, output):
     k = 0
@@ -61,22 +71,12 @@ def _argminmax_fillmax(starts, stops, content, output):
             output[k] = bestj
             k += 1
 
-@numba.njit(["void(i8[:], i8[:])"])
-def _offsets2parents_fill(offsets, parents):
-    j = 0
-    k = -1
-    for i in offsets:
-        while j < i:
-            parents[j] = k
-            j += 1
-        k += 1
-
 class JaggedArrayNumba(awkward.array.jagged.JaggedArray, NumbaMethods):
     @classmethod
     def offsets2parents(cls, offsets):
         if len(offsets) == 0:
             raise ValueError("offsets must have at least one element")
-        parents = cls.numpy.empty(offsets[-1], dtype=JaggedArray.INDEXTYPE)
+        parents = cls.numpy.empty(offsets[-1], dtype=cls.JaggedArray.fget(None).INDEXTYPE)
         _offsets2parents_fill(offsets, parents)
         return parents
 

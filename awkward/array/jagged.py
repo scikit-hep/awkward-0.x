@@ -53,14 +53,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def counts2offsets(cls, counts):
-        offsets = cls.numpy.empty(len(counts) + 1, dtype=JaggedArray.INDEXTYPE)
+        offsets = cls.numpy.empty(len(counts) + 1, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
         offsets[0] = 0
         cls.numpy.cumsum(counts, out=offsets[1:])
         return offsets
 
     @classmethod
     def offsets2parents(cls, offsets):
-        out = cls.numpy.zeros(offsets[-1], dtype=JaggedArray.INDEXTYPE)
+        out = cls.numpy.zeros(offsets[-1], dtype=cls.JaggedArray.fget(None).INDEXTYPE)
         cls.numpy.add.at(out, offsets[offsets != offsets[-1]][1:], 1)
         cls.numpy.cumsum(out, out=out)
         if offsets[0] > 0:
@@ -69,7 +69,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def startsstops2parents(cls, starts, stops):
-        out = cls.numpy.full(stops.max(), -1, dtype=JaggedArray.INDEXTYPE)
+        out = cls.numpy.full(stops.max(), -1, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
         lenstarts = len(starts)
         i = 0
         while i < lenstarts:
@@ -82,14 +82,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         # FIXME for 1.0: use length to add empty lists at the end of the jagged array or truncate
         # assumes that children are contiguous, but not necessarily in order or fully covering (allows empty lists)
         tmp = cls.numpy.nonzero(parents[1:] != parents[:-1])[0] + 1
-        changes = cls.numpy.empty(len(tmp) + 2, dtype=JaggedArray.INDEXTYPE)
+        changes = cls.numpy.empty(len(tmp) + 2, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
         changes[0] = 0
         changes[-1] = len(parents)
         changes[1:-1] = tmp
 
         length = parents.max() + 1
-        starts = cls.numpy.zeros(length, dtype=JaggedArray.INDEXTYPE)
-        counts = cls.numpy.zeros(length, dtype=JaggedArray.INDEXTYPE)
+        starts = cls.numpy.zeros(length, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
+        counts = cls.numpy.zeros(length, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
 
         where = parents[changes[:-1]]
         real = (where >= 0)
@@ -105,12 +105,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         # values are ignored, apart from uniqueness
         changes = cls.numpy.nonzero(uniques[1:] != uniques[:-1])[0] + 1
 
-        offsets = cls.numpy.empty(len(changes) + 2, dtype=JaggedArray.INDEXTYPE)
+        offsets = cls.numpy.empty(len(changes) + 2, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
         offsets[0] = 0
         offsets[-1] = len(uniques)
         offsets[1:-1] = changes
 
-        parents = cls.numpy.zeros(len(uniques), dtype=JaggedArray.INDEXTYPE)
+        parents = cls.numpy.zeros(len(uniques), dtype=cls.JaggedArray.fget(None).INDEXTYPE)
         parents[changes] = 1
         cls.numpy.cumsum(parents, out=parents)
 
@@ -861,7 +861,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                     if "first" not in locals() or isinstance(first, (numbers.Number, self.numpy.bool_, self.numpy.bool, self.numpy.number)):
                         inputs[i] = self.numpy.array(inputs[i], copy=False)
                     else:
-                        inputs[i] = JaggedArray.fromiter(inputs[i])
+                        inputs[i] = self.JaggedArray.fromiter(inputs[i])
 
         for jaggedarray in inputs:
             if isinstance(jaggedarray, JaggedArray):
@@ -949,7 +949,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         left = starts_parents + i
         right = starts_parents + k - n*i + (i*(i + 1) >> 1)
 
-        out = JaggedArray.fromoffsets(offsets, self.Table.named("tuple", left, right))
+        out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", left, right))
         out._parents = parents
         return out
 
@@ -960,7 +960,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out = out[out["0"] != out["1"]]
 
         if nested:
-            out = JaggedArray.fromcounts(self.numpy.maximum(0, self.counts - 1), JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
+            out = self.JaggedArray.fromcounts(self.numpy.maximum(0, self.counts - 1), self.JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
 
         return out
 
@@ -970,11 +970,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         left = argpairs._content["0"]
         right = argpairs._content["1"]
 
-        out = JaggedArray.fromoffsets(argpairs.offsets, self.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
+        out = self.JaggedArray.fromoffsets(argpairs.offsets, self.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
         out._parents = argpairs._parents
 
         if nested:
-            out = JaggedArray.fromcounts(self.numpy.maximum(0, self.counts - 1), JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
+            out = self.JaggedArray.fromcounts(self.numpy.maximum(0, self.counts - 1), self.JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
 
         return out
 
@@ -984,7 +984,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out["1"] = out["1"] - self._starts
 
         if nested:
-            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
+            out = self.JaggedArray.fromcounts(self.counts, self.JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
 
         return out
 
@@ -993,11 +993,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         left = argpairs._content["0"]
         right = argpairs._content["1"]
 
-        out = JaggedArray.fromoffsets(argpairs.offsets, self.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
+        out = self.JaggedArray.fromoffsets(argpairs.offsets, self.Table.named("tuple", self._content[left], self._content[right]).flattentuple())
         out._parents = argpairs._parents
 
         if nested:
-            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
+            out = self.JaggedArray.fromcounts(self.counts, self.JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
 
         return out
 
@@ -1021,7 +1021,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         left = self._starts[parents] + iop_ocp
         right = other._starts[parents] + iop - ocp * iop_ocp
 
-        out = JaggedArray.fromoffsets(offsets, self.Table.named("tuple", left, right))
+        out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", left, right))
         out._parents = parents
         return out
 
@@ -1031,7 +1031,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out["1"] = out["1"] - other._starts
 
         if nested:
-            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts(self._broadcast(other.counts).flatten(), out._content))
+            out = self.JaggedArray.fromcounts(self.counts, self.JaggedArray.fromcounts(self._broadcast(other.counts).flatten(), out._content))
 
         return out
 
@@ -1044,13 +1044,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         argcross = thyself._argcross(other)
         left, right = argcross._content._contents.values()
 
-        out = JaggedArray.fromoffsets(argcross._offsets, self.Table.named("tuple", thyself._content[left], other._content[right]).flattentuple())
+        out = self.JaggedArray.fromoffsets(argcross._offsets, self.Table.named("tuple", thyself._content[left], other._content[right]).flattentuple())
         out._parents = argcross._parents
         out._iscross = True
 
         if nested:
             old = out
-            out = JaggedArray.fromcounts(thyself.counts, JaggedArray.fromcounts(thyself._broadcast(other.counts).flatten(), out._content))
+            out = self.JaggedArray.fromcounts(thyself.counts, self.JaggedArray.fromcounts(thyself._broadcast(other.counts).flatten(), out._content))
             out._nestedcross = old
 
         if hasattr(self, "_nestedcross"):
@@ -1058,7 +1058,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             mask = (self.counts != 0)
             counts[mask] //= self.counts[mask]
             old = out
-            out = JaggedArray.fromcounts(self.counts, JaggedArray.fromcounts(self._broadcast(counts).flatten(), out._content))
+            out = self.JaggedArray.fromcounts(self.counts, self.JaggedArray.fromcounts(self._broadcast(counts).flatten(), out._content))
             out._nestedcross = old
 
         return out
@@ -1072,8 +1072,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             raise TypeError("axis must be a non-negative integer (can't count from the end)")
         if axis > 0:
             if isinstance(self._content, JaggedArray):
-                counts = JaggedArray.fromcounts(self.counts, self._content.counts).sum()
-                return JaggedArray.fromcounts(counts, self._content.flatten(axis=axis - 1))
+                counts = self.JaggedArray.fromcounts(self.counts, self._content.counts).sum()
+                return self.JaggedArray.fromcounts(counts, self._content.flatten(axis=axis - 1))
 
         if len(self) == 0:
             return self._content[0:0]

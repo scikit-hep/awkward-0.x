@@ -44,7 +44,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     @classmethod
     def invert(cls, permutation):
         permutation = permutation.reshape(-1)
-        out = cls.numpy.zeros(permutation.max() + 1, dtype=IndexedArray.INDEXTYPE)
+        out = cls.numpy.zeros(permutation.max() + 1, dtype=cls.IndexedArray.fget(None).INDEXTYPE)
         identity = cls.numpy.arange(len(permutation))
         out[permutation] = identity
         if not cls.numpy.array_equal(out[permutation], identity):
