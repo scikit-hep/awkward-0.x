@@ -64,13 +64,12 @@ def _argminmax_fillmax(starts, stops, content, output):
 @numba.njit(["void(i8[:], i8[:])"])
 def _offsets2parents_fill(offsets, parents):
     j = 0
-    while j < offsets[0]:
-        parents[j] = -1
-        j += 1
-    for i in range(len(offsets) - 1):
-        while j < offsets[i + 1]:
-            parents[j] = offsets[i]
+    k = -1
+    for i in offsets:
+        while j < i:
+            parents[j] = k
             j += 1
+        k += 1
 
 class JaggedArrayNumba(awkward.array.jagged.JaggedArray, NumbaMethods):
     @classmethod
