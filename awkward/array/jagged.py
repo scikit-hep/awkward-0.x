@@ -966,7 +966,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         # At the beginning the i-th iteration of the outer loop,
         #   len(pairs) = L = (n-1) + (n-2) + ... + (n-i)
         #                  = n*i - i*(i+1)/2
-        #   ==>  -i^2 + (2i-1)*n - 2*L = 0
+        #   ==>  -i^2 + (2n-1)*i - 2*L = 0
         # So the quadratic formula gives i as a function of L at that point:
         #    i = [(2*n-1) - sqrt((2*n-1)^2 - 4*2*L)]/2
         # Since i(L) is monotone increasing, and won't reach i+1 until
