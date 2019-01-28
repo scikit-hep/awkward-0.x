@@ -953,11 +953,42 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out._parents = parents
         return out
 
+    def _argdistincts(self, add_starts):
+        counts_comb = self.counts*(self.counts-1)//2
+        offsets_comb = self.counts2offsets(counts_comb)
+        parents_comb = self.offsets2parents(offsets_comb)
+        local_indices = self.numpy.arange(offsets_comb[-1]) - offsets_comb[parents_comb]
+
+        # Consider the double-loop:
+        # for i in range(n):
+        #     for j in range(i+1, n):
+        #         pairs.append((i,j))
+        # At the beginning the i-th iteration of the outer loop,
+        #   len(pairs) = L = (n-1) + (n-2) + ... + (n-i)
+        #                  = n*i - i*(i+1)/2
+        #   ==>  -i^2 + (2i-1)*n - 2*L = 0
+        # So the quadratic formula gives i as a function of L at that point:
+        #    i = [(2*n-1) - sqrt((2*n-1)^2 - 4*2*L)]/2
+        # Since i(L) is monotone increasing, and won't reach i+1 until
+        # the next outer loop, the floor gives the i value inside the outer loop.
+        # To find j, we can subtract L from our local indices to get the index
+        # from zero of the inner loop, then add i+1
+        n = self.counts[parents_comb]
+        b = 2*n-1
+        i = self.numpy.floor((b-self.numpy.sqrt(b*b-8*local_indices))/2).astype(counts_comb.dtype)
+        j = local_indices + i*(i-b+2)//2 + 1
+
+        if add_starts:
+            starts_parents = self._starts[parents_comb]
+            i += starts_parents
+            j += starts_parents
+
+        out = JaggedArray.fromoffsets(offsets_comb, self.Table.named("tuple", i, j))
+        out._parents = parents_comb
+        return out
+
     def argdistincts(self, nested=False):
-        out = self._argpairs()
-        out["0"] = out["0"] - self._starts
-        out["1"] = out["1"] - self._starts
-        out = out[out["0"] != out["1"]]
+        out = self._argdistincts(add_starts=False)
 
         if nested:
             out = JaggedArray.fromcounts(self.numpy.maximum(0, self.counts - 1), JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
@@ -965,8 +996,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return out
 
     def distincts(self, nested=False):
-        argpairs = self._argpairs()
-        argpairs = argpairs[argpairs["0"] != argpairs["1"]]
+        argpairs = self._argdistincts(add_starts=True)
         left = argpairs._content["0"]
         right = argpairs._content["1"]
 
