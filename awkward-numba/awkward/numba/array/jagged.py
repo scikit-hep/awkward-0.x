@@ -88,13 +88,14 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
             raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
 
         # subarray with counts > 0 --> counts = 1
-        counts = (self.counts != 0).astype(self.INDEXTYPE)
+        counts = (self.counts != 0).astype(self.INDEXTYPE).reshape(-1)
         # offsets for these 0 or 1 counts (involves a cumsum)
         offsets = self.counts2offsets(counts)
         # starts and stops derived from offsets and reshaped to original starts and stops (see specification)
         starts, stops = offsets[:-1], offsets[1:]
-        starts.reshape(self._starts.shape[:-1] + (-1,))
-        stops.reshape(self._starts.shape[:-1] + (-1,))
+
+        starts = starts.reshape(self._starts.shape[:-1] + (-1,))
+        stops = stops.reshape(self._stops.shape[:-1] + (-1,))
 
         # content to fit the new offsets
         content = awkward.util.numpy.empty(offsets[-1], dtype=self.INDEXTYPE)

@@ -900,7 +900,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
                 content = recurse(data)
 
-                inputs[i] = JaggedArray(starts, stops, content)
+                inputs[i] = self.JaggedArray(starts, stops, content)
 
         for i in range(len(inputs)):
             if isinstance(inputs[i], JaggedArray):
@@ -910,11 +910,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         counts = stops - starts
         if isinstance(result, tuple):
-            return tuple(self.Methods.maybemixin(type(x), JaggedArray).fromcounts(counts, x) if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+            return tuple(self.Methods.maybemixin(type(x), self.JaggedArray).fromcounts(counts, x) if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
         elif method == "at":
             return None
         else:
-            return self.Methods.maybemixin(type(result), JaggedArray).fromcounts(counts, result)
+            return self.Methods.maybemixin(type(result), self.JaggedArray).fromcounts(counts, result)
 
     def regular(self):
         if len(self) > 0 and not (self.counts.reshape(-1)[0] == self.counts).all():
@@ -1112,7 +1112,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self._content[self._starts[0]:self._stops[-1]]
         else:
             offsets = self.counts2offsets(self.counts.reshape(-1))
-            return self._tojagged(offsets[:-1], offsets[1:], copy=False)._content
+            if len(self._starts.shape) == 1:
+                out = self
+            else:
+                out = self.JaggedArray(self._starts.reshape(-1), self._stops.reshape(-1), self._content)
+            return out._tojagged(offsets[:-1], offsets[1:], copy=False)._content
 
     def _hasjagged(self):
         return True
