@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2018, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -51,10 +51,10 @@ class UnionArray(awkward.array.base.AwkwardArray):
         if len(out._tags.reshape(-1)) > 0 and out._tags.reshape(-1).max() >= len(out._contents):
             raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(out._tags.reshape(-1).max(), len(out._contents)))
 
-        index = awkward.util.numpy.full(out._tags.shape, -1, dtype=cls.INDEXTYPE)
+        index = cls.numpy.full(out._tags.shape, -1, dtype=cls.INDEXTYPE)
         for tag, content in enumerate(out._contents):
             mask = (out._tags == tag)
-            index[mask] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(mask))
+            index[mask] = cls.numpy.arange(cls.numpy.count_nonzero(mask))
 
         out.index = index
         return out
@@ -76,26 +76,26 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     def deepcopy(self, tags=None, index=None, contents=None):
         out = self.copy(tags=tags, index=index, contents=contents)
-        out._tags = awkward.util.deepcopy(out._tags)
-        out._index = awkward.util.deepcopy(out._index)
-        out._contents = [awkward.util.deepcopy(x) for x in out._contents]            
+        out._tags = self._util_deepcopy(out._tags)
+        out._index = self._util_deepcopy(out._index)
+        out._contents = [self._util_deepcopy(x) for x in out._contents]            
         return out
 
     def empty_like(self, **overrides):
-        return self.copy(contents=[awkward.util.numpy.empty_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.empty_like(**overrides) for x in self._contents])
+        return self.copy(contents=[self.numpy.empty_like(x) if isinstance(x, self.numpy.ndarray) else x.empty_like(**overrides) for x in self._contents])
 
     def zeros_like(self, **overrides):
-        return self.copy(contents=[awkward.util.numpy.zeros_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.zeros_like(**overrides) for x in self._contents])
+        return self.copy(contents=[self.numpy.zeros_like(x) if isinstance(x, self.numpy.ndarray) else x.zeros_like(**overrides) for x in self._contents])
 
     def ones_like(self, **overrides):
-        return self.copy(contents=[awkward.util.numpy.ones_like(x) if isinstance(x, awkward.util.numpy.ndarray) else x.ones_like(**overrides) for x in self._contents])
+        return self.copy(contents=[self.numpy.ones_like(x) if isinstance(x, self.numpy.ndarray) else x.ones_like(**overrides) for x in self._contents])
 
     @property
     def issequential(self):
         self._valid()
-        for tag in awkward.util.numpy.unique(self._tags):
+        for tag in self.numpy.unique(self._tags):
             mask = self._tags == tag
-            if not awkward.util.numpy.array_equal(self._index[mask], awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(mask))):
+            if not self.numpy.array_equal(self._index[mask], self.numpy.arange(self.numpy.count_nonzero(mask))):
                 return False
         return True
 
@@ -103,16 +103,16 @@ class UnionArray(awkward.array.base.AwkwardArray):
         self._valid()
         if self.issequential:
             return {"id": ident,
-                    "call": ["awkward", self.__class__.__name__, "fromtags"],
-                    "args": [fill(self._tags, self.__class__.__name__ + ".tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"list": [fill(x, self.__class__.__name__ + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
+                    "call": ["awkward", "UnionArray", "fromtags"],
+                    "args": [fill(self._tags, "UnionArray.tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             {"list": [fill(x, "UnionArray.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
 
         else:
             return {"id": ident,
-                    "call": ["awkward", self.__class__.__name__],
-                    "args": [fill(self._tags, self.__class__.__name__ + ".tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._index, self.__class__.__name__ + ".index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"list": [fill(x, self.__class__.__name__ + ".contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
+                    "call": ["awkward", "UnionArray"],
+                    "args": [fill(self._tags, "UnionArray.tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             fill(self._index, "UnionArray.index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                             {"list": [fill(x, "UnionArray.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
 
     @property
     def tags(self):
@@ -120,8 +120,8 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @tags.setter
     def tags(self, value):
-        value = awkward.util.toarray(value, self.TAGTYPE, awkward.util.numpy.ndarray)
-        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+        value = self._util_toarray(value, self.TAGTYPE, self.numpy.ndarray)
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("tags must have integer dtype")
         if (value < 0).any():
             raise ValueError("tags must be a non-negative array")
@@ -134,8 +134,8 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @index.setter
     def index(self, value):
-        value = awkward.util.toarray(value, self.INDEXTYPE, awkward.util.numpy.ndarray)
-        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+        value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("index must have integer dtype")
         if (value < 0).any():
             raise ValueError("index must be a non-negative array")
@@ -152,7 +152,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
             iter(value)
         except TypeError:
             raise TypeError("contents must be iterable")
-        value = tuple(awkward.util.toarray(x, self.DEFAULTTYPE) for x in value)
+        value = tuple(self._util_toarray(x, self.DEFAULTTYPE) for x in value)
         if len(value) == 0:
             raise ValueError("contents must be non-empty")
         self._contents = value
@@ -162,62 +162,62 @@ class UnionArray(awkward.array.base.AwkwardArray):
     @property
     def dtype(self):
         if self._dtype is None:
-            if all(issubclass(x.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.bool_)
+            if all(issubclass(x.dtype.type, (self.numpy.bool_, self.numpy.bool)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.bool_)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.int8)
+            elif all(issubclass(x.dtype.type, (self.numpy.int8)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.int8)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.uint8)
+            elif all(issubclass(x.dtype.type, (self.numpy.uint8)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.uint8)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8, awkward.util.numpy.uint8, awkward.util.numpy.int16)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.int16)
+            elif all(issubclass(x.dtype.type, (self.numpy.int8, self.numpy.uint8, self.numpy.int16)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.int16)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8, awkward.util.numpy.uint16)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.uint16)
+            elif all(issubclass(x.dtype.type, (self.numpy.uint8, self.numpy.uint16)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.uint16)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8, awkward.util.numpy.uint8, awkward.util.numpy.int16, awkward.util.numpy.uint16, awkward.util.numpy.int32)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.int32)
+            elif all(issubclass(x.dtype.type, (self.numpy.int8, self.numpy.uint8, self.numpy.int16, self.numpy.uint16, self.numpy.int32)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.int32)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8, awkward.util.numpy.uint16, awkward.util.numpy.uint32)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.uint32)
+            elif all(issubclass(x.dtype.type, (self.numpy.uint8, self.numpy.uint16, self.numpy.uint32)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.uint32)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.int8, awkward.util.numpy.uint8, awkward.util.numpy.int16, awkward.util.numpy.uint16, awkward.util.numpy.int32, awkward.util.numpy.uint32, awkward.util.numpy.int64)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.int64)
+            elif all(issubclass(x.dtype.type, (self.numpy.int8, self.numpy.uint8, self.numpy.int16, self.numpy.uint16, self.numpy.int32, self.numpy.uint32, self.numpy.int64)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.int64)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.uint8, awkward.util.numpy.uint16, awkward.util.numpy.uint32, awkward.util.numpy.uint64)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.uint64)
+            elif all(issubclass(x.dtype.type, (self.numpy.uint8, self.numpy.uint16, self.numpy.uint32, self.numpy.uint64)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.uint64)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float16)
+            elif all(issubclass(x.dtype.type, (self.numpy.float16)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.float16)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float32)
+            elif all(issubclass(x.dtype.type, (self.numpy.float16, self.numpy.float32)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.float32)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float64)
+            elif all(issubclass(x.dtype.type, (self.numpy.float16, self.numpy.float32, self.numpy.float64)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.float64)
 
-            elif hasattr(awkward.util.numpy, "float128") and all(issubclass(x.dtype.type, (awkward.util.numpy.float16, awkward.util.numpy.float32, awkward.util.numpy.float64, awkward.util.numpy.float128)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float128)
+            elif hasattr(self.numpy, "float128") and all(issubclass(x.dtype.type, (self.numpy.float16, self.numpy.float32, self.numpy.float64, self.numpy.float128)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.float128)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.integer, awkward.util.numpy.floating)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.float64)
+            elif all(issubclass(x.dtype.type, (self.numpy.integer, self.numpy.floating)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.float64)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex64)
+            elif all(issubclass(x.dtype.type, (self.numpy.complex64)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.complex64)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex128)
+            elif all(issubclass(x.dtype.type, (self.numpy.complex64, self.numpy.complex128)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.complex128)
 
-            elif hasattr(awkward.util.numpy, "complex256") and all(issubclass(x.dtype.type, (awkward.util.numpy.complex64, awkward.util.numpy.complex128, awkward.util.numpy.complex256)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex256)
+            elif hasattr(self.numpy, "complex256") and all(issubclass(x.dtype.type, (self.numpy.complex64, self.numpy.complex128, self.numpy.complex256)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.complex256)
 
-            elif all(issubclass(x.dtype.type, (awkward.util.numpy.integer, awkward.util.numpy.floating, awkward.util.numpy.complexfloating)) for x in self._contents):
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.complex128)
+            elif all(issubclass(x.dtype.type, (self.numpy.integer, self.numpy.floating, self.numpy.complexfloating)) for x in self._contents):
+                self._dtype = self.numpy.dtype(self.numpy.complex128)
 
             else:
-                self._dtype = awkward.util.numpy.dtype(awkward.util.numpy.object_)
+                self._dtype = self.numpy.dtype(self.numpy.object_)
 
         return self._dtype
 
@@ -244,7 +244,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(self._tags.reshape(-1).max(), len(self._contents)))
 
             index = self._index[:len(self._tags)]
-            for tag in awkward.util.numpy.unique(self._tags):
+            for tag in self.numpy.unique(self._tags):
                 maxindex = index[self._tags == tag].reshape(-1).max()
                 if maxindex >= len(self._contents[tag]):
                     raise ValueError("maximum index ({0}) must be less than the length of all contents arrays ({1})".format(maxindex, len(self._contents[tag])))
@@ -269,9 +269,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def __getitem__(self, where):
         self._valid()
 
-        if awkward.util.isstringslice(where):
+        if self._util_isstringslice(where):
             contents = []
-            for tag in awkward.util.numpy.unique(self._tags):
+            for tag in self.numpy.unique(self._tags):
                 contents.append(self._contents[tag][where])
             # TODO: think about inheriting methods from contents[where]; all satisfying tags would have to have the same methods before promoting the output (generalized maybemixin?)
             if len(contents) == 0:
@@ -299,34 +299,32 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 return self.copy(tags=tags, index=index)
     
     def __setitem__(self, where, what):
-        import awkward.array.index
-
         if what.shape[:len(self._tags.shape)] != self._tags.shape:
             raise ValueError("array to assign does not have the same starting shape as tags")
 
         if isinstance(where, awkward.util.string):
-            for tag in awkward.util.numpy.unique(self._tags):
-                inverseindex = awkward.array.index.invert(self._index[:len(self._tags)][self._tags == tag])
-                self._contents[tag][where] = awkward.array.index.IndexedArray(inverseindex, what)
+            for tag in self.numpy.unique(self._tags):
+                inverseindex = self.IndexedArray.invert(self._index[:len(self._tags)][self._tags == tag])
+                self._contents[tag][where] = self.IndexedArray(inverseindex, what)
 
-        elif awkward.util.isstringslice(where):
+        elif self._util_isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
-            for tag in awkward.util.numpy.unique(self._tags):
-                inverseindex = awkward.array.index.invert(self._index[:len(self._tags)][self._tags == tag])
+            for tag in self.numpy.unique(self._tags):
+                inverseindex = self.IndexedArray.invert(self._index[:len(self._tags)][self._tags == tag])
                 for x, y in zip(where, what):
-                    self._contents[tag][x] = awkward.array.index.IndexedArray(inverseindex, y)
+                    self._contents[tag][x] = self.IndexedArray(inverseindex, y)
 
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def __delitem__(self, where):
         if isinstance(where, awkward.util.string):
-            for tag in awkward.util.numpy.unique(self._tags):
+            for tag in self.numpy.unique(self._tags):
                 del self._contents[tag][where]
 
-        elif awkward.util.isstringslice(where):
-            for tag in awkward.util.numpy.unique(self._tags):
+        elif self._util_isstringslice(where):
+            for tag in self.numpy.unique(self._tags):
                 for x in where:
                     del self._contents[tag][x]
 
@@ -334,8 +332,6 @@ class UnionArray(awkward.array.base.AwkwardArray):
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        import awkward.array.objects
-
         if "out" in kwargs:
             raise NotImplementedError("in-place operations not supported")
 
@@ -352,18 +348,18 @@ class UnionArray(awkward.array.base.AwkwardArray):
         if any(x.shape != tags[0].shape for x in tags[1:]):
             raise ValueError("cannot {0} UnionArrays because tag shapes differ".format(ufunc))
 
-        combos = awkward.util.numpy.stack(tags, axis=-1).view([(str(i), x.dtype) for i, x in enumerate(tags)]).reshape(tags[0].shape)
+        combos = self.numpy.stack(tags, axis=-1).view([(str(i), x.dtype) for i, x in enumerate(tags)]).reshape(tags[0].shape)
 
-        outtags = awkward.util.numpy.empty(tags[0].shape, dtype=self.TAGTYPE)
-        outindex = awkward.util.numpy.empty(tags[0].shape, dtype=self.INDEXTYPE)
+        outtags = self.numpy.empty(tags[0].shape, dtype=self.TAGTYPE)
+        outindex = self.numpy.empty(tags[0].shape, dtype=self.INDEXTYPE)
 
         out = None
         contents = {}
         types = {}
-        for outtag, combo in enumerate(awkward.util.numpy.unique(combos)):
+        for outtag, combo in enumerate(self.numpy.unique(combos)):
             mask = (combos == combo)
             outtags[mask] = outtag
-            outindex[mask] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(mask))
+            outindex[mask] = self.numpy.arange(self.numpy.count_nonzero(mask))
 
             result = getattr(ufunc, method)(*[x[mask] if isinstance(x, UnionArray) else x for x in inputs], **kwargs)
 
@@ -371,7 +367,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 if out is None:
                     out = list(result)
                 for i, x in enumerate(result):
-                    if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
+                    if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardArray)):
                         if i not in contents:
                             contents[i] = []
                         contents[i].append(x)
@@ -381,7 +377,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 pass
 
             else:
-                if isinstance(result, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
+                if isinstance(result, (self.numpy.ndarray, awkward.array.base.AwkwardArray)):
                     if None not in contents:
                         contents[None] = []
                     contents[None].append(result)
@@ -389,17 +385,17 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
         if out is None:
             if None in contents:
-                return awkward.array.objects.Methods.maybemixin(types[None], UnionArray)(outtags, outindex, contents[None])
+                return self.Methods.maybemixin(types[None], UnionArray)(outtags, outindex, contents[None])
             else:
                 return None
         else:
             for i in range(len(out)):
                 if i in contents:
-                    out[i] = awkward.array.objects.Methods.maybemixin(types[i], UnionArray)(outtags, outindex, contents[i])
+                    out[i] = self.Methods.maybemixin(types[i], UnionArray)(outtags, outindex, contents[i])
             return tuple(out)
 
     def _hasjagged(self):
-        return all(awkward.util._hasjagged(x) for x in self._contents)
+        return all(self._util_hasjagged(x) for x in self._contents)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         if self._hasjagged():
@@ -415,22 +411,22 @@ class UnionArray(awkward.array.base.AwkwardArray):
             return ufunc.reduce(self._prepare(identity, dtype))
 
     def _prepare(self, identity, dtype):
-        if dtype is None and issubclass(self.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
-            dtype = awkward.util.numpy.dtype(type(identity))
+        if dtype is None and issubclass(self.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+            dtype = self.numpy.dtype(type(identity))
         if dtype is None:
             dtype = self.dtype
 
         out = None
         index = self._index[:len(self._tags)]
         for tag, content in enumerate(self._contents):
-            if not isinstance(content, awkward.util.numpy.ndarray):
+            if not isinstance(content, self.numpy.ndarray):
                 content = content._prepare(identity, dtype)
 
             mask = (self._tags == tag)
             c = content[index[mask]]
 
             if out is None:
-                out = awkward.util.numpy.full(self._tags.shape[:1] + c.shape[1:], identity, dtype=dtype)
+                out = self.numpy.full(self._tags.shape[:1] + c.shape[1:], identity, dtype=dtype)
             out[mask] = c
 
         return out
@@ -439,7 +435,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def columns(self):
         out = None
         for content in self._contents:
-            if isinstance(content, awkward.util.numpy.ndarray):
+            if isinstance(content, self.numpy.ndarray):
                 return []
 
             if out is None:

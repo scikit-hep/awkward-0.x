@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2018, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -63,8 +63,8 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def deepcopy(self, mask=None, content=None):
         out = self.copy(mask=mask, content=content)
-        out._mask = awkward.util.deepcopy(out._mask)
-        out._content = awkward.util.deepcopy(out._content)
+        out._mask = self._util_deepcopy(out._mask)
+        out._content = self._util_deepcopy(out._content)
         return out
 
     def _mine(self, overrides):
@@ -74,31 +74,31 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def empty_like(self, **overrides):
         mine = self._mine(overrides)
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.empty_like(self._content), **mine)
+        if isinstance(self._content, self.numpy.ndarray):
+            return self.copy(content=self.numpy.empty_like(self._content), **mine)
         else:
             return self.copy(content=self._content.empty_like(**overrides), **mine)
 
     def zeros_like(self, **overrides):
         mine = self._mine(overrides)
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.zeros_like(self._content), **mine)
+        if isinstance(self._content, self.numpy.ndarray):
+            return self.copy(content=self.numpy.zeros_like(self._content), **mine)
         else:
             return self.copy(content=self._content.zeros_like(**overrides), **mine)
 
     def ones_like(self, **overrides):
         mine = self._mine(overrides)
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            return self.copy(content=awkward.util.numpy.ones_like(self._content), **mine)
+        if isinstance(self._content, self.numpy.ndarray):
+            return self.copy(content=self.numpy.ones_like(self._content), **mine)
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         return {"id": ident,
-                "call": ["awkward", self.__class__.__name__],
-                "args": [fill(self._mask, self.__class__.__name__ + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                "call": ["awkward", "MaskedArray"],
+                "args": [fill(self._mask, "MaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, "MaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          {"json": bool(self._maskedwhen)}]}
 
     @property
@@ -107,10 +107,10 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @mask.setter
     def mask(self, value):
-        value = awkward.util.toarray(value, self.MASKTYPE, awkward.util.numpy.ndarray)
+        value = self._util_toarray(value, self.MASKTYPE, self.numpy.ndarray)
         if len(value.shape) != 1:
             raise ValueError("mask must have 1-dimensional shape")
-        if not issubclass(value.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+        if not issubclass(value.dtype.type, (self.numpy.bool_, self.numpy.bool)):
             value = (value != 0)
         self._mask = value
         self._isvalid = False
@@ -121,7 +121,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         if maskedwhen == self._maskedwhen:
             return self._mask
         else:
-            return awkward.util.numpy.logical_not(self._mask)
+            return self.numpy.logical_not(self._mask)
 
     @property
     def ismasked(self):
@@ -137,7 +137,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, self.DEFAULTTYPE)
+        self._content = self._util_toarray(value, self.DEFAULTTYPE)
         self._isvalid = False
 
     @property
@@ -183,7 +183,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def __getitem__(self, where):
         self._valid()
 
-        if awkward.util.isstringslice(where):
+        if self._util_isstringslice(where):
             content = self._content[where]
             cls = awkward.array.objects.Methods.maybemixin(type(content), MaskedArray)
             out = cls.__new__(cls)
@@ -197,7 +197,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, awkward.util.integer):
+        if self._util_isinteger(head):
             if self._mask[head] == self._maskedwhen:
                 if tail != ():
                     raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
@@ -213,8 +213,6 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
                 return self.copy(mask=mask, content=self._content[:len(self._mask)][(head,) + tail])
         
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        import awkward.array.objects
-
         if "out" in kwargs:
             raise NotImplementedError("in-place operations not supported")
 
@@ -238,7 +236,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
                 inputs[i] = inputs[i]._content[inputs[i]._mask[tokeep]]
             elif isinstance(inputs[i], MaskedArray):
                 inputs[i] = inputs[i]._content[tokeep]
-            elif isinstance(inputs[i], (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray)):
+            elif isinstance(inputs[i], (self.numpy.ndarray, awkward.array.base.AwkwardArray)):
                 inputs[i] = inputs[i][tokeep]
             else:
                 try:
@@ -247,29 +245,29 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
                 except TypeError:
                     pass
                 else:
-                    inputs[i] = awkward.util.numpy.array(inputs[i], copy=False)[tokeep]
+                    inputs[i] = self.numpy.array(inputs[i], copy=False)[tokeep]
 
         # compute only the non-masked elements
         result = getattr(ufunc, method)(*inputs, **kwargs)
 
         # put the masked out values back
-        index = awkward.util.numpy.full(len(tokeep), -1, dtype=self.INDEXTYPE)
-        index[tokeep] = awkward.util.numpy.arange(awkward.util.numpy.count_nonzero(tokeep))
+        index = self.numpy.full(len(tokeep), -1, dtype=self.INDEXTYPE)
+        index[tokeep] = self.numpy.arange(self.numpy.count_nonzero(tokeep))
 
         if isinstance(result, tuple):
-            return tuple(awkward.array.objects.Methods.maybemixin(type(x), IndexedMaskedArray)(index, x, maskedwhen=-1) if isinstance(x, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+            return tuple(self.Methods.maybemixin(type(x), IndexedMaskedArray)(index, x, maskedwhen=-1) if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
         elif method == "at":
             return None
         else:
-            return awkward.array.objects.Methods.maybemixin(type(result), IndexedMaskedArray)(index, result, maskedwhen=-1)
+            return self.Methods.maybemixin(type(result), IndexedMaskedArray)(index, result, maskedwhen=-1)
 
     def indexed(self):
-        maskindex = awkward.util.numpy.arange(len(self), dtype=self.INDEXTYPE)
+        maskindex = self.numpy.arange(len(self), dtype=self.INDEXTYPE)
         maskindex[self.boolmask(maskedwhen=True)] = -1
         return IndexedMaskedArray(maskindex, self._content, maskedwhen=-1)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        if awkward.util._hasjagged(self._content):
+        if self._util_hasjagged(self._content):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
 
         elif isinstance(self._content, awkward.array.table.Table):
@@ -282,9 +280,9 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             return ufunc.reduce(self._prepare(identity, dtype))
 
     def _prepare(self, identity, dtype):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            if dtype is None and issubclass(self._content.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
-                dtype = awkward.util.numpy.dtype(type(identity))
+        if isinstance(self._content, self.numpy.ndarray):
+            if dtype is None and issubclass(self._content.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                dtype = self.numpy.dtype(type(identity))
             if dtype is None:
                 content = self._content
             else:
@@ -311,7 +309,7 @@ class BitMaskedArray(MaskedArray):
 
     @classmethod
     def fromboolmask(cls, mask, content, maskedwhen=True, lsborder=False):
-        return BitMaskedArray(BitMaskedArray.bool2bit(mask, lsborder=lsborder), content, maskedwhen=maskedwhen, lsborder=lsborder)
+        return cls(cls.bool2bit(mask, lsborder=lsborder), content, maskedwhen=maskedwhen, lsborder=lsborder)
         
     def copy(self, mask=None, content=None, maskedwhen=None, lsborder=None):
         out = super(BitMaskedArray, self).copy(mask=mask, content=content, maskedwhen=maskedwhen)
@@ -329,9 +327,9 @@ class BitMaskedArray(MaskedArray):
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         return {"id": ident,
-                "call": ["awkward", self.__class__.__name__],
-                "args": [fill(self._mask, self.__class__.__name__ + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                "call": ["awkward", "BitMaskedArray"],
+                "args": [fill(self._mask, "BitMaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, "BitMaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          {"json": bool(self._maskedwhen)},
                          {"json": bool(self._lsborder)}]}
 
@@ -341,7 +339,7 @@ class BitMaskedArray(MaskedArray):
 
     @mask.setter
     def mask(self, value):
-        value = awkward.util.toarray(value, self.BITMASKTYPE, awkward.util.numpy.ndarray)
+        value = self._util_toarray(value, self.BITMASKTYPE, self.numpy.ndarray)
         if len(value.shape) != 1:
             raise ValueError("mask must have 1-dimensional shape")
         self._mask = value.view(self.BITMASKTYPE)
@@ -354,26 +352,26 @@ class BitMaskedArray(MaskedArray):
     def _ceildiv8(x):
         return -(-x >> 3)   # this is int(math.ceil(x / 8))
 
-    @staticmethod
-    def bit2bool(bitmask, lsborder=False):
-        out = awkward.util.numpy.unpackbits(bitmask)
+    @classmethod
+    def bit2bool(cls, bitmask, lsborder=False):
+        out = cls.numpy.unpackbits(bitmask)
         if lsborder:
             out = out.reshape(-1, 8)[:,::-1].reshape(-1)
-        return out.view(MaskedArray.MASKTYPE)
+        return out.view(cls.MASKTYPE)
         
-    @staticmethod
-    def bool2bit(boolmask, lsborder=False):
-        boolmask = awkward.util.toarray(boolmask, MaskedArray.MASKTYPE, awkward.util.numpy.ndarray)
+    @classmethod
+    def bool2bit(cls, boolmask, lsborder=False):
+        boolmask = cls._util_toarray(boolmask, cls.MaskedArray.fget(None).MASKTYPE, cls.numpy.ndarray)
         if len(boolmask.shape) != 1:
             raise ValueError("boolmask must have 1-dimensional shape")
-        if not issubclass(boolmask.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+        if not issubclass(boolmask.dtype.type, (cls.numpy.bool_, cls.numpy.bool)):
             boolmask = (boolmask != 0)
 
         if lsborder:
             # maybe pad the length for reshape
-            length = BitMaskedArray._ceildiv8(len(boolmask)) * 8
+            length = cls._ceildiv8(len(boolmask)) * 8
             if length != len(boolmask):
-                out = awkward.util.numpy.empty(length, dtype=boolmask.dtype)
+                out = cls.numpy.empty(length, dtype=boolmask.dtype)
                 out[:len(boolmask)] = boolmask
             else:
                 out = boolmask
@@ -385,7 +383,7 @@ class BitMaskedArray(MaskedArray):
             # numpy.packbits encodes as msb (most significant bit); already in the right order
             out = boolmask
 
-        return awkward.util.numpy.packbits(out)
+        return cls.numpy.packbits(out)
 
     def boolmask(self, maskedwhen=None):
         if maskedwhen is None:
@@ -393,7 +391,7 @@ class BitMaskedArray(MaskedArray):
         if maskedwhen == self._maskedwhen:
             bitmask = self._mask
         else:
-            bitmask = awkward.util.numpy.bitwise_not(self._mask)
+            bitmask = self.numpy.bitwise_not(self._mask)
         return self.bit2bool(bitmask, lsborder=self._lsborder)[:len(self._content)]
 
     @property
@@ -416,8 +414,8 @@ class BitMaskedArray(MaskedArray):
             self._checkiter()
         self._valid()
 
-        one = awkward.util.numpy.uint8(1)
-        zero = awkward.util.numpy.uint8(0)
+        one = self.numpy.uint8(1)
+        zero = self.numpy.uint8(0)
         mask = self._mask
         content = self._content
         lencontent = len(content)
@@ -426,7 +424,7 @@ class BitMaskedArray(MaskedArray):
 
         if self._lsborder:
             byte = i = 0
-            bit = start = awkward.util.numpy.uint8(1)
+            bit = start = self.numpy.uint8(1)
             while i < lencontent:
                 if ((mask[byte] & bit) != 0) == self._maskedwhen:
                     yield masked
@@ -440,7 +438,7 @@ class BitMaskedArray(MaskedArray):
 
         else:
             byte = i = 0
-            bit = start = awkward.util.numpy.uint8(128)
+            bit = start = self.numpy.uint8(128)
             while i < lencontent:
                 if ((mask[byte] & bit) != 0) == self._maskedwhen:
                     yield masked
@@ -453,15 +451,15 @@ class BitMaskedArray(MaskedArray):
                 i += 1
 
     def _maskat(self, where):
-        bytepos = awkward.util.numpy.right_shift(where, 3)    # where // 8
+        bytepos = self.numpy.right_shift(where, 3)    # where // 8
         bitpos  = where - 8*bytepos                           # where % 8
 
         if self._lsborder:
-            bitmask = awkward.util.numpy.left_shift(1, bitpos)
+            bitmask = self.numpy.left_shift(1, bitpos)
         else:
-            bitmask = awkward.util.numpy.right_shift(128, bitpos)
+            bitmask = self.numpy.right_shift(128, bitpos)
 
-        if isinstance(bitmask, awkward.util.numpy.ndarray):
+        if isinstance(bitmask, self.numpy.ndarray):
             bitmask = bitmask.astype(self.BITMASKTYPE)
         else:
             bitmask = self.BITMASKTYPE.type(bitmask)
@@ -469,24 +467,24 @@ class BitMaskedArray(MaskedArray):
         return bytepos, bitmask
 
     def _maskwhere(self, where):
-        if isinstance(where, awkward.util.integer):
+        if self._util_isinteger(where):
             bytepos, bitmask = self._maskat(where)
-            return awkward.util.numpy.bitwise_and(self._mask[bytepos], bitmask) != 0
+            return self.numpy.bitwise_and(self._mask[bytepos], bitmask) != 0
 
         elif isinstance(where, slice):
             # assumes a small slice; for a big slice, it could be faster to unpack the whole mask
-            return self._maskwhere(awkward.util.numpy.arange(*where.indices(len(self._content))))
+            return self._maskwhere(self.numpy.arange(*where.indices(len(self._content))))
 
         else:
-            where = awkward.util.numpy.array(where, copy=False)
-            if len(where.shape) == 1 and issubclass(where.dtype.type, awkward.util.numpy.integer):
+            where = self.numpy.array(where, copy=False)
+            if len(where.shape) == 1 and self._util_isintegertype(where.dtype.type):
                 byteposes, bitmasks = self._maskat(where)
-                awkward.util.numpy.bitwise_and(bitmasks, self._mask[byteposes], bitmasks)
-                return bitmasks.astype(awkward.util.numpy.bool_)
+                self.numpy.bitwise_and(bitmasks, self._mask[byteposes], bitmasks)
+                return bitmasks.astype(self.numpy.bool_)
         
-            elif len(where.shape) == 1 and issubclass(where.dtype.type, (awkward.util.numpy.bool, awkward.util.numpy.bool_)):
+            elif len(where.shape) == 1 and issubclass(where.dtype.type, (self.numpy.bool, self.numpy.bool_)):
                 # scales with the size of the mask anyway, so go ahead and unpack the whole mask
-                unpacked = awkward.util.numpy.unpackbits(self._mask).view(self.MASKTYPE)
+                unpacked = self.numpy.unpackbits(self._mask).view(self.MASKTYPE)
 
                 if self._lsborder:
                     unpacked = unpacked.reshape(-1, 8)[:,::-1].reshape(-1)[:len(where)]
@@ -501,7 +499,7 @@ class BitMaskedArray(MaskedArray):
     def __getitem__(self, where):
         self._valid()
 
-        if awkward.util.isstringslice(where):
+        if self._util_isstringslice(where):
             content = self._content[where]
             cls = awkward.array.objects.Methods.maybemixin(type(content), BitMaskedArray)
             out = cls.__new__(cls)
@@ -515,7 +513,7 @@ class BitMaskedArray(MaskedArray):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, awkward.util.integer):
+        if self._util_isinteger(head):
             if self._maskwhere(head) == self._maskedwhen:
                 if tail != ():
                     raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
@@ -558,9 +556,9 @@ class IndexedMaskedArray(MaskedArray):
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         return {"id": ident,
-                "call": ["awkward", self.__class__.__name__],
-                "args": [fill(self._mask, self.__class__.__name__ + ".mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, self.__class__.__name__ + ".content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                "call": ["awkward", "IndexedMaskedArray"],
+                "args": [fill(self._mask, "IndexedMaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                         fill(self._content, "IndexedMaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
                          {"json": int(self._maskedwhen)}]}
 
     @property
@@ -569,8 +567,8 @@ class IndexedMaskedArray(MaskedArray):
 
     @mask.setter
     def mask(self, value):
-        value = awkward.util.toarray(value, self.INDEXTYPE, awkward.util.numpy.ndarray)
-        if not issubclass(value.dtype.type, awkward.util.numpy.integer):
+        value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
+        if not self._util_isintegertype(value.dtype.type):
             raise TypeError("starts must have integer dtype")
         if len(value.shape) != 1:
             raise ValueError("mask must have 1-dimensional shape")
@@ -583,7 +581,7 @@ class IndexedMaskedArray(MaskedArray):
 
     @content.setter
     def content(self, value):
-        self._content = awkward.util.toarray(value, self.DEFAULTTYPE)
+        self._content = self._util_toarray(value, self.DEFAULTTYPE)
         self._isvalid = False
 
     @property
@@ -592,7 +590,7 @@ class IndexedMaskedArray(MaskedArray):
 
     @maskedwhen.setter
     def maskedwhen(self, value):
-        if not isinstance(value, awkward.util.integer):
+        if not self._util_isinteger(value):
             raise TypeError("maskedwhen must be an integer for IndexedMaskedArray")
         self._maskedwhen = value
 
@@ -637,7 +635,7 @@ class IndexedMaskedArray(MaskedArray):
     def __getitem__(self, where):
         self._valid()
 
-        if awkward.util.isstringslice(where):
+        if self._util_isstringslice(where):
             content = self._content[where]
             cls = awkward.array.objects.Methods.maybemixin(type(content), IndexedMaskedArray)
             out = cls.__new__(cls)
@@ -651,7 +649,7 @@ class IndexedMaskedArray(MaskedArray):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, awkward.util.integer):
+        if self._util_isinteger(head):
             maskindex = self._mask[head]
             if maskindex == self._maskedwhen:
                 if tail != ():
@@ -671,9 +669,9 @@ class IndexedMaskedArray(MaskedArray):
         return self
 
     def _prepare(self, identity, dtype):
-        if isinstance(self._content, awkward.util.numpy.ndarray):
-            if dtype is None and issubclass(self._content.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
-                dtype = awkward.util.numpy.dtype(type(identity))
+        if isinstance(self._content, self.numpy.ndarray):
+            if dtype is None and issubclass(self._content.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                dtype = self.numpy.dtype(type(identity))
             if dtype is None:
                 content = self._content
             else:
@@ -681,6 +679,6 @@ class IndexedMaskedArray(MaskedArray):
         else:
             content = self._content._prepare(identity, dtype)
 
-        out = awkward.util.numpy.full(self._mask.shape + content.shape[1:], identity, dtype=content.dtype)
+        out = self.numpy.full(self._mask.shape + content.shape[1:], identity, dtype=content.dtype)
         out[self.isunmasked] = content[self.mask[self.mask >= 0]]
         return out

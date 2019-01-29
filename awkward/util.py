@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2018, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -28,14 +28,12 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import ast
 import itertools
-import numbers
-import re
 import sys
-import types
 from collections import OrderedDict
-    
+
+import numpy
+
 if sys.version_info[0] <= 2:
     izip = itertools.izip
     string = basestring
@@ -45,28 +43,13 @@ else:
     string = str
     unicode = str
 
-def isidentifier(x):
-    if not isinstance(x, string):
-        return False
+# FIXME: this goes away once everything starts depending on 0.8.0
+frombuffer = numpy.frombuffer
 
-    if sys.version_info[0] <= 2:
-        try:
-            node = ast.parse(x)
-        except SyntaxError:
-            return False
-        else:
-            return isinstance(node, ast.Module) and len(node.body) == 1 and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Name) and node.body[0].value.id == x
-
-    else:
-        return x.isidentifier()
-
-def isintstring(x):
-    return isinstance(x, string) and isintstring._pattern.match(x) is not None
-isintstring._pattern = re.compile("^(0|[1-9]+[0-9]*)$")
-
-def is_intstring(x):
-    return isinstance(x, string) and is_intstring._pattern.match(x) is not None
-is_intstring._pattern = re.compile("^_(0|[1-9]+[0-9]*)$")
+# FIXME: this goes away once everything starts depending on 0.8.0
+def toarray(value, defaultdtype, passthrough=None):
+    import awkward.array.base
+    return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
 
 class bothmethod(object):
     def __init__(self, fcn):
@@ -78,129 +61,6 @@ class bothmethod(object):
             return lambda *args, **kwargs: self.fcn(False, ins, *args, **kwargs)
 
 ################################################################ array helpers
-
-import distutils.version
-import numpy   # all access to Numpy passes through here
-if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVersion("1.13.1"):
-    raise ImportError("Numpy 1.13.1 or later required")
-
-integer = (numbers.Integral, numpy.integer)
-
-frombuffer = numpy.frombuffer
-
-def toarray(value, defaultdtype, passthrough=None):
-    import awkward.array.base
-    if passthrough is None:
-        passthrough = (numpy.ndarray, awkward.array.base.AwkwardArray)
-    if isinstance(value, passthrough):
-        return value
-    else:
-        try:
-            return numpy.frombuffer(value, dtype=getattr(value, "dtype", defaultdtype)).reshape(getattr(value, "shape", -1))
-        except AttributeError:
-            if len(value) == 0:
-                return numpy.array(value, dtype=defaultdtype, copy=False)
-            else:
-                return numpy.array(value, copy=False)
-
-def _draw(x):
-    if isinstance(x, list):
-        if len(x) > 6:
-            return "[" + " ".join(_draw(y) for y in x[:3]) + " ... " + " ".join(_draw(y) for y in x[-3:]) + "]"
-        else:
-            return "[" + " ".join(_draw(y) for y in x) + "]"
-    elif isinstance(x, tuple):
-        return "(" + ", ".join(_draw(y) for y in x) + ")"
-    else:
-        return repr(x)
-
-def array_str(array):
-    import awkward.array.base
-    if isinstance(array, numpy.ndarray):
-        return _draw(array.tolist())
-    elif isinstance(array, awkward.array.base.AwkwardArray):
-        return str(array).replace("\n", "")
-    else:
-        return repr(array)
-
-def isnumpy(dtype):
-    if isinstance(dtype, numpy.dtype):
-        return True
-    else:
-        return dtype.isnumpy
-
-def deepcopy(array):
-    if array is None:
-        return None
-    elif isinstance(array, numpy.ndarray):
-        return array.copy()
-    else:
-        return array.deepcopy()
-
-def _valid(array, seen):
-    import awkward.array.base
-    if isinstance(array, awkward.array.base.AwkwardArray):
-        array._valid(seen)
-
-def _hasjagged(array):
-    import awkward.array.base
-    return isinstance(array, awkward.array.base.AwkwardArray) and array._hasjagged()
-
-def _reduce(array, ufunc, identity, dtype, regularaxis):
-    import awkward.array.base
-
-    if isinstance(array, awkward.array.base.AwkwardArray):
-        return array._reduce(ufunc, identity, dtype, regularaxis)
-
-    elif len(array) == 0:
-        if dtype is None:
-            dtype = array.dtype
-        return ufunc.reduce(numpy.full((1,) + array.shape[1:], identity, dtype=dtype), axis=regularaxis)
-
-    else:
-        original = array
-        if dtype is not None:
-            array = numpy.array(array, dtype=dtype, copy=False)
-        if issubclass(array.dtype.type, (numpy.floating, numpy.complexfloating)):
-            mask = numpy.isnan(array)
-            if mask.any():
-                if array is original:
-                    array = array.copy()
-                array[mask] = identity
-        return ufunc.reduce(array, axis=regularaxis)
-
-def concatenate(arrays):
-    if all(isinstance(x, numpy.ndarray) for x in arrays):
-        return numpy.concatenate(arrays)
-    else:
-        return arrays[0].concatenate(arrays[1:])
-
-def isstringslice(where):
-    import awkward.array.base
-    if isinstance(where, string):
-        return True
-    elif isinstance(where, tuple):
-        return False
-    elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)) and issubclass(where.dtype.type, (numpy.str, numpy.str_)):
-        return True
-    elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)) and issubclass(where.dtype.type, (numpy.object, numpy.object_)) and not issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
-        return len(where) > 0 and all(isinstance(x, string) for x in where)
-    elif isinstance(where, (numpy.ndarray, awkward.array.base.AwkwardArray)):
-        return False
-    try:
-        assert len(where) > 0 and all(isinstance(x, string) for x in where)
-    except (TypeError, AssertionError):
-        return False
-    else:
-        return True
-
-def iscomparison(ufunc):
-    return (ufunc is numpy.less or
-            ufunc is numpy.less_equal or
-            ufunc is numpy.equal or
-            ufunc is numpy.not_equal or
-            ufunc is numpy.greater or
-            ufunc is numpy.greater_equal)
 
 try:
     NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin

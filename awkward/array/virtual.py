@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2018, DIANA-HEP
+# Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -105,27 +105,27 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def deepcopy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, persistvirtual=None):
         out = self.copy(generator=generator, args=arge, kwargs=kwargs, cache=cache, persistentkey=persistentkey, type=type, persistvirtual=persistvirtual)
-        out._array = awkward.util.deepcopy(out._array)
+        out._array = self._util_deepcopy(out._array)
         if out._setitem is not None:
             for n in list(out._setitem):
-                out._setitem[n] = awkward.util.deepcopy(out._setitem[n])
+                out._setitem[n] = self._util_deepcopy(out._setitem[n])
         return out
 
     def empty_like(self, **overrides):
-        if isinstance(self.array, awkward.util.numpy.ndarray):
-            return awkward.util.numpy.empty_like(array)
+        if isinstance(self.array, self.numpy.ndarray):
+            return self.numpy.empty_like(array)
         else:
             return self.array.empty_like(**overrides)
 
     def zeros_like(self, **overrides):
-        if isinstance(self.array, awkward.util.numpy.ndarray):
-            return awkward.util.numpy.zeros_like(array)
+        if isinstance(self.array, self.numpy.ndarray):
+            return self.numpy.zeros_like(array)
         else:
             return self.array.zeros_like(**overrides)
 
     def ones_like(self, **overrides):
-        if isinstance(self.array, awkward.util.numpy.ndarray):
-            return awkward.util.numpy.ones_like(array)
+        if isinstance(self.array, self.numpy.ndarray):
+            return self.numpy.ones_like(array)
         else:
             return self.array.ones_like(**overrides)
 
@@ -134,10 +134,10 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         
         if self._persistvirtual:
             out = {"id": ident,
-                   "call": ["awkward", self.__class__.__name__],
-                   "args": [fill(self._generator, self.__class__.__name__ + ".generator", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                            {"tuple": [fill(x, self.__class__.__name__ + ".args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
-                            {"dict": {n: fill(x, self.__class__.__name__ + ".kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}],
+                   "call": ["awkward", "VirtualArray"],
+                   "args": [fill(self._generator, "VirtualArray.generator", prefix, suffix, schemasuffix, storage, compression, **kwargs),
+                            {"tuple": [fill(x, "VirtualArray.args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
+                            {"dict": {n: fill(x, "VirtualArray.kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}],
                    "cacheable": True}
             others = {}
             if self._persistentkey is not None:
@@ -153,7 +153,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             return out
 
         else:
-            return fill(self.array, self.__class__.__name__ + ".array", prefix, suffix, schemasuffix, storage, compression, **kwargs)
+            return fill(self.array, "VirtualArray.array", prefix, suffix, schemasuffix, storage, compression, **kwargs)
 
     @property
     def generator(self):
@@ -212,7 +212,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @persistvirtual.setter
     def persistvirtual(self, value):
-        if not isinstance(value, (bool, awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+        if not isinstance(value, (bool, self.numpy.bool_, self.numpy.bool)):
             raise TypeError("persistvirtual must be boolean")
         self._persistvirtual = bool(value)
 
@@ -289,12 +289,12 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     @property
     def ismaterialized(self):
         if self._cache is None:
-            return isinstance(self._array, (awkward.util.numpy.ndarray, awkward.array.base.AwkwardArray))
+            return isinstance(self._array, (self.numpy.ndarray, awkward.array.base.AwkwardArray))
         else:
             return self._array is not None and self._array in self._cache
 
     def materialize(self):
-        array = awkward.util.toarray(self._generator(*self._args, **self._kwargs), self.DEFAULTTYPE)
+        array = self._util_toarray(self._generator(*self._args, **self._kwargs), self.DEFAULTTYPE)
         if self._setitem is not None:
             for n, x in self._setitem.items():
                 array[n] = x
@@ -334,7 +334,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def __array__(self, *args, **kwargs):
         self._checktonumpy()
-        return awkward.util.numpy.array(self.array, *args, **kwargs)
+        return self.numpy.array(self.array, *args, **kwargs)
 
     def __getitem__(self, where):
         return self.array[where]
@@ -374,16 +374,16 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         return getattr(ufunc, method)(*inputs, **kwargs)
 
     def _hasjagged(self):
-        return awkward.util._hasjagged(self.array)
+        return self._util_hasjagged(self.array)
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
-        return awkward.util._reduce(self.array, ufunc, identity, dtype, regularaxis)
+        return self._util_reduce(self.array, ufunc, identity, dtype, regularaxis)
 
     def _prepare(self, identity, dtype):
         array = self.array
-        if isinstance(array, awkward.util.numpy.ndarray):
-            if dtype is None and issubclass(array.dtype.type, (awkward.util.numpy.bool_, awkward.util.numpy.bool)):
-                dtype = awkward.util.numpy.dtype(type(identity))
+        if isinstance(array, self.numpy.ndarray):
+            if dtype is None and issubclass(array.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                dtype = self.numpy.dtype(type(identity))
             if dtype is None:
                 return array
             else:
