@@ -42,12 +42,13 @@ try:
 except ImportError:
     from collections import Mapping, MutableMapping
 
+import numpy
+
 import awkward.type
-import awkward.util
 import awkward.version
 
 compression = [
-    {"minsize": 8192, "types": [awkward.util.numpy.bool_, awkward.util.numpy.bool, awkward.util.numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
+    {"minsize": 8192, "types": [numpy.bool_, numpy.bool, numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
     ]
 
 partner = {
@@ -102,7 +103,7 @@ def json2dtype(obj):
             return [recurse(x) for x in obj]
         else:
             return obj
-    return awkward.util.numpy.dtype(recurse(obj))
+    return numpy.dtype(recurse(obj))
 
 def type2json(obj):
     if isinstance(obj, awkward.type.Type):
@@ -145,7 +146,7 @@ def type2json(obj):
                 else:
                     return out
 
-        elif isinstance(obj, awkward.util.numpy.dtype):
+        elif isinstance(obj, numpy.dtype):
             return {"dtype": dtype2json(obj)}
 
         elif callable(obj):
@@ -229,13 +230,13 @@ def jsonable(obj):
     elif isinstance(obj, str):
         return str(obj)
 
-    elif isinstance(obj, (bool, awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+    elif isinstance(obj, (bool, numpy.bool_, numpy.bool)):
         return bool(obj)      # policy: eliminate Numpy types
 
-    elif isinstance(obj, (numbers.Integral, awkward.util.numpy.integer)):
+    elif isinstance(obj, (numbers.Integral, numpy.integer)):
         return int(obj)       # policy: eliminate Numpy types
 
-    elif isinstance(obj, (numbers.Real, awkward.util.numpy.floating)) and awkward.util.numpy.isfinite(obj):
+    elif isinstance(obj, (numbers.Real, numpy.floating)) and numpy.isfinite(obj):
         return float(obj)     # policy: eliminate Numpy types
 
     else:
@@ -301,12 +302,12 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
         ident = len(seen)
         seen[id(obj)] = ident
 
-        if type(obj) is awkward.util.numpy.dtype:
+        if type(obj) is numpy.dtype:
             return {"dtype": dtype2json(obj)}
 
-        elif type(obj) is awkward.util.numpy.ndarray and len(obj.shape) != 0:
+        elif type(obj) is numpy.ndarray and len(obj.shape) != 0:
             if len(obj.shape) > 1:
-                dtype = awkward.util.numpy.dtype((obj.dtype, obj.shape[1:]))
+                dtype = numpy.dtype((obj.dtype, obj.shape[1:]))
             else:
                 dtype = obj.dtype
 
@@ -376,7 +377,7 @@ def deserialize(storage, name="", awkwardlib="awkward", whitelist=whitelist, cac
     import awkward.array.virtual
 
     schema = storage[name]
-    if isinstance(schema, awkward.util.numpy.ndarray):
+    if isinstance(schema, numpy.ndarray):
         schema = schema.tostring()
     if isinstance(schema, bytes):
         schema = schema.decode("ascii")
@@ -462,7 +463,7 @@ def deserialize(storage, name="", awkwardlib="awkward", whitelist=whitelist, cac
 
 def keys(storage, name="", subschemas=True):
     schema = storage[name]
-    if isinstance(schema, awkward.util.numpy.ndarray):
+    if isinstance(schema, numpy.ndarray):
         schema = schema.tostring()
     if isinstance(schema, bytes):
         schema = schema.decode("ascii")
@@ -646,7 +647,7 @@ class hdf5(MutableMapping):
             def __getitem__(self, where):
                 return self.g[where][()]
             def __setitem__(self, where, what):
-                self.g[where] = awkward.util.numpy.frombuffer(what, dtype=awkward.util.numpy.uint8)
+                self.g[where] = numpy.frombuffer(what, dtype=numpy.uint8)
 
         self._group = Wrap()
 
