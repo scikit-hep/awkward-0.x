@@ -47,6 +47,7 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install h5py ; fi
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install numba ; ln -s ../awkward-numba/awkward/numba awkward/numba ; fi
   - export AWKWARD_DEPLOYMENT=base
+  - pip install --upgrade pyOpenSSL     # for deployment
 
 notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
