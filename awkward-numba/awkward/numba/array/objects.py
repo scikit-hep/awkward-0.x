@@ -31,11 +31,11 @@
 import awkward.array.objects
 from .base import NumbaMethods
 
-class MethodsNumba(awkward.array.objects.Methods, NumbaMethods):
+class MethodsNumba(NumbaMethods, awkward.array.objects.Methods):
     pass
 
-class ObjectArrayNumba(awkward.array.objects.ObjectArray, NumbaMethods):
+class ObjectArrayNumba(NumbaMethods, awkward.array.objects.ObjectArray):
     pass
 
-class StringArrayNumba(awkward.array.objects.StringArray, NumbaMethods):
+class StringArrayNumba(NumbaMethods, awkward.array.objects.StringArray):
     pass

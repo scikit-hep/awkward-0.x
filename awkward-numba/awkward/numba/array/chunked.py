@@ -31,8 +31,8 @@
 import awkward.array.chunked
 from .base import NumbaMethods
 
-class ChunkedArrayNumba(awkward.array.chunked.ChunkedArray, NumbaMethods):
+class ChunkedArrayNumba(NumbaMethods, awkward.array.chunked.ChunkedArray):
     pass
 
-class AppendableArrayNumba(awkward.array.chunked.AppendableArray, NumbaMethods):
+class AppendableArrayNumba(NumbaMethods, awkward.array.chunked.AppendableArray):
     pass

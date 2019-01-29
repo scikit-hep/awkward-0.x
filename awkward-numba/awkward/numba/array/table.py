@@ -31,5 +31,5 @@
 import awkward.array.table
 from .base import NumbaMethods
 
-class TableNumba(awkward.array.table.Table, NumbaMethods):
+class TableNumba(NumbaMethods, awkward.array.table.Table):
     pass

@@ -31,5 +31,5 @@
 import awkward.array.virtual
 from .base import NumbaMethods
 
-class VirtualArrayNumba(awkward.array.virtual.VirtualArray, NumbaMethods):
+class VirtualArrayNumba(NumbaMethods, awkward.array.virtual.VirtualArray):
     pass

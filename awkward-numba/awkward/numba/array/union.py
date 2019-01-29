@@ -31,5 +31,5 @@
 import awkward.array.union
 from .base import NumbaMethods
 
-class UnionArrayNumba(awkward.array.union.UnionArray, NumbaMethods):
+class UnionArrayNumba(NumbaMethods, awkward.array.union.UnionArray):
     pass

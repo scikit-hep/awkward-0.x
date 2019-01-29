@@ -31,8 +31,8 @@
 import awkward.array.indexed
 from .base import NumbaMethods
 
-class IndexedArrayNumba(awkward.array.indexed.IndexedArray, NumbaMethods):
+class IndexedArrayNumba(NumbaMethods, awkward.array.indexed.IndexedArray):
     pass
 
-class SparseArrayNumba(awkward.array.indexed.SparseArray, NumbaMethods):
+class SparseArrayNumba(NumbaMethods, awkward.array.indexed.SparseArray):
     pass

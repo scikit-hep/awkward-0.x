@@ -71,7 +71,7 @@ def _argminmax_fillmax(starts, stops, content, output):
             output[k] = bestj
             k += 1
 
-class JaggedArrayNumba(awkward.array.jagged.JaggedArray, NumbaMethods):
+class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     @classmethod
     def offsets2parents(cls, offsets):
         if len(offsets) == 0:
