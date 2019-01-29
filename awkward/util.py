@@ -51,6 +51,15 @@ def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
     return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
 
+def awkwardlib(awkwardlib):
+    if awkwardlib is None:
+        import awkward
+        return awkward
+    elif isinstance(awkwardlib, str):
+        return importlib.import_module(awkwardlib)
+    else:
+        return awkwardlib
+
 class bothmethod(object):
     def __init__(self, fcn):
         self.fcn = fcn
