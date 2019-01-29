@@ -30,6 +30,9 @@
 
 import math
 import numbers
+from collections import OrderedDict
+
+import numpy
 
 import awkward.util
 
@@ -133,7 +136,7 @@ class Type(object):
 
         elif isinstance(x, TableType):
             seen[id(x)] = TableType.__new__(TableType)
-            seen[id(x)]._fields = awkward.util.OrderedDict()
+            seen[id(x)]._fields = OrderedDict()
             for n, y in x._fields.items():
                 seen[id(x)]._fields[n] = Type._copy(y, seen)
             return seen[id(x)]
@@ -159,7 +162,7 @@ class Type(object):
             # apply string-integer commutation so that TableTypes are nested as deeply as possible
             if isinstance(x, TableType) and len(x._fields) > 0 and all(isinstance(y, ArrayType) for y in x._fields.values()):
                 newtable = TableType.__new__(TableType)
-                newtable._fields = awkward.util.OrderedDict()
+                newtable._fields = OrderedDict()
                 first = None
                 for n, y in x._fields.items():
                     if first is None:
@@ -214,10 +217,10 @@ class Type(object):
 
     @staticmethod
     def _finaltype(x):
-        if isinstance(x, type) and issubclass(x, (numbers.Number, awkward.util.numpy.generic)):
-            return awkward.util.numpy.dtype(x)
+        if isinstance(x, type) and issubclass(x, (numbers.Number, numpy.generic)):
+            return numpy.dtype(x)
         elif isinstance(x, (awkward.util.unicode, bytes)):
-            return awkward.util.numpy.dtype(x)
+            return numpy.dtype(x)
         else:
             return x
 
@@ -228,7 +231,7 @@ class ArrayType(Type):
 
         elif isinstance(args[0], awkward.util.string):
             self.__class__ = TableType
-            self._fields = awkward.util.OrderedDict()
+            self._fields = OrderedDict()
             if len(args) == 2:
                 self[args[0]] = args[1]
             else:
@@ -247,7 +250,7 @@ class ArrayType(Type):
 
     @takes.setter
     def takes(self, value):
-        if value == awkward.util.numpy.inf or (isinstance(value, (numbers.Integral, awkward.util.numpy.integer)) and value >= 0):
+        if value == numpy.inf or (isinstance(value, (numbers.Integral, numpy.integer)) and value >= 0):
             self._takes = value
         else:
             raise ValueError("{0} is not allowed in type specification".format(value))
@@ -265,10 +268,10 @@ class ArrayType(Type):
 
     @property
     def shape(self):
-        if self._takes == awkward.util.numpy.inf:
+        if self._takes == numpy.inf:
             return ()
 
-        elif isinstance(self._to, (Type, awkward.util.numpy.dtype)):
+        elif isinstance(self._to, (Type, numpy.dtype)):
             return (self._takes,) + self._to.shape
 
         else:
@@ -276,28 +279,28 @@ class ArrayType(Type):
 
     @property
     def dtype(self):
-        if self._takes == awkward.util.numpy.inf:
-            return awkward.util.numpy.dtype(object)
+        if self._takes == numpy.inf:
+            return numpy.dtype(object)
 
         elif isinstance(self._to, Type):
             return self._to.dtype
 
-        elif isinstance(self._to, awkward.util.numpy.dtype):
+        elif isinstance(self._to, numpy.dtype):
             if self._to.subdtype is None:
                 return self._to
             else:
                 return self._to.subdtype[0]
 
         else:
-            return awkward.util.numpy.dtype(object)
+            return numpy.dtype(object)
 
     def _isnumpy(self, seen):
         if id(self) in seen:
             return False
         seen.add(id(self))
-        if self._takes == awkward.util.numpy.inf:
+        if self._takes == numpy.inf:
             return False
-        elif isinstance(self._to, awkward.util.numpy.dtype):
+        elif isinstance(self._to, numpy.dtype):
             return True
         else:
             return self._to._isnumpy(seen)
@@ -306,9 +309,9 @@ class ArrayType(Type):
         if id(self) in seen:
             return False
         seen.add(id(self))
-        if isinstance(self._to, awkward.util.numpy.dtype) and self._to.names is None:
+        if isinstance(self._to, numpy.dtype) and self._to.names is None:
             return False
-        elif isinstance(self._to, awkward.util.numpy.dtype):
+        elif isinstance(self._to, numpy.dtype):
             return name in self._to.names
         else:
             return self._to._hascolumn(name, seen)
@@ -350,7 +353,7 @@ class ArrayType(Type):
 
 class TableType(Type):
     def __init__(self, **fields):
-        self._fields = awkward.util.OrderedDict()
+        self._fields = OrderedDict()
         for n, x in fields.items():
             self._fields[n] = x
 
@@ -364,11 +367,11 @@ class TableType(Type):
         for n, x in self._fields.items():
             if x.shape != ():
                 raise TypeError("Table with non-primitive fields has no Numpy dtype")
-            elif isinstance(x, awkward.util.numpy.dtype):
+            elif isinstance(x, numpy.dtype):
                 out.append((n, x))
             else:
                 out.append((n, x.dtype))
-        return awkward.util.numpy.dtype(out)
+        return numpy.dtype(out)
 
     @property
     def columns(self):
@@ -379,7 +382,7 @@ class TableType(Type):
             return False
         seen.add(id(self))
         for x in self._fields.values():
-            if isinstance(x, awkward.util.numpy.dtype):
+            if isinstance(x, numpy.dtype):
                 return True
             elif not isinstance(x, OptionType) and x._isnumpy(seen):
                 return x.shape != ()
@@ -406,7 +409,7 @@ class TableType(Type):
 
     def __and__(self, other):
         out = TableType.__new__(TableType)
-        out._fields = awkward.util.OrderedDict(list(self._fields.items()) + list(other._fields.items()))
+        out._fields = OrderedDict(list(self._fields.items()) + list(other._fields.items()))
         return out
 
     def _subrepr(self, labeled, seen):
@@ -555,7 +558,7 @@ class OptionType(Type):
         if id(self) in seen:
             return False
         seen.add(id(self))
-        if isinstance(self._type, awkward.util.numpy.dtype):
+        if isinstance(self._type, numpy.dtype):
             return True
         else:
             return self._type._isnumpy(seen)
@@ -605,8 +608,8 @@ class OptionType(Type):
 def fromnumpy(shape, dtype, masked=False):
     if not isinstance(shape, tuple):
         shape = (shape,)
-    if not isinstance(dtype, awkward.util.numpy.dtype):
-        dtype = awkward.util.numpy.dtype(dtype)
+    if not isinstance(dtype, numpy.dtype):
+        dtype = numpy.dtype(dtype)
 
     if masked:
         return OptionType(fromnumpy(shape, dtype))
@@ -623,19 +626,19 @@ def _fromarray(array, seen):
     if id(array) not in seen:
         seen[id(array)] = placeholder = Placeholder()
 
-        if isinstance(array, awkward.util.numpy.ndarray):
+        if isinstance(array, numpy.ndarray):
             if array.dtype.names is None:
                 out = array.dtype
 
             else:
                 out = TableType.__new__(TableType)
-                out._fields = awkward.util.OrderedDict()
+                out._fields = OrderedDict()
                 for n in array.dtype.names:
                     out[n] = array.dtype[n]
 
             for x in array.shape[:0:-1]:
                 out = ArrayType(x, out)
-            if isinstance(array, awkward.util.numpy.ma.MaskedArray):
+            if isinstance(array, numpy.ma.MaskedArray):
                 out = OptionType(out)
 
             placeholder.value = out
@@ -666,7 +669,7 @@ def _resolve(tpe, seen):
 
         elif isinstance(tpe, TableType):
             seen[id(tpe)] = TableType.__new__(TableType)
-            seen[id(tpe)]._fields = awkward.util.OrderedDict()
+            seen[id(tpe)]._fields = OrderedDict()
             for n, y in tpe._fields.items():
                 seen[id(tpe)]._fields[n] = _resolve(y, seen)
 
