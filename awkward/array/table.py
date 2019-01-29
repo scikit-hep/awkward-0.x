@@ -30,6 +30,7 @@
 
 import re
 import types
+from collections import OrderedDict
 try:
     from collections.abc import Iterable
 except ImportError:
@@ -96,7 +97,7 @@ class Table(awkward.array.base.AwkwardArray):
                     raise ValueError("no column named {0}".format(repr(where)))
 
             elif self._util_isstringslice(where):
-                contents = awkward.util.OrderedDict()
+                contents = OrderedDict()
                 for n in where:
                     try:
                         contents[n] = self._table._contents[n]
@@ -206,7 +207,7 @@ class Table(awkward.array.base.AwkwardArray):
         self._view = None
         self._base = None
         self.rowname = "Row"
-        self._contents = awkward.util.OrderedDict()
+        self._contents = OrderedDict()
 
         seen = set()
         if isinstance(columns1, dict):
@@ -297,20 +298,20 @@ class Table(awkward.array.base.AwkwardArray):
         out._rowname = self._rowname
         out._contents = self._contents
         if contents is not None and isinstance(contents, dict):
-            out._contents = awkward.util.OrderedDict(contents.items())
+            out._contents = OrderedDict(contents.items())
         elif contents is not None:
-            out._contents = awkward.util.OrderedDict(contents)
+            out._contents = OrderedDict(contents)
         else:
-            out._contents = awkward.util.OrderedDict(self._contents.items())
+            out._contents = OrderedDict(self._contents.items())
         return out
 
     def deepcopy(self, contents=None):
         out = self.copy(contents=contents)
         index = out._index()
         if index is None:
-            out._contents = awkward.util.OrderedDict([(n, self._util_deepcopy(x)) for n, x in out._contents.items()])
+            out._contents = OrderedDict([(n, self._util_deepcopy(x)) for n, x in out._contents.items()])
         else:
-            out._contents = awkward.util.OrderedDict([(n, self._util_deepcopy(x[index])) for n, x in out._contents.items()])
+            out._contents = OrderedDict([(n, self._util_deepcopy(x[index])) for n, x in out._contents.items()])
             out._view = None
             out._base = None
         return out
@@ -320,7 +321,7 @@ class Table(awkward.array.base.AwkwardArray):
         out._view = None
         out._base = None
         out._rowname = self._rowname
-        out._contents = awkward.util.OrderedDict()
+        out._contents = OrderedDict()
         return out
 
     def zeros_like(self, **overrides):
@@ -537,7 +538,7 @@ class Table(awkward.array.base.AwkwardArray):
                 except KeyError:
                     raise ValueError("no column named {0}".format(repr(where)))
             else:
-                contents = awkward.util.OrderedDict()
+                contents = OrderedDict()
                 for n in where:
                     try:
                         contents[n] = self._contents[n]
@@ -606,7 +607,7 @@ class Table(awkward.array.base.AwkwardArray):
                 x._valid()
 
                 if inputsdict is None:
-                    inputsdict = awkward.util.OrderedDict([(n, []) for n in x._contents])
+                    inputsdict = OrderedDict([(n, []) for n in x._contents])
                     table = x
                 elif set(inputsdict) != set(x._contents):
                     raise ValueError("Tables have different sets of columns")
@@ -675,10 +676,10 @@ class Table(awkward.array.base.AwkwardArray):
 
     def flattentuple(self):
         out = self.copy()
-        out._contents = awkward.util.OrderedDict([(n, x.flattentuple() if isinstance(x, Table) else x) for n, x in out._contents.items()])
+        out._contents = OrderedDict([(n, x.flattentuple() if isinstance(x, Table) else x) for n, x in out._contents.items()])
 
         if self.istuple:
-            contents = awkward.util.OrderedDict()
+            contents = OrderedDict()
             for n, x in out._contents.items():
                 if isinstance(x, Table) and x.istuple:
                     if x._view is None:

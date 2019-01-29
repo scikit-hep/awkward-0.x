@@ -31,6 +31,7 @@
 import math
 import numbers
 import os
+from collections import OrderedDict
 
 import awkward.array.base
 import awkward.persist
@@ -1360,7 +1361,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             if not isinstance(inputs[i], JaggedArray):
                 inputs[i] = first._broadcast(inputs[i])
 
-        newtable = self.Table(awkward.util.OrderedDict(zip(table._content, [x._content for x in inputs])))
+        newtable = self.Table(OrderedDict(zip(table._content, [x._content for x in inputs])))
         return cls(first._starts, first._stops, newtable)
 
     def pandas(self):

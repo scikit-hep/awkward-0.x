@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import importlib
+from collections import OrderedDict
 
 import awkward.array.base
 import awkward.persist
@@ -82,7 +83,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         if self._setitem is None:
             out._setitem = None
         else:
-            out._setitem = awkward.util.OrderedDict(self._setitem.items())
+            out._setitem = OrderedDict(self._setitem.items())
         if self._delitem is None:
             out._delitem = None
         else:
@@ -344,7 +345,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         if self._type is not None:
             self._type = awkward.type.fromarray(array)
         if self._setitem is None:
-            self._setitem = awkward.util.OrderedDict()
+            self._setitem = OrderedDict()
         self._setitem[where] = what
 
     def __delitem__(self, where):
