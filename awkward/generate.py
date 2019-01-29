@@ -36,13 +36,8 @@ try:
 except ImportError:
     from collections import Iterable
 
-import awkward.array.base
-import awkward.array.indexed
-import awkward.array.jagged
-import awkward.array.masked
-import awkward.array.objects
-import awkward.array.table
-import awkward.array.union
+import numpy
+
 import awkward.type
 import awkward.util
 
@@ -50,9 +45,9 @@ def typeof(obj):
     if obj is None:
         return None
 
-    elif isinstance(obj, (bool, awkward.util.numpy.bool_, awkward.util.numpy.bool)):
+    elif isinstance(obj, (bool, numpy.bool_, numpy.bool)):
         return BoolFillable
-    elif isinstance(obj, (numbers.Number, awkward.util.numpy.number)):
+    elif isinstance(obj, (numbers.Number, awkward.numpy.number)):
         return NumberFillable
     elif isinstance(obj, bytes):
         return BytesFillable
@@ -77,28 +72,31 @@ def typeof(obj):
         return set(n for n in obj.__dict__ if not n.startswith("_")), type(obj)
 
 class Fillable(object):
+    def __init__(self, awkwardlib):
+        self.awkwardlib = awkwardlib
+
     @staticmethod
-    def make(tpe):
+    def make(tpe, awkwardlib):
         if tpe is None:
-            return MaskedFillable(UnknownFillable(), 0)
+            return MaskedFillable(UnknownFillable(awkwardlib), 0, awkwardlib)
 
         elif isinstance(tpe, type):
-            return tpe()
+            return tpe(awkwardlib)
 
         elif isinstance(tpe, set):
-            return TableFillable(tpe)
+            return TableFillable(tpe, awkwardlib)
 
         elif isinstance(tpe, tuple) and len(tpe) == 2 and isinstance(tpe[0], set):
             if len(tpe[0]) == 0:
-                return ObjectFillable(JaggedFillable(), tpe[1])
+                return ObjectFillable(JaggedFillable(awkwardlib), tpe[1], awkwardlib)
             else:
-                return ObjectFillable(TableFillable(tpe[0]), tpe[1])
+                return ObjectFillable(TableFillable(tpe[0], awkwardlib), tpe[1], awkwardlib)
 
         elif isinstance(tpe, tuple) and len(tpe) == 2 and isinstance(tpe[0], tuple):
             if len(tpe[0]) == 0:
-                return NamedTupleFillable(JaggedFillable(), tpe[1])
+                return NamedTupleFillable(JaggedFillable(awkwardlib), tpe[1], awkwardlib)
             else:
-                return NamedTupleFillable(TableFillable(tpe[0]), tpe[1])
+                return NamedTupleFillable(TableFillable(tpe[0], awkwardlib), tpe[1], awkwardlib)
 
         else:
             raise AssertionError(tpe)
@@ -107,10 +105,11 @@ class Fillable(object):
         return type(self) is tpe
 
 class UnknownFillable(Fillable):
-    __slots__ = ["count"]
+    __slots__ = ["count", "awkwardlib"]
 
-    def __init__(self):
+    def __init__(self, awkwardlib):
         self.count = 0
+        self.awkwardlib = awkwardlib
 
     def __len__(self):
         return self.count
@@ -124,24 +123,25 @@ class UnknownFillable(Fillable):
             return self
 
         else:
-            fillable = Fillable.make(tpe)
+            fillable = Fillable.make(tpe, self.awkwardlib)
             if self.count == 0:
                 return fillable.append(obj, tpe)
             else:
-                return MaskedFillable(fillable.append(obj, tpe), self.count)
+                return MaskedFillable(fillable.append(obj, tpe), self.count, self.awkwardlib)
 
     def finalize(self, **options):
         if self.count == 0:
-            return awkward.util.numpy.empty(0, dtype=awkward.array.base.AwkwardArray.DEFAULTTYPE)
+            return self.awkwardlib.numpy.empty(0, dtype=self.awkwardlib.JaggedArray.DEFAULTTYPE)
         else:
-            mask = awkward.util.numpy.zeros(self.count, dtype=awkward.array.masked.MaskedArray.MASKTYPE)
-            return awkward.array.masked.MaskedArray(mask, mask, maskedwhen=False)
+            mask = self.awkwardlib.numpy.zeros(self.count, dtype=self.awkwardlib.MaskedArray.MASKTYPE)
+            return self.awkwardlib.MaskedArray(mask, mask, maskedwhen=False)
 
 class SimpleFillable(Fillable):
-    __slots__ = ["data"]
+    __slots__ = ["data", "awkwardlib"]
 
-    def __init__(self):
+    def __init__(self, awkwardlib):
         self.data = []
+        self.awkwardlib = awkwardlib
 
     def __len__(self):
         return len(self.data)
@@ -151,47 +151,48 @@ class SimpleFillable(Fillable):
 
     def append(self, obj, tpe):
         if tpe is None:
-            return MaskedFillable(self, 0).append(obj, tpe)
+            return MaskedFillable(self, 0, self.awkwardlib).append(obj, tpe)
 
         if self.matches(tpe):
             self.data.append(obj)
             return self
 
         else:
-            return UnionFillable(self).append(obj, tpe)
+            return UnionFillable(self, self.awkwardlib).append(obj, tpe)
 
 class BoolFillable(SimpleFillable):
     def finalize(self, **options):
-        return awkward.util.numpy.array(self.data, dtype=awkward.array.base.AwkwardArray.BOOLTYPE)
+        return self.awkwardlib.numpy.array(self.data, dtype=self.awkwardlib.JaggedArray.BOOLTYPE)
 
 class NumberFillable(SimpleFillable):
     def finalize(self, **options):
-        return awkward.util.numpy.array(self.data)
+        return self.awkwardlib.numpy.array(self.data)
 
 class BytesFillable(SimpleFillable):
     def finalize(self, **options):
         dictencoding = options.get("dictencoding", False)
         if (callable(dictencoding) and dictencoding(self.data)) or (not callable(dictencoding) and dictencoding):
-            dictionary, index = awkward.util.numpy.unique(self.data, return_inverse=True)
-            return awkward.array.indexed.IndexedArray(index, awkward.array.objects.StringArray.fromiter(dictionary, encoding=None))
+            dictionary, index = self.awkwardlib.numpy.unique(self.data, return_inverse=True)
+            return self.awkwardlib.IndexedArray(index, self.awkwardlib.StringArray.fromiter(dictionary, encoding=None))
         else:
-            return awkward.array.objects.StringArray.fromiter(self.data, encoding=None)
+            return self.awkwardlib.StringArray.fromiter(self.data, encoding=None)
 
 class StringFillable(SimpleFillable):
     def finalize(self, **options):
         dictencoding = options.get("dictencoding", False)
         if (callable(dictencoding) and dictencoding(self.data)) or (not callable(dictencoding) and dictencoding):
-            dictionary, index = awkward.util.numpy.unique(self.data, return_inverse=True)
-            return awkward.array.indexed.IndexedArray(index, awkward.array.objects.StringArray.fromiter(dictionary, encoding="utf-8"))
+            dictionary, index = self.awkwardlib.numpy.unique(self.data, return_inverse=True)
+            return self.awkwardlib.IndexedArray(index, self.awkwardlib.StringArray.fromiter(dictionary, encoding="utf-8"))
         else:
-            return awkward.array.objects.StringArray.fromiter(self.data, encoding="utf-8")
+            return self.awkwardlib.StringArray.fromiter(self.data, encoding="utf-8")
 
 class JaggedFillable(Fillable):
-    __slots__ = ["content", "offsets"]
+    __slots__ = ["content", "offsets", "awkwardlib"]
 
-    def __init__(self):
-        self.content = UnknownFillable()
+    def __init__(self, awkwardlib):
+        self.content = UnknownFillable(awkwardlib)
         self.offsets = [0]
+        self.awkwardlib = awkwardlib
 
     def __len__(self):
         return len(self.offsets) - 1
@@ -202,7 +203,7 @@ class JaggedFillable(Fillable):
 
     def append(self, obj, tpe):
         if tpe is None:
-            return MaskedFillable(self, 0).append(obj, tpe)
+            return MaskedFillable(self, 0, self.awkwardlib).append(obj, tpe)
 
         if self.matches(tpe):
             for x in obj:
@@ -211,19 +212,20 @@ class JaggedFillable(Fillable):
             return self
 
         else:
-            return UnionFillable(self).append(obj, tpe)
+            return UnionFillable(self, self.awkwardlib).append(obj, tpe)
 
     def finalize(self, **options):
-        return awkward.array.jagged.JaggedArray.fromoffsets(self.offsets, self.content.finalize(**options))
+        return self.awkwardlib.JaggedArray.fromoffsets(self.offsets, self.content.finalize(**options))
 
 class TableFillable(Fillable):
-    __slots__ = ["fields", "contents", "count"]
+    __slots__ = ["fields", "contents", "count", "awkwardlib"]
 
-    def __init__(self, fields):
+    def __init__(self, fields, awkwardlib):
         assert len(fields) > 0
         self.fields = fields
-        self.contents = {n: UnknownFillable() for n in fields}
+        self.contents = {n: UnknownFillable(awkwardlib) for n in fields}
         self.count = 0
+        self.awkwardlib = awkwardlib
 
     def __len__(self):
         return self.count
@@ -238,7 +240,7 @@ class TableFillable(Fillable):
 
     def append(self, obj, tpe):
         if tpe is None:
-            return MaskedFillable(self, 0).append(obj, tpe)
+            return MaskedFillable(self, 0, self.awkwardlib).append(obj, tpe)
 
         if self.matches(tpe):
             for n in self.fields:
@@ -248,17 +250,18 @@ class TableFillable(Fillable):
             return self
 
         else:
-            return UnionFillable(self).append(obj, tpe)
+            return UnionFillable(self, self.awkwardlib).append(obj, tpe)
 
     def finalize(self, **options):
-        return awkward.array.table.Table.frompairs((n, self.contents[n].finalize(**options)) for n in sorted(self.fields))
+        return self.awkwardlib.Table.frompairs((n, self.contents[n].finalize(**options)) for n in sorted(self.fields))
 
 class ObjectFillable(Fillable):
-    __slots__ = ["content", "cls"]
+    __slots__ = ["content", "cls", "awkwardlib"]
 
-    def __init__(self, content, cls):
+    def __init__(self, content, cls, awkwardlib):
         self.content = content
         self.cls = cls
+        self.awkwardlib = awkwardlib
 
     def __len__(self):
         return len(self.content)
@@ -271,7 +274,7 @@ class ObjectFillable(Fillable):
 
     def append(self, obj, tpe):
         if tpe is None:
-            return MaskedFillable(self, 0).append(obj, tpe)
+            return MaskedFillable(self, 0, self.awkwardlib).append(obj, tpe)
 
         if self.matches(tpe):
             if len(tpe[0]) == 0:
@@ -281,7 +284,7 @@ class ObjectFillable(Fillable):
             return self
 
         else:
-            return UnionFillable(self).append(obj, tpe)
+            return UnionFillable(self, self.awkwardlib).append(obj, tpe)
 
     def finalize(self, **options):
         def make(x):
@@ -289,12 +292,12 @@ class ObjectFillable(Fillable):
             out.__dict__.update(x.tolist())
             return out
 
-        return awkward.array.objects.ObjectArray(self.content.finalize(**options), make)
+        return self.awkwardlib.ObjectArray(self.content.finalize(**options), make)
 
 class NamedTupleFillable(ObjectFillable):
     def append(self, obj, tpe):
         if tpe is None:
-            return MaskedFillable(self, 0).append(obj, tpe)
+            return MaskedFillable(self, 0, self.awkwardlib).append(obj, tpe)
 
         if self.matches(tpe):
             if len(tpe[0]) == 0:
@@ -304,21 +307,22 @@ class NamedTupleFillable(ObjectFillable):
             return self
 
         else:
-            return UnionFillable(self).append(obj, tpe)
+            return UnionFillable(self, self.awkwardlib).append(obj, tpe)
 
     def finalize(self, **options):
         def make(x):
             asdict = x.tolist()
             return self.cls(*[asdict[n] for n in self.cls._fields])
 
-        return awkward.array.objects.ObjectArray(self.content.finalize(**options), make)
+        return self.awkwardlib.ObjectArray(self.content.finalize(**options), make)
 
 class MaskedFillable(Fillable):
-    __slots__ = ["content", "nullpos"]
+    __slots__ = ["content", "nullpos", "awkwardlib"]
 
-    def __init__(self, content, count):
+    def __init__(self, content, count, awkwardlib):
         self.content = content
         self.nullpos = list(range(count))
+        self.awkwardlib = awkwardlib
 
     def matches(self, tpe):
         return tpe is None
@@ -339,54 +343,55 @@ class MaskedFillable(Fillable):
 
     def finalize(self, **options):
         if isinstance(self.content, (TableFillable, ObjectFillable, UnionFillable)):
-            index = awkward.util.numpy.zeros(len(self), dtype=awkward.array.masked.IndexedMaskedArray.INDEXTYPE)
+            index = self.awkwardlib.numpy.zeros(len(self), dtype=self.awkwardlib.IndexedMaskedArray.INDEXTYPE)
             index[self.nullpos] = -1
-            index[index == 0] = awkward.util.numpy.arange(len(self.content))
+            index[index == 0] = awkward.numpy.arange(len(self.content))
 
-            return awkward.array.masked.IndexedMaskedArray(index, self.content.finalize(**options))
+            return self.awkwardlib.IndexedMaskedArray(index, self.content.finalize(**options))
 
-        valid = awkward.util.numpy.ones(len(self), dtype=awkward.array.masked.MaskedArray.MASKTYPE)
+        valid = self.awkwardlib.numpy.ones(len(self), dtype=self.awkwardlib.MaskedArray.MASKTYPE)
         valid[self.nullpos] = False
 
         if isinstance(self.content, (BoolFillable, NumberFillable)):
             compact = self.content.finalize(**options)
-            expanded = awkward.util.numpy.empty(len(self), dtype=compact.dtype)
+            expanded = self.awkwardlib.numpy.empty(len(self), dtype=compact.dtype)
             expanded[valid] = compact
 
-            return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
+            return self.awkwardlib.MaskedArray(valid, expanded, maskedwhen=False)
 
         elif isinstance(self.content, (BytesFillable, StringFillable)):
             compact = self.content.finalize(**options)
 
-            if isinstance(compact, awkward.array.indexed.IndexedArray):
-                index = awkward.util.numpy.zeros(len(self), dtype=compact.index.dtype)
+            if isinstance(compact, self.awkwardlib.IndexedArray):
+                index = self.awkwardlib.numpy.zeros(len(self), dtype=compact.index.dtype)
                 index[valid] = compact.index
-                expanded = awkward.array.indexed.IndexedArray(index, compact.content)
+                expanded = self.awkwardlib.IndexedArray(index, compact.content)
             else:
-                counts = awkward.util.numpy.zeros(len(self), dtype=compact.counts.dtype)
+                counts = self.awkwardlib.numpy.zeros(len(self), dtype=compact.counts.dtype)
                 counts[valid] = compact.counts
-                expanded = awkward.array.objects.StringArray.fromcounts(counts, compact.content, encoding=compact.encoding)
+                expanded = self.awkwardlib.StringArray.fromcounts(counts, compact.content, encoding=compact.encoding)
 
-            return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
+            return self.awkwardlib.MaskedArray(valid, expanded, maskedwhen=False)
 
         elif isinstance(self.content, JaggedFillable):
             compact = self.content.finalize(**options)
-            counts = awkward.util.numpy.zeros(len(self), dtype=compact.counts.dtype)
+            counts = self.awkwardlib.numpy.zeros(len(self), dtype=compact.counts.dtype)
             counts[valid] = compact.counts
-            expanded = awkward.array.jagged.JaggedArray.fromcounts(counts, compact.content)
+            expanded = self.awkwardlib.JaggedArray.fromcounts(counts, compact.content)
 
-            return awkward.array.masked.MaskedArray(valid, expanded, maskedwhen=False)
+            return self.awkwardlib.MaskedArray(valid, expanded, maskedwhen=False)
 
         else:
             raise AssertionError(self.content)
 
 class UnionFillable(Fillable):
-    __slots__ = ["contents", "tags", "index"]
+    __slots__ = ["contents", "tags", "index", "awkwardlib"]
 
-    def __init__(self, content):
+    def __init__(self, content, awkwardlib):
         self.contents = [content]
         self.tags = [0] * len(content)
         self.index = list(range(len(content)))
+        self.awkwardlib = awkwardlib
 
     def __len__(self):
         return len(self.tags)
@@ -399,7 +404,7 @@ class UnionFillable(Fillable):
 
     def append(self, obj, tpe):
         if tpe is None:
-            return MaskedFillable(self, 0).append(obj, tpe)
+            return MaskedFillable(self, 0, self.awkwardlib).append(obj, tpe)
 
         else:
             for tag, content in enumerate(self.contents):
@@ -410,7 +415,7 @@ class UnionFillable(Fillable):
                     break
 
             else:
-                fillable = Fillable.make(tpe)
+                fillable = Fillable.make(tpe, self.awkwardlib)
                 self.tags.append(len(self.contents))
                 self.index.append(len(fillable))
                 self.contents.append(fillable.append(obj, tpe))
@@ -418,30 +423,32 @@ class UnionFillable(Fillable):
             return self
 
     def finalize(self, **options):
-        return awkward.array.union.UnionArray(self.tags, self.index, [x.finalize(**options) for x in self.contents])
+        return self.awkwardlib.UnionArray(self.tags, self.index, [x.finalize(**options) for x in self.contents])
 
 def _checkoptions(options):
     unrecognized = set(options).difference(["dictencoding"])
     if len(unrecognized) != 0:
         raise TypeError("unrecognized options: {0}".format(", ".join(sorted(unrecognized))))
 
-def fromiter(iterable, **options):
+def fromiter(iterable, awkwardlib=None, **options):
     _checkoptions(options)
 
-    fillable = UnknownFillable()
+    awkwardlib = awkward.util.awkwardlib(awkwardlib)
+    fillable = UnknownFillable(awkwardlib)
 
     for obj in iterable:
         fillable = fillable.append(obj, typeof(obj))
 
     return fillable.finalize(**options)
 
-def fromiterchunks(iterable, chunksize, **options):
-    if not isinstance(chunksize, (numbers.Integral, awkward.util.numpy.integer)) or chunksize <= 0:
+def fromiterchunks(iterable, chunksize, awkwardlib=None, **options):
+    if not isinstance(chunksize, (numbers.Integral, numpy.integer)) or chunksize <= 0:
         raise TypeError("chunksize must be a positive integer")
 
     _checkoptions(options)
 
-    fillable = UnknownFillable()
+    awkwardlib = awkward.util.awkwardlib(awkwardlib)
+    fillable = UnknownFillable(awkwardlib)
     count = 0
     tpe = None
 
