@@ -185,7 +185,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if self._util_isstringslice(where):
             content = self._content[where]
-            cls = awkward.array.objects.Methods.maybemixin(type(content), MaskedArray)
+            cls = awkward.array.objects.Methods.maybemixin(type(content), self.MaskedArray)
             out = cls.__new__(cls)
             out.__dict__.update(self.__dict__)
             out._content = content
@@ -501,7 +501,7 @@ class BitMaskedArray(MaskedArray):
 
         if self._util_isstringslice(where):
             content = self._content[where]
-            cls = awkward.array.objects.Methods.maybemixin(type(content), BitMaskedArray)
+            cls = awkward.array.objects.Methods.maybemixin(type(content), self.BitMaskedArray)
             out = cls.__new__(cls)
             out.__dict__.update(self.__dict__)
             out._content = content
@@ -637,7 +637,7 @@ class IndexedMaskedArray(MaskedArray):
 
         if self._util_isstringslice(where):
             content = self._content[where]
-            cls = awkward.array.objects.Methods.maybemixin(type(content), IndexedMaskedArray)
+            cls = awkward.array.objects.Methods.maybemixin(type(content), self.IndexedMaskedArray)
             out = cls.__new__(cls)
             out.__dict__.update(self.__dict__)
             out._content = content
