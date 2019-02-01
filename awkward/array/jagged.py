@@ -480,7 +480,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if self._util_isstringslice(where):
             content = self._content[where]
-            cls = awkward.array.objects.Methods.maybemixin(type(content), JaggedArray)
+            cls = awkward.array.objects.Methods.maybemixin(type(content), self.JaggedArray)
             out = cls.__new__(cls)
             out.__dict__.update(self.__dict__)
             out._content = content
