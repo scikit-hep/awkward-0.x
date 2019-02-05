@@ -122,16 +122,7 @@ or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
     conda install awkward
     conda install awkward-numba               # optional: some methods accelerated by Numba
 
-Both installers automatically install the dependencies, but not the recommended packages.
-
-Dependencies:
--------------
-
-- `numpy <https://scipy.org/install.html>`__ (1.13.1+)
-
-**For awkward-numba:**
-
-- `numba <https://numba.pydata.org/numba-doc/dev/user/installing.html>`__
+The base ``awkward`` package requires only `Numpy <https://scipy.org/install.html>`__  (1.13.1+), but ``awkward-numba`` also requires `Numba <https://numba.pydata.org/numba-doc/dev/user/installing.html>`__.
 
 Recommended packages:
 ---------------------
