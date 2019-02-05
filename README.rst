@@ -128,7 +128,7 @@ Dependencies:
 -------------
 
 - `numpy <https://scipy.org/install.html>`__ (1.13.1+)
-- `numba <https://numba.pydata.org/numba-doc/dev/user/installing.html>`__ _(for awkward-numba only)_
+- `numba <https://numba.pydata.org/numba-doc/dev/user/installing.html>`__ *(for awkward-numba only)*
 
 Recommended packages:
 ---------------------
