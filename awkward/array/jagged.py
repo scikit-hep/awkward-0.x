@@ -879,7 +879,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
                 if parents is None:
                     parents = jaggedarray.parents
-                    good = (parents >= 0)
+                    if self._canuseoffset() and len(jaggedarray.starts) > 0 and jaggedarray.starts[0] == 0:
+                        good = None
+                    else:
+                        good = (parents >= 0)
 
                 def recurse(x):
                     if isinstance(x, awkward.array.objects.ObjectArray):
@@ -889,6 +892,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                         content = x.empty_like()
                         for n in x.columns:
                             content[n] = recurse(x[n])
+                        return content
+
+                    elif good is None:
+                        if len(x.shape) == 0:
+                            content = self.numpy.full(len(parents), x, dtype=x.dtype)
+                        else:
+                            content = x[parents]
                         return content
 
                     else:
