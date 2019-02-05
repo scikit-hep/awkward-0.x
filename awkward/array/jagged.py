@@ -879,7 +879,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
                 if parents is None:
                     parents = jaggedarray.parents
-                    if self._canuseoffset and len(jaggedarray.starts) > 0 and jaggedarray.starts[0] == 0:
+                    if self._canuseoffset() and len(jaggedarray.starts) > 0 and jaggedarray.starts[0] == 0:
                         good = None
                     else:
                         good = (parents >= 0)
