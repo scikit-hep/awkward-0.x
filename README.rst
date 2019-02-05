@@ -107,22 +107,31 @@ Rather than matching the speed of compiled code, this can exceed the speed of co
 Installation
 ============
 
-Install awkward-array like any other Python package:
+Install awkward like any other Python package:
 
 .. code-block:: bash
 
-    pip install awkward
+    pip install awkward                       # maybe with sudo or --user, or in virtualenv
+    pip install awkward-numba                 # optional: some methods accelerated by Numba
 
-or similar (use ``sudo``, ``--user``, ``virtualenv``, or pip-in-conda if you wish).
+or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
 
-Strict dependencies:
-====================
+.. code-block:: bash
 
-- `Python <http://docs.python-guide.org/en/latest/starting/installation/>`__ (2.7+, 3.4+)
-- `Numpy <https://scipy.org/install.html>`__ (1.13.1+)
+    conda config --add channels conda-forge   # if you haven't added conda-forge already
+    conda install awkward
+    conda install awkward-numba               # optional: some methods accelerated by Numba
 
-Recommended dependencies:
-=========================
+Both installers automatically install the dependencies, but not the recommended packages.
+
+Dependencies:
+-------------
+
+- `numpy <https://scipy.org/install.html>`__ (1.13.1+)
+- `numba <https://numba.pydata.org/numba-doc/dev/user/installing.html>`__ _(for awkward-numba only)_
+
+Recommended packages:
+---------------------
 
 - `pyarrow <https://arrow.apache.org/docs/python/install.html>`__ to view Arrow and Parquet data as awkward-arrays
 - `h5py <https://www.h5py.org>`__ to read and write awkward-arrays in HDF5 files
