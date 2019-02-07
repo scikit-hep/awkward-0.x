@@ -32,6 +32,7 @@ import unittest
 
 import numpy
 
+import awkward
 from awkward import *
 from awkward.type import *
 
@@ -420,3 +421,17 @@ class Test(unittest.TestCase):
         assert [a[i : i + 2].tolist() for i in range(len(a) - 1)] == [[[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], []], [[], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)]], [[(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [(8.8, 8.8), (9.9, 9.9)]], [[(8.8, 8.8), (9.9, 9.9)], []]]
         assert [x.tolist() for x in a[[2, 1, 0, -2]]] == [[(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], [], [(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [(8.8, 8.8), (9.9, 9.9)]]
         assert [x.tolist() for x in a[[True, False, True, False, True]]] == [[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], []]
+
+    def test_jagged_zip(self):
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        b = awkward.JaggedArray([1, 5, 5], [4, 5, 7], [999, 10, 20, 30, 999, 40, 50, 999])
+        c = numpy.array([100, 200, 300])
+        d = 1000
+        assert awkward.JaggedArray.zip(one=a, two=b).tolist() == [[{"one": 1.1, "two": 10}, {"one": 2.2, "two": 20}, {"one": 3.3, "two": 30}], [], [{"one": 4.4, "two": 40}, {"one": 5.5, "two": 50}]]
+        assert awkward.JaggedArray.zip(one=b, two=a).tolist() == [[{"one": 10, "two": 1.1}, {"one": 20, "two": 2.2}, {"one": 30, "two": 3.3}], [], [{"one": 40, "two": 4.4}, {"one": 50, "two": 5.5}]]
+        assert awkward.JaggedArray.zip(one=b, two=c).tolist() == [[{"one": 10, "two": 100}, {"one": 20, "two": 100}, {"one": 30, "two": 100}], [], [{"one": 40, "two": 300}, {"one": 50, "two": 300}]]
+        assert awkward.JaggedArray.zip(one=b, two=d).tolist() == [[{"one": 10, "two": 1000}, {"one": 20, "two": 1000}, {"one": 30, "two": 1000}], [], [{"one": 40, "two": 1000}, {"one": 50, "two": 1000}]]
+        assert a.zip(b).tolist() == [[(1.1, 10), (2.2, 20), (3.3, 30)], [], [(4.4, 40), (5.5, 50)]]
+        assert b.zip(a).tolist() == [[(10, 1.1), (20, 2.2), (30, 3.3)], [], [(40, 4.4), (50, 5.5)]]
+        assert b.zip(c).tolist() == [[(10, 100), (20, 100), (30, 100)], [], [(40, 300), (50, 300)]]
+        assert b.zip(d).tolist() == [[(10, 1000), (20, 1000), (30, 1000)], [], [(40, 1000), (50, 1000)]]
