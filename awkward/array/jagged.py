@@ -1466,7 +1466,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             if isinstance(columns1, dict) or len(columns3) > 0:
                 table = first.Table(columns1, *columns2, **columns3)
             else:
-                table = first.Table.named("tuple", columns1, *columns2, **columns3)
+                table = first.Table.named("tuple", columns1, *columns2)
             return first.JaggedArray(first._starts, first._stops, table)
 
     def pandas(self):
