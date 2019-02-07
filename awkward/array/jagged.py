@@ -1457,10 +1457,16 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 raise TypeError("unrecognized type for JaggedArray.zip: {0}".format(type(x)))
 
         if isclassmethod:
-            table = cls.Table.fget(None)(columns1, *columns2, **columns3)
+            if isinstance(columns1, dict) or len(columns3) > 0:
+                table = cls.Table.fget(None)(columns1, *columns2, **columns3)
+            else:
+                table = cls.Table.fget(None).named("tuple", columns1, *columns2)
             return cls.JaggedArray.fget(None)(first._starts, first._stops, table)
         else:
-            table = first.Table(columns1, *columns2, **columns3)
+            if isinstance(columns1, dict) or len(columns3) > 0:
+                table = first.Table(columns1, *columns2, **columns3)
+            else:
+                table = first.Table.named("tuple", columns1, *columns2, **columns3)
             return first.JaggedArray(first._starts, first._stops, table)
 
     def pandas(self):
