@@ -32,6 +32,10 @@ import math
 import numbers
 import os
 from collections import OrderedDict
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 import awkward.array.base
 import awkward.persist
@@ -1350,29 +1354,114 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def stack(cls, first, *rest):    # each item in first followed by second, etc.
         raise NotImplementedError
 
-    @classmethod
-    def zip(cls, columns1={}, *columns2, **columns3):
-        # FIXME for 1.0: make an @awkward.util.bothmethod like concatenate
-        table = self.Table(columns1, *columns2, **columns3)
-        inputs = list(table._content.values())
+    @awkward.util.bothmethod
+    def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
+        if isclassmethod:
+            cls = cls_or_self
+        else:
+            self = cls_or_self
+            cls = self.__class__
+            if not (isinstance(columns1, dict) and len(columns1) == 0):
+                columns2 = (columns1,) + columns2
+            columns1 = self
 
         first = None
-        for i in range(len(inputs)):
-            if isinstance(inputs[i], JaggedArray):
+        def ready(x):
+            starts, stops = x._starts.reshape(-1), x._stops.reshape(-1)
+            if (x._canuseoffset() and len(starts) != 0 and starts[0] == 0) or (len(starts) != 0 and len(stops) != 0 and len(stops) >= len(starts) and starts[0] == 0 and stops[len(starts) - 1] >= starts[len(starts) - 1] and (starts[1:] == stops[:-1]).all()):
+                return x
+            else:
+                offsets = x.counts2offsets(stops - starts)
+                starts, stops = offsets[:-1], offsets[1:]
+                starts = starts.reshape((-1,) + x._starts.shape[1:])
+                stops = stops.reshape((-1,) + x._stops.shape[1:])
+                return x._tojagged(starts, stops, copy=False)
+
+        if isinstance(columns1, JaggedArray):
+            columns1 = first = ready(columns1)
+            
+        if isinstance(columns1, dict):
+            for n in columns1:
+                x = columns1[n]
+                if isinstance(x, JaggedArray):
+                    if first is None:
+                        columns1[n] = first = ready(x)
+                    else:
+                        columns1[n] = x._tojagged(first._starts, first._stops, copy=False)
+
+        columns2 = list(columns2)
+        for i in range(len(columns2)):
+            x = columns2[i]
+            if isinstance(x, JaggedArray):
                 if first is None:
-                    first = inputs[i] = inputs[i]._tojagged(copy=False)
+                    columns2[i] = first = ready(x)
                 else:
-                    inputs[i] = inputs[i]._tojagged(first._starts, first._stops, copy=False)
+                    columns2[i] = x._tojagged(first._starts, first._stops, copy=False)
+
+        for n in columns3:
+            x = columns3[n]
+            if isinstance(x, JaggedArray):
+                if first is None:
+                    columns3[n] = first = ready(x)
+                else:
+                    columns3[n] = x._tojagged(first._starts, first._stops, copy=False)
 
         if first is None:
-            return table
+            raise TypeError("at least one argument in JaggedArray.zip must be a JaggedArray")
 
-        for i in range(len(inputs)):
-            if not isinstance(inputs[i], JaggedArray):
-                inputs[i] = first._broadcast(inputs[i])
+        if isclassmethod:
+            numpy = cls.numpy
+        else:
+            numpy = first.numpy
 
-        newtable = self.Table(OrderedDict(zip(table._content, [x._content for x in inputs])))
-        return cls(first._starts, first._stops, newtable)
+        if isinstance(columns1, JaggedArray):
+            columns1 = columns1._content
+        elif isinstance(columns1, dict):
+            for n in columns1:
+                x = columns1[n]
+                if isinstance(x, JaggedArray):
+                    columns1[n] = x._content
+                elif isinstance(x, Iterable):
+                    columns1[n] = first._broadcast(x)._content
+                elif isinstance(x, (numbers.Number, numpy.number, numpy.bool, numpy.bool_)):
+                    columns1[n] = JaggedArray(first._starts, first._stops, numpy.full(first._stops.max(), columns1, dtype=type(columns1)))._content
+                else:
+                    raise TypeError("unrecognized type for JaggedArray.zip: {0}".format(type(x)))
+        elif isinstance(columns1, Iterable):
+            columns1 = first._broadcast(columns1)._content
+        elif isinstance(columns1, (numbers.Number, numpy.number, numpy.bool, numpy.bool_)):
+            columns1 = JaggedArray(first._starts, first._stops, numpy.full(first._stops.max(), columns1, dtype=type(columns1)))._content
+        else:
+            raise TypeError("unrecognized type for JaggedArray.zip: {0}".format(type(columns1)))
+
+        for i in range(len(columns2)):
+            x = columns2[i]
+            if isinstance(x, JaggedArray):
+                columns2[i] = x._content
+            elif not isinstance(x, dict) and isinstance(x, Iterable):
+                columns2[i] = first._broadcast(x)._content
+            elif isinstance(x, (numbers.Number, numpy.number, numpy.bool, numpy.bool_)):
+                columns2[i] = JaggedArray(first._starts, first._stops, numpy.full(first._stops.max(), x, dtype=type(x)))._content
+            else:
+                raise TypeError("unrecognized type for JaggedArray.zip: {0}".format(type(x)))
+
+        for n in columns3:
+            x = columns3[n]
+            if isinstance(x, JaggedArray):
+                columns3[n] = x._content
+            elif not isinstance(x, dict) and isinstance(x, Iterable):
+                columns3[n] = first._broadcast(x)._content
+            elif isinstance(x, (numbers.Number, numpy.number, numpy.bool, numpy.bool_)):
+                columns3[n] = JaggedArray(first._starts, first._stops, numpy.full(first._stops.max(), x, dtype=type(x)))._content
+            else:
+                raise TypeError("unrecognized type for JaggedArray.zip: {0}".format(type(x)))
+
+        if isclassmethod:
+            table = cls.Table.fget(None)(columns1, *columns2, **columns3)
+            return cls.JaggedArray.fget(None)(first._starts, first._stops, table)
+        else:
+            table = first.Table(columns1, *columns2, **columns3)
+            return first.JaggedArray(first._starts, first._stops, table)
 
     def pandas(self):
         import pandas
