@@ -388,16 +388,22 @@ class Test(unittest.TestCase):
         assert a_class_concat.tolist() == a_orig.tolist()
 
     def test_jagged_concatenate_axis1(self):
-        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        b = JaggedArray([0, 5, 7, 7], [5, 7, 7, 10], [6.5, 7.6, 8.7, 9.8, 10.9, 4.3, 5.4, 1., 2.1, 3.2])
-        c = a.concatenate([b], axis=1)
-        assert c.tolist() == [[0.,1.1,2.2,6.5,7.6,8.7,9.8,10.9],[4.3,5.4],[3.3,4.4],[5.5,6.6,7.7,8.8,9.9,1.,2.1,3.2]]
+        a1 = JaggedArray([0, 0, 3, 3, 5], [0, 3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        b1 = JaggedArray([0, 0, 5, 7, 7], [0, 5, 7, 7, 10], [6.5, 7.6, 8.7, 9.8, 10.9, 4.3, 5.4, 1., 2.1, 3.2])
+        c1 = a1.concatenate([b1], axis=1)
+        assert c1.tolist() == [[],[0.,1.1,2.2,6.5,7.6,8.7,9.8,10.9],[4.3,5.4],[3.3,4.4],[5.5,6.6,7.7,8.8,9.9,1.,2.1,3.2]]
 
         # Check that concatenating boolean arrays does not accidently promote them to integers
-        a = JaggedArray([0], [3], [False, False, False])
-        b = JaggedArray([0], [3], [True, True, True])
-        c = a.concatenate([b], axis=1)
-        assert c.content.dtype == numpy.dtype(bool)
+        a2 = JaggedArray([0], [3], [False, False, False])
+        b2 = JaggedArray([0], [3], [True, True, True])
+        c2 = a2.concatenate([b2], axis=1)
+        assert c2.content.dtype == numpy.dtype(bool)
+
+        # Test some masked arrays
+        a3 = a1[[True, True, True, False, True]]
+        b3 = b1[[True, True, True, True, False]]
+        c3 = a3.concatenate([b3], axis=1)
+        assert c3.tolist() == [[],[0.,1.1,2.2,6.5,7.6,8.7,9.8,10.9],[4.3,5.4],[5.5,6.6,7.7,8.8,9.9]]
 
 
     def test_jagged_get(self):

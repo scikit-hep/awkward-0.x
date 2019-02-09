@@ -1392,8 +1392,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         content = np.zeros(n_content, dtype=dtype)
         for i in range(n):
             working_array = np.zeros(n_content+1, dtype=cls.INDEXTYPE)
-            working_array[starts[i::n]] += 1
-            working_array[stops[i::n]] -= 1
+            starts_i = starts[i::n]
+            stops_i = stops[i::n]
+            not_empty = starts_i != stops_i
+            working_array[starts_i[not_empty]] += 1
+            working_array[stops_i[not_empty]] -= 1
             mask = np.array(np.cumsum(working_array)[:-1], dtype=cls.MASKTYPE)
             content[mask] = flatarrays[i]
 
