@@ -387,6 +387,19 @@ class Test(unittest.TestCase):
         a_class_concat = JaggedArray.concatenate([a1, a2, a3])
         assert a_class_concat.tolist() == a_orig.tolist()
 
+    def test_jagged_concatenate_axis1(self):
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        b = JaggedArray([0, 5, 7, 7], [5, 7, 7, 10], [6.5, 7.6, 8.7, 9.8, 10.9, 4.3, 5.4, 1., 2.1, 3.2])
+        c = a.concatenate([b], axis=1)
+        assert c.tolist() == [[0.,1.1,2.2,6.5,7.6,8.7,9.8,10.9],[4.3,5.4],[3.3,4.4],[5.5,6.6,7.7,8.8,9.9,1.,2.1,3.2]]
+
+        # Check that concatenating boolean arrays does not accidently promote them to integers
+        a = JaggedArray([0], [3], [False, False, False])
+        b = JaggedArray([0], [3], [True, True, True])
+        c = a.concatenate([b], axis=1)
+        assert c.content.dtype == numpy.dtype(bool)
+
+
     def test_jagged_get(self):
         a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         assert [a[i].tolist() for i in range(len(a))] == [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []]
@@ -435,9 +448,3 @@ class Test(unittest.TestCase):
         assert b.zip(a).tolist() == [[(10, 1.1), (20, 2.2), (30, 3.3)], [], [(40, 4.4), (50, 5.5)]]
         assert b.zip(c).tolist() == [[(10, 100), (20, 100), (30, 100)], [], [(40, 300), (50, 300)]]
         assert b.zip(d).tolist() == [[(10, 1000), (20, 1000), (30, 1000)], [], [(40, 1000), (50, 1000)]]
-
-    def test_jagged_stack(self):
-        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        b = JaggedArray([0, 5, 7, 7], [5, 7, 7, 10], [6.5, 7.6, 8.7, 9.8, 10.9, 4.3, 5.4, 1., 2.1, 3.2])
-        c = a.stack([b])
-        assert c.tolist() == [[0.,1.1,2.2,6.5,7.6,8.7,9.8,10.9],[4.3,5.4],[3.3,4.4],[5.5,6.6,7.7,8.8,9.9,1.,2.1,3.2]]

@@ -105,18 +105,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return starts, starts + counts
 
     @classmethod
-    def startsstops2mask(cls, starts, stops, length=None):
-        if length is None:
-            length = stops[-1]
-
-        np = cls.numpy
-
-        mask = np.zeros(length+1, dtype=cls.numpy.int)
-        mask[starts] += 1
-        mask[stops] -= 1
-        return np.array(np.cumsum(mask)[:-1], dtype=np.bool)
-
-    @classmethod
     def uniques2offsetsparents(cls, uniques):
         # assumes that children are contiguous, in order, and fully covering (can't have empty lists)
         # values are ignored, apart from uniqueness
@@ -1331,7 +1319,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
     @awkward.util.bothmethod
-    def concatenate(isclassmethod, cls_or_self, arrays):
+    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
         if isclassmethod: 
             cls = cls_or_self
             if not all(isinstance(x, JaggedArray) for x in arrays):
@@ -1345,6 +1333,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         for x in arrays:
             x._valid()
+
+        if axis == 1:
+            return cls._concatenate_axis1(arrays)
+
+        if axis > 1:
+            raise NotImplementedError
 
         starts = cls.numpy.concatenate([x._starts for x in arrays])
         stops = cls.numpy.concatenate([x._stops for x in arrays])
@@ -1362,28 +1356,23 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         return cls(starts, stops, content)
 
-    @awkward.util.bothmethod
-    def stack(isclassmethod, cls_or_self, arrays):    # each item in first followed by second, etc.
+    @classmethod
+    def _concatenate_axis1(cls, arrays):
 
-        if isclassmethod: 
-            cls = cls_or_self
-            if not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot stack non-JaggedArrays with JaggedArray.stack")
-        else:
-            self = cls_or_self
-            cls = self.__class__
-            if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot stack non-JaggedArrays with JaggedArray.stack")
-            arrays = (self,) + tuple(arrays)
-
-        if len(set([len(a) for a in arrays])) > 1:
-            raise ValueError("cannot stack JaggedArrays of different lengths")
+        if len(arrays) == 0:
+            raise ValueError("at least one array must be provided")   # this can only happen in the classmethod case
+        if any(len(a) != len(arrays[0]) for a in arrays):
+            raise ValueError("cannot concatenate JaggedArrays of different lengths with axis=1")
+        if any(len(a.starts.shape) > 1 for a in arrays):
+            raise NotImplementedError
 
         np = cls.numpy
 
+        flatarrays = [a.flatten() for a in arrays]
         n = len(arrays)
-        n_content = sum([len(a.flatten()) for a in arrays])
-        dtype = arrays[0].content.dtype
+
+        if any(not isinstance(a, np.ndarray) for a in flatarrays):
+            raise NotImplementedError
 
         # the first step is to get the starts and stops for the stacked structure
         counts = np.vstack([a.counts for a in arrays])
@@ -1391,11 +1380,22 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         offsets = cls.counts2offsets(flat_counts)
         starts, stops = offsets[:-1], offsets[1:]
 
+        # find most general type with a tentative sum which implements the right type-promotion,
+        # except for booleans which would get promoted to integers when summing
+        dtype = np.dtype(sum([x[0] for x in flatarrays if len(x) != 0]), False)
+        allbools = not np.any([a.dtype != np.dtype(bool) for a in flatarrays])
+        dtype = np.dtype(bool) if allbools else dtype
+
+        n_content = sum([len(a) for a in flatarrays])
+
         # use masks for each of the arrays so we can fill the stacked content array at the right indices
         content = np.zeros(n_content, dtype=dtype)
         for i in range(n):
-            mask = cls.startsstops2mask(starts[i::n], stops[i::n], length=n_content)
-            content[mask] = arrays[i].flatten()
+            working_array = np.zeros(n_content+1, dtype=cls.INDEXTYPE)
+            working_array[starts[i::n]] += 1
+            working_array[stops[i::n]] -= 1
+            mask = np.array(np.cumsum(working_array)[:-1], dtype=cls.MASKTYPE)
+            content[mask] = flatarrays[i]
 
         return cls(starts[::n], stops[n-1::n], content)
 
