@@ -105,6 +105,18 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return starts, starts + counts
 
     @classmethod
+    def startsstops2mask(cls, starts, stops, length=None):
+        if length is None:
+            length = stops[-1]
+
+        np = cls.numpy
+
+        mask = np.zeros(length+1, dtype=cls.numpy.int)
+        mask[starts] += 1
+        mask[stops] -= 1
+        return np.array(np.cumsum(mask)[:-1], dtype=np.bool)
+
+    @classmethod
     def uniques2offsetsparents(cls, uniques):
         # assumes that children are contiguous, in order, and fully covering (can't have empty lists)
         # values are ignored, apart from uniqueness
@@ -1350,9 +1362,42 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         return cls(starts, stops, content)
 
-    @classmethod
-    def stack(cls, first, *rest):    # each item in first followed by second, etc.
-        raise NotImplementedError
+    @awkward.util.bothmethod
+    def stack(isclassmethod, cls_or_self, arrays):    # each item in first followed by second, etc.
+
+        if isclassmethod: 
+            cls = cls_or_self
+            if not all(isinstance(x, JaggedArray) for x in arrays):
+                raise TypeError("cannot stack non-JaggedArrays with JaggedArray.stack")
+        else:
+            self = cls_or_self
+            cls = self.__class__
+            if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
+                raise TypeError("cannot stack non-JaggedArrays with JaggedArray.stack")
+            arrays = (self,) + tuple(arrays)
+
+        if len(set([len(a) for a in arrays])) > 1:
+            raise ValueError("cannot stack JaggedArrays of different lengths")
+
+        np = cls.numpy
+
+        n = len(arrays)
+        n_content = sum([len(a.flatten()) for a in arrays])
+        dtype = arrays[0].content.dtype
+
+        # the first step is to get the starts and stops for the stacked structure
+        counts = np.vstack([a.counts for a in arrays])
+        flat_counts = counts.T.flatten()
+        offsets = cls.counts2offsets(flat_counts)
+        starts, stops = offsets[:-1], offsets[1:]
+
+        # use masks for each of the arrays so we can fill the stacked content array at the right indices
+        content = np.zeros(n_content, dtype=dtype)
+        for i in range(n):
+            mask = cls.startsstops2mask(starts[i::n], stops[i::n], length=n_content)
+            content[mask] = arrays[i].flatten()
+
+        return cls(starts[::n], stops[n-1::n], content)
 
     @awkward.util.bothmethod
     def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
