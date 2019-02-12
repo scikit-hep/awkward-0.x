@@ -43,15 +43,16 @@ class AwkwardType(numba.types.Type):
     pass
         
 class JaggedArrayType(AwkwardType):
-    def __init__(self, startstype, stopstype, contenttype):
-        super(JaggedArrayType, self).__init__(name="JaggedArrayType({0}, {1}, {2})".format(startstype.name, stopstype.name, contenttype.name))
+    def __init__(self, startstype, stopstype, contenttype, specialization=JaggedArray):
+        super(JaggedArrayType, self).__init__(name="JaggedArrayType{0}({1}, {2}, {3})".format("" if specialization is JaggedArray else repr(abs(hash(specialization))), startstype.name, stopstype.name, contenttype.name))
         self.startstype = startstype
         self.stopstype = stopstype
         self.contenttype = contenttype
+        self.specialization = specialization
 
 @numba.extending.typeof_impl.register(JaggedArray)
 def typeof_JaggedArray(val, c):
-    return JaggedArrayType(numba.typeof(val.starts), numba.typeof(val.stops), numba.typeof(val.content))
+    return JaggedArrayType(numba.typeof(val.starts), numba.typeof(val.stops), numba.typeof(val.content), type(val))
 
 @numba.extending.register_model(JaggedArrayType)
 class JaggedArrayModel(numba.datamodel.models.StructModel):
@@ -78,3 +79,14 @@ def unbox_JaggedArray(typ, obj, c):
 
     is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
     return numba.extending.NativeValue(jaggedarray._getvalue(), is_error)
+
+@numba.extending.box(JaggedArrayType)
+def box_JaggedArray(typ, val, c):
+    jaggedarray = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder, value=val)
+    starts_obj = c.pyapi.from_native_value(typ.startstype, jaggedarray.starts, c.env_manager)
+    stops_obj = c.pyapi.from_native_value(typ.stopstype, jaggedarray.stops, c.env_manager)
+    content_obj = c.pyapi.from_native_value(typ.contenttype, jaggedarray.content, c.env_manager)
+
+    cls = c.pyapi.unserialize(c.pyapi.serialize_object(typ.specialization))
+    out = c.pyapi.call_function_objargs(cls, (starts_obj, stops_obj, content_obj))
+    return out
