@@ -30,8 +30,44 @@
 
 import numba
 
+from awkward.array.chunked import ChunkedArray, AppendableArray
+from awkward.array.indexed import IndexedArray, SparseArray
+from awkward.array.jagged import JaggedArray
+from awkward.array.masked import MaskedArray, BitMaskedArray, IndexedMaskedArray
+from awkward.array.objects import Methods, ObjectArray, StringArray
+from awkward.array.table import Table
+from awkward.array.union import UnionArray
+from awkward.array.virtual import VirtualArray
+
 class AwkwardType(numba.types.Type):
     pass
-
+        
 class JaggedArrayType(AwkwardType):
-    pass
+    def __init__(self, startstype, stopstype, contenttype):
+        super(JaggedArrayType, self).__init__(name="JaggedArrayType({0}, {1}, {2})".format(startstype.name, stopstype.name, contenttype.name))
+
+@numba.extending.register_model(JaggedArrayType)
+class JaggedArrayModel(numba.datamodel.models.StructModel):
+    def __init__(self, dmm, fe_type):
+        members = [("starts", fe_type.startstype),
+                   ("stops", fe_type.stopstype),
+                   ("content", fe_type.contenttype)]
+        super(JaggedArrayModel, self).__init__(dmm, fe_type, members)
+
+numba.extending.make_attribute_wrapper(JaggedArrayType, "starts", "starts")
+numba.extending.make_attribute_wrapper(JaggedArrayType, "stops", "stops")
+numba.extending.make_attribute_wrapper(JaggedArrayType, "content", "content")
+
+@numba.extending.unbox(JaggedArrayType)
+def unbox_JaggedArray(typ, obj, c):
+    starts_obj = c.pyapi.object_getattr_string(obj, "starts")
+    stops_obj = c.pyapi.object_getattr_string(obj, "stops")
+    content_obj = c.pyapi.object_getattr_string(obj, "content")
+
+    jaggedarray = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder)
+    jaggedarray.starts = numba.pythonapi.unbox(starts_obj)
+    jaggedarray.stops = numba.pythonapi.unbox(stops_obj)
+    jaggedarray.content = numba.pythonapi.unbox(content_obj)
+
+    is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
+    return numba.extending.NativeValue(jaggedarray._getvalue(), is_error)

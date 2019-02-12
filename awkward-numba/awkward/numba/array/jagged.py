@@ -33,7 +33,7 @@ import numba
 import awkward.array.jagged
 from .base import NumbaMethods
 
-@numba.njit(["void(i8[:], i8[:])"])
+@numba.njit
 def _offsets2parents_fill(offsets, parents):
     j = 0
     k = -1
@@ -43,9 +43,7 @@ def _offsets2parents_fill(offsets, parents):
             j += 1
         k += 1
 
-@numba.njit(["void(i8[:], i8[:], f8[:], i8[:])",
-             "void(i8[:], i8[:], f4[:], i8[:])",
-             "void(i8[:], i8[:], i8[:], i8[:])"])
+@numba.njit
 def _argminmax_fillmin(starts, stops, content, output):
     k = 0
     for i in range(len(starts)):
@@ -59,9 +57,7 @@ def _argminmax_fillmin(starts, stops, content, output):
             output[k] = bestj
             k += 1
 
-@numba.njit(["void(i8[:], i8[:], f8[:], i8[:])",
-             "void(i8[:], i8[:], f4[:], i8[:])",
-             "void(i8[:], i8[:], i8[:], i8[:])"])
+@numba.njit
 def _argminmax_fillmax(starts, stops, content, output):
     k = 0
     for i in range(len(starts)):
