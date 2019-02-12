@@ -36,12 +36,19 @@ import pytest
 numba = pytest.importorskip("numba")
 awkward_numba = pytest.importorskip("awkward.numba")
 
-import awkward.arrow
 from awkward import *
 
 class Test(unittest.TestCase):
     def runTest(self):
         pass
 
-    def test_innumba_box(self):
-        pass
+    def test_innumba_unbox(self):
+        @numba.njit
+        def test(x):
+            return 3.14
+
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        test(a)
+
+        a = JaggedArray.fromcounts([2, 0, 1], a)
+        test(a)
