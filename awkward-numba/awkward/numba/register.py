@@ -77,6 +77,10 @@ def unbox_JaggedArray(typ, obj, c):
     jaggedarray.stops = c.pyapi.to_native_value(typ.stopstype, stops_obj).value
     jaggedarray.content = c.pyapi.to_native_value(typ.contenttype, content_obj).value
 
+    c.pyapi.decref(starts_obj)
+    c.pyapi.decref(stops_obj)
+    c.pyapi.decref(content_obj)
+
     is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
     return numba.extending.NativeValue(jaggedarray._getvalue(), is_error)
 

@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
+
 import unittest
 
 import numpy
@@ -47,6 +49,13 @@ class Test(unittest.TestCase):
         def test(x):
             return 3.14
         a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+
+        for i in range(20):
+            print(sys.getrefcount(a), sys.getrefcount(a._starts), sys.getrefcount(a._stops), sys.getrefcount(a._content))
+            test(a)
+
+        raise Exception
+
         test(a)
         a = JaggedArray.fromcounts([2, 0, 1], a)
         test(a)
