@@ -94,13 +94,11 @@ def JaggedArray_getitem(context, builder, sig, args):
     start = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, numba.typing.templates.signature(jaggedtype.startstype.dtype, jaggedtype.startstype, indextype), (jaggedarray.starts, indexval))
     stop = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, numba.typing.templates.signature(jaggedtype.stopstype.dtype, jaggedtype.stopstype, indextype), (jaggedarray.stops, indexval))
 
-    print("start", start)
-    print("stop ", stop)
+    sli = context.make_helper(builder, numba.types.slice2_type)
+    sli.start = start
+    sli.stop = stop
 
-    slc = numba.cgutils.create_struct_proxy(numba.types.SliceType)(context, builder)
-
-    print("slc  ", slc)
-
+    return numba.targets.arrayobj.getitem_arraynd_intp(context, builder, numba.typing.templates.signature(jaggedtype.contenttype, jaggedtype.contenttype, numba.types.slice2_type), (jaggedarray.content, sli._getvalue()))
 
 @numba.extending.unbox(JaggedArrayType)
 def JaggedArray_unbox(typ, obj, c):

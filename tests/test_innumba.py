@@ -44,29 +44,31 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
-    # def test_innumba_unbox(self):
-    #     @numba.njit
-    #     def test(x):
-    #         return 3.14
-    #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    #     test(a)
-    #     a = JaggedArray.fromcounts([2, 0, 1], a)
-    #     test(a)
+    def test_innumba_unbox(self):
+        @numba.njit
+        def test(x):
+            return 3.14
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        test(a)
+        a = JaggedArray.fromcounts([2, 0, 1], a)
+        test(a)
 
-    # def test_innumba_box(self):
-    #     @numba.njit
-    #     def test(x):
-    #         return x
-    #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    #     assert test(a).tolist() == a.tolist()
-    #     a = JaggedArray.fromcounts([2, 0, 1], a)
-    #     assert test(a).tolist() == a.tolist()
+    def test_innumba_box(self):
+        @numba.njit
+        def test(x):
+            return x
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        assert test(a).tolist() == a.tolist()
+        a = JaggedArray.fromcounts([2, 0, 1], a)
+        assert test(a).tolist() == a.tolist()
 
     def test_innumba_getitem(self):
         @numba.njit
-        def test(x):
-            return x[2][1]
+        def test(x, i, j):
+            return x[i][j]
         a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-        print(test(a))
-
-        raise Exception
+        assert test(a, 0, 0) == 1.1
+        assert test(a, 0, 1) == 2.2
+        assert test(a, 0, 2) == 3.3
+        assert test(a, 2, 0) == 4.4
+        assert test(a, 2, 1) == 5.5
