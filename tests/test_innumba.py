@@ -63,12 +63,25 @@ class Test(unittest.TestCase):
         assert test(a).tolist() == a.tolist()
 
     def test_innumba_getitem(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+
         @numba.njit
         def test(x, i, j):
             return x[i][j]
-        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         assert test(a, 0, 0) == 1.1
         assert test(a, 0, 1) == 2.2
         assert test(a, 0, 2) == 3.3
         assert test(a, 2, 0) == 4.4
         assert test(a, 2, 1) == 5.5
+
+        @numba.njit
+        def test2(x, i):
+            return x.blah(i)
+
+        @numba.njit
+        def test2(x, i):
+            return x[i]
+
+        assert test2(a, 0).tolist() == [1.1, 2.2, 3.3]
+        assert test2(a, 1).tolist() == []
+        assert test2(a, 2).tolist() == [4.4, 5.5]

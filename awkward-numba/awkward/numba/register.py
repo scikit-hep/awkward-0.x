@@ -82,23 +82,18 @@ numba.extending.make_attribute_wrapper(JaggedArrayType, "starts", "starts")
 numba.extending.make_attribute_wrapper(JaggedArrayType, "stops", "stops")
 numba.extending.make_attribute_wrapper(JaggedArrayType, "content", "content")
 
+@numba.njit
+def JaggedArray_getitem_integer(array, index):
+    start = array.starts[index]
+    stop = array.stops[index]
+    return array.content[start:stop]
+
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
 def JaggedArray_getitem(context, builder, sig, args):
-    jaggedtype, indextype = sig.args
-    jaggedval, indexval = args
-
-    jaggedarray = numba.cgutils.create_struct_proxy(jaggedtype)(context, builder, value=jaggedval)
-    if jaggedtype.startstype.ndim != 1 or jaggedtype.stopstype.ndim != 1:
-        raise NotImplementedError
-
-    start = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, numba.typing.templates.signature(jaggedtype.startstype.dtype, jaggedtype.startstype, indextype), (jaggedarray.starts, indexval))
-    stop = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, numba.typing.templates.signature(jaggedtype.stopstype.dtype, jaggedtype.stopstype, indextype), (jaggedarray.stops, indexval))
-
-    sli = context.make_helper(builder, numba.types.slice2_type)
-    sli.start = start
-    sli.stop = stop
-
-    return numba.targets.arrayobj.getitem_arraynd_intp(context, builder, numba.typing.templates.signature(jaggedtype.contenttype, jaggedtype.contenttype, numba.types.slice2_type), (jaggedarray.content, sli._getvalue()))
+    if sig.args not in JaggedArray_getitem_integer.overloads:
+        JaggedArray_getitem_integer.compile(sig)
+    cres = JaggedArray_getitem_integer.overloads[sig.args]
+    return cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
 
 @numba.extending.unbox(JaggedArrayType)
 def JaggedArray_unbox(typ, obj, c):
