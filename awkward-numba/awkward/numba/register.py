@@ -50,9 +50,6 @@ class type_getitem(numba.typing.templates.AbstractTemplate):
         if len(args) == 2 and len(kwargs) == 0:
             arraytype, indextype = args
             if isinstance(arraytype, AwkwardType):
-
-                print("HERE", numba.typing.templates.signature(arraytype.getitem(indextype), *args, **kwargs))
-
                 return numba.typing.templates.signature(arraytype.getitem(indextype), *args, **kwargs)
 
 class JaggedArrayType(AwkwardType):
@@ -94,38 +91,77 @@ def JaggedArray_init_type(context):
 
 @numba.extending.lower_builtin(JaggedArray, numba.types.Array, numba.types.Array, numba.types.Array)
 def JaggedArray_init_array(context, builder, sig, args):
-    starts, stops, content = args
+    startstype, stopstype, contenttype = sig.args
+    startsval, stopsval, contentval = args
+
+    starts = numba.targets.arrayobj.make_array(startstype)(context, builder)
+    numba.targets.arrayobj.populate_array(starts,
+                                          data=starts.data,
+                                          shape=starts.shape,
+                                          strides=starts.strides,
+                                          itemsize=starts.itemsize,
+                                          meminfo=starts.meminfo,
+                                          parent=starts.parent)
+
+    stops = numba.targets.arrayobj.make_array(stopstype)(context, builder)
+    numba.targets.arrayobj.populate_array(stops,
+                                          data=stops.data,
+                                          shape=stops.shape,
+                                          strides=stops.strides,
+                                          itemsize=stops.itemsize,
+                                          meminfo=stops.meminfo,
+                                          parent=stops.parent)
+
+    content = numba.targets.arrayobj.make_array(contenttype)(context, builder)
+    numba.targets.arrayobj.populate_array(content,
+                                          data=content.data,
+                                          shape=content.shape,
+                                          strides=content.strides,
+                                          itemsize=content.itemsize,
+                                          meminfo=content.meminfo,
+                                          parent=content.parent)
+
     jaggedarray = numba.cgutils.create_struct_proxy(sig.return_type)(context, builder)
-    jaggedarray.starts = starts
-    jaggedarray.stops = stops
-    jaggedarray.content = content
+    jaggedarray.starts = starts._getvalue()
+    jaggedarray.stops = stops._getvalue()
+    jaggedarray.content = content._getvalue()
     return jaggedarray._getvalue()
 
-@numba.njit
-def JaggedArray_getitem_integer(array, where):
-    start = array.starts[where]
-    stop = array.stops[where]
-    return array.content[start:stop]
-
-@numba.njit
-def JaggedArray_getitem_slice(array, where):
-    starts = array.starts[where]
-    stops = array.stops[where]
-    return JaggedArray(starts, stops, array.content)
-
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
-def JaggedArray_getitem(context, builder, sig, args):
+def JaggedArray_getitem_lower_integer(context, builder, sig, args):
+    print("JaggedArray_getitem_lower_integer", sig)
+
+    @numba.njit
+    def JaggedArray_getitem_integer(array, where):
+        start = array.starts[where]
+        stop = array.stops[where]
+        return array.content[start:stop]
+
     if sig.args not in JaggedArray_getitem_integer.overloads:
+        print("JaggedArray_getitem_lower_integer compile")
         JaggedArray_getitem_integer.compile(sig)
     cres = JaggedArray_getitem_integer.overloads[sig.args]
-    return cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
+    out = cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
+    print("JaggedArray_getitem_lower_integer out")
+    return out
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
-def JaggedArray_getitem(context, builder, sig, args):
+def JaggedArray_getitem_lower_slice(context, builder, sig, args):
+    print("JaggedArray_getitem_lower_slice", sig)
+
+    @numba.njit
+    def JaggedArray_getitem_slice(array, where):
+        starts = array.starts[where]
+        stops = array.stops[where]
+        return JaggedArray(starts, stops, array.content)
+
     if sig.args not in JaggedArray_getitem_slice.overloads:
+        print("JaggedArray_getitem_lower_slice compile")
         JaggedArray_getitem_slice.compile(sig)
     cres = JaggedArray_getitem_slice.overloads[sig.args]
-    return cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
+    out = cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
+    print("JaggedArray_getitem_lower_slice out")
+    return out
 
 @numba.extending.unbox(JaggedArrayType)
 def JaggedArray_unbox(typ, obj, c):
@@ -158,5 +194,7 @@ def JaggedArray_box(typ, val, c):
     c.pyapi.decref(starts_obj)
     c.pyapi.decref(stops_obj)
     c.pyapi.decref(content_obj)
+
+    # c.pyapi.incref(out)
 
     return out

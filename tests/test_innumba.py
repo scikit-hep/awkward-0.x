@@ -28,6 +28,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import gc
 import sys
 
 import unittest
@@ -62,24 +63,41 @@ class Test(unittest.TestCase):
     #     assert test(a).tolist() == a.tolist()
     #     assert test(a2).tolist() == a2.tolist()
 
-    def test_innumba_getitem(self):
-        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-        a2 = JaggedArray.fromcounts([2, 0, 1], a)
-        # @numba.njit
-        # def test1(x, i, j):
-        #     return x[i][j]
-        # assert test1(a, 0, 0) == 1.1
-        # assert test1(a, 0, 1) == 2.2
-        # assert test1(a, 0, 2) == 3.3
-        # assert test1(a, 2, 0) == 4.4
-        # assert test1(a, 2, 1) == 5.5
-        @numba.njit
-        def test2(x, i):
-            return x[i]
-        # assert test2(a, 0).tolist() == [1.1, 2.2, 3.3]
-        # assert test2(a, 1).tolist() == []
-        # assert test2(a, 2).tolist() == [4.4, 5.5]
-        assert test2(a2, 0).tolist() == [[1.1, 2.2, 3.3], []]
-        # assert test2(a2, 1).tolist() == []
-        # assert test2(a2, 2).tolist() == [[4.4, 5.5]]
+    # def test_innumba_getitem(self):
+    #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    #     a2 = JaggedArray.fromcounts([2, 0, 1], a)
+    #     # @numba.njit
+    #     # def test1(x, i, j):
+    #     #     return x[i][j]
+    #     # assert test1(a, 0, 0) == 1.1
+    #     # assert test1(a, 0, 1) == 2.2
+    #     # assert test1(a, 0, 2) == 3.3
+    #     # assert test1(a, 2, 0) == 4.4
+    #     # assert test1(a, 2, 1) == 5.5
+    #     @numba.njit
+    #     def test2(x, i):
+    #         return x[i]
+    #     # assert test2(a, 0).tolist() == [1.1, 2.2, 3.3]
+    #     # assert test2(a, 1).tolist() == []
+    #     # assert test2(a, 2).tolist() == [4.4, 5.5]
+    #     print("ONE")
+    #     print(test2(a2, 0))  #  == [[1.1, 2.2, 3.3], []]
+    #     print("TWO")
+    #     # assert test2(a2, 1).tolist() == []
+    #     # assert test2(a2, 2).tolist() == [[4.4, 5.5]]
+    #     print(test2(a2, 0))
+    #     print("THREE")
 
+    def test_innumba_init(self):
+        @numba.njit
+        def test(starts, stops, content):
+            return JaggedArray(starts, stops, content)
+        starts = numpy.array([0, 3, 3])
+        stops = numpy.array([3, 3, 5])
+        content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
+        print(test(starts, stops, content))
+        starts = numpy.array([0, 3, 3])
+        stops = numpy.array([3, 3, 5])
+        content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
+        print("HERE")
+        print(test(starts, stops, content))
