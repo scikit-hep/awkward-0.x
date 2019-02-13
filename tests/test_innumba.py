@@ -28,7 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import gc
 import sys
 
 import unittest
@@ -45,23 +44,23 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
-    # def test_innumba_unbox(self):
-    #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    #     a2 = JaggedArray.fromcounts([2, 0, 1], a)
-    #     @numba.njit
-    #     def test(x):
-    #         return 3.14
-    #     test(a)
-    #     test(a2)
+    def test_innumba_unbox(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = JaggedArray.fromcounts([2, 0, 1], a)
+        @numba.njit
+        def test(x):
+            return 3.14
+        test(a)
+        test(a2)
 
-    # def test_innumba_box(self):
-    #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    #     a2 = JaggedArray.fromcounts([2, 0, 1], a)
-    #     @numba.njit
-    #     def test(x):
-    #         return x
-    #     assert test(a).tolist() == a.tolist()
-    #     assert test(a2).tolist() == a2.tolist()
+    def test_innumba_box(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = JaggedArray.fromcounts([2, 0, 1], a)
+        @numba.njit
+        def test(x):
+            return x
+        assert test(a).tolist() == a.tolist()
+        assert test(a2).tolist() == a2.tolist()
 
     # def test_innumba_getitem(self):
     #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
@@ -95,9 +94,13 @@ class Test(unittest.TestCase):
         starts = numpy.array([0, 3, 3])
         stops = numpy.array([3, 3, 5])
         content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
-        print(test(starts, stops, content))
-        starts = numpy.array([0, 3, 3])
-        stops = numpy.array([3, 3, 5])
-        content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
-        print("HERE")
-        print(test(starts, stops, content))
+        z = test(starts, stops, content)
+        assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+        assert z.starts is starts
+        assert z.stops is stops
+        assert z.content is content
+        z = test(starts, stops, content)
+        assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+        assert z.starts is starts
+        assert z.stops is stops
+        assert z.content is content

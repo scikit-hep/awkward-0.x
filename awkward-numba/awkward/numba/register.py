@@ -92,40 +92,62 @@ def JaggedArray_init_type(context):
 @numba.extending.lower_builtin(JaggedArray, numba.types.Array, numba.types.Array, numba.types.Array)
 def JaggedArray_init_array(context, builder, sig, args):
     startstype, stopstype, contenttype = sig.args
-    startsval, stopsval, contentval = args
+    starts, stops, content = args
 
-    starts = numba.targets.arrayobj.make_array(startstype)(context, builder)
-    numba.targets.arrayobj.populate_array(starts,
-                                          data=starts.data,
-                                          shape=starts.shape,
-                                          strides=starts.strides,
-                                          itemsize=starts.itemsize,
-                                          meminfo=starts.meminfo,
-                                          parent=starts.parent)
-
-    stops = numba.targets.arrayobj.make_array(stopstype)(context, builder)
-    numba.targets.arrayobj.populate_array(stops,
-                                          data=stops.data,
-                                          shape=stops.shape,
-                                          strides=stops.strides,
-                                          itemsize=stops.itemsize,
-                                          meminfo=stops.meminfo,
-                                          parent=stops.parent)
-
-    content = numba.targets.arrayobj.make_array(contenttype)(context, builder)
-    numba.targets.arrayobj.populate_array(content,
-                                          data=content.data,
-                                          shape=content.shape,
-                                          strides=content.strides,
-                                          itemsize=content.itemsize,
-                                          meminfo=content.meminfo,
-                                          parent=content.parent)
+    if context.enable_nrt:
+        context.nrt.incref(builder, startstype, starts)
+        context.nrt.incref(builder, stopstype, stops)
+        context.nrt.incref(builder, contenttype, content)
 
     jaggedarray = numba.cgutils.create_struct_proxy(sig.return_type)(context, builder)
-    jaggedarray.starts = starts._getvalue()
-    jaggedarray.stops = stops._getvalue()
-    jaggedarray.content = content._getvalue()
+    jaggedarray.starts = starts
+    jaggedarray.stops = stops
+    jaggedarray.content = content
     return jaggedarray._getvalue()
+
+    # startsobj = numba.targets.arrayobj.make_array(startstype)(context, builder, value=startsval)
+
+    # print("data", startsobj.data)
+    # print("shape", startsobj.shape)
+    # print("strides", startsobj.strides)
+    # print("itemsize", startsobj.itemsize)
+    # print("meminfo", startsobj.meminfo)
+    # print("parent", startsobj.parent)
+
+    # starts = numba.targets.arrayobj.make_array(startstype)(context, builder)
+    # # numba.targets.arrayobj.populate_array(starts,
+    # #                                       data=startsobj.data,
+    # #                                       shape=startsobj.shape,
+    # #                                       strides=startsobj.strides,
+    # #                                       itemsize=startsobj.itemsize,
+    # #                                       meminfo=startsobj.meminfo,
+    # #                                       parent=startsobj.parent)
+
+    # stopsobj = numba.targets.arrayobj.make_array(stopstype)(context, builder, value=stopsval)
+    # stops = numba.targets.arrayobj.make_array(stopstype)(context, builder)
+    # # numba.targets.arrayobj.populate_array(stops,
+    # #                                       data=stopsobj.data,
+    # #                                       shape=stopsobj.shape,
+    # #                                       strides=stopsobj.strides,
+    # #                                       itemsize=stopsobj.itemsize,
+    # #                                       meminfo=stopsobj.meminfo,
+    # #                                       parent=stopsobj.parent)
+
+    # contentobj = numba.targets.arrayobj.make_array(contenttype)(context, builder, value=contentval)
+    # content = numba.targets.arrayobj.make_array(contenttype)(context, builder)
+    # # numba.targets.arrayobj.populate_array(content,
+    # #                                       data=contentobj.data,
+    # #                                       shape=contentobj.shape,
+    # #                                       strides=contentobj.strides,
+    # #                                       itemsize=contentobj.itemsize,
+    # #                                       meminfo=contentobj.meminfo,
+    # #                                       parent=contentobj.parent)
+
+    # jaggedarray = numba.cgutils.create_struct_proxy(sig.return_type)(context, builder)
+    # jaggedarray.starts = starts._getvalue()
+    # jaggedarray.stops = stops._getvalue()
+    # jaggedarray.content = content._getvalue()
+    # return jaggedarray._getvalue()
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
 def JaggedArray_getitem_lower_integer(context, builder, sig, args):
