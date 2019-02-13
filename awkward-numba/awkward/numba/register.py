@@ -93,4 +93,9 @@ def box_JaggedArray(typ, val, c):
 
     cls = c.pyapi.unserialize(c.pyapi.serialize_object(typ.specialization))
     out = c.pyapi.call_function_objargs(cls, (starts_obj, stops_obj, content_obj))
+
+    c.pyapi.decref(starts_obj)
+    c.pyapi.decref(stops_obj)
+    c.pyapi.decref(content_obj)
+
     return out
