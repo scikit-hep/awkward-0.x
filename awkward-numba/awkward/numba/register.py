@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import operator
+
 import numba
 
 from awkward.array.chunked import ChunkedArray, AppendableArray
@@ -41,7 +43,15 @@ from awkward.array.virtual import VirtualArray
 
 class AwkwardType(numba.types.Type):
     pass
-        
+
+@numba.typing.templates.infer_global(operator.getitem)
+class type_getitem(numba.typing.templates.AbstractTemplate):
+    def generic(self, args, kwargs):
+        if len(args) == 2 and len(kwargs) == 0:
+            arraytype, indextype = args
+            if isinstance(arraytype, AwkwardType):
+                return numba.typing.templates.signature(arraytype.getitem(indextype), *args, **kwargs)
+
 class JaggedArrayType(AwkwardType):
     def __init__(self, startstype, stopstype, contenttype, specialization=JaggedArray):
         super(JaggedArrayType, self).__init__(name="JaggedArrayType{0}({1}, {2}, {3})".format("" if specialization is JaggedArray else repr(abs(hash(specialization))), startstype.name, stopstype.name, contenttype.name))
@@ -50,8 +60,14 @@ class JaggedArrayType(AwkwardType):
         self.contenttype = contenttype
         self.specialization = specialization
 
+    def getitem(self, indextype):
+        if isinstance(indextype, numba.types.Integer):
+            return self.contenttype
+        if isinstance(indextype, numba.types.SliceType):
+            return self
+
 @numba.extending.typeof_impl.register(JaggedArray)
-def typeof_JaggedArray(val, c):
+def JaggedArray_typeof(val, c):
     return JaggedArrayType(numba.typeof(val.starts), numba.typeof(val.stops), numba.typeof(val.content), type(val))
 
 @numba.extending.register_model(JaggedArrayType)
@@ -66,8 +82,28 @@ numba.extending.make_attribute_wrapper(JaggedArrayType, "starts", "starts")
 numba.extending.make_attribute_wrapper(JaggedArrayType, "stops", "stops")
 numba.extending.make_attribute_wrapper(JaggedArrayType, "content", "content")
 
+@numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
+def JaggedArray_getitem(context, builder, sig, args):
+    jaggedtype, indextype = sig.args
+    jaggedval, indexval = args
+
+    jaggedarray = numba.cgutils.create_struct_proxy(jaggedtype)(context, builder, value=jaggedval)
+    if jaggedtype.startstype.ndim != 1 or jaggedtype.stopstype.ndim != 1:
+        raise NotImplementedError
+
+    start = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, numba.typing.templates.signature(jaggedtype.startstype.dtype, jaggedtype.startstype, indextype), (jaggedarray.starts, indexval))
+    stop = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, numba.typing.templates.signature(jaggedtype.stopstype.dtype, jaggedtype.stopstype, indextype), (jaggedarray.stops, indexval))
+
+    print("start", start)
+    print("stop ", stop)
+
+    slc = numba.cgutils.create_struct_proxy(numba.types.SliceType)(context, builder)
+
+    print("slc  ", slc)
+
+
 @numba.extending.unbox(JaggedArrayType)
-def unbox_JaggedArray(typ, obj, c):
+def JaggedArray_unbox(typ, obj, c):
     starts_obj = c.pyapi.object_getattr_string(obj, "starts")
     stops_obj = c.pyapi.object_getattr_string(obj, "stops")
     content_obj = c.pyapi.object_getattr_string(obj, "content")
@@ -85,7 +121,7 @@ def unbox_JaggedArray(typ, obj, c):
     return numba.extending.NativeValue(jaggedarray._getvalue(), is_error)
 
 @numba.extending.box(JaggedArrayType)
-def box_JaggedArray(typ, val, c):
+def JaggedArray_box(typ, val, c):
     jaggedarray = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder, value=val)
     starts_obj = c.pyapi.from_native_value(typ.startstype, jaggedarray.starts, c.env_manager)
     stops_obj = c.pyapi.from_native_value(typ.stopstype, jaggedarray.stops, c.env_manager)
