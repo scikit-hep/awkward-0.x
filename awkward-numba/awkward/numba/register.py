@@ -50,6 +50,9 @@ class type_getitem(numba.typing.templates.AbstractTemplate):
         if len(args) == 2 and len(kwargs) == 0:
             arraytype, indextype = args
             if isinstance(arraytype, AwkwardType):
+
+                print("HERE", numba.typing.templates.signature(arraytype.getitem(indextype), *args, **kwargs))
+
                 return numba.typing.templates.signature(arraytype.getitem(indextype), *args, **kwargs)
 
 class JaggedArrayType(AwkwardType):
@@ -59,7 +62,7 @@ class JaggedArrayType(AwkwardType):
         self.stopstype = stopstype
         self.contenttype = contenttype
         self.specialization = specialization
-
+        
     def getitem(self, indextype):
         if isinstance(indextype, numba.types.Integer):
             return self.contenttype
@@ -82,17 +85,46 @@ numba.extending.make_attribute_wrapper(JaggedArrayType, "starts", "starts")
 numba.extending.make_attribute_wrapper(JaggedArrayType, "stops", "stops")
 numba.extending.make_attribute_wrapper(JaggedArrayType, "content", "content")
 
+@numba.extending.type_callable(JaggedArray)
+def JaggedArray_init_type(context):
+    def typer(startstype, stopstype, contenttype):
+        if isinstance(startstype, numba.types.Array) and isinstance(stopstype, numba.types.Array) and isinstance(contenttype, (numba.types.Array, AwkwardType)):
+            return JaggedArrayType(startstype, stopstype, contenttype)
+    return typer
+
+@numba.extending.lower_builtin(JaggedArray, numba.types.Array, numba.types.Array, numba.types.Array)
+def JaggedArray_init_array(context, builder, sig, args):
+    starts, stops, content = args
+    jaggedarray = numba.cgutils.create_struct_proxy(sig.return_type)(context, builder)
+    jaggedarray.starts = starts
+    jaggedarray.stops = stops
+    jaggedarray.content = content
+    return jaggedarray._getvalue()
+
 @numba.njit
-def JaggedArray_getitem_integer(array, index):
-    start = array.starts[index]
-    stop = array.stops[index]
+def JaggedArray_getitem_integer(array, where):
+    start = array.starts[where]
+    stop = array.stops[where]
     return array.content[start:stop]
+
+@numba.njit
+def JaggedArray_getitem_slice(array, where):
+    starts = array.starts[where]
+    stops = array.stops[where]
+    return JaggedArray(starts, stops, array.content)
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
 def JaggedArray_getitem(context, builder, sig, args):
     if sig.args not in JaggedArray_getitem_integer.overloads:
         JaggedArray_getitem_integer.compile(sig)
     cres = JaggedArray_getitem_integer.overloads[sig.args]
+    return cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
+
+@numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
+def JaggedArray_getitem(context, builder, sig, args):
+    if sig.args not in JaggedArray_getitem_slice.overloads:
+        JaggedArray_getitem_slice.compile(sig)
+    cres = JaggedArray_getitem_slice.overloads[sig.args]
     return cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
 
 @numba.extending.unbox(JaggedArrayType)
