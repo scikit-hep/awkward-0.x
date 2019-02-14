@@ -71,6 +71,10 @@ class JaggedArrayType(AwkwardArrayType):
             return self.contenttype
         if isinstance(indextype, numba.types.SliceType):
             return self
+        if isinstance(indextype, numba.types.Array) and indextype.ndim == 1 and isinstance(indextype.dtype, numba.types.Boolean):
+            return self
+        if isinstance(indextype, numba.types.Array) and indextype.ndim == 1 and isinstance(indextype.dtype, numba.types.Integer):
+            return self
 
 @numba.extending.register_model(JaggedArrayType)
 class JaggedArrayModel(numba.datamodel.models.StructModel):
@@ -170,13 +174,30 @@ def JaggedArray_getitem_slice(jaggedarray, where):
     stops = jaggedarray.stops[where]
     return jaggedarray.copy(starts, stops, jaggedarray.content, jaggedarray.iscompact)
 
+@numba.njit
+def JaggedArray_getitem_boolarray(jaggedarray, where):
+    starts = jaggedarray.starts[where]
+    stops = jaggedarray.stops[where]
+    return jaggedarray.copy(starts, stops, jaggedarray.content, False)
+
+@numba.njit
+def JaggedArray_getitem_intarray(jaggedarray, where):
+    starts = jaggedarray.starts[where]
+    stops = jaggedarray.stops[where]
+    return jaggedarray.copy(starts, stops, jaggedarray.content, False)
+
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
+@numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Array)
 def JaggedArray_lower_getitem(context, builder, sig, args):
     if isinstance(sig.args[1], numba.types.Integer):
         getitem = JaggedArray_getitem_integer
     elif isinstance(sig.args[1], numba.types.SliceType):
         getitem = JaggedArray_getitem_slice
+    elif isinstance(sig.args[1], numba.types.Array) and sig.args[1].ndim == 1 and isinstance(sig.args[1].dtype, numba.types.Boolean):
+        getitem = JaggedArray_getitem_boolarray
+    elif isinstance(sig.args[1], numba.types.Array) and sig.args[1].ndim == 1 and isinstance(sig.args[1].dtype, numba.types.Integer):
+        getitem = JaggedArray_getitem_intarray
     else:
         raise AssertionError(sig.args[1])
     if sig.args not in getitem.overloads:
