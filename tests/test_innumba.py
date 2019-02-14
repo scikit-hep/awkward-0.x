@@ -176,3 +176,29 @@ class Test(unittest.TestCase):
         z2 = test2(a2, index)
         assert z2.tolist() == [[4.4, 5.5], [4.4, 5.5], [1.1, 2.2, 3.3], []]
         assert z2.content.tolist() == [4.4, 5.5, 4.4, 5.5, 1.1, 2.2, 3.3]
+
+    def test_innumba_getitem_boolarray(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        starts = numpy.array([0, 3, 4])
+        stops = numpy.array([3, 3, 6])
+        content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
+        a2 = JaggedArray(starts, stops, content)
+        index = numpy.array([False, True, True])
+        @numba.njit
+        def test1(x, i):
+            return x[i]
+        z = test1(a, index)
+        assert z.tolist() == [[], [4.4, 5.5]]
+        assert z.content.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
+        z2 = test1(a2, index)
+        assert z2.tolist() == [[], [4.4, 5.5]]
+        assert z2.content.tolist() == [1.1, 2.2, 3.3, 999, 4.4, 5.5]
+        @numba.njit
+        def test2(x, i):
+            return x[i].compact()
+        z = test2(a, index)
+        assert z.tolist() == [[], [4.4, 5.5]]
+        assert z.content.tolist() == [4.4, 5.5]
+        z2 = test2(a2, index)
+        assert z2.tolist() == [[], [4.4, 5.5]]
+        assert z2.content.tolist() == [4.4, 5.5]
