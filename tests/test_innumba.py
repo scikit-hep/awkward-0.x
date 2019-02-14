@@ -35,6 +35,7 @@ import unittest
 import numpy
 import pytest
 
+import awkward
 numba = pytest.importorskip("numba")
 awkward_numba = pytest.importorskip("awkward.numba")
 
@@ -101,6 +102,10 @@ class Test(unittest.TestCase):
         assert z.starts is starts
         assert z.stops is stops
         assert z.content is content
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        starts2 = numpy.array([0, 2, 2])
+        stops2 = numpy.array([2, 2, 3])
+        assert test(starts2, stops2, a).tolist() == [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
 
     def test_innumba_copy(self):
         @numba.njit
@@ -109,6 +114,15 @@ class Test(unittest.TestCase):
         starts = numpy.array([0, 3, 3])
         stops = numpy.array([3, 3, 5])
         content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
-        a = JaggedArray.fromiter([[999.9], [3.14], [2.2, 2.2, 2.2]])
-        a2 = JaggedArray.fromcounts([2, 0, 1], a)
-        test(a, starts, stops, content)
+        a = awkward_numba.JaggedArray.fromiter([[999.9], [3.14], [2.2, 2.2, 2.2]])
+        a2 = awkward_numba.JaggedArray.fromcounts([2, 0, 1], a)
+        z = test(a, starts, stops, content)
+        assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+        assert isinstance(z, awkward_numba.JaggedArray)
+        assert type(z) is not awkward.JaggedArray
+        starts2 = numpy.array([0, 2, 2])
+        stops2 = numpy.array([2, 2, 3])
+        z2 = test(a2, starts2, stops2, z)
+        assert z2.tolist() == [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
+        assert isinstance(z2, awkward_numba.JaggedArray)
+        assert type(z2) is not awkward.JaggedArray

@@ -124,6 +124,7 @@ def JaggedArray_type_init(context):
     return typer
 
 @numba.extending.lower_builtin(JaggedArray, numba.types.Array, numba.types.Array, numba.types.Array)
+@numba.extending.lower_builtin(JaggedArray, numba.types.Array, numba.types.Array, AwkwardArrayType)
 def JaggedArray_init_array(context, builder, sig, args):
     startstype, stopstype, contenttype = sig.args
     starts, stops, content = args
@@ -139,16 +140,6 @@ def JaggedArray_init_array(context, builder, sig, args):
     jaggedarray.content = content
     return jaggedarray._getvalue()
 
-@numba.typing.templates.infer_getattr
-class JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
-    key = JaggedArrayType
-
-    @numba.typing.templates.bound_function("copy")
-    def resolve_copy(self, jaggedarraytype, args, kwargs):
-        if len(args) == 3 and len(kwargs) == 0:
-            startstype, stopstype, contenttype = args
-            return jaggedarraytype(startstype, stopstype, contenttype)
-
 ######################################################################## JaggedArray_getitem
 
 @numba.njit
@@ -161,11 +152,11 @@ def JaggedArray_getitem_integer(array, where):
 def JaggedArray_getitem_slice(array, where):
     starts = array.starts[where]
     stops = array.stops[where]
-    return JaggedArray(starts, stops, array.content)
+    return array.copy(starts, stops, array.content)
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
-def JaggedArray_getitem_lower(context, builder, sig, args):
+def JaggedArray_lower_getitem(context, builder, sig, args):
     if isinstance(sig.args[1], numba.types.Integer):
         getitem = JaggedArray_getitem_integer
     elif isinstance(sig.args[1], numba.types.SliceType):
@@ -176,6 +167,35 @@ def JaggedArray_getitem_lower(context, builder, sig, args):
         getitem.compile(sig)
     cres = getitem.overloads[sig.args]
     return cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
+
+######################################################################## JaggedArray_methods
+
+@numba.typing.templates.infer_getattr
+class JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
+    key = JaggedArrayType
+
+    @numba.typing.templates.bound_function("copy")
+    def resolve_copy(self, jaggedarraytype, args, kwargs):
+        if len(args) == 3 and len(kwargs) == 0:
+            startstype, stopstype, contenttype = args
+            return jaggedarraytype(startstype, stopstype, contenttype)
+
+@numba.extending.lower_builtin("copy", JaggedArrayType, numba.types.Array, numba.types.Array, numba.types.Array)
+@numba.extending.lower_builtin("copy", JaggedArrayType, numba.types.Array, numba.types.Array, AwkwardArrayType)
+def JaggedArray_lower_copy(context, builder, sig, args):
+    jaggedarraytype, startstype, stopstype, contenttype = sig.args
+    jaggedarray, starts, stops, content = args
+
+    if context.enable_nrt:
+        context.nrt.incref(builder, startstype, starts)
+        context.nrt.incref(builder, stopstype, stops)
+        context.nrt.incref(builder, contenttype, content)
+
+    jaggedarray = numba.cgutils.create_struct_proxy(jaggedarraytype)(context, builder)
+    jaggedarray.starts = starts
+    jaggedarray.stops = stops
+    jaggedarray.content = content
+    return jaggedarray._getvalue()
 
 ######################################################################## AwkwardArray_typeof
 
