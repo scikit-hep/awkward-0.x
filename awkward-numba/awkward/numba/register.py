@@ -139,6 +139,16 @@ def JaggedArray_init_array(context, builder, sig, args):
     jaggedarray.content = content
     return jaggedarray._getvalue()
 
+@numba.typing.templates.infer_getattr
+class JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
+    key = JaggedArrayType
+
+    @numba.typing.templates.bound_function("copy")
+    def resolve_copy(self, jaggedarraytype, args, kwargs):
+        if len(args) == 3 and len(kwargs) == 0:
+            startstype, stopstype, contenttype = args
+            return jaggedarraytype(startstype, stopstype, contenttype)
+
 ######################################################################## JaggedArray_getitem
 
 @numba.njit

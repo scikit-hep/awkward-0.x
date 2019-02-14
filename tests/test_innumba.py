@@ -101,3 +101,14 @@ class Test(unittest.TestCase):
         assert z.starts is starts
         assert z.stops is stops
         assert z.content is content
+
+    def test_innumba_copy(self):
+        @numba.njit
+        def test(x, starts, stops, content):
+            return x.copy(starts, stops, content)
+        starts = numpy.array([0, 3, 3])
+        stops = numpy.array([3, 3, 5])
+        content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
+        a = JaggedArray.fromiter([[999.9], [3.14], [2.2, 2.2, 2.2]])
+        a2 = JaggedArray.fromcounts([2, 0, 1], a)
+        test(a, starts, stops, content)
