@@ -110,7 +110,7 @@ class Test(unittest.TestCase):
     def test_innumba_copy(self):
         @numba.njit
         def test(x, starts, stops, content):
-            return x.copy(starts, stops, content)
+            return x.copy(starts, stops, content, False)
         starts = numpy.array([0, 3, 3])
         stops = numpy.array([3, 3, 5])
         content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
@@ -126,3 +126,27 @@ class Test(unittest.TestCase):
         assert z2.tolist() == [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
         assert isinstance(z2, awkward_numba.JaggedArray)
         assert type(z2) is not awkward.JaggedArray
+
+    def test_innumba_compact(self):
+        @numba.njit
+        def test(x):
+            return x.compact()
+        starts = numpy.array([0, 3, 4])
+        stops = numpy.array([3, 3, 6])
+        content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
+        a = JaggedArray(starts, stops, content)
+        z = test(a)
+        assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+        assert z.content.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
+        assert z.iscompact
+
+    def test_innumba_flatten(self):
+        @numba.njit
+        def test(x):
+            return x.flatten()
+        starts = numpy.array([0, 3, 4])
+        stops = numpy.array([3, 3, 6])
+        content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
+        a = JaggedArray(starts, stops, content)
+        z = test(a)
+        assert z.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]

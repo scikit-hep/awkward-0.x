@@ -248,7 +248,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             offsets[-1] = len(content)
         return cls.fromoffsets(offsets, content)
 
-    def copy(self, starts=None, stops=None, content=None):
+    def copy(self, starts=None, stops=None, content=None, iscompact=None):
         out = self.__class__.__new__(self.__class__)
         out._starts  = self._starts
         out._stops   = self._stops
@@ -265,7 +265,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out.content = content
         return out
 
-    def deepcopy(self, starts=None, stops=None, content=None):
+    def deepcopy(self, starts=None, stops=None, content=None, iscompact=None):
         out = self.copy(starts=starts, stops=stops, content=content)
         out._starts  = self._util_deepcopy(out._starts)
         out._stops   = self._util_deepcopy(out._stops)
@@ -326,7 +326,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         
     @property
     def stops(self):
-        return self._stops
+        if len(self._stops) == len(self._starts):
+            return self._stops
+        else:
+            return self._stops[:len(self._starts)]
 
     @stops.setter
     def stops(self, value):
@@ -1111,7 +1114,34 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _canuseoffset(self):
         self._valid()
-        return self.offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and self.numpy.array_equal(self._starts[1:], self._stops[:-1]))
+        return self.offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and self.numpy.array_equal(self._starts[1:], self.stops[:-1]))
+
+    @property
+    def iscompact(self):
+        if len(self._starts) == 0:
+            return len(self._content) == 0
+        else:
+            flatstarts = self._starts.reshape(-1)
+            flatstops = self.stops.reshape(-1)   # no underscore!
+            if not self.offsetsaliased(self._starts, self._stops) and not self.numpy.array_equal(flatstarts[1:], flatstops[:-1]):
+                return False
+            if not self._isvalid and not (flatstops >= flatstarts).all():
+                raise ValueError("offsets must be monatonically increasing")
+            return flatstarts[0] == 0 and flatstops[-1] == len(self._content)
+
+    def compact(self):
+        if self.iscompact:
+            return self
+        else:
+            offsets = self.counts2offsets(self.counts.reshape(-1))
+            if len(self._starts.shape) == 1:
+                tmp = self
+            else:                                                # no underscore!
+                tmp = self.JaggedArray(self._starts.reshape(-1), self.stops.reshape(-1), self._content)
+            out = tmp._tojagged(offsets[:-1], offsets[1:], copy=False)
+            out.starts.shape = self._starts.shape
+            out.stops.shape = self._starts.shape  # intentional: self._stops can too long
+            return out
 
     def flatten(self, axis=0):
         if not self._util_isinteger(axis) or axis < 0:

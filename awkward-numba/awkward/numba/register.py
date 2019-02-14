@@ -30,6 +30,7 @@
 
 import operator
 
+import numpy
 import numba
 
 from awkward.array.base import AwkwardArray
@@ -76,27 +77,32 @@ class JaggedArrayModel(numba.datamodel.models.StructModel):
     def __init__(self, dmm, fe_type):
         members = [("starts", fe_type.startstype),
                    ("stops", fe_type.stopstype),
-                   ("content", fe_type.contenttype)]
+                   ("content", fe_type.contenttype),
+                   ("iscompact", numba.types.boolean)]
         super(JaggedArrayModel, self).__init__(dmm, fe_type, members)
 
 numba.extending.make_attribute_wrapper(JaggedArrayType, "starts", "starts")
 numba.extending.make_attribute_wrapper(JaggedArrayType, "stops", "stops")
 numba.extending.make_attribute_wrapper(JaggedArrayType, "content", "content")
+numba.extending.make_attribute_wrapper(JaggedArrayType, "iscompact", "iscompact")
 
 @numba.extending.unbox(JaggedArrayType)
 def JaggedArray_unbox(typ, obj, c):
     starts_obj = c.pyapi.object_getattr_string(obj, "starts")
     stops_obj = c.pyapi.object_getattr_string(obj, "stops")
     content_obj = c.pyapi.object_getattr_string(obj, "content")
+    iscompact_obj = c.pyapi.object_getattr_string(obj, "iscompact")
 
     jaggedarray = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder)
     jaggedarray.starts = c.pyapi.to_native_value(typ.startstype, starts_obj).value
     jaggedarray.stops = c.pyapi.to_native_value(typ.stopstype, stops_obj).value
     jaggedarray.content = c.pyapi.to_native_value(typ.contenttype, content_obj).value
+    jaggedarray.iscompact = c.pyapi.to_native_value(numba.types.boolean, iscompact_obj).value
 
     c.pyapi.decref(starts_obj)
     c.pyapi.decref(stops_obj)
     c.pyapi.decref(content_obj)
+    c.pyapi.decref(iscompact_obj)
 
     is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
     return numba.extending.NativeValue(jaggedarray._getvalue(), is_error)
@@ -138,21 +144,31 @@ def JaggedArray_init_array(context, builder, sig, args):
     jaggedarray.starts = starts
     jaggedarray.stops = stops
     jaggedarray.content = content
+    jaggedarray.iscompact = context.get_constant(numba.types.boolean, False)
     return jaggedarray._getvalue()
 
 ######################################################################## JaggedArray_getitem
 
-@numba.njit
-def JaggedArray_getitem_integer(array, where):
-    start = array.starts[where]
-    stop = array.stops[where]
-    return array.content[start:stop]
+@numba.extending.overload(len)
+def JaggedArray_len(jaggedarraytype):
+    if isinstance(jaggedarraytype, JaggedArrayType):
+        def impl(jaggedarray):
+            return len(jaggedarray.starts)
+        return impl
 
 @numba.njit
-def JaggedArray_getitem_slice(array, where):
-    starts = array.starts[where]
-    stops = array.stops[where]
-    return array.copy(starts, stops, array.content)
+def JaggedArray_getitem_integer(jaggedarray, where):
+    start = jaggedarray.starts[where]
+    stop = jaggedarray.stops[where]
+    if start >= len(jaggedarray.content) or stop > len(jaggedarray.content):
+        raise ValueError("JaggedArray.starts or JaggedArray.stops extends beyond JaggedArray.content")
+    return jaggedarray.content[start:stop]
+
+@numba.njit
+def JaggedArray_getitem_slice(jaggedarray, where):
+    starts = jaggedarray.starts[where]
+    stops = jaggedarray.stops[where]
+    return jaggedarray.copy(starts, stops, jaggedarray.content, jaggedarray.iscompact)
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
@@ -176,15 +192,16 @@ class JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
 
     @numba.typing.templates.bound_function("copy")
     def resolve_copy(self, jaggedarraytype, args, kwargs):
-        if len(args) == 3 and len(kwargs) == 0:
-            startstype, stopstype, contenttype = args
-            return jaggedarraytype(startstype, stopstype, contenttype)
+        if len(args) == 4 and len(kwargs) == 0:
+            startstype, stopstype, contenttype, iscompacttype = args
+            if isinstance(startstype, numba.types.Array) and isinstance(stopstype, numba.types.Array) and isinstance(contenttype, (numba.types.Array, AwkwardArrayType)) and isinstance(iscompacttype, numba.types.Boolean):
+                return jaggedarraytype(startstype, stopstype, contenttype, iscompacttype)
 
-@numba.extending.lower_builtin("copy", JaggedArrayType, numba.types.Array, numba.types.Array, numba.types.Array)
-@numba.extending.lower_builtin("copy", JaggedArrayType, numba.types.Array, numba.types.Array, AwkwardArrayType)
+@numba.extending.lower_builtin("copy", JaggedArrayType, numba.types.Array, numba.types.Array, numba.types.Array, numba.types.boolean)
+@numba.extending.lower_builtin("copy", JaggedArrayType, numba.types.Array, numba.types.Array, AwkwardArrayType, numba.types.boolean)
 def JaggedArray_lower_copy(context, builder, sig, args):
-    jaggedarraytype, startstype, stopstype, contenttype = sig.args
-    jaggedarray, starts, stops, content = args
+    jaggedarraytype, startstype, stopstype, contenttype, iscompacttype = sig.args
+    jaggedarray, starts, stops, content, iscompact = args
 
     if context.enable_nrt:
         context.nrt.incref(builder, startstype, starts)
@@ -195,7 +212,51 @@ def JaggedArray_lower_copy(context, builder, sig, args):
     jaggedarray.starts = starts
     jaggedarray.stops = stops
     jaggedarray.content = content
+    jaggedarray.iscompact = iscompact
     return jaggedarray._getvalue()
+
+@numba.extending.overload_method(JaggedArrayType, "compact")
+def JaggedArray_compact(jaggedarraytype):
+    if isinstance(jaggedarraytype, JaggedArrayType):
+        def impl(jaggedarray):
+            if jaggedarray.iscompact:
+                return jaggedarray
+            if len(jaggedarray.starts) == 0:
+                return jaggedarray.copy(jaggedarray.starts, jaggedarray.starts, jaggedarray.content[0:0], True)
+
+            if jaggedarray.starts.shape != jaggedarray.stops.shape:
+                raise ValueError("JaggedArray.starts.shape must be equal to JaggedArray.stops.shape")
+            flatstarts = jaggedarray.starts.ravel()
+            flatstops = jaggedarray.stops.ravel()
+
+            offsets = numpy.empty(len(flatstarts) + 1, flatstarts.dtype)
+            offsets[0] = 0
+            for i in range(len(flatstarts)):
+                count = flatstops[i] - flatstarts[i]
+                if count < 0:
+                    raise ValueError("JaggedArray.stops[i] must be greater than or equal to JaggedArray.starts[i] for all i")
+                offsets[i + 1] = offsets[i] + count
+
+            index = numpy.empty(offsets[-1], numpy.int64)
+            k = 0
+            for i in range(len(flatstarts)):
+                for j in range(flatstarts[i], flatstops[i]):
+                    index[k] = j
+                    k += 1
+
+            starts = offsets[:-1].reshape(jaggedarray.starts.shape)
+            stops = offsets[1:].reshape(jaggedarray.stops.shape)
+            content = jaggedarray.content[index]
+            return jaggedarray.copy(starts, stops, content, True)
+
+    return impl
+
+@numba.extending.overload_method(JaggedArrayType, "flatten")
+def JaggedArray_flatten(jaggedarraytype):
+    if isinstance(jaggedarraytype, JaggedArrayType):
+        def impl(jaggedarray):
+            return jaggedarray.compact().content
+    return impl
 
 ######################################################################## AwkwardArray_typeof
 
