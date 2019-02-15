@@ -251,3 +251,17 @@ class Test(unittest.TestCase):
         def test2(x, i, j, k):
             return x[i:j, k]
         assert test2(a, 0, 2, 0).tolist() == [[1.1, 2.2, 3.3], []]
+
+    def test_innumba_getitem_tuple_boolarray(self):
+        a = JaggedArray([[0], [3], [3]], [[3], [3], [5]], [1.1, 2.2, 3.3, 4.4, 5.5])  # [[[1.1 2.2 3.3]] [[]] [[4.4 5.5]]]
+        @numba.njit
+        def test1(x, i, j):
+            return x[i, j]
+        assert test1(a, numpy.array([True, False, True]), 0).tolist() == [[1.1, 2.2, 3.3], [4.4, 5.5]]
+
+    def test_innumba_getitem_tuple_intarray(self):
+        a = JaggedArray([[0], [3], [3]], [[3], [3], [5]], [1.1, 2.2, 3.3, 4.4, 5.5])  # [[[1.1 2.2 3.3]] [[]] [[4.4 5.5]]]
+        @numba.njit
+        def test1(x, i, j):
+            return x[i, j]
+        assert test1(a, numpy.array([2, 0]), 0).tolist() == [[4.4, 5.5], [1.1, 2.2, 3.3]]
