@@ -227,6 +227,12 @@ class Test(unittest.TestCase):
         a3 = JaggedArray.fromcounts([2, 0, 1], a)
         assert test1(a3, index).tolist() == [[], [[4.4, 5.5]]]
 
+    def test_innumba_getitem_tuple_integer(self):
+        a = JaggedArray([[0], [3], [3]], [[3], [3], [5]], [1.1, 2.2, 3.3, 4.4, 5.5])
+        
+
+
+        
     def test_innumba_getitem_tuple_slice(self):
         a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         a2 = JaggedArray.fromcounts([2, 0, 1], a)   # [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
@@ -239,9 +245,8 @@ class Test(unittest.TestCase):
         assert test1(a2, 1, 3).tolist() == [[], [[4.4, 5.5]]]
 
         a = JaggedArray([[0], [3], [3]], [[3], [3], [5]], [1.1, 2.2, 3.3, 4.4, 5.5])
-        print(a)
-        print(a[0:2, 0])
+        assert a[0:2, 0].tolist() == [[1.1, 2.2, 3.3], []]
         @numba.njit
         def test2(x, i, j, k):
             return x[i:j, k]
-        print(test2(a, 0, 2, 0))
+        assert test2(a, 0, 2, 0).tolist() == [[1.1, 2.2, 3.3], []]
