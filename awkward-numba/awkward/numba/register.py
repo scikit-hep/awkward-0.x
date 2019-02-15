@@ -294,10 +294,8 @@ def JaggedArray_lower_getitem_tuple_entry(context, builder, sig, args):
 
     headtype = numba.types.Tuple(wheretype.types[:jaggedarraytype.startstype.ndim])
     tailtype = numba.types.Tuple(wheretype.types[jaggedarraytype.startstype.ndim:])
-    headslice = context.get_constant(numba.types.slice2_type, slice(None, jaggedarraytype.startstype.ndim))
-    tailslice = context.get_constant(numba.types.slice2_type, slice(jaggedarraytype.startstype.ndim, None))
-    headval = numba.targets.tupleobj.static_getitem_tuple(context, builder, headtype(whereval, numba.types.slice2_type), (whereval, headslice))
-    tailval = numba.targets.tupleobj.static_getitem_tuple(context, builder, tailtype(whereval, numba.types.slice2_type), (whereval, tailslice))
+    headval = numba.targets.tupleobj.static_getitem_tuple(context, builder, headtype(whereval, numba.types.slice2_type), (whereval, slice(None, jaggedarraytype.startstype.ndim)))
+    tailval = numba.targets.tupleobj.static_getitem_tuple(context, builder, tailtype(whereval, numba.types.slice2_type), (whereval, slice(jaggedarraytype.startstype.ndim, None)))
 
     startstype = numba.typing.arraydecl.get_array_index_type(jaggedarraytype.startstype, headtype).result
     stopstype = numba.typing.arraydecl.get_array_index_type(jaggedarraytype.stopstype, headtype).result
@@ -305,7 +303,8 @@ def JaggedArray_lower_getitem_tuple_entry(context, builder, sig, args):
     stops = numba.targets.arrayobj.getitem_array_tuple(context, builder, stopstype(jaggedarraytype.stopstype, headtype), (jaggedarray.stops, headval))
 
     contenttype = jaggedarraytype.contenttype
-    return JaggedArray_lower_copy(context, builder, jaggedarraytype(jaggedarraytype, startstype, stopstype, contenttype, numba.types.boolean), (jaggedarrayval, starts, stops, jaggedarray.content, context.get_constant(numba.types.boolean, False)))
+    newtype = JaggedArrayType(startstype, stopstype, contenttype, specialization=jaggedarraytype.specialization)
+    return JaggedArray_lower_copy(context, builder, newtype(jaggedarraytype, startstype, stopstype, contenttype, numba.types.boolean), (jaggedarrayval, starts, stops, jaggedarray.content, context.get_constant(numba.types.boolean, False)))
 
 
 # def JaggedArray_getitem_intarray(jaggedarray, where):
@@ -353,7 +352,7 @@ def JaggedArray_lower_copy(context, builder, sig, args):
         context.nrt.incref(builder, stopstype, stops)
         context.nrt.incref(builder, contenttype, content)
 
-    jaggedarray = numba.cgutils.create_struct_proxy(jaggedarraytype)(context, builder)
+    jaggedarray = numba.cgutils.create_struct_proxy(sig.return_type)(context, builder)
     jaggedarray.starts = starts
     jaggedarray.stops = stops
     jaggedarray.content = content

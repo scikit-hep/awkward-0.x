@@ -237,3 +237,11 @@ class Test(unittest.TestCase):
         assert test1(a, 1, 3).tolist() == [[], [4.4, 5.5]]
         assert test1(a2, 0, 2).tolist() == [[[1.1, 2.2, 3.3], []], []]
         assert test1(a2, 1, 3).tolist() == [[], [[4.4, 5.5]]]
+
+        a = JaggedArray([[0], [3], [3]], [[3], [3], [5]], [1.1, 2.2, 3.3, 4.4, 5.5])
+        print(a)
+        print(a[0:2, 0])
+        @numba.njit
+        def test2(x, i, j, k):
+            return x[i:j, k]
+        print(test2(a, 0, 2, 0))
