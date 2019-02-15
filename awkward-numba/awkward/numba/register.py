@@ -107,7 +107,7 @@ class JaggedArrayType(AwkwardArrayType):
         self.stopstype = stopstype
         self.contenttype = contenttype
         self.specialization = specialization
-        
+
     def getitem(self, context, wheretype):
         if not isinstance(wheretype, numba.types.BaseTuple):
             wheretype = numba.types.Tuple((wheretype,))
@@ -213,13 +213,36 @@ def JaggedArray_len(jaggedarraytype):
             return len(jaggedarray.starts)
         return impl
 
-@numba.njit
-def JaggedArray_getitem_integer(jaggedarray, where):
-    start = jaggedarray.starts[where]
-    stop = jaggedarray.stops[where]
-    if start >= len(jaggedarray.content) or stop > len(jaggedarray.content):
-        raise ValueError("JaggedArray.starts or JaggedArray.stops extends beyond JaggedArray.content")
-    return jaggedarray.content[start:stop]
+@numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
+def JaggedArray_lower_getitem_integer(context, builder, sig, args):
+    jaggedarraytype, wheretype = sig.args
+    jaggedarrayval, whereval = args
+
+    jaggedarray = numba.cgutils.create_struct_proxy(jaggedarraytype)(context, builder, value=jaggedarrayval)
+
+    startstype = jaggedarraytype.startstype
+    start = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, startstype.dtype(startstype, wheretype), (jaggedarray.starts, whereval))
+
+    stopstype = jaggedarraytype.stopstype
+    stop = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, stopstype.dtype(stopstype, wheretype), (jaggedarray.stops, whereval))
+
+    contenttype = jaggedarraytype.contenttype
+    sli = context.make_helper(builder, numba.types.slice2_type)
+    sli.start = start
+    sli.stop = stop
+    sli.step = context.get_constant(numba.types.intp, 1)
+    if isinstance(jaggedarraytype.contenttype, numba.types.Array):
+        return numba.targets.arrayobj.getitem_arraynd_intp(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sli._getvalue()))
+    else:
+        return JaggedArray_lower_getitem(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sli._getvalue()))
+
+# @numba.njit
+# def JaggedArray_getitem_integer(jaggedarray, where):
+#     start = jaggedarray.starts[where]
+#     stop = jaggedarray.stops[where]
+#     if start >= len(jaggedarray.content) or stop > len(jaggedarray.content):
+#         raise ValueError("JaggedArray.starts or JaggedArray.stops extends beyond JaggedArray.content")
+#     return jaggedarray.content[start:stop]
 
 @numba.njit
 def JaggedArray_getitem_slice(jaggedarray, where):
@@ -239,7 +262,6 @@ def JaggedArray_getitem_intarray(jaggedarray, where):
     stops = jaggedarray.stops[where]
     return jaggedarray.copy(starts, stops, jaggedarray.content, False)
 
-@numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Array)
 def JaggedArray_lower_getitem(context, builder, sig, args):
