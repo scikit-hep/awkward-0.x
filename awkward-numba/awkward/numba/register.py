@@ -44,6 +44,22 @@ from awkward.array.table import Table
 from awkward.array.union import UnionArray
 from awkward.array.virtual import VirtualArray
 
+######################################################################## utilities
+
+def sliceval2(context, builder, start, stop):
+    out = context.make_helper(builder, numba.types.slice2_type)
+    out.start = start
+    out.stop = stop
+    out.step = context.get_constant(numba.types.intp, 1)
+    return out._getvalue()
+
+def sliceval3(context, builder, start, stop, step):
+    out = context.make_helper(builder, numba.types.slice3_type)
+    out.start = start
+    out.stop = stop
+    out.step = step
+    return out._getvalue()
+
 ######################################################################## AwkwardArrayType
 
 class AwkwardArrayType(numba.types.Type):
@@ -229,14 +245,10 @@ def JaggedArray_lower_getitem_integer(context, builder, sig, args):
                          likely=False):
         context.call_conv.return_user_exc(builder, ValueError, ("JaggedArray.starts or JaggedArray.stops is beyond the range of JaggedArray.content",))
 
-    sli = context.make_helper(builder, numba.types.slice2_type)
-    sli.start = start
-    sli.stop = stop
-    sli.step = context.get_constant(numba.types.intp, 1)
     if isinstance(contenttype, numba.types.Array):
-        return numba.targets.arrayobj.getitem_arraynd_intp(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sli._getvalue()))
+        return numba.targets.arrayobj.getitem_arraynd_intp(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sliceval2(context, builder, start, stop)))
     else:
-        return JaggedArray_lower_getitem_slice(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sli._getvalue()))
+        return JaggedArray_lower_getitem_slice(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sliceval2(context, builder, start, stop)))
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
 def JaggedArray_lower_getitem_slice(context, builder, sig, args):
@@ -269,6 +281,32 @@ def JaggedArray_lower_getitem_array(context, builder, sig, args):
 
     contenttype = jaggedarraytype.contenttype
     return JaggedArray_lower_copy(context, builder, jaggedarraytype(jaggedarraytype, startstype, stopstype, contenttype, numba.types.boolean), (jaggedarrayval, starts, stops, jaggedarray.content, context.get_constant(numba.types.boolean, False)))
+
+@numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.BaseTuple)
+def JaggedArray_lower_getitem_tuple_entry(context, builder, sig, args):
+    jaggedarraytype, wheretype = sig.args
+    jaggedarrayval, whereval = args
+
+    if len(wheretype.types) == 0:
+        return jaggedarrayval
+
+    jaggedarray = numba.cgutils.create_struct_proxy(jaggedarraytype)(context, builder, value=jaggedarrayval)
+
+    headtype = numba.types.Tuple(wheretype.types[:jaggedarraytype.startstype.ndim])
+    tailtype = numba.types.Tuple(wheretype.types[jaggedarraytype.startstype.ndim:])
+    headslice = context.get_constant(numba.types.slice2_type, slice(None, jaggedarraytype.startstype.ndim))
+    tailslice = context.get_constant(numba.types.slice2_type, slice(jaggedarraytype.startstype.ndim, None))
+    headval = numba.targets.tupleobj.static_getitem_tuple(context, builder, headtype(whereval, numba.types.slice2_type), (whereval, headslice))
+    tailval = numba.targets.tupleobj.static_getitem_tuple(context, builder, tailtype(whereval, numba.types.slice2_type), (whereval, tailslice))
+
+    startstype = numba.typing.arraydecl.get_array_index_type(jaggedarraytype.startstype, headtype).result
+    stopstype = numba.typing.arraydecl.get_array_index_type(jaggedarraytype.stopstype, headtype).result
+    starts = numba.targets.arrayobj.getitem_array_tuple(context, builder, startstype(jaggedarraytype.startstype, headtype), (jaggedarray.starts, headval))
+    stops = numba.targets.arrayobj.getitem_array_tuple(context, builder, stopstype(jaggedarraytype.stopstype, headtype), (jaggedarray.stops, headval))
+
+    contenttype = jaggedarraytype.contenttype
+    return JaggedArray_lower_copy(context, builder, jaggedarraytype(jaggedarraytype, startstype, stopstype, contenttype, numba.types.boolean), (jaggedarrayval, starts, stops, jaggedarray.content, context.get_constant(numba.types.boolean, False)))
+
 
 # def JaggedArray_getitem_intarray(jaggedarray, where):
 #     starts = jaggedarray.starts[where]
