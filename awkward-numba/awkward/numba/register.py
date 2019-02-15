@@ -234,7 +234,7 @@ def JaggedArray_lower_getitem_integer(context, builder, sig, args):
     if isinstance(jaggedarraytype.contenttype, numba.types.Array):
         return numba.targets.arrayobj.getitem_arraynd_intp(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sli._getvalue()))
     else:
-        return JaggedArray_lower_getitem(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sli._getvalue()))
+        return JaggedArray_lower_getitem_slice(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sli._getvalue()))
 
 # @numba.njit
 # def JaggedArray_getitem_integer(jaggedarray, where):
@@ -244,11 +244,27 @@ def JaggedArray_lower_getitem_integer(context, builder, sig, args):
 #         raise ValueError("JaggedArray.starts or JaggedArray.stops extends beyond JaggedArray.content")
 #     return jaggedarray.content[start:stop]
 
-@numba.njit
-def JaggedArray_getitem_slice(jaggedarray, where):
-    starts = jaggedarray.starts[where]
-    stops = jaggedarray.stops[where]
-    return jaggedarray.copy(starts, stops, jaggedarray.content, jaggedarray.iscompact)
+@numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
+def JaggedArray_lower_getitem_slice(context, builder, sig, args):
+    jaggedarraytype, wheretype = sig.args
+    jaggedarrayval, whereval = args
+
+    jaggedarray = numba.cgutils.create_struct_proxy(jaggedarraytype)(context, builder, value=jaggedarrayval)
+
+    startstype = jaggedarraytype.startstype
+    starts = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, startstype(startstype, wheretype), (jaggedarray.starts, whereval))
+
+    stopstype = jaggedarraytype.stopstype
+    stops = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, stopstype(stopstype, wheretype), (jaggedarray.stops, whereval))
+
+    contenttype = jaggedarraytype.contenttype
+    return JaggedArray_lower_copy(context, builder, jaggedarraytype(jaggedarraytype, startstype, stopstype, contenttype, numba.types.boolean), (jaggedarrayval, starts, stops, jaggedarray.content, jaggedarray.iscompact))
+
+# @numba.njit
+# def JaggedArray_getitem_slice(jaggedarray, where):
+#     starts = jaggedarray.starts[where]
+#     stops = jaggedarray.stops[where]
+#     return jaggedarray.copy(starts, stops, jaggedarray.content, jaggedarray.iscompact)
 
 @numba.njit
 def JaggedArray_getitem_boolarray(jaggedarray, where):
@@ -262,7 +278,6 @@ def JaggedArray_getitem_intarray(jaggedarray, where):
     stops = jaggedarray.stops[where]
     return jaggedarray.copy(starts, stops, jaggedarray.content, False)
 
-@numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Array)
 def JaggedArray_lower_getitem(context, builder, sig, args):
     if isinstance(sig.args[1], numba.types.Integer):
