@@ -104,13 +104,14 @@ class JaggedArrayType(AwkwardArrayType):
             return None
 
         headarray = any(isinstance(x, numba.types.Array) for x in head.types)
+        finaltailarray = isinstance(self.contenttype, numba.types.Array) and any(isinstance(x, numba.types.Array) for x in tail.types)
 
         contenttype = getitem(self.contenttype, tail, advanced or headarray)
         if contenttype is None:
             return None
 
         assert isinstance(startstype, numba.types.Array) == isinstance(stopstype, numba.types.Array)
-        if isinstance(startstype, numba.types.Array) and not (advanced and headarray):
+        if isinstance(startstype, numba.types.Array) and not (advanced and headarray) and not (advanced and finaltailarray):
             return JaggedArrayType(startstype, stopstype, contenttype, specialization=self.specialization)
         else:
             return contenttype
