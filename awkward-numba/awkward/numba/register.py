@@ -32,6 +32,7 @@ import operator
 
 import numpy
 import numba
+import numba.typing.arraydecl
 
 from awkward.array.base import AwkwardArray
 from awkward.array.chunked import ChunkedArray, AppendableArray
@@ -103,15 +104,18 @@ class JaggedArrayType(AwkwardArrayType):
         stopstype = getitem(self.stopstype, head, advanced)
         if startstype is None or stopstype is None:
             return None
+        assert isinstance(startstype, numba.types.Array) == isinstance(stopstype, numba.types.Array)
 
-        contenttype = getitem(self.contenttype, tail, advanced)
-        if contenttype is None:
-            return None
-
-        if isinstance(startstype, numba.types.Array) and isinstance(stopstype, numba.types.Array):
-            return JaggedArrayType(startstype, stopstype, contenttype, specialization=self.specialization)
+        if isinstance(startstype, numba.types.Array):
+            contenttype = getitem(self.contenttype, tail, True)
+            if contenttype is None:
+                return None
+            if advanced:
+                return contenttype
+            else:
+                return JaggedArrayType(startstype, stopstype, contenttype, specialization=self.specialization)
         else:
-            return contenttype
+            return getitem(self.contenttype, tail, advanced)
 
 @numba.extending.register_model(JaggedArrayType)
 class JaggedArrayModel(numba.datamodel.models.StructModel):
