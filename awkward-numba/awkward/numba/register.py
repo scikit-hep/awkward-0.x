@@ -60,6 +60,19 @@ def sliceval3(context, builder, start, stop, step):
     out.step = step
     return out._getvalue()
 
+def check_startstop_contentlen(context, builder, starttype, startval, stoptype, stopval, contenttype, contentval):
+    if isinstance(contenttype, numba.types.Array):
+        contentlen = numba.targets.arrayobj.array_len(context, builder, numba.types.intp(contenttype), (contentval,))
+    else:
+        contentlen = JaggedArray_lower_len(context, builder, numba.types.intp(contenttype), (contentval,))
+
+    with builder.if_then(builder.or_(builder.or_(builder.icmp_signed("<", startval, context.get_constant(starttype, 0)),
+                                                 builder.icmp_signed("<", stopval, context.get_constant(stoptype, 0))),
+                                     builder.or_(builder.icmp_signed(">=", startval, contentlen),
+                                                 builder.icmp_signed(">", stopval, contentlen))),
+                         likely=False):
+        context.call_conv.return_user_exc(builder, ValueError, ("JaggedArray.starts or JaggedArray.stops is beyond the range of JaggedArray.content",))
+
 ######################################################################## AwkwardArrayType
 
 class AwkwardArrayType(numba.types.Type):
@@ -233,17 +246,7 @@ def JaggedArray_lower_getitem_integer(context, builder, sig, args):
     stop = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, stopstype.dtype(stopstype, wheretype), (jaggedarray.stops, whereval))
 
     contenttype = jaggedarraytype.contenttype
-    if isinstance(contenttype, numba.types.Array):
-        contentlen = numba.targets.arrayobj.array_len(context, builder, numba.types.intp(contenttype), (jaggedarray.content,))
-    else:
-        contentlen = JaggedArray_lower_len(context, builder, numba.types.intp(contenttype), (jaggedarray.content,))
-
-    with builder.if_then(builder.or_(builder.or_(builder.icmp_signed("<", start, context.get_constant(startstype.dtype, 0)),
-                                                 builder.icmp_signed("<", stop, context.get_constant(stopstype.dtype, 0))),
-                                     builder.or_(builder.icmp_signed(">=", start, contentlen),
-                                                 builder.icmp_signed(">", stop, contentlen))),
-                         likely=False):
-        context.call_conv.return_user_exc(builder, ValueError, ("JaggedArray.starts or JaggedArray.stops is beyond the range of JaggedArray.content",))
+    check_startstop_contentlen(context, builder, startstype.dtype, start, stopstype.dtype, stop, contenttype, jaggedarray.content)
 
     if isinstance(contenttype, numba.types.Array):
         return numba.targets.arrayobj.getitem_arraynd_intp(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sliceval2(context, builder, start, stop)))
@@ -306,17 +309,7 @@ def JaggedArray_lower_getitem_tuple_entry(context, builder, sig, args):
 
     assert isinstance(startstype, numba.types.Integer) == isinstance(stopstype, numba.types.Integer)
     if isinstance(startstype, numba.types.Integer):
-        if isinstance(contenttype, numba.types.Array):
-            contentlen = numba.targets.arrayobj.array_len(context, builder, numba.types.intp(contenttype), (jaggedarray.content,))
-        else:
-            contentlen = JaggedArray_lower_len(context, builder, numba.types.intp(contenttype), (jaggedarray.content,))
-
-        with builder.if_then(builder.or_(builder.or_(builder.icmp_signed("<", starts, context.get_constant(startstype, 0)),
-                                                     builder.icmp_signed("<", stops, context.get_constant(stopstype, 0))),
-                                         builder.or_(builder.icmp_signed(">=", starts, contentlen),
-                                                     builder.icmp_signed(">", stops, contentlen))),
-                             likely=False):
-            context.call_conv.return_user_exc(builder, ValueError, ("JaggedArray.starts or JaggedArray.stops is beyond the range of JaggedArray.content",))
+        check_startstop_contentlen(context, builder, startstype, starts, stopstype, stops, contenttype, jaggedarray.content)
 
         if isinstance(contenttype, numba.types.Array):
             reducedtype = contenttype
