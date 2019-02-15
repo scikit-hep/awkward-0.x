@@ -62,12 +62,14 @@ class AwkwardArrayType_type_getitem(numba.typing.templates.AbstractTemplate):
         if len(args) == 2 and len(kwargs) == 0:
             arraytype, wheretype = args
             if isinstance(arraytype, AwkwardArrayType):
-                return numba.typing.templates.signature(arraytype.getitem(self.context, wheretype), *args, **kwargs)
+                return numba.typing.templates.signature(arraytype.getitem(wheretype, False), *args, **kwargs)
 
-def getitem(context, arraytype, wheretype):
+def getitem(arraytype, wheretype, advanced):
     if isinstance(arraytype, AwkwardArrayType):
-        return arraytype.getitem(context, wheretype)
+        return arraytype.getitem(wheretype, advanced)
     if isinstance(arraytype, numba.types.Array):
+        if advanced and (isinstance(wheretype, numba.types.Array) or (isinstance(wheretype, numba.types.BaseTuple) and any(isinstance(x, numba.types.Array) for x in wheretype.types))):
+            raise NotImplementedError("cannot mix advanced indexing types among Numpy and awkward arrays")
         return numba.typing.arraydecl.get_array_index_type(arraytype, wheretype).result
 
 def specialrepr(x):
@@ -90,19 +92,19 @@ class JaggedArrayType(AwkwardArrayType):
         self.contenttype = contenttype
         self.specialization = specialization
 
-    def getitem(self, context, wheretype):
+    def getitem(self, wheretype, advanced):
         if not isinstance(wheretype, numba.types.BaseTuple):
             wheretype = numba.types.Tuple((wheretype,))
         if len(wheretype) == 0:
             return self
         head, tail = numba.types.Tuple(wheretype.types[:self.startstype.ndim]), numba.types.Tuple(wheretype.types[self.startstype.ndim:])
 
-        startstype = getitem(context, self.startstype, head)
-        stopstype = getitem(context, self.stopstype, head)
+        startstype = getitem(self.startstype, head, advanced)
+        stopstype = getitem(self.stopstype, head, advanced)
         if startstype is None or stopstype is None:
             return None
 
-        contenttype = getitem(context, self.contenttype, tail)
+        contenttype = getitem(self.contenttype, tail, advanced)
         if contenttype is None:
             return None
 
