@@ -319,12 +319,15 @@ def JaggedArray_lower_getitem_tuple_entry(context, builder, sig, args):
             context.call_conv.return_user_exc(builder, ValueError, ("JaggedArray.starts or JaggedArray.stops is beyond the range of JaggedArray.content",))
 
         if isinstance(contenttype, numba.types.Array):
-            reduced = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sliceval2(context, builder, starts, stops)))
+            reducedtype = contenttype
+            reduced = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, reducedtype(contenttype, numba.types.slice2_type), (jaggedarray.content, sliceval2(context, builder, starts, stops)))
         else:
+            reducedtype = contenttype
             reduced = JaggedArray_lower_getitem_slice(context, builder, contenttype(contenttype, numba.types.slice2_type), (jaggedarray.content, sliceval2(context, builder, starts, stops)))
  
     else:
-        reduced = JaggedArray_lower_copy(context, builder, sig.return_type(jaggedarraytype, startstype, stopstype, contenttype, numba.types.boolean), (jaggedarrayval, starts, stops, jaggedarray.content, context.get_constant(numba.types.boolean, False)))
+        reducedtype = JaggedArrayType(startstype, stopstype, contenttype, specialization=jaggedarraytype.specialization)
+        reduced = JaggedArray_lower_copy(context, builder, reducedtype(jaggedarraytype, startstype, stopstype, contenttype, numba.types.boolean), (jaggedarrayval, starts, stops, jaggedarray.content, context.get_constant(numba.types.boolean, False)))
 
     return reduced
 
