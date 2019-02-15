@@ -57,20 +57,36 @@ class AwkwardArrayType_type_getitem(numba.typing.templates.AbstractTemplate):
                 return numba.typing.templates.signature(arraytype.getitem(self.context, wheretype), *args, **kwargs)
 
 def getitem(context, arraytype, wheretype):
-    print("   getitem", arraytype, wheretype)
-
     if isinstance(arraytype, AwkwardArrayType):
-        print("   is awkward")
-        out = arraytype.getitem(context, wheretype)
-        print("   returning", out)
-        return out
-    if isinstance(arraytype, numba.types.Array):
-        print("   is numpy")
-        out = numba.typing.arraydecl.GetItemBuffer(context).generic((arraytype, wheretype), {})
-        print("   returning", out)
-        return out
+        return arraytype.getitem(context, wheretype)
 
-    print("   returning None")
+    if isinstance(arraytype, numba.types.Array):
+        if not isinstance(wheretype, numba.types.BaseTuple):
+            wheretype = numba.types.Tuple((wheretype,))
+        if len(wheretype) == 0:
+            return arraytype
+
+        ndim = arraytype.ndim
+        intarray = False
+        for wt in wheretype.types:
+            if isinstance(wt, numba.types.Integer):
+                ndim -= 1
+            elif isinstance(wt, numba.types.SliceType):
+                pass
+            elif isinstance(wt, numba.types.Array) and wt.ndim == 1 and isinstance(wt.dtype, numba.types.Boolean):
+                pass
+            elif isinstance(wt, numba.types.Array) and wt.ndim == 1 and isinstance(wt.dtype, numba.types.Integer):
+                intarray = True
+                ndim -= 1
+            else:
+                return None
+        if intarray:
+            ndim += 1
+
+        if ndim == 0:
+            return arraytype.dtype
+        else:
+            return numba.types.Array(arraytype.dtype, ndim, arraytype.layout)
 
 def specialrepr(x):
     if x is ChunkedArray or x is AppendableArray or x is IndexedArray or x is SparseArray or x is JaggedArray or x is MaskedArray or x is BitMaskedArray or x is IndexedMaskedArray or x is Methods or x is ObjectArray or x is StringArray or x is Table or x is UnionArray or x is VirtualArray:
@@ -93,56 +109,25 @@ class JaggedArrayType(AwkwardArrayType):
         self.specialization = specialization
         
     def getitem(self, context, wheretype):
-        print("JaggedArrayType.getitem", wheretype)
-
-        if not isinstance(wheretype, numba.types.Tuple):
+        if not isinstance(wheretype, numba.types.BaseTuple):
             wheretype = numba.types.Tuple((wheretype,))
         if len(wheretype) == 0:
-            print("returning", self)
             return self
-        head, tail = wheretype.types[:self.startstype.ndim], wheretype.types[self.startstype.ndim:]
+        head, tail = numba.types.Tuple(wheretype.types[:self.startstype.ndim]), numba.types.Tuple(wheretype.types[self.startstype.ndim:])
 
-        print("startstype")
         startstype = getitem(context, self.startstype, head)
-        print("stopstype")
         stopstype = getitem(context, self.stopstype, head)
         if startstype is None or stopstype is None:
-            print("returning None")
             return None
 
-        print("contenttype")
         contenttype = getitem(context, self.contenttype, tail)
         if contenttype is None:
-            print("returning None")
             return None
-        
+
         if isinstance(startstype, numba.types.Array) and isinstance(stopstype, numba.types.Array):
-            print("returning", JaggedArrayType(startstype, stopstype, contenttype, specialization=self.specialization))
             return JaggedArrayType(startstype, stopstype, contenttype, specialization=self.specialization)
         else:
-            print("returning", contenttype)
             return contenttype
-
-        print("returning None")
-
-        
-        # if isinstance(wheretype, numba.types.Integer):
-        #     return self.contenttype
-        # if isinstance(wheretype, numba.types.SliceType):
-        #     return self
-        # if isinstance(wheretype, numba.types.Array) and wheretype.ndim == 1 and isinstance(wheretype.dtype, numba.types.Boolean):
-        #     return self
-        # if isinstance(wheretype, numba.types.Array) and wheretype.ndim == 1 and isinstance(wheretype.dtype, numba.types.Integer):
-        #     return self
-        # if isinstance(wheretype, numba.types.Tuple):
-        #     if len(wheretype) == 0:
-        #         return self.getitem(context, wheretype[0])
-        #     elif isinstance(wheretype[0], numba.types.Integer):
-        #         return getitem(context, self.contenttype, wheretype[1:])
-        #     else:
-        #         out = getitem(context, self.contenttype, wheretype[1:])
-        #         if out is not None:
-        #             return JaggedArrayType(self.startstype, self.stopstype, out, specialization=self.specialization)
 
 @numba.extending.register_model(JaggedArrayType)
 class JaggedArrayModel(numba.datamodel.models.StructModel):

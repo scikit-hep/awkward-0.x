@@ -132,24 +132,24 @@ class Test(unittest.TestCase):
     def test_innumba_getitem_integer(self):
         a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         a2 = JaggedArray.fromcounts([2, 0, 1], a)
-        # @numba.njit
-        # def test1(x, i, j):
-        #     return x[i][j]
-        # assert test1(a, 0, 0) == 1.1
-        # assert test1(a, 0, 1) == 2.2
-        # assert test1(a, 0, 2) == 3.3
-        # assert test1(a, 2, 0) == 4.4
-        # assert test1(a, 2, 1) == 5.5
+        @numba.njit
+        def test1(x, i, j):
+            return x[i][j]
+        assert test1(a, 0, 0) == 1.1
+        assert test1(a, 0, 1) == 2.2
+        assert test1(a, 0, 2) == 3.3
+        assert test1(a, 2, 0) == 4.4
+        assert test1(a, 2, 1) == 5.5
         @numba.njit
         def test2(x, i):
             return x[i]
         assert test2(a, 0).tolist() == [1.1, 2.2, 3.3]
-        # assert test2(a, 1).tolist() == []
-        # assert test2(a, 2).tolist() == [4.4, 5.5]
-        # assert test2(a2, 0).tolist() == [[1.1, 2.2, 3.3], []]
-        # assert test2(a2, 1).tolist() == []
-        # assert test2(a2, 2).tolist() == [[4.4, 5.5]]
-        # assert test2(a2, 0).content.tolist() == a.content.tolist()
+        assert test2(a, 1).tolist() == []
+        assert test2(a, 2).tolist() == [4.4, 5.5]
+        assert test2(a2, 0).tolist() == [[1.1, 2.2, 3.3], []]
+        assert test2(a2, 1).tolist() == []
+        assert test2(a2, 2).tolist() == [[4.4, 5.5]]
+        assert test2(a2, 0).content.tolist() == a.content.tolist()
 
     def test_innumba_getitem_intarray(self):
         a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
