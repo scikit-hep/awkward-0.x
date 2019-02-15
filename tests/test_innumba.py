@@ -129,6 +129,15 @@ class Test(unittest.TestCase):
         z = test(a)
         assert z.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
 
+    def test_innumba_len(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = JaggedArray.fromcounts([2, 1], a)
+        @numba.njit
+        def test1(x):
+            return len(x)
+        assert test1(a) == 3
+        assert test1(a2) == 2
+
     def test_innumba_getitem_integer(self):
         a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         a2 = JaggedArray.fromcounts([2, 0, 1], a)
