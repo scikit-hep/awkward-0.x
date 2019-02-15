@@ -67,34 +67,8 @@ class AwkwardArrayType_type_getitem(numba.typing.templates.AbstractTemplate):
 def getitem(context, arraytype, wheretype):
     if isinstance(arraytype, AwkwardArrayType):
         return arraytype.getitem(context, wheretype)
-
     if isinstance(arraytype, numba.types.Array):
-        if not isinstance(wheretype, numba.types.BaseTuple):
-            wheretype = numba.types.Tuple((wheretype,))
-        if len(wheretype) == 0:
-            return arraytype
-
-        ndim = arraytype.ndim
-        intarray = False
-        for wt in wheretype.types:
-            if isinstance(wt, numba.types.Integer):
-                ndim -= 1
-            elif isinstance(wt, numba.types.SliceType):
-                pass
-            elif isinstance(wt, numba.types.Array) and wt.ndim == 1 and isinstance(wt.dtype, numba.types.Boolean):
-                pass
-            elif isinstance(wt, numba.types.Array) and wt.ndim == 1 and isinstance(wt.dtype, numba.types.Integer):
-                intarray = True
-                ndim -= 1
-            else:
-                return None
-        if intarray:
-            ndim += 1
-
-        if ndim == 0:
-            return arraytype.dtype
-        else:
-            return numba.types.Array(arraytype.dtype, ndim, arraytype.layout)
+        return numba.typing.arraydecl.get_array_index_type(arraytype, wheretype).result
 
 def specialrepr(x):
     if x is ChunkedArray or x is AppendableArray or x is IndexedArray or x is SparseArray or x is JaggedArray or x is MaskedArray or x is BitMaskedArray or x is IndexedMaskedArray or x is Methods or x is ObjectArray or x is StringArray or x is Table or x is UnionArray or x is VirtualArray:
