@@ -69,8 +69,6 @@ def getitem(arraytype, wheretype, advanced):
     if isinstance(arraytype, AwkwardArrayType):
         return arraytype.getitem(wheretype, advanced)
     if isinstance(arraytype, numba.types.Array):
-        if advanced and (isinstance(wheretype, numba.types.Array) or (isinstance(wheretype, numba.types.BaseTuple) and any(isinstance(x, numba.types.Array) for x in wheretype.types))):
-            raise NotImplementedError("cannot mix advanced indexing types among Numpy and awkward arrays")
         return numba.typing.arraydecl.get_array_index_type(arraytype, wheretype).result
 
 def specialrepr(x):
@@ -104,18 +102,18 @@ class JaggedArrayType(AwkwardArrayType):
         stopstype = getitem(self.stopstype, head, advanced)
         if startstype is None or stopstype is None:
             return None
-        assert isinstance(startstype, numba.types.Array) == isinstance(stopstype, numba.types.Array)
 
-        if isinstance(startstype, numba.types.Array):
-            contenttype = getitem(self.contenttype, tail, True)
-            if contenttype is None:
-                return None
-            if advanced:
-                return contenttype
-            else:
-                return JaggedArrayType(startstype, stopstype, contenttype, specialization=self.specialization)
+        headarray = any(isinstance(x, numba.types.Array) for x in head.types)
+
+        contenttype = getitem(self.contenttype, tail, advanced or headarray)
+        if contenttype is None:
+            return None
+
+        assert isinstance(startstype, numba.types.Array) == isinstance(stopstype, numba.types.Array)
+        if isinstance(startstype, numba.types.Array) and not (advanced and headarray):
+            return JaggedArrayType(startstype, stopstype, contenttype, specialization=self.specialization)
         else:
-            return getitem(self.contenttype, tail, advanced)
+            return contenttype
 
 @numba.extending.register_model(JaggedArrayType)
 class JaggedArrayModel(numba.datamodel.models.StructModel):
