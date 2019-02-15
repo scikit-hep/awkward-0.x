@@ -98,6 +98,8 @@ def getitem(arraytype, wheretype, advanced):
     if isinstance(arraytype, AwkwardArrayType):
         return arraytype.getitem(wheretype, advanced)
     if isinstance(arraytype, numba.types.Array):
+        # if arraytype.startstype.ndim != 1 and wheretype... HERE
+        #     raise NotImplementedError()
         return numba.typing.arraydecl.get_array_index_type(arraytype, wheretype).result
 
 def specialrepr(x):
@@ -306,8 +308,33 @@ def JaggedArray_lower_getitem_array(context, builder, sig, args):
 #     cres = getitem.overloads[sig.args]
 #     return cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
 
-def JaggedArray_lower_getitem_tuple_next(context, builder, nexttype, nextval, tailtype, tailval):
-    return nextval
+@numba.njit
+def JaggedArray_getitem_next(jaggedarray, head):
+    starts = numpy.empty(HERE, jaggedarray.starts.dtype)
+    stops = numpy.empty(HERE, jaggedarray.stops.dtype)
+
+    for i in range(jaggedarray.starts):
+        starts[i] = jaggedarray.starts[i][head]
+        stops[i] = jaggedarray.stops[i][head]
+
+
+
+
+
+    HERE
+
+def JaggedArray_lower_getitem_tuple_next(context, builder, jaggedarraytype, jaggedarrayval, wheretype, whereval):
+    if len(wheretype.types) == 0:
+        return jaggedarrayval
+
+    headtype = numba.types.Tuple(wheretype.types[:jaggedarraytype.startstype.ndim])
+    tailtype = numba.types.Tuple(wheretype.types[jaggedarraytype.startstype.ndim:])
+    headval = numba.targets.tupleobj.static_getitem_tuple(context, builder, headtype(whereval, numba.types.slice2_type), (whereval, slice(None, jaggedarraytype.startstype.ndim)))
+    tailval = numba.targets.tupleobj.static_getitem_tuple(context, builder, tailtype(whereval, numba.types.slice2_type), (whereval, slice(jaggedarraytype.startstype.ndim, None)))
+
+    HERE
+
+
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.BaseTuple)
 def JaggedArray_lower_getitem_tuple_entry(context, builder, sig, args):
