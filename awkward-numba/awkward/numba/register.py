@@ -96,10 +96,10 @@ class AwkwardArrayType_type_getitem(numba.typing.templates.AbstractTemplate):
 
 def getitem(arraytype, wheretype, advanced):
     if isinstance(arraytype, AwkwardArrayType):
+        if isinstance(arraytype, JaggedArrayType) and arraytype.startstype.ndim != 1:
+            raise NotImplementedError("nested JaggedArrays must have one-dimensional starts/stops to be used in Numba")
         return arraytype.getitem(wheretype, advanced)
     if isinstance(arraytype, numba.types.Array):
-        # if arraytype.startstype.ndim != 1 and wheretype... HERE
-        #     raise NotImplementedError()
         return numba.typing.arraydecl.get_array_index_type(arraytype, wheretype).result
 
 def specialrepr(x):
@@ -309,30 +309,26 @@ def JaggedArray_lower_getitem_array(context, builder, sig, args):
 #     return cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
 
 @numba.njit
-def JaggedArray_getitem_next(jaggedarray, head):
-    starts = numpy.empty(HERE, jaggedarray.starts.dtype)
-    stops = numpy.empty(HERE, jaggedarray.stops.dtype)
-
+def JaggedArray_getitem_next_reduced(jaggedarray, head):
+    index = numpy.empty(len(jaggedarray.starts), "int64")
     for i in range(jaggedarray.starts):
-        starts[i] = jaggedarray.starts[i][head]
-        stops[i] = jaggedarray.stops[i][head]
-
-
-
-
-
-    HERE
+        index[i] = jaggedarray.starts[i]
+    return jaggedarray.content[index]   # TODO: split into two cases: content is numba.types.Array (no intermediate index) or not
 
 def JaggedArray_lower_getitem_tuple_next(context, builder, jaggedarraytype, jaggedarrayval, wheretype, whereval):
     if len(wheretype.types) == 0:
         return jaggedarrayval
 
-    headtype = numba.types.Tuple(wheretype.types[:jaggedarraytype.startstype.ndim])
-    tailtype = numba.types.Tuple(wheretype.types[jaggedarraytype.startstype.ndim:])
-    headval = numba.targets.tupleobj.static_getitem_tuple(context, builder, headtype(whereval, numba.types.slice2_type), (whereval, slice(None, jaggedarraytype.startstype.ndim)))
-    tailval = numba.targets.tupleobj.static_getitem_tuple(context, builder, tailtype(whereval, numba.types.slice2_type), (whereval, slice(jaggedarraytype.startstype.ndim, None)))
+    headtype = wheretype.types[0]
+    tailtype = numba.types.Tuple(wheretype.types[1:])
+    headval = numba.targets.tupleobj.static_getitem_tuple(context, builder, headtype(whereval, numba.types.int64), (whereval, 0))
+    tailval = numba.targets.tupleobj.static_getitem_tuple(context, builder, tailtype(whereval, numba.types.slice2_type), (whereval, slice(1, None)))
 
-    HERE
+    
+
+
+
+
 
 
 
@@ -414,7 +410,7 @@ def JaggedArray_lower_copy(context, builder, sig, args):
 
 @numba.extending.overload_method(JaggedArrayType, "compact")
 def JaggedArray_compact(jaggedarraytype):
-    if isinstance(jaggedarraytype, JaggedArrayType):
+    if isinstance(jaggedarraytype, JaggedArrayType) and isinstance(jaggedarraytype.contenttype, AwkwardArrayType):
         def impl(jaggedarray):
             if jaggedarray.iscompact:
                 return jaggedarray
@@ -444,6 +440,37 @@ def JaggedArray_compact(jaggedarraytype):
             starts = offsets[:-1].reshape(jaggedarray.starts.shape)
             stops = offsets[1:].reshape(jaggedarray.stops.shape)
             content = jaggedarray.content[index]
+            return jaggedarray.copy(starts, stops, content, True)
+
+    elif isinstance(jaggedarraytype, JaggedArrayType):
+        def impl(jaggedarray):
+            if jaggedarray.iscompact:
+                return jaggedarray
+            if len(jaggedarray.starts) == 0:
+                return jaggedarray.copy(jaggedarray.starts, jaggedarray.starts, jaggedarray.content[0:0], True)
+
+            if jaggedarray.starts.shape != jaggedarray.stops.shape:
+                raise ValueError("JaggedArray.starts.shape must be equal to JaggedArray.stops.shape")
+            flatstarts = jaggedarray.starts.ravel()
+            flatstops = jaggedarray.stops.ravel()
+
+            offsets = numpy.empty(len(flatstarts) + 1, flatstarts.dtype)
+            offsets[0] = 0
+            for i in range(len(flatstarts)):
+                count = flatstops[i] - flatstarts[i]
+                if count < 0:
+                    raise ValueError("JaggedArray.stops[i] must be greater than or equal to JaggedArray.starts[i] for all i")
+                offsets[i + 1] = offsets[i] + count
+
+            content = numpy.empty(offsets[-1], jaggedarray.content.dtype)
+            k = 0
+            for i in range(len(flatstarts)):
+                for j in range(flatstarts[i], flatstops[i]):
+                    content[k] = jaggedarray.content[j]
+                    k += 1
+
+            starts = offsets[:-1].reshape(jaggedarray.starts.shape)
+            stops = offsets[1:].reshape(jaggedarray.stops.shape)
             return jaggedarray.copy(starts, stops, content, True)
 
     return impl

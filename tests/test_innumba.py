@@ -113,10 +113,15 @@ class Test(unittest.TestCase):
         stops = numpy.array([3, 3, 6])
         content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
         a = JaggedArray(starts, stops, content)
+        a2 = JaggedArray([1, 0, 0], [3, 0, 1], a)
         z = test(a)
         assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
         assert z.content.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
         assert z.iscompact
+        z2 = test(a2)
+        assert z2.tolist() == [[[], [4.4, 5.5]], [], [[1.1, 2.2, 3.3]]]
+        assert z2.content.tolist() == [[], [4.4, 5.5], [1.1, 2.2, 3.3]]
+        assert z2.iscompact
 
     def test_innumba_flatten(self):
         @numba.njit
