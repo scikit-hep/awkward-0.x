@@ -330,21 +330,20 @@ def JaggedArray_typer_getitem_tuple_next(arraytype, wheretype):
     if isinstance(arraytype, (numba.types.Array, JaggedArrayType)) and isinstance(wheretype, numba.types.BaseTuple):
         if len(wheretype.types) == 0:
             return arraytype
-
         if isinstance(arraytype, numba.types.Array):
             return numba.typing.arraydecl.get_array_index_type(arraytype, wheretype).result
 
         if arraytype.startstype.ndim != 1:
             raise NotImplementedError("nested JaggedArrays must have one-dimensional starts/stops to be used in Numba")
 
+        contenttype = JaggedArray_typer_getitem_tuple_next(arraytype.contenttype, numba.types.Tuple(wheretype.types[1:]))
+
         if isinstance(wheretype.types[0], numba.types.Integer):
-            return JaggedArray_typer_getitem_tuple_next(arraytype.contenttype, numba.types.Tuple(wheretype.types[1:]))
-
-        if isinstance(wheretype.types[0], numba.types.SliceType) and wheretype.types[0].members == 2:
-            contenttype = JaggedArray_typer_getitem_tuple_next(arraytype.contenttype, numba.types.Tuple(wheretype.types[1:]))
+            return contenttype
+        elif isinstance(wheretype.types[0], numba.types.SliceType):
             return JaggedArrayType(arraytype.startstype, arraytype.stopstype, contenttype, specialization=arraytype.specialization)
-
-        raise NotImplementedError(wheretype.types[0])
+        else:
+            raise NotImplementedError(wheretype.types[0])
 
 @numba.extending.type_callable(JaggedArray_getitem_tuple_next)
 def JaggedArray_type_getitem_tuple_next(context):
@@ -393,7 +392,6 @@ def JaggedArray_slice2_getitem_tuple_next(jaggedarray, head, tail):
         if b <= a:
             a = 0
             b = 0
-
         if a < 0:
             a = 0
         elif a > length:
@@ -407,6 +405,71 @@ def JaggedArray_slice2_getitem_tuple_next(jaggedarray, head, tail):
         stops[i] = jaggedarray.starts[i] + b
 
     return JaggedArray_copy(jaggedarray, starts, stops, jaggedarray.content, False)
+
+@numba.njit
+def JaggedArray_slice3_getitem_tuple_next(jaggedarray, head, tail):
+    if head.step == 0:
+        raise ValueError("slice step cannot be zero")
+
+    starts = numpy.empty_like(jaggedarray.starts)
+    stops = numpy.empty_like(jaggedarray.stops)
+    index = numpy.empty(len(jaggedarray.content), numpy.int64)
+    k = 0
+    for i in range(len(jaggedarray.starts)):
+        length = jaggedarray.stops[i] - jaggedarray.starts[i]
+        a = head.start
+        b = head.stop
+        c = head.step
+
+        if c == intp_maxval:
+            c = 1
+
+        if a < 0:
+            a += length
+        elif a == intp_maxval and c > 0:
+            a = 0
+        elif a == intp_maxval:
+            a = length - 1
+
+        if b < 0:
+            b += length
+        elif b == intp_maxval and c > 0:
+            b = length
+        elif b == intp_maxval:
+            b = -1
+
+        if c > 0:
+            if b <= a:
+                a = 0
+                b = 0
+            if a < 0:
+                a = 0
+            elif a > length:
+                a = length
+            if b < 0:
+                b = 0
+            elif b > length:
+                b = length
+        else:
+            if a <= b:
+                a = 0
+                b = 0
+            if a < -1:
+                a = -1
+            elif a >= length:
+                a = length - 1
+            if b < -1:
+                b = -1
+            elif b >= length:
+                b = length - 1
+
+        starts[i] = k
+        for j in range(a, b, c):
+            index[k] = jaggedarray.starts[i] + j
+            k += 1
+        stops[i] = k
+
+    return JaggedArray_copy(jaggedarray, starts, stops, jaggedarray.content[index[:k]], True)
 
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, numba.types.Array, numba.types.BaseTuple)
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, JaggedArrayType, numba.types.BaseTuple)
@@ -434,6 +497,8 @@ def JaggedArray_lower_getitem_tuple_next(context, builder, sig, args):
             getitem = JaggedArray_integerawkward_getitem_tuple_next
     elif isinstance(headtype, numba.types.SliceType) and headtype.members == 2:
         getitem = JaggedArray_slice2_getitem_tuple_next
+    elif isinstance(headtype, numba.types.SliceType) and headtype.members == 3:
+        getitem = JaggedArray_slice3_getitem_tuple_next
     else:
         raise NotImplementedError(headtype)
 
