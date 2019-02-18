@@ -88,7 +88,7 @@ class Test(unittest.TestCase):
     def test_innumba_copy(self):
         @numba.njit
         def test(x, starts, stops, content):
-            return x.copy(starts, stops, content, False)
+            return awkward_numba.register.JaggedArray_copy(x, starts, stops, content, False)
         starts = numpy.array([0, 3, 3])
         stops = numpy.array([3, 3, 5])
         content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])

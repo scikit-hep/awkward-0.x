@@ -383,15 +383,27 @@ def JaggedArray_lower_getitem_tuple_entry(context, builder, sig, args):
 class JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
     key = JaggedArrayType
 
-    @numba.typing.templates.bound_function("copy")
-    def resolve_copy(self, jaggedarraytype, args, kwargs):
-        if len(args) == 4 and len(kwargs) == 0:
-            startstype, stopstype, contenttype, iscompacttype = args
-            if isinstance(startstype, numba.types.Array) and isinstance(stopstype, numba.types.Array) and isinstance(contenttype, (numba.types.Array, AwkwardArrayType)) and isinstance(iscompacttype, numba.types.Boolean):
-                return jaggedarraytype(startstype, stopstype, contenttype, iscompacttype)
+    # @numba.typing.templates.bound_function("copy")
+    # def resolve_copy(self, jaggedarraytype, args, kwargs):
+    #     if len(args) == 4 and len(kwargs) == 0:
+    #         startstype, stopstype, contenttype, iscompacttype = args
+    #         if isinstance(startstype, numba.types.Array) and isinstance(stopstype, numba.types.Array) and isinstance(contenttype, (numba.types.Array, AwkwardArrayType)) and isinstance(iscompacttype, numba.types.Boolean):
+    #             return jaggedarraytype(startstype, stopstype, contenttype, iscompacttype)
 
-@numba.extending.lower_builtin("copy", JaggedArrayType, numba.types.Array, numba.types.Array, numba.types.Array, numba.types.boolean)
-@numba.extending.lower_builtin("copy", JaggedArrayType, numba.types.Array, numba.types.Array, AwkwardArrayType, numba.types.boolean)
+def JaggedArray_copy(jaggedarray, starts, stops, content, iscompact):
+    return type(jaggedarray)(starts, stops, content)
+
+@numba.extending.type_callable(JaggedArray_copy)
+def JaggedArray_type_copy(context):
+    def typer(jaggedarraytype, startstype, stopstype, contenttype, iscompacttype):
+        if isinstance(jaggedarraytype, JaggedArrayType) and isinstance(startstype, numba.types.Array) and isinstance(stopstype, numba.types.Array) and isinstance(contenttype, (numba.types.Array, AwkwardArrayType)) and isinstance(iscompacttype, numba.types.Boolean):
+            return jaggedarraytype
+    return typer
+
+# @numba.extending.lower_builtin("copy", JaggedArrayType, numba.types.Array, numba.types.Array, numba.types.Array, numba.types.boolean)
+# @numba.extending.lower_builtin("copy", JaggedArrayType, numba.types.Array, numba.types.Array, AwkwardArrayType, numba.types.boolean)
+@numba.extending.lower_builtin(JaggedArray_copy, JaggedArrayType, numba.types.Array, numba.types.Array, numba.types.Array, numba.types.Boolean)
+@numba.extending.lower_builtin(JaggedArray_copy, JaggedArrayType, numba.types.Array, numba.types.Array, AwkwardArrayType, numba.types.Boolean)
 def JaggedArray_lower_copy(context, builder, sig, args):
     jaggedarraytype, startstype, stopstype, contenttype, iscompacttype = sig.args
     jaggedarray, starts, stops, content, iscompact = args
@@ -415,7 +427,7 @@ def JaggedArray_compact(jaggedarraytype):
             if jaggedarray.iscompact:
                 return jaggedarray
             if len(jaggedarray.starts) == 0:
-                return jaggedarray.copy(jaggedarray.starts, jaggedarray.starts, jaggedarray.content[0:0], True)
+                return JaggedArray_copy(jaggedarray, jaggedarray.starts, jaggedarray.starts, jaggedarray.content[0:0], True)
 
             if jaggedarray.starts.shape != jaggedarray.stops.shape:
                 raise ValueError("JaggedArray.starts.shape must be equal to JaggedArray.stops.shape")
@@ -440,14 +452,14 @@ def JaggedArray_compact(jaggedarraytype):
             starts = offsets[:-1].reshape(jaggedarray.starts.shape)
             stops = offsets[1:].reshape(jaggedarray.stops.shape)
             content = jaggedarray.content[index]
-            return jaggedarray.copy(starts, stops, content, True)
+            return JaggedArray_copy(jaggedarray, starts, stops, content, True)
 
     elif isinstance(jaggedarraytype, JaggedArrayType):
         def impl(jaggedarray):
             if jaggedarray.iscompact:
                 return jaggedarray
             if len(jaggedarray.starts) == 0:
-                return jaggedarray.copy(jaggedarray.starts, jaggedarray.starts, jaggedarray.content[0:0], True)
+                return JaggedArray_copy(jaggedarray, jaggedarray.starts, jaggedarray.starts, jaggedarray.content[0:0], True)
 
             if jaggedarray.starts.shape != jaggedarray.stops.shape:
                 raise ValueError("JaggedArray.starts.shape must be equal to JaggedArray.stops.shape")
@@ -471,7 +483,7 @@ def JaggedArray_compact(jaggedarraytype):
 
             starts = offsets[:-1].reshape(jaggedarray.starts.shape)
             stops = offsets[1:].reshape(jaggedarray.stops.shape)
-            return jaggedarray.copy(starts, stops, content, True)
+            return JaggedArray_copy(jaggedarray, starts, stops, content, True)
 
     return impl
 
