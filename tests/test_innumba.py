@@ -296,24 +296,24 @@ class Test(unittest.TestCase):
         assert test1(a, numpy.array([2, 0]), 0).tolist() == [[4.4, 5.5], [1.1, 2.2, 3.3]]
 
     def test_innumba_getitem_tuple_slice_boolarray(self):
-        # a = numpy.arange(36).reshape(4, 3, 3)
-        # a2 = awkward.fromiter(a)
-        # @numba.njit
-        # def test1(x, i):
-        #     return x[1:3, i]
-        # assert test1(a, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
-        # assert test1(a2, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
-        # @numba.njit
-        # def test2(x, i, j):
-        #     return x[1:3, i, j]
-        # print(test2.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])))
-        # print(test2(a2, numpy.array([True, False, True]), numpy.array([True, True, False])))
+        a = numpy.arange(36).reshape(4, 3, 3)
+        a2 = awkward.fromiter(a)
+        @numba.njit
+        def test1(x, i):
+            return x[1:3, i]
+        assert test1(a, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
+        assert test1(a2, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
+        @numba.njit
+        def test2(x, i, j):
+            return x[1:3, i, j]
+        print(test2.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])))
+        print(test2(a2, numpy.array([True, False, True]), numpy.array([True, True, False])))
         a = numpy.arange(27, dtype=numpy.float64).reshape(3, 3, 3)
         a2 = awkward.fromiter(a)
         @numba.njit
         def test2(x, i, j):
             return x[:, i, j]
-        # print(test2.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])))
+        print(test2.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])))
         print(test2(a2, numpy.array([True, False, True]), numpy.array([True, True, False])))
 
     def test_innumba_getitem_tuple_slice_intarray(self):

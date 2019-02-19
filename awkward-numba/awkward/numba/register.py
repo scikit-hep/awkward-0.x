@@ -145,14 +145,7 @@ class JaggedArrayType(AwkwardArrayType):
                 advanced = True
 
             nexttype = JaggedArrayType(startstype, stopstype, self.contenttype, specialization=self.specialization)
-            out = JaggedArray_typer_getitem_tuple_next(nexttype, tailtype, ISADVANCED if advanced else NOTADVANCED)
-
-            # print(self)
-            # print(wheretype)
-            # print(out)
-            # print()
-
-            return out
+            return JaggedArray_typer_getitem_tuple_next(nexttype, tailtype, ISADVANCED if advanced else NOTADVANCED)
 
         else:
             return JaggedArray_typer_getitem_tuple_next(self, wheretype, ISADVANCED if advanced else NOTADVANCED)
@@ -299,8 +292,6 @@ def JaggedArray_lower_getitem_array(context, builder, sig, args):
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.BaseTuple)
 def JaggedArray_lower_getitem_tuple_enter(context, builder, sig, args):
-    print("compiling")
-
     jaggedarraytype, wheretype = sig.args
     jaggedarrayval, whereval = args
 
@@ -366,10 +357,7 @@ def JaggedArray_getitem_tuple_next(jaggedarray, where):
     pass
 
 def JaggedArray_typer_getitem_tuple_next(jaggedarraytype, wheretype, advancedtype):
-    # print("JaggedArray_typer_getitem_tuple_next", advancedtype == ISADVANCED, wheretype)
-
     if isinstance(wheretype, numba.types.BaseTuple) and len(wheretype.types) == 0:
-        # print(".")
         return jaggedarraytype
 
     if isinstance(jaggedarraytype, (numba.types.Array, JaggedArrayType)) and isinstance(wheretype, numba.types.BaseTuple) and isinstance(advancedtype, numba.types.Integer):
@@ -382,15 +370,9 @@ def JaggedArray_typer_getitem_tuple_next(jaggedarraytype, wheretype, advancedtyp
         contenttype = JaggedArray_typer_getitem_tuple_next(jaggedarraytype.contenttype, numba.types.Tuple(wheretype.types[1:]), ISADVANCED if isarray else advancedtype)
 
         if isinstance(wheretype.types[0], numba.types.Integer) or (advancedtype == ISADVANCED and isarray):
-            # print(".", advancedtype == ISADVANCED, contenttype)
-
             return contenttype
         elif isinstance(wheretype.types[0], numba.types.SliceType) or (advancedtype == NOTADVANCED and isarray):
-            out = JaggedArrayType(jaggedarraytype.startstype, jaggedarraytype.stopstype, contenttype, specialization=jaggedarraytype.specialization)
-
-            # print(".", advancedtype == ISADVANCED, out)
-
-            return out
+            return JaggedArrayType(jaggedarraytype.startstype, jaggedarraytype.stopstype, contenttype, specialization=jaggedarraytype.specialization)
         else:
             raise TypeError("cannot be used for indexing: {0}".format(wheretype))
 
@@ -618,25 +600,10 @@ def JaggedArray_lower_getitem_tuple_next(context, builder, sig, args):
     copy_args = cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
 
     if isinstance(headtype, numba.types.Integer) or (isarray and advancedtype == ISADVANCED):
-        out = builder.extract_value(copy_args, 3)
-
-        print("extract", headtype, isarray, advancedtype == ISADVANCED, return_type)
-
-        return out
+        return builder.extract_value(copy_args, 3)
     else:
-        print("HERE")
-        print("jaggedarraytype", jaggedarraytype)
-        print("starttype", jaggedarraytype.startstype)
-        print("stoptype", jaggedarraytype.stopstype)
-        print("nexttype", nexttype)
-
         outtype = JaggedArrayType(jaggedarraytype.startstype, jaggedarraytype.stopstype, nexttype, specialization=jaggedarraytype.specialization)
-
-        out = JaggedArray_lower_copy(context, builder, outtype(jaggedarraytype, jaggedarraytype.startstype, jaggedarraytype.stopstype, nexttype, numba.types.boolean), (builder.extract_value(copy_args, i) for i in range(5)))
-
-        print("wrap", headtype, isarray, advancedtype == ISADVANCED, return_type)
-
-        return out
+        return JaggedArray_lower_copy(context, builder, outtype(jaggedarraytype, jaggedarraytype.startstype, jaggedarraytype.stopstype, nexttype, numba.types.boolean), (builder.extract_value(copy_args, i) for i in range(5)))
 
 ######################################################################## JaggedArray_methods
 
