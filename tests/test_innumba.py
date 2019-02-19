@@ -294,3 +294,21 @@ class Test(unittest.TestCase):
         def test1(x, i, j):
             return x[i, j]
         assert test1(a, numpy.array([2, 0]), 0).tolist() == [[4.4, 5.5], [1.1, 2.2, 3.3]]
+
+    def test_innumba_getitem_tuple_slice_boolarray(self):
+        a = numpy.arange(36).reshape(4, 3, 3)
+        a2 = awkward.fromiter(a)
+        @numba.njit
+        def test1(x, i):
+            return x[1:3, i]
+        assert test1(a, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
+        assert test1(a2, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
+
+    def test_innumba_getitem_tuple_slice_intarray(self):
+        a = numpy.arange(36).reshape(4, 3, 3)
+        a2 = awkward.fromiter(a)
+        @numba.njit
+        def test1(x, i):
+            return x[1:3, i]
+        assert test1(a, numpy.array([1, 0, 2])).tolist() == [[[12, 13, 14], [9, 10, 11], [15, 16, 17]], [[21, 22, 23], [18, 19, 20], [24, 25, 26]]]
+        assert test1(a2, numpy.array([1, 0, 2])).tolist() == [[[12, 13, 14], [9, 10, 11], [15, 16, 17]], [[21, 22, 23], [18, 19, 20], [24, 25, 26]]]

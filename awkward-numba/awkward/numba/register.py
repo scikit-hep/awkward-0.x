@@ -342,8 +342,10 @@ def JaggedArray_typer_getitem_tuple_next(arraytype, wheretype):
             return contenttype
         elif isinstance(wheretype.types[0], numba.types.SliceType):
             return JaggedArrayType(arraytype.startstype, arraytype.stopstype, contenttype, specialization=arraytype.specialization)
+        elif isinstance(wheretype.types[0], numba.types.Array) and wheretype.types[0].ndim == 1:
+            return JaggedArrayType(arraytype.startstype, arraytype.stopstype, contenttype, specialization=arraytype.specialization)
         else:
-            raise NotImplementedError(wheretype.types[0])
+            raise TypeError("cannot be used for indexing: {0}".format(wheretype))
 
 @numba.extending.type_callable(JaggedArray_getitem_tuple_next)
 def JaggedArray_type_getitem_tuple_next(context):
@@ -413,7 +415,7 @@ def JaggedArray_slice3_getitem_tuple_next(jaggedarray, head, tail):
 
     starts = numpy.empty_like(jaggedarray.starts)
     stops = numpy.empty_like(jaggedarray.stops)
-    index = numpy.empty(len(jaggedarray.content), numpy.int64)
+    index = numpy.empty(len(jaggedarray.content), numpy.int64)   # too big, but it will go away after indexing
     k = 0
     for i in range(len(jaggedarray.starts)):
         length = jaggedarray.stops[i] - jaggedarray.starts[i]
@@ -471,6 +473,48 @@ def JaggedArray_slice3_getitem_tuple_next(jaggedarray, head, tail):
 
     return JaggedArray_copy(jaggedarray, starts, stops, jaggedarray.content[index[:k]], True)
 
+@numba.njit
+def JaggedArray_boolarray_getitem_tuple_next(jaggedarray, head, tail):
+    starts = numpy.empty_like(jaggedarray.starts)
+    stops = numpy.empty_like(jaggedarray.stops)
+    index = numpy.empty(len(jaggedarray.content), numpy.int64)   # too big, but it will go away after indexing
+    k = 0
+    for i in range(len(jaggedarray.starts)):
+        length = jaggedarray.stops[i] - jaggedarray.starts[i]
+        if len(head) != length:
+            raise IndexError("boolean index length did not match JaggedArray subarray length")
+
+        starts[i] = k
+        for j in range(length):
+            if head[j]:
+                index[k] = jaggedarray.starts[i] + j
+                k += 1
+        stops[i] = k
+
+    return JaggedArray_copy(jaggedarray, starts, stops, jaggedarray.content[index[:k]], True)
+
+@numba.njit
+def JaggedArray_intarray_getitem_tuple_next(jaggedarray, head, tail):
+    starts = numpy.empty_like(jaggedarray.starts)
+    stops = numpy.empty_like(jaggedarray.stops)
+    index = numpy.empty(len(head) * len(jaggedarray.starts), numpy.int64)
+    k = 0
+    for i in range(len(jaggedarray.starts)):
+        length = jaggedarray.stops[i] - jaggedarray.starts[i]
+
+        starts[i] = k
+        for j in head:
+            fixedj = j
+            if fixedj < 0:
+                fixedj += length
+            if fixedj < 0 or fixedj >= length:
+                raise IndexError("index is out of bounds for JaggedArray subarray")
+            index[k] = jaggedarray.starts[i] + fixedj
+            k += 1
+        stops[i] = k
+
+    return JaggedArray_copy(jaggedarray, starts, stops, jaggedarray.content[index], True)
+
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, numba.types.Array, numba.types.BaseTuple)
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, JaggedArrayType, numba.types.BaseTuple)
 def JaggedArray_lower_getitem_tuple_next(context, builder, sig, args):
@@ -499,8 +543,12 @@ def JaggedArray_lower_getitem_tuple_next(context, builder, sig, args):
         getitem = JaggedArray_slice2_getitem_tuple_next
     elif isinstance(headtype, numba.types.SliceType) and headtype.members == 3:
         getitem = JaggedArray_slice3_getitem_tuple_next
+    elif isinstance(headtype, numba.types.Array) and isinstance(headtype.dtype, numba.types.Boolean):
+        getitem = JaggedArray_boolarray_getitem_tuple_next
+    elif isinstance(headtype, numba.types.Array) and isinstance(headtype.dtype, numba.types.Integer):
+        getitem = JaggedArray_intarray_getitem_tuple_next
     else:
-        raise NotImplementedError(headtype)
+        raise AssertionError(headtype)
 
     sig = sig.return_type(arraytype, headtype, tailtype)
     args = (arrayval, headval, tailval)
