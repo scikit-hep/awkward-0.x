@@ -303,6 +303,11 @@ class Test(unittest.TestCase):
             return x[1:3, i]
         assert test1(a, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
         assert test1(a2, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
+        @numba.njit
+        def test2(x, i, j):
+            return x[1:3, i, j]
+        print(test2.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])))
+        print(test2(a2, numpy.array([True, False, True]), numpy.array([True, True, False])))
 
     def test_innumba_getitem_tuple_slice_intarray(self):
         a = numpy.arange(36).reshape(4, 3, 3)
