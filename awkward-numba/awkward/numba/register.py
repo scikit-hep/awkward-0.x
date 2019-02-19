@@ -145,7 +145,14 @@ class JaggedArrayType(AwkwardArrayType):
                 advanced = True
 
             nexttype = JaggedArrayType(startstype, stopstype, self.contenttype, specialization=self.specialization)
-            return JaggedArray_typer_getitem_tuple_next(nexttype, tailtype, numba.types.int64)
+            out = JaggedArray_typer_getitem_tuple_next(nexttype, tailtype, ISADVANCED if advanced else NOTADVANCED)
+
+            # print(self)
+            # print(wheretype)
+            # print(out)
+            # print()
+
+            return out
 
         else:
             return JaggedArray_typer_getitem_tuple_next(self, wheretype, ISADVANCED if advanced else NOTADVANCED)
@@ -292,6 +299,8 @@ def JaggedArray_lower_getitem_array(context, builder, sig, args):
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.BaseTuple)
 def JaggedArray_lower_getitem_tuple_enter(context, builder, sig, args):
+    print("compiling")
+
     jaggedarraytype, wheretype = sig.args
     jaggedarrayval, whereval = args
 
@@ -357,7 +366,10 @@ def JaggedArray_getitem_tuple_next(jaggedarray, where):
     pass
 
 def JaggedArray_typer_getitem_tuple_next(jaggedarraytype, wheretype, advancedtype):
+    # print("JaggedArray_typer_getitem_tuple_next", advancedtype == ISADVANCED, wheretype)
+
     if isinstance(wheretype, numba.types.BaseTuple) and len(wheretype.types) == 0:
+        # print(".")
         return jaggedarraytype
 
     if isinstance(jaggedarraytype, (numba.types.Array, JaggedArrayType)) and isinstance(wheretype, numba.types.BaseTuple) and isinstance(advancedtype, numba.types.Integer):
@@ -365,16 +377,20 @@ def JaggedArray_typer_getitem_tuple_next(jaggedarraytype, wheretype, advancedtyp
         if jaggedarraytype.startstype.ndim != 1:
             raise NotImplementedError("nested JaggedArrays must have one-dimensional starts/stops to be used in Numba")
 
-        contenttype = JaggedArray_typer_getitem_tuple_next(jaggedarraytype.contenttype, numba.types.Tuple(wheretype.types[1:]), advancedtype)
-
         isarray = (isinstance(wheretype.types[0], numba.types.Array) and wheretype.types[0].ndim == 1)
-        if isarray and advancedtype == NOTADVANCED:
-            advancedtype = ISADVANCED
 
-        if isinstance(wheretype.types[0], numba.types.Integer):  # or (advancedtype == ISADVANCED and isarray):
+        contenttype = JaggedArray_typer_getitem_tuple_next(jaggedarraytype.contenttype, numba.types.Tuple(wheretype.types[1:]), ISADVANCED if isarray else advancedtype)
+
+        if isinstance(wheretype.types[0], numba.types.Integer) or (advancedtype == ISADVANCED and isarray):
+            # print(".", advancedtype == ISADVANCED, contenttype)
+
             return contenttype
-        elif isinstance(wheretype.types[0], numba.types.SliceType) or isarray:  # or (advancedtype == NOTADVANCED and isarray):
-            return JaggedArrayType(jaggedarraytype.startstype, jaggedarraytype.stopstype, contenttype, specialization=jaggedarraytype.specialization)
+        elif isinstance(wheretype.types[0], numba.types.SliceType) or (advancedtype == NOTADVANCED and isarray):
+            out = JaggedArrayType(jaggedarraytype.startstype, jaggedarraytype.stopstype, contenttype, specialization=jaggedarraytype.specialization)
+
+            # print(".", advancedtype == ISADVANCED, out)
+
+            return out
         else:
             raise TypeError("cannot be used for indexing: {0}".format(wheretype))
 
@@ -577,6 +593,8 @@ def JaggedArray_lower_getitem_tuple_next(context, builder, sig, args):
     jaggedarraytype, wheretype, advancedtype = sig.args
     jaggedarrayval, whereval, advancedval = args
 
+    return_type = sig.return_type
+
     if len(wheretype.types) == 0:
         if context.enable_nrt:
             context.nrt.incref(builder, jaggedarraytype, jaggedarrayval)
@@ -589,7 +607,9 @@ def JaggedArray_lower_getitem_tuple_next(context, builder, sig, args):
 
     getitem = JaggedArray_getitem_tuple_bytype
 
-    nexttype = JaggedArray_typer_getitem_tuple_next(jaggedarraytype.contenttype, tailtype, advancedtype)
+    isarray = (isinstance(headtype, numba.types.Array) and headtype.ndim == 1)
+
+    nexttype = JaggedArray_typer_getitem_tuple_next(jaggedarraytype.contenttype, tailtype, ISADVANCED if isarray else advancedtype)
     sig = numba.types.Tuple((jaggedarraytype, jaggedarraytype.startstype, jaggedarraytype.stopstype, nexttype, numba.types.boolean))(jaggedarraytype, headtype, tailtype, advancedtype)
     args = (jaggedarrayval, headval, tailval, advancedval)
     if sig.args not in getitem.overloads:
@@ -597,10 +617,26 @@ def JaggedArray_lower_getitem_tuple_next(context, builder, sig, args):
     cres = getitem.overloads[sig.args]
     copy_args = cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
 
-    if isinstance(headtype, numba.types.Integer):
-        return builder.extract_value(copy_args, 3)
+    if isinstance(headtype, numba.types.Integer) or (isarray and advancedtype == ISADVANCED):
+        out = builder.extract_value(copy_args, 3)
+
+        print("extract", headtype, isarray, advancedtype == ISADVANCED, return_type)
+
+        return out
     else:
-        return JaggedArray_lower_copy(context, builder, jaggedarraytype(jaggedarraytype, jaggedarraytype.startstype, jaggedarraytype.stopstype, nexttype, numba.types.boolean), (builder.extract_value(copy_args, i) for i in range(5)))
+        print("HERE")
+        print("jaggedarraytype", jaggedarraytype)
+        print("starttype", jaggedarraytype.startstype)
+        print("stoptype", jaggedarraytype.stopstype)
+        print("nexttype", nexttype)
+
+        outtype = JaggedArrayType(jaggedarraytype.startstype, jaggedarraytype.stopstype, nexttype, specialization=jaggedarraytype.specialization)
+
+        out = JaggedArray_lower_copy(context, builder, outtype(jaggedarraytype, jaggedarraytype.startstype, jaggedarraytype.stopstype, nexttype, numba.types.boolean), (builder.extract_value(copy_args, i) for i in range(5)))
+
+        print("wrap", headtype, isarray, advancedtype == ISADVANCED, return_type)
+
+        return out
 
 ######################################################################## JaggedArray_methods
 
