@@ -510,34 +510,59 @@ def JaggedArray_getitem_tuple_bytype(jaggedarray, head, tail, advanced):
             return (jaggedarray, starts, stops, next, True)
 
     elif isinstance(head, numba.types.Array) and isinstance(head.dtype, numba.types.Boolean):
-        def getitem(jaggedarray, head, tail, advanced):
-            nextadvanced = head.astype(numpy.int64).sum()
-            # if len(advanced) != 0:
-            #     if advanced[0] == 1:
-            #         pass
-            #     elif nextadvanced == 1:
-            #         pass
-            #     elif advanced[0] != nextadvanced:
-            #         raise 
+        if advanced == NOTADVANCED:
+            def getitem(jaggedarray, head, tail, advanced):
+                nextadvanced = head.astype(numpy.int64).sum()
 
-            starts = numpy.empty_like(jaggedarray.starts)
-            stops = numpy.empty_like(jaggedarray.stops)
-            index = numpy.empty(len(jaggedarray.content), numpy.int64)   # too big, but it will go away after indexing
-            k = 0
-            for i in range(len(jaggedarray.starts)):
-                length = jaggedarray.stops[i] - jaggedarray.starts[i]
-                if len(head) != length:
-                    raise IndexError("boolean index length did not match JaggedArray subarray length")
+                starts = numpy.empty_like(jaggedarray.starts)
+                stops = numpy.empty_like(jaggedarray.stops)
+                index = numpy.empty(len(jaggedarray.content), numpy.int64)   # too big, but it will go away after indexing
+                k = 0
+                for i in range(len(jaggedarray.starts)):
+                    length = jaggedarray.stops[i] - jaggedarray.starts[i]
+                    if len(head) > length:
+                        raise IndexError("boolean index length must be less than or equal to all JaggedArray subarray lengths")
 
-                starts[i] = k
-                for j in range(length):
+                    starts[i] = k
+                    for j in range(length):
+                        if head[j]:
+                            index[k] = jaggedarray.starts[i] + j
+                            k += 1
+                    stops[i] = k
+
+                next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail, nextadvanced)
+                return (jaggedarray, starts, stops, next, True)
+
+        else:
+            def getitem(jaggedarray, head, tail, advanced):
+                nextadvanced = head.astype(numpy.int64).sum()
+
+                if advanced == 1:
+                    raise NotImplementedError
+
+                if nextadvanced == 1:
+                    raise NotImplementedError
+
+                if advanced != nextadvanced:
+                    raise IndexError("boolean or integer indexing lengths do not match")
+
+                index = numpy.empty(len(jaggedarray.starts), numpy.int64)   # too big, but it will go away after indexing
+                j = 0
+                k = 0
+                for i in range(len(jaggedarray.starts)):
+                    length = jaggedarray.stops[i] - jaggedarray.starts[i]
+                    if len(head) > length:
+                        raise IndexError("boolean index length must be less than or equal to all JaggedArray subarray lengths")
+
                     if head[j]:
                         index[k] = jaggedarray.starts[i] + j
                         k += 1
-                stops[i] = k
+                    j += 1
+                    if j == nextadvanced:
+                        j = 0
 
-            next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail, nextadvanced)
-            return (jaggedarray, starts, stops, next, True)
+                next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail, nextadvanced)
+                return (jaggedarray, jaggedarray.starts, jaggedarray.stops, next, True)
 
     elif isinstance(head, numba.types.Array) and isinstance(head.dtype, numba.types.Integer):
         def getitem(jaggedarray, head, tail, advanced):
