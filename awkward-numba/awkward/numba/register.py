@@ -368,9 +368,9 @@ def JaggedArray_typer_getitem_tuple_next(jaggedarraytype, wheretype, advancedtyp
         if isarray and len(advancedtype.types) == 0:
             advancedtype = numba.types.Tuple((numba.types.int64,))
 
-        if isinstance(wheretype.types[0], numba.types.Integer):
+        if isinstance(wheretype.types[0], numba.types.Integer):  # or (len(advancedtype) != 0 and isarray):
             return contenttype
-        elif isinstance(wheretype.types[0], numba.types.SliceType) or isarray:
+        elif isinstance(wheretype.types[0], numba.types.SliceType) or isarray:  # or (len(advancedtype) == 0 and isarray):
             return JaggedArrayType(jaggedarraytype.startstype, jaggedarraytype.stopstype, contenttype, specialization=jaggedarraytype.specialization)
         else:
             raise TypeError("cannot be used for indexing: {0}".format(wheretype))
@@ -392,7 +392,8 @@ def JaggedArray_getitem_tuple_bytype(jaggedarray, head, tail, advanced):
                     if j >= jaggedarray.stops[i]:
                         raise ValueError("integer index is beyond the range of one of the JaggedArray.starts-JaggedArray.stops pairs")
                     content[i] = jaggedarray.content[j]
-                return JaggedArray_getitem_tuple_next(content, tail, advanced)
+                next = JaggedArray_getitem_tuple_next(content, tail, advanced)
+                return (jaggedarray, jaggedarray.starts, jaggedarray.stops, next, False)
 
         else:
             def getitem(jaggedarray, head, tail, advanced):
@@ -402,7 +403,8 @@ def JaggedArray_getitem_tuple_bytype(jaggedarray, head, tail, advanced):
                     if j >= jaggedarray.stops[i]:
                         raise ValueError("integer index is beyond the range of one of the JaggedArray.starts-JaggedArray.stops pairs")
                     index[i] = j
-                return JaggedArray_getitem_tuple_next(jaggedarray.content[index], tail, advanced)
+                next = JaggedArray_getitem_tuple_next(jaggedarray.content[index], tail, advanced)
+                return (jaggedarray, jaggedarray.starts, jaggedarray.stops, next, False)
 
     elif isinstance(head, numba.types.SliceType) and head.members == 2:
         def getitem(jaggedarray, head, tail, advanced):
@@ -438,7 +440,7 @@ def JaggedArray_getitem_tuple_bytype(jaggedarray, head, tail, advanced):
                 stops[i] = jaggedarray.starts[i] + b
 
             next = JaggedArray_getitem_tuple_next(jaggedarray.content, tail, advanced)
-            return JaggedArray_copy(jaggedarray, starts, stops, next, False)
+            return (jaggedarray, starts, stops, next, False)
 
     elif isinstance(head, numba.types.SliceType) and head.members == 3:
         def getitem(jaggedarray, head, tail, advanced):
@@ -504,10 +506,19 @@ def JaggedArray_getitem_tuple_bytype(jaggedarray, head, tail, advanced):
                 stops[i] = k
 
             next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail, advanced)
-            return JaggedArray_copy(jaggedarray, starts, stops, next, True)
+            return (jaggedarray, starts, stops, next, True)
 
     elif isinstance(head, numba.types.Array) and isinstance(head.dtype, numba.types.Boolean):
         def getitem(jaggedarray, head, tail, advanced):
+            nextadvanced = head.astype(numpy.int64).sum()
+            # if len(advanced) != 0:
+            #     if advanced[0] == 1:
+            #         pass
+            #     elif nextadvanced == 1:
+            #         pass
+            #     elif advanced[0] != nextadvanced:
+            #         raise 
+
             starts = numpy.empty_like(jaggedarray.starts)
             stops = numpy.empty_like(jaggedarray.stops)
             index = numpy.empty(len(jaggedarray.content), numpy.int64)   # too big, but it will go away after indexing
@@ -524,11 +535,13 @@ def JaggedArray_getitem_tuple_bytype(jaggedarray, head, tail, advanced):
                         k += 1
                 stops[i] = k
 
-            next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail, (head.astype(numpy.int64).sum(),))
-            return JaggedArray_copy(jaggedarray, starts, stops, next, True)
+            next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail, (nextadvanced,))
+            return (jaggedarray, starts, stops, next, True)
 
     elif isinstance(head, numba.types.Array) and isinstance(head.dtype, numba.types.Integer):
         def getitem(jaggedarray, head, tail, advanced):
+            nextadvanced = len(head)
+
             starts = numpy.empty_like(jaggedarray.starts)
             stops = numpy.empty_like(jaggedarray.stops)
             index = numpy.empty(len(head) * len(jaggedarray.starts), numpy.int64)
@@ -547,8 +560,8 @@ def JaggedArray_getitem_tuple_bytype(jaggedarray, head, tail, advanced):
                     k += 1
                 stops[i] = k
 
-            next = JaggedArray_getitem_tuple_next(jaggedarray.content[index], tail, (len(head),))
-            return JaggedArray_copy(jaggedarray, starts, stops, next, True)
+            next = JaggedArray_getitem_tuple_next(jaggedarray.content[index], tail, (nextadvanced,))
+            return (jaggedarray, starts, stops, next, True)
 
     else:
         raise AssertionError(head)
@@ -558,13 +571,13 @@ def JaggedArray_getitem_tuple_bytype(jaggedarray, head, tail, advanced):
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, numba.types.Array, numba.types.BaseTuple, numba.types.BaseTuple)
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, JaggedArrayType, numba.types.BaseTuple, numba.types.BaseTuple)
 def JaggedArray_lower_getitem_tuple_next(context, builder, sig, args):
-    arraytype, wheretype, advancedtype = sig.args
-    arrayval, whereval, advancedval = args
+    jaggedarraytype, wheretype, advancedtype = sig.args
+    jaggedarrayval, whereval, advancedval = args
 
     if len(wheretype.types) == 0:
         if context.enable_nrt:
-            context.nrt.incref(builder, arraytype, arrayval)
-        return arrayval
+            context.nrt.incref(builder, jaggedarraytype, jaggedarrayval)
+        return jaggedarrayval
 
     headtype = wheretype.types[0]
     tailtype = numba.types.Tuple(wheretype.types[1:])
@@ -573,12 +586,18 @@ def JaggedArray_lower_getitem_tuple_next(context, builder, sig, args):
 
     getitem = JaggedArray_getitem_tuple_bytype
 
-    sig = sig.return_type(arraytype, headtype, tailtype, advancedtype)
-    args = (arrayval, headval, tailval, advancedval)
+    nexttype = JaggedArray_typer_getitem_tuple_next(jaggedarraytype.contenttype, tailtype, advancedtype)
+    sig = numba.types.Tuple((jaggedarraytype, jaggedarraytype.startstype, jaggedarraytype.stopstype, nexttype, numba.types.boolean))(jaggedarraytype, headtype, tailtype, advancedtype)
+    args = (jaggedarrayval, headval, tailval, advancedval)
     if sig.args not in getitem.overloads:
         getitem.compile(sig)
     cres = getitem.overloads[sig.args]
-    return cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
+    copy_args = cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
+
+    if isinstance(headtype, numba.types.Integer):
+        return builder.extract_value(copy_args, 3)
+    else:
+        return JaggedArray_lower_copy(context, builder, jaggedarraytype(jaggedarraytype, jaggedarraytype.startstype, jaggedarraytype.stopstype, nexttype, numba.types.boolean), (builder.extract_value(copy_args, i) for i in range(5)))
 
 ######################################################################## JaggedArray_methods
 
