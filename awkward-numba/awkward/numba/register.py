@@ -406,7 +406,8 @@ def JaggedArray_slice2_getitem_tuple_next(jaggedarray, head, tail):
         starts[i] = jaggedarray.starts[i] + a
         stops[i] = jaggedarray.starts[i] + b
 
-    return JaggedArray_copy(jaggedarray, starts, stops, jaggedarray.content, False)
+    next = JaggedArray_getitem_tuple_next(jaggedarray.content, tail)
+    return JaggedArray_copy(jaggedarray, starts, stops, next, False)
 
 @numba.njit
 def JaggedArray_slice3_getitem_tuple_next(jaggedarray, head, tail):
@@ -471,7 +472,8 @@ def JaggedArray_slice3_getitem_tuple_next(jaggedarray, head, tail):
             k += 1
         stops[i] = k
 
-    return JaggedArray_copy(jaggedarray, starts, stops, jaggedarray.content[index[:k]], True)
+    next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail)
+    return JaggedArray_copy(jaggedarray, starts, stops, next, True)
 
 @numba.njit
 def JaggedArray_boolarray_getitem_tuple_next(jaggedarray, head, tail):
@@ -491,7 +493,8 @@ def JaggedArray_boolarray_getitem_tuple_next(jaggedarray, head, tail):
                 k += 1
         stops[i] = k
 
-    return JaggedArray_copy(jaggedarray, starts, stops, jaggedarray.content[index[:k]], True)
+    next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail)
+    return JaggedArray_copy(jaggedarray, starts, stops, next, True)
 
 @numba.njit
 def JaggedArray_intarray_getitem_tuple_next(jaggedarray, head, tail):
@@ -513,7 +516,8 @@ def JaggedArray_intarray_getitem_tuple_next(jaggedarray, head, tail):
             k += 1
         stops[i] = k
 
-    return JaggedArray_copy(jaggedarray, starts, stops, jaggedarray.content[index], True)
+    next = JaggedArray_getitem_tuple_next(jaggedarray.content[index], tail)
+    return JaggedArray_copy(jaggedarray, starts, stops, next, True)
 
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, numba.types.Array, numba.types.BaseTuple)
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, JaggedArrayType, numba.types.BaseTuple)
