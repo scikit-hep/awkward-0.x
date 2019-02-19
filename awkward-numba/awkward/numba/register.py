@@ -351,173 +351,181 @@ def JaggedArray_typer_getitem_tuple_next(arraytype, wheretype):
 def JaggedArray_type_getitem_tuple_next(context):
     return JaggedArray_typer_getitem_tuple_next
 
-@numba.njit
-def JaggedArray_integernumpy_getitem_tuple_next(jaggedarray, head, tail):
-    content = numpy.empty(len(jaggedarray.starts), jaggedarray.content.dtype)
-    for i in range(len(jaggedarray.starts)):
-        j = jaggedarray.starts[i] + head
-        if j >= jaggedarray.stops[i]:
-            raise ValueError("integer index is beyond the range of one of the JaggedArray.starts-JaggedArray.stops pairs")
-        content[i] = jaggedarray.content[j]
-    return JaggedArray_getitem_tuple_next(content, tail)
+@numba.generated_jit(nopython=True)
+def JaggedArray_getitem_tuple_bytype(jaggedarray, head, tail):
+    intp_maxval = numba.types.intp.maxval
 
-@numba.njit
-def JaggedArray_integerawkward_getitem_tuple_next(jaggedarray, head, tail):
-    index = numpy.empty(len(jaggedarray.starts), numpy.int64)
-    for i in range(len(jaggedarray.starts)):
-        j = jaggedarray.starts[i] + head
-        if j >= jaggedarray.stops[i]:
-            raise ValueError("integer index is beyond the range of one of the JaggedArray.starts-JaggedArray.stops pairs")
-        index[i] = j
-    return JaggedArray_getitem_tuple_next(jaggedarray.content[index], tail)
+    if isinstance(head, numba.types.Integer):
+        if isinstance(jaggedarray.contenttype, numba.types.Array):
+            def getitem(jaggedarray, head, tail):
+                content = numpy.empty(len(jaggedarray.starts), jaggedarray.content.dtype)
+                for i in range(len(jaggedarray.starts)):
+                    j = jaggedarray.starts[i] + head
+                    if j >= jaggedarray.stops[i]:
+                        raise ValueError("integer index is beyond the range of one of the JaggedArray.starts-JaggedArray.stops pairs")
+                    content[i] = jaggedarray.content[j]
+                return JaggedArray_getitem_tuple_next(content, tail)
 
-intp_maxval = numba.types.intp.maxval
-
-@numba.njit
-def JaggedArray_slice2_getitem_tuple_next(jaggedarray, head, tail):
-    starts = numpy.empty_like(jaggedarray.starts)
-    stops = numpy.empty_like(jaggedarray.stops)
-    for i in range(len(jaggedarray.starts)):
-        length = jaggedarray.stops[i] - jaggedarray.starts[i]
-        a = head.start
-        b = head.stop
-
-        if a < 0:
-            a += length
-        elif a == intp_maxval:
-            a = 0
-        if b < 0:
-            b += length
-        elif b == intp_maxval:
-            b = length
-
-        if b <= a:
-            a = 0
-            b = 0
-        if a < 0:
-            a = 0
-        elif a > length:
-            a = length
-        if b < 0:
-            b = 0
-        elif b > length:
-            b = length
-
-        starts[i] = jaggedarray.starts[i] + a
-        stops[i] = jaggedarray.starts[i] + b
-
-    next = JaggedArray_getitem_tuple_next(jaggedarray.content, tail)
-    return JaggedArray_copy(jaggedarray, starts, stops, next, False)
-
-@numba.njit
-def JaggedArray_slice3_getitem_tuple_next(jaggedarray, head, tail):
-    if head.step == 0:
-        raise ValueError("slice step cannot be zero")
-
-    starts = numpy.empty_like(jaggedarray.starts)
-    stops = numpy.empty_like(jaggedarray.stops)
-    index = numpy.empty(len(jaggedarray.content), numpy.int64)   # too big, but it will go away after indexing
-    k = 0
-    for i in range(len(jaggedarray.starts)):
-        length = jaggedarray.stops[i] - jaggedarray.starts[i]
-        a = head.start
-        b = head.stop
-        c = head.step
-
-        if c == intp_maxval:
-            c = 1
-
-        if a < 0:
-            a += length
-        elif a == intp_maxval and c > 0:
-            a = 0
-        elif a == intp_maxval:
-            a = length - 1
-
-        if b < 0:
-            b += length
-        elif b == intp_maxval and c > 0:
-            b = length
-        elif b == intp_maxval:
-            b = -1
-
-        if c > 0:
-            if b <= a:
-                a = 0
-                b = 0
-            if a < 0:
-                a = 0
-            elif a > length:
-                a = length
-            if b < 0:
-                b = 0
-            elif b > length:
-                b = length
         else:
-            if a <= b:
-                a = 0
-                b = 0
-            if a < -1:
-                a = -1
-            elif a >= length:
-                a = length - 1
-            if b < -1:
-                b = -1
-            elif b >= length:
-                b = length - 1
+            def getitem(jaggedarray, head, tail):
+                index = numpy.empty(len(jaggedarray.starts), numpy.int64)
+                for i in range(len(jaggedarray.starts)):
+                    j = jaggedarray.starts[i] + head
+                    if j >= jaggedarray.stops[i]:
+                        raise ValueError("integer index is beyond the range of one of the JaggedArray.starts-JaggedArray.stops pairs")
+                    index[i] = j
+                return JaggedArray_getitem_tuple_next(jaggedarray.content[index], tail)
 
-        starts[i] = k
-        for j in range(a, b, c):
-            index[k] = jaggedarray.starts[i] + j
-            k += 1
-        stops[i] = k
+    elif isinstance(head, numba.types.SliceType) and head.members == 2:
+        def getitem(jaggedarray, head, tail):
+            starts = numpy.empty_like(jaggedarray.starts)
+            stops = numpy.empty_like(jaggedarray.stops)
+            for i in range(len(jaggedarray.starts)):
+                length = jaggedarray.stops[i] - jaggedarray.starts[i]
+                a = head.start
+                b = head.stop
 
-    next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail)
-    return JaggedArray_copy(jaggedarray, starts, stops, next, True)
+                if a < 0:
+                    a += length
+                elif a == intp_maxval:
+                    a = 0
+                if b < 0:
+                    b += length
+                elif b == intp_maxval:
+                    b = length
 
-@numba.njit
-def JaggedArray_boolarray_getitem_tuple_next(jaggedarray, head, tail):
-    starts = numpy.empty_like(jaggedarray.starts)
-    stops = numpy.empty_like(jaggedarray.stops)
-    index = numpy.empty(len(jaggedarray.content), numpy.int64)   # too big, but it will go away after indexing
-    k = 0
-    for i in range(len(jaggedarray.starts)):
-        length = jaggedarray.stops[i] - jaggedarray.starts[i]
-        if len(head) != length:
-            raise IndexError("boolean index length did not match JaggedArray subarray length")
+                if b <= a:
+                    a = 0
+                    b = 0
+                if a < 0:
+                    a = 0
+                elif a > length:
+                    a = length
+                if b < 0:
+                    b = 0
+                elif b > length:
+                    b = length
 
-        starts[i] = k
-        for j in range(length):
-            if head[j]:
-                index[k] = jaggedarray.starts[i] + j
-                k += 1
-        stops[i] = k
+                starts[i] = jaggedarray.starts[i] + a
+                stops[i] = jaggedarray.starts[i] + b
 
-    next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail)
-    return JaggedArray_copy(jaggedarray, starts, stops, next, True)
+            next = JaggedArray_getitem_tuple_next(jaggedarray.content, tail)
+            return JaggedArray_copy(jaggedarray, starts, stops, next, False)
 
-@numba.njit
-def JaggedArray_intarray_getitem_tuple_next(jaggedarray, head, tail):
-    starts = numpy.empty_like(jaggedarray.starts)
-    stops = numpy.empty_like(jaggedarray.stops)
-    index = numpy.empty(len(head) * len(jaggedarray.starts), numpy.int64)
-    k = 0
-    for i in range(len(jaggedarray.starts)):
-        length = jaggedarray.stops[i] - jaggedarray.starts[i]
+    elif isinstance(head, numba.types.SliceType) and head.members == 3:
+        def getitem(jaggedarray, head, tail):
+            if head.step == 0:
+                raise ValueError("slice step cannot be zero")
 
-        starts[i] = k
-        for j in head:
-            fixedj = j
-            if fixedj < 0:
-                fixedj += length
-            if fixedj < 0 or fixedj >= length:
-                raise IndexError("index is out of bounds for JaggedArray subarray")
-            index[k] = jaggedarray.starts[i] + fixedj
-            k += 1
-        stops[i] = k
+            starts = numpy.empty_like(jaggedarray.starts)
+            stops = numpy.empty_like(jaggedarray.stops)
+            index = numpy.empty(len(jaggedarray.content), numpy.int64)   # too big, but it will go away after indexing
+            k = 0
+            for i in range(len(jaggedarray.starts)):
+                length = jaggedarray.stops[i] - jaggedarray.starts[i]
+                a = head.start
+                b = head.stop
+                c = head.step
 
-    next = JaggedArray_getitem_tuple_next(jaggedarray.content[index], tail)
-    return JaggedArray_copy(jaggedarray, starts, stops, next, True)
+                if c == intp_maxval:
+                    c = 1
+
+                if a < 0:
+                    a += length
+                elif a == intp_maxval and c > 0:
+                    a = 0
+                elif a == intp_maxval:
+                    a = length - 1
+
+                if b < 0:
+                    b += length
+                elif b == intp_maxval and c > 0:
+                    b = length
+                elif b == intp_maxval:
+                    b = -1
+
+                if c > 0:
+                    if b <= a:
+                        a = 0
+                        b = 0
+                    if a < 0:
+                        a = 0
+                    elif a > length:
+                        a = length
+                    if b < 0:
+                        b = 0
+                    elif b > length:
+                        b = length
+                else:
+                    if a <= b:
+                        a = 0
+                        b = 0
+                    if a < -1:
+                        a = -1
+                    elif a >= length:
+                        a = length - 1
+                    if b < -1:
+                        b = -1
+                    elif b >= length:
+                        b = length - 1
+
+                starts[i] = k
+                for j in range(a, b, c):
+                    index[k] = jaggedarray.starts[i] + j
+                    k += 1
+                stops[i] = k
+
+            next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail)
+            return JaggedArray_copy(jaggedarray, starts, stops, next, True)
+
+    elif isinstance(head, numba.types.Array) and isinstance(head.dtype, numba.types.Boolean):
+        def getitem(jaggedarray, head, tail):
+            starts = numpy.empty_like(jaggedarray.starts)
+            stops = numpy.empty_like(jaggedarray.stops)
+            index = numpy.empty(len(jaggedarray.content), numpy.int64)   # too big, but it will go away after indexing
+            k = 0
+            for i in range(len(jaggedarray.starts)):
+                length = jaggedarray.stops[i] - jaggedarray.starts[i]
+                if len(head) != length:
+                    raise IndexError("boolean index length did not match JaggedArray subarray length")
+
+                starts[i] = k
+                for j in range(length):
+                    if head[j]:
+                        index[k] = jaggedarray.starts[i] + j
+                        k += 1
+                stops[i] = k
+
+            next = JaggedArray_getitem_tuple_next(jaggedarray.content[index[:k]], tail)
+            return JaggedArray_copy(jaggedarray, starts, stops, next, True)
+
+    elif isinstance(head, numba.types.Array) and isinstance(head.dtype, numba.types.Integer):
+        def getitem(jaggedarray, head, tail):
+            starts = numpy.empty_like(jaggedarray.starts)
+            stops = numpy.empty_like(jaggedarray.stops)
+            index = numpy.empty(len(head) * len(jaggedarray.starts), numpy.int64)
+            k = 0
+            for i in range(len(jaggedarray.starts)):
+                length = jaggedarray.stops[i] - jaggedarray.starts[i]
+
+                starts[i] = k
+                for j in head:
+                    fixedj = j
+                    if fixedj < 0:
+                        fixedj += length
+                    if fixedj < 0 or fixedj >= length:
+                        raise IndexError("index is out of bounds for JaggedArray subarray")
+                    index[k] = jaggedarray.starts[i] + fixedj
+                    k += 1
+                stops[i] = k
+
+            next = JaggedArray_getitem_tuple_next(jaggedarray.content[index], tail)
+            return JaggedArray_copy(jaggedarray, starts, stops, next, True)
+
+    else:
+        raise AssertionError(head)
+
+    return getitem
 
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, numba.types.Array, numba.types.BaseTuple)
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, JaggedArrayType, numba.types.BaseTuple)
@@ -538,21 +546,7 @@ def JaggedArray_lower_getitem_tuple_next(context, builder, sig, args):
     headval = numba.targets.tupleobj.static_getitem_tuple(context, builder, headtype(wheretype, numba.types.int64), (whereval, 0))
     tailval = numba.targets.tupleobj.static_getitem_tuple(context, builder, tailtype(wheretype, numba.types.slice2_type), (whereval, slice(1, None)))
 
-    if isinstance(headtype, numba.types.Integer):
-        if isinstance(arraytype.contenttype, numba.types.Array):
-            getitem = JaggedArray_integernumpy_getitem_tuple_next
-        else:
-            getitem = JaggedArray_integerawkward_getitem_tuple_next
-    elif isinstance(headtype, numba.types.SliceType) and headtype.members == 2:
-        getitem = JaggedArray_slice2_getitem_tuple_next
-    elif isinstance(headtype, numba.types.SliceType) and headtype.members == 3:
-        getitem = JaggedArray_slice3_getitem_tuple_next
-    elif isinstance(headtype, numba.types.Array) and isinstance(headtype.dtype, numba.types.Boolean):
-        getitem = JaggedArray_boolarray_getitem_tuple_next
-    elif isinstance(headtype, numba.types.Array) and isinstance(headtype.dtype, numba.types.Integer):
-        getitem = JaggedArray_intarray_getitem_tuple_next
-    else:
-        raise AssertionError(headtype)
+    getitem = JaggedArray_getitem_tuple_bytype
 
     sig = sig.return_type(arraytype, headtype, tailtype)
     args = (arrayval, headval, tailval)
