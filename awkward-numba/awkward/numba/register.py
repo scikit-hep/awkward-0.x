@@ -92,7 +92,7 @@ class AwkwardArrayType_type_getitem(numba.typing.templates.AbstractTemplate):
         if len(args) == 2 and len(kwargs) == 0:
             arraytype, wheretype = args
             if isinstance(arraytype, AwkwardArrayType):
-                return numba.typing.templates.signature(arraytype.getitem(wheretype, False), *args, **kwargs)
+                return numba.typing.templates.signature(arraytype.getitem(wheretype), *args, **kwargs)
 
 def specialrepr(x):
     if x is ChunkedArray or x is AppendableArray or x is IndexedArray or x is SparseArray or x is JaggedArray or x is MaskedArray or x is BitMaskedArray or x is IndexedMaskedArray or x is Methods or x is ObjectArray or x is StringArray or x is Table or x is UnionArray or x is VirtualArray:
@@ -114,31 +114,35 @@ class JaggedArrayType(AwkwardArrayType):
         self.contenttype = contenttype
         self.specialization = specialization
 
-    def getitem(self, wheretype, advanced):
+    def getitem(self, wheretype, first=True, advanced=False):
         if not isinstance(wheretype, numba.types.BaseTuple):
             wheretype = numba.types.Tuple((wheretype,))
         if len(wheretype.types) == 0:
             return self
 
-        headtype, tailtype = numba.types.Tuple(wheretype.types[:self.startstype.ndim]), numba.types.Tuple(wheretype.types[self.startstype.ndim:])
+        if first:
+            headtype, tailtype = numba.types.Tuple(wheretype.types[:self.startstype.ndim]), numba.types.Tuple(wheretype.types[self.startstype.ndim:])
 
-        startstype = numba.typing.arraydecl.get_array_index_type(self.startstype, headtype).result
-        stopstype = numba.typing.arraydecl.get_array_index_type(self.stopstype, headtype).result
-        if startstype is None or stopstype is None:
-            return None
+            startstype = numba.typing.arraydecl.get_array_index_type(self.startstype, headtype).result
+            stopstype = numba.typing.arraydecl.get_array_index_type(self.stopstype, headtype).result
+            if startstype is None or stopstype is None:
+                return None
 
-        assert isinstance(startstype, numba.types.Integer) == isinstance(stopstype, numba.types.Integer)
-        if isinstance(startstype, numba.types.Integer):
-            if isinstance(self.contenttype, numba.types.Array):
-                if len(tailtype.types) == 0:
-                    return self.contenttype
+            assert isinstance(startstype, numba.types.Integer) == isinstance(stopstype, numba.types.Integer)
+            if isinstance(startstype, numba.types.Integer):
+                if isinstance(self.contenttype, numba.types.Array):
+                    if len(tailtype.types) == 0:
+                        return self.contenttype
+                    else:
+                        return numba.typing.arraydecl.get_array_index_type(self.contenttype, tailtype).result
                 else:
-                    return numba.typing.arraydecl.get_array_index_type(self.contenttype, tailtype).result
-            else:
-                return self.contenttype.getitem(tailtype, advanced)
+                    return self.contenttype.getitem(tailtype)
 
-        nexttype = JaggedArrayType(startstype, stopstype, self.contenttype, specialization=self.specialization)
-        return JaggedArray_typer_getitem_tuple_next(nexttype, tailtype)
+            nexttype = JaggedArrayType(startstype, stopstype, self.contenttype, specialization=self.specialization)
+            return JaggedArray_typer_getitem_tuple_next(nexttype, tailtype)   # , numba.types.Tuple((numba.types.int64,) if advanced else ()))
+
+        else:
+            return JaggedArray_typer_getitem_tuple_next(self, wheretype)   # , numba.types.Tuple((numba.types.int64,) if advanced else ()))
 
 @numba.extending.register_model(JaggedArrayType)
 class JaggedArrayModel(numba.datamodel.models.StructModel):
@@ -326,24 +330,23 @@ def JaggedArray_lower_getitem_tuple_enter(context, builder, sig, args):
 def JaggedArray_getitem_tuple_next(jaggedarray, where):
     pass
 
-def JaggedArray_typer_getitem_tuple_next(arraytype, wheretype):
-    if isinstance(arraytype, (numba.types.Array, JaggedArrayType)) and isinstance(wheretype, numba.types.BaseTuple):
-        if len(wheretype.types) == 0:
-            return arraytype
-        if isinstance(arraytype, numba.types.Array):
-            return numba.typing.arraydecl.get_array_index_type(arraytype, wheretype).result
+def JaggedArray_typer_getitem_tuple_next(jaggedarraytype, wheretype):   # , advancedtype
+    if isinstance(wheretype, numba.types.BaseTuple) and len(wheretype.types) == 0:
+        return jaggedarraytype
 
-        if arraytype.startstype.ndim != 1:
+    if isinstance(jaggedarraytype, (numba.types.Array, JaggedArrayType)) and isinstance(wheretype, numba.types.BaseTuple):  # and isinstance(advancedtype, numba.types.BaseTuple) and (len(advancedtype.types) == 0 or advancedtype.types == (numba.types.int64,)):
+        assert jaggedarraytype.startstype.ndim == jaggedarraytype.stopstype.ndim
+        if jaggedarraytype.startstype.ndim != 1:
             raise NotImplementedError("nested JaggedArrays must have one-dimensional starts/stops to be used in Numba")
 
-        contenttype = JaggedArray_typer_getitem_tuple_next(arraytype.contenttype, numba.types.Tuple(wheretype.types[1:]))
+        contenttype = JaggedArray_typer_getitem_tuple_next(jaggedarraytype.contenttype, numba.types.Tuple(wheretype.types[1:]))
 
         if isinstance(wheretype.types[0], numba.types.Integer):
             return contenttype
         elif isinstance(wheretype.types[0], numba.types.SliceType):
-            return JaggedArrayType(arraytype.startstype, arraytype.stopstype, contenttype, specialization=arraytype.specialization)
+            return JaggedArrayType(jaggedarraytype.startstype, jaggedarraytype.stopstype, contenttype, specialization=jaggedarraytype.specialization)
         elif isinstance(wheretype.types[0], numba.types.Array) and wheretype.types[0].ndim == 1:
-            return JaggedArrayType(arraytype.startstype, arraytype.stopstype, contenttype, specialization=arraytype.specialization)
+            return JaggedArrayType(jaggedarraytype.startstype, jaggedarraytype.stopstype, contenttype, specialization=jaggedarraytype.specialization)
         else:
             raise TypeError("cannot be used for indexing: {0}".format(wheretype))
 
