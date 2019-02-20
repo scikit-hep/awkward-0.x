@@ -1,10 +1,9 @@
 import numpy, awkward
 
-a = numpy.arange(4**3).reshape(4, 4, 4)
+a = numpy.arange(4**4).reshape(4, 4, 4, 4)
 a2 = awkward.fromiter(a)
 
-# , numpy.array([2, 0, 0]), numpy.array([True, False, True, True])]
-slices = [2, numpy.array([2, 0, 0]), numpy.array([3, 1, 2]), slice(None), slice(2, 4), slice(None, None, -1)]
+slices = [2, slice(None), slice(2, 4), slice(1, None, 2), slice(None, None, -1), numpy.array([2, 0, 0]), numpy.array([3, 1, 2]), numpy.array([True, False, True, True]), numpy.array([True, True, True, False])]
 
 def spread_advanced(starts, stops, advanced):
     if advanced is None:
@@ -163,14 +162,19 @@ def getitem_enter(array, slices):
 
     arraylen = 0
     for x in slices:
-        if isinstance(x, numpy.ndarray):
-            arraylen = max(arraylen, len(x))
+        if isinstance(x, numpy.ndarray) and len(x.shape) == 1:
+            if issubclass(x.dtype.type, (numpy.bool_, numpy.bool)):
+                arraylen = max(arraylen, numpy.count_nonzero(x))
+            else:
+                arraylen = max(arraylen, len(x))
 
     newslices = []
     for x in slices:
-        if isinstance(x, int) and arraylen != 0:
+        if isinstance(x, numpy.ndarray) and len(x.shape) == 1 and issubclass(x.dtype.type, (numpy.bool, numpy.bool_)):
+            newslices.append(numpy.nonzero(x)[0])
+        elif isinstance(x, int) and arraylen != 0:
             newslices.append(numpy.full(arraylen, x, int))
-        elif isinstance(x, numpy.ndarray) and len(x) == 1:
+        elif isinstance(x, numpy.ndarray) and x.shape == (1,):
             newslices.append(numpy.full(arraylen, x, int))
         else:
             newslices.append(x)
