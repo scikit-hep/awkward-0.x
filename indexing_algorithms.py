@@ -3,8 +3,8 @@ import numpy, awkward
 a = numpy.arange(4**3).reshape(4, 4, 4)
 a2 = awkward.fromiter(a)
 
-slices = [2, slice(None), slice(2, 4), slice(None, None, -1)]  # , numpy.array([2, 0, 0]), numpy.array([True, False, True, True])]
-slices = [numpy.array([2, 0, 0]), numpy.array([3, 1, 2]), slice(None)]
+# , numpy.array([2, 0, 0]), numpy.array([True, False, True, True])]
+slices = [2, numpy.array([2, 0, 0]), numpy.array([3, 1, 2]), slice(None), slice(2, 4), slice(None, None, -1)]
 
 def spread_advanced(starts, stops, advanced):
     if advanced is None:
@@ -160,7 +160,22 @@ def getitem_next(array, slices, advanced):
 def getitem_enter(array, slices):
     if len(slices) == 0:
         return array
-    fake = getitem_next(awkward.JaggedArray([0], [len(array)], array), slices, None)
+
+    arraylen = 0
+    for x in slices:
+        if isinstance(x, numpy.ndarray):
+            arraylen = max(arraylen, len(x))
+
+    newslices = []
+    for x in slices:
+        if isinstance(x, int) and arraylen != 0:
+            newslices.append(numpy.full(arraylen, x, int))
+        elif isinstance(x, numpy.ndarray) and len(x) == 1:
+            newslices.append(numpy.full(arraylen, x, int))
+        else:
+            newslices.append(x)
+
+    fake = getitem_next(awkward.JaggedArray([0], [len(array)], array), newslices, None)
     if isinstance(fake, numpy.ndarray):
         return fake[0]
     else:
