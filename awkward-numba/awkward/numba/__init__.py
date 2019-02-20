@@ -30,8 +30,6 @@
 
 import numpy
 
-import awkward.numba.register
-
 from awkward.numba.array.chunked import ChunkedArrayNumba as ChunkedArray
 from awkward.numba.array.chunked import AppendableArrayNumba as AppendableArray
 from awkward.numba.array.indexed import IndexedArrayNumba as IndexedArray
