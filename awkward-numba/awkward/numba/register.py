@@ -105,7 +105,7 @@ def specialrepr(x):
 ######################################################################## JaggedArrayType
 
 ISADVANCED = numba.types.int64
-NOTADVANCED = numba.types.int8
+NOTADVANCED = numba.types.none
 
 class JaggedArrayType(AwkwardArrayType):
     def __init__(self, startstype, stopstype, contenttype, specialization=JaggedArray):
@@ -347,7 +347,7 @@ def JaggedArray_lower_getitem_tuple_enter(context, builder, sig, args):
 
     if advancedval is None:
         advancedtype = NOTADVANCED
-        advancedval = context.get_constant(advancedtype, -1)
+        advancedval = context.get_constant(advancedtype, None)
 
     nexttype = JaggedArrayType(startstype, stopstype, contenttype, specialization=jaggedarraytype.specialization)
     nextval = JaggedArray_lower_copy(context, builder, nexttype(jaggedarraytype, startstype, stopstype, contenttype, numba.types.boolean), (jaggedarrayval, starts, stops, jaggedarray.content, context.get_constant(numba.types.boolean, False)))
@@ -360,7 +360,7 @@ def JaggedArray_typer_getitem_tuple_next(jaggedarraytype, wheretype, advancedtyp
     if isinstance(wheretype, numba.types.BaseTuple) and len(wheretype.types) == 0:
         return jaggedarraytype
 
-    if isinstance(jaggedarraytype, (numba.types.Array, JaggedArrayType)) and isinstance(wheretype, numba.types.BaseTuple) and isinstance(advancedtype, numba.types.Integer):
+    if isinstance(jaggedarraytype, (numba.types.Array, JaggedArrayType)) and isinstance(wheretype, numba.types.BaseTuple) and isinstance(advancedtype, (numba.types.NoneType, numba.types.Integer)):
         assert jaggedarraytype.startstype.ndim == jaggedarraytype.stopstype.ndim
         if jaggedarraytype.startstype.ndim != 1:
             raise NotImplementedError("nested JaggedArrays must have one-dimensional starts/stops to be used in Numba")
@@ -594,6 +594,8 @@ def JaggedArray_getitem_tuple_bytype(jaggedarray, head, tail, advanced):
 
     return getitem
 
+@numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, numba.types.Array, numba.types.BaseTuple, numba.types.NoneType)
+@numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, JaggedArrayType, numba.types.BaseTuple, numba.types.NoneType)
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, numba.types.Array, numba.types.BaseTuple, numba.types.Integer)
 @numba.extending.lower_builtin(JaggedArray_getitem_tuple_next, JaggedArrayType, numba.types.BaseTuple, numba.types.Integer)
 def JaggedArray_lower_getitem_tuple_next(context, builder, sig, args):
