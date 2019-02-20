@@ -28,6 +28,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import operator
+
+import numpy
+import numba
+
 class NumbaMethods(object):
     @property
     def ChunkedArray(self):
@@ -98,3 +103,49 @@ class NumbaMethods(object):
     def VirtualArray(self):
         import awkward.numba.array.virtual
         return awkward.numba.array.virtual.VirtualArrayNumba
+
+class AwkwardArrayType(numba.types.Type):
+    pass
+
+@numba.typing.templates.infer_global(len)
+class AwkwardArrayType_type_len(numba.typing.templates.AbstractTemplate):
+    def generic(self, args, kwargs):
+        if len(args) == 1 and len(kwargs) == 0:
+            arraytype, = args
+            if isinstance(arraytype, AwkwardArrayType):
+                return numba.typing.templates.signature(numba.types.intp, arraytype)
+
+@numba.typing.templates.infer_global(operator.getitem)
+class AwkwardArrayType_type_getitem(numba.typing.templates.AbstractTemplate):
+    def generic(self, args, kwargs):
+        if len(args) == 2 and len(kwargs) == 0:
+            arraytype, wheretype = args
+            if isinstance(arraytype, AwkwardArrayType):
+                return numba.typing.templates.signature(arraytype.getitem(wheretype))
+
+def clsrepr(cls):
+    import awkward.array
+    if any(cls is x for x in (awkward.array.base.AwkwardArray,
+                              awkward.array.chunked.ChunkedArray,
+                              awkward.array.chunked.AppendableArray,
+                              awkward.array.indexed.IndexedArray,
+                              awkward.array.indexed.SparseArray,
+                              awkward.array.jagged.JaggedArray,
+                              awkward.array.masked.MaskedArray,
+                              awkward.array.masked.BitMaskedArray,
+                              awkward.array.masked.IndexedMaskedArray,
+                              awkward.array.objects.Methods,
+                              awkward.array.objects.ObjectArray,
+                              awkward.array.objects.StringArray,
+                              awkward.array.table.Table,
+                              awkward.array.union.UnionArray,
+                              awkward.array.virtual.VirtualArray)):
+        return cls.__name__
+    else:
+        bases = ", ".join(clsrepr(x) for x in cls.__bases__ if x is not object)
+        if len(bases) != 0:
+            bases = "<" + bases + ">"
+        return "{0}.{1}{2}".format(x.__module__, x.__name__, bases)
+
+ISADVANCED = numba.types.Array(numba.types.int64, 1, "C")
+NOTADVANCED = numba.types.none
