@@ -4,7 +4,7 @@ a = numpy.arange(4**3).reshape(4, 4, 4)
 a2 = awkward.fromiter(a)
 
 slices = [2, slice(None), slice(2, 4), slice(None, None, -1)]  # , numpy.array([2, 0, 0]), numpy.array([True, False, True, True])]
-slices = [numpy.array([2, 0, 0]), numpy.array([3, 1, 2]), slice(None)]   # 
+slices = [numpy.array([2, 0, 0]), numpy.array([3, 1, 2]), slice(None)]
 
 def spread_advanced(starts, stops, advanced):
     if advanced is None:
@@ -101,14 +101,14 @@ def getitem_intarray_none(array, head, tail, advanced):
         length = array.stops[i] - array.starts[i]
 
         starts[i] = k
-        for j in head:
-            normj = j
-            if normj < 0:
-                normj += length
-            if normj < 0 or normj >= length:
+        for j in range(len(head)):
+            norm = head[j]
+            if norm < 0:
+                norm += length
+            if norm < 0 or norm >= length:
                 raise IndexError("advanced index is out of bounds in JaggedArray")
-            index[k] = array.starts[i] + normj
-            nextadvanced[k] = k
+            index[k] = array.starts[i] + norm
+            nextadvanced[k] = j
             k += 1
         stops[i] = k
 
@@ -166,16 +166,18 @@ def getitem_enter(array, slices):
     else:
         return fake.content[fake.starts[0]:fake.stops[-1]]
 
-def check(slices, left, right):
-    print(slices)
+def check(left, right):
     if left.tolist() != right.tolist():
         print(left.tolist())
         print(right.tolist())
         raise AssertionError
 
 for x in slices:
-    check((x,), a[x,], getitem_enter(a2, (x,)))
+    print(x)
+    check(a[x,], getitem_enter(a2, (x,)))
     for y in slices:
-        check((x, y), a[x, y], getitem_enter(a2, (x, y)))
+        print(x, y)
+        check(a[x, y], getitem_enter(a2, (x, y)))
         for z in slices:
-            check((x, y, z), a[x, y, z], getitem_enter(a2, (x, y, z)))
+            print(x, y, z)
+            check(a[x, y, z], getitem_enter(a2, (x, y, z)))
