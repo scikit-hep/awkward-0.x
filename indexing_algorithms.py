@@ -4,25 +4,34 @@ a = numpy.arange(4**3).reshape(4, 4, 4)
 a2 = awkward.fromiter(a)
 
 slices = [2, slice(None), slice(2, 4), slice(None, None, -1)]  # , numpy.array([2, 0, 0]), numpy.array([True, False, True, True])]
+slices = [numpy.array([2, 0, 0]), numpy.array([3, 1, 2]), slice(None)]   # 
 
-def getitem_integer(array, head, tail):
-    if isinstance(array, numpy.ndarray):
-        return array[(head,) + tail]
+def spread_advanced(starts, stops, advanced):
+    if advanced is None:
+        return advanced
+    else:
+        assert len(starts) == len(stops) == len(advanced)
+        counts = stops - starts
+        nextadvanced = numpy.full(counts.sum(), 999, int)
+        k = 0
+        for i in range(len(counts)):
+            length = counts[i]
+            nextadvanced[k : k + length] = advanced[i]
+            k += length
+        return nextadvanced
 
-    index = numpy.empty(len(array.starts), int)
+def getitem_integer(array, head, tail, advanced):
+    index = numpy.full(len(array.starts), 999, int)
     for i in range(len(array.starts)):
         j = array.starts[i] + head
         if j >= array.stops[i]:
             raise ValueError("integer index is beyond the range of one of the JaggedArray.starts-JaggedArray.stops pairs")
         index[i] = j
 
-    next = getitem_next(array.content[index], tail)    
+    next = getitem_next(array.content[index], tail, advanced)    
     return next
 
-def getitem_slice3(array, head, tail):
-    if isinstance(array, numpy.ndarray):
-        return array[(head,) + tail]
-
+def getitem_slice3(array, head, tail, advanced):
     if head.step == 0:
         raise ValueError
     starts = numpy.full(len(array.starts), 999, int)
@@ -78,20 +87,72 @@ def getitem_slice3(array, head, tail):
             k += 1
         stops[i] = k
 
-    next = getitem_next(array.content[index[:k]], tail)
+    next = getitem_next(array.content[index[:k]], tail, spread_advanced(starts, stops, advanced))
     return awkward.JaggedArray(starts, stops, next)
 
-def getitem_next(array, slices):
+def getitem_intarray_none(array, head, tail, advanced):
+    starts = numpy.full(len(array.starts), 999, int)
+    stops = numpy.full(len(array.stops), 999, int)
+    index = numpy.full(len(head)*len(array.starts), 999, int)
+    nextadvanced = numpy.full(len(index), 999, int)
+
+    k = 0
+    for i in range(len(array.starts)):
+        length = array.stops[i] - array.starts[i]
+
+        starts[i] = k
+        for j in head:
+            normj = j
+            if normj < 0:
+                normj += length
+            if normj < 0 or normj >= length:
+                raise IndexError("advanced index is out of bounds in JaggedArray")
+            index[k] = array.starts[i] + normj
+            nextadvanced[k] = k
+            k += 1
+        stops[i] = k
+
+    next = getitem_next(array.content[index], tail, nextadvanced)
+    return awkward.JaggedArray(starts, stops, next)
+
+def getitem_intarray_some(array, head, tail, advanced):
+    index = numpy.full(len(array.starts), 999, int)
+    nextadvanced = numpy.full(len(index), 999, int)
+
+    for i in range(len(advanced)):
+        length = array.stops[i] - array.starts[i]
+        if advanced[i] >= len(head):
+            raise IndexError("advanced index lengths do not match")
+        normj = head[advanced[i]]
+        if normj < 0:
+            normj += length
+        if normj < 0 or normj >= length:
+            raise IndexError("advanced index is out of bounds in JaggedArray")
+        index[i] = array.starts[i] + normj
+        nextadvanced[i] = i
+
+    next = getitem_next(array.content[index], tail, nextadvanced)
+    return next
+
+def getitem_next(array, slices, advanced):
     if len(slices) == 0:
         return array
+    if isinstance(array, numpy.ndarray):
+        return array[slices]
     
     head = slices[0]
     tail = slices[1:]
     if isinstance(head, int):
-        return getitem_integer(array, head, tail)
+        return getitem_integer(array, head, tail, advanced)
 
     elif isinstance(head, slice):
-        return getitem_slice3(array, head, tail)
+        return getitem_slice3(array, head, tail, advanced)
+
+    elif isinstance(head, numpy.ndarray) and issubclass(head.dtype.type, numpy.integer):
+        if advanced is None:
+            return getitem_intarray_none(array, head, tail, advanced)
+        else:
+            return getitem_intarray_some(array, head, tail, advanced)
 
     else:
         raise NotImplementedError(head)
@@ -99,19 +160,11 @@ def getitem_next(array, slices):
 def getitem_enter(array, slices):
     if len(slices) == 0:
         return array
-    if isinstance(array, numpy.ndarray):
-        return array[slices]
-
-    head = slices[0]
-    tail = slices[1:]
-    if isinstance(head, int):
-        return getitem_enter(array.content[array.starts[head]:array.stops[head]], tail)
-
-    elif isinstance(head, slice):
-        return getitem_next(awkward.JaggedArray(array.starts[head], array.stops[head], array.content), tail)
-
+    fake = getitem_next(awkward.JaggedArray([0], [len(array)], array), slices, None)
+    if isinstance(fake, numpy.ndarray):
+        return fake[0]
     else:
-        raise NotImplementedError(head)
+        return fake.content[fake.starts[0]:fake.stops[-1]]
 
 def check(slices, left, right):
     print(slices)
