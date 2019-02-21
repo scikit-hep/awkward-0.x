@@ -248,7 +248,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             offsets[-1] = len(content)
         return cls.fromoffsets(offsets, content)
 
-    def copy(self, starts=None, stops=None, content=None, iscompact=None):
+    def copy(self, starts=None, stops=None, content=None):
         out = self.__class__.__new__(self.__class__)
         out._starts  = self._starts
         out._stops   = self._stops
@@ -265,7 +265,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out.content = content
         return out
 
-    def deepcopy(self, starts=None, stops=None, content=None, iscompact=None):
+    def deepcopy(self, starts=None, stops=None, content=None):
         out = self.copy(starts=starts, stops=stops, content=content)
         out._starts  = self._util_deepcopy(out._starts)
         out._stops   = self._util_deepcopy(out._stops)
@@ -1119,7 +1119,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @property
     def iscompact(self):
         if len(self._starts) == 0:
-            return len(self._content) == 0
+            return True
         else:
             flatstarts = self._starts.reshape(-1)
             flatstops = self.stops.reshape(-1)   # no underscore!
@@ -1127,7 +1127,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 return False
             if not self._isvalid and not (flatstops >= flatstarts).all():
                 raise ValueError("offsets must be monatonically increasing")
-            return flatstarts[0] == 0 and flatstops[-1] == len(self._content)
+            return True
 
     def compact(self):
         if self.iscompact:

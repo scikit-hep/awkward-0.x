@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import operator
+
 import numba
 import numba.typing.arraydecl
 
@@ -123,13 +125,13 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
 ######################################################################## register types in Numba
 
 class JaggedArrayType(AwkwardArrayType):
-    def __init__(self, starts, stops, content, special=awkward.array.jagged.JaggedArray):
-        super(JaggedArrayType, self).__init__(name="JaggedArrayType({0}, {1}, {2}{3})".format(starts.name, stops.name, content.name, "" if special is awkward.array.jagged.JaggedArray else clsrepr(special)))
-        if starts.ndim != stops.ndim:
+    def __init__(self, startstype, stopstype, contenttype, special=awkward.array.jagged.JaggedArray):
+        super(JaggedArrayType, self).__init__(name="JaggedArrayType({0}, {1}, {2}{3})".format(startstype.name, stopstype.name, contenttype.name, "" if special is awkward.array.jagged.JaggedArray else clsrepr(special)))
+        if startstype.ndim != stopstype.ndim:
             raise ValueError("JaggedArray.starts must have the same number of dimensions as JaggedArray.stops")
-        self.starts = starts
-        self.stops = stops
-        self.content = content
+        self.startstype = startstype
+        self.stopstype = stopstype
+        self.contenttype = contenttype
         self.special = special
 
     def getitem(self, where):
@@ -143,27 +145,125 @@ class JaggedArrayType(AwkwardArrayType):
         else:
             return fake.content
 
-def _JaggedArray_getitem_typer(array, where, advanced):
-    if len(where.types) == 0:
-        return array
+def _JaggedArray_getitem_typer(arraytype, wheretype, advancedtype):
+    if len(wheretype.types) == 0:
+        return arraytype
 
-    assert array.starts.ndim == array.stops.ndim == 1
+    assert arraytype.startstype.ndim == arraytype.stopstype.ndim == 1
 
-    isarray = (isinstance(where.types[0], numba.types.Array) and where.types[0].ndim == 1)
+    isarray = (isinstance(wheretype.types[0], numba.types.Array) and wheretype.types[0].ndim == 1)
 
-    content = _JaggedArray_getitem_typer(array.content, numba.types.Tuple(where.types[1:]), ISADVANCED if isarray else advanced)
+    contenttype = _JaggedArray_getitem_typer(arraytype.contenttype, numba.types.Tuple(wheretype.types[1:]), ISADVANCED if isarray else advancedtype)
 
-    if isinstance(where.types[0], numba.types.Integer) or (advanced == ISADVANCED and isarray):
-        return content
-    elif isinstance(where.types[0], numba.types.SliceType) or (advanced == NOTADVANCED and isarray):
-        return JaggedArrayType(array.starts, array.stops, content, special=array.special)
+    if isinstance(wheretype.types[0], numba.types.Integer) or (advancedtype == ISADVANCED and isarray):
+        return contenttype
+    elif isinstance(wheretype.types[0], numba.types.SliceType) or (advancedtype == NOTADVANCED and isarray):
+        return JaggedArrayType(arraytype.startstype, arraytype.stopstype, contenttype, special=arraytype.special)
     else:
-        raise TypeError("cannot be used for indexing: {0}".format(where))
+        raise TypeError("cannot be used for indexing: {0}".format(wheretype))
 
+def _JaggedArray_getitem_next(array, where):
+    pass
 
-
-
+@numba.extending.type_callable(_JaggedArray_getitem_next)
+def _JaggedArray_getitem_next_typer(context):
+    return _JaggedArray_getitem_typer
 
 ######################################################################## model and boxing
 
+@numba.extending.register_model(JaggedArrayType)
+class JaggedArrayModel(numba.datamodel.models.StructModel):
+    def __init__(self, dmm, fe_type):
+        members = [("starts", fe_type.startstype),
+                   ("stops", fe_type.stopstype),
+                   ("content", fe_type.contenttype),
+                   ("iscompact", numba.types.boolean)]
+        super(JaggedArrayModel, self).__init__(dmm, fe_type, members)
+
+numba.extending.make_attribute_wrapper(JaggedArrayType, "starts", "starts")
+numba.extending.make_attribute_wrapper(JaggedArrayType, "stops", "stops")
+numba.extending.make_attribute_wrapper(JaggedArrayType, "content", "content")
+numba.extending.make_attribute_wrapper(JaggedArrayType, "iscompact", "iscompact")
+
+@numba.extending.unbox(JaggedArrayType)
+def _JaggedArray_unbox(typ, obj, c):
+    starts_obj = c.pyapi.object_getattr_string(obj, "starts")
+    stops_obj = c.pyapi.object_getattr_string(obj, "stops")
+    content_obj = c.pyapi.object_getattr_string(obj, "content")
+    iscompact_obj = c.pyapi.object_getattr_string(obj, "iscompact")
+
+    array = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder)
+    array.starts = c.pyapi_to_native_value(typ.startstype, starts_obj).value
+    array.stops = c.pyapi_to_native_value(typ.stopstype, stops_obj).value
+    array.content = c.pyapi_to_native_value(typ.contenttype, content_obj).value
+    array.iscompact = c.pyapi_to_native_value(numba.types.boolean, iscompact_obj).value
+
+    c.pyapi.decref(starts_obj)
+    c.pyapi.decref(stops_obj)
+    c.pyapi.decref(content_obj)
+    c.pyapi.decref(iscompact_obj)
+
+    is_error = numba.cgutils.is_not_null(c.builder, c.pyapi.err_occurred())
+    return numba.extending.NativeValue(array._getvalue(), is_error)
+
+@numba.extending.box(JaggedArrayType)
+def _JaggedArray_box(typ, val, c):
+    array = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder, value=val)
+    starts_obj = c.pyapi.from_native_value(typ.startstype, array.starts, c.env_manager)
+    stops_obj = c.pyapi.from_native_value(typ.stopstype, array.stops, c.env_manager)
+    content_obj = c.pyapi.from_native_value(typ.contenttype, array.content, c.env_manager)
+
+    cls = c.pyapi.unserialize(c.pyapi.serialize_object(typ.special))
+    out = c.pyapi.call_function_objargs(cls, (starts_obj, stops_obj, content_obj))
+
+    c.pyapi.decref(starts_obj)
+    c.pyapi.decref(stops_obj)
+    c.pyapi.decref(content_obj)
+
+    return out
+
+@numba.extending.type_callable(awkward.array.jagged.JaggedArray)
+def _JaggedArray_type_init(context):
+    def typer(startstype, stopstype, contenttype):
+        if isinstance(startstype, numba.types.Array) and isinstance(stopstype, numba.types.Array) and isinstance(contenttype, (numba.types.Array, AwkwardArrayType)):
+            return JaggedArrayType(startstype, stopstype, contenttype, special=awkward.array.jagged.JaggedArray)
+    return typer
+
+@numba.extending.type_callable(JaggedArrayNumba)
+def _JaggedArray_type_init(context):
+    def typer(startstype, stopstype, contenttype):
+        if isinstance(startstype, numba.types.Array) and isinstance(stopstype, numba.types.Array) and isinstance(contenttype, (numba.types.Array, AwkwardArrayType)):
+            return JaggedArrayType(startstype, stopstype, contenttype, special=JaggedArrayNumba)
+    return typer
+
+@numba.extending.lower_builtin(awkward.array.jagged.JaggedArray, numba.types.Array, numba.types.Array, numba.types.Array)
+@numba.extending.lower_builtin(awkward.array.jagged.JaggedArray, numba.types.Array, numba.types.Array, AwkwardArrayType)
+@numba.extending.lower_builtin(JaggedArrayNumba, numba.types.Array, numba.types.Array, numba.types.Array)
+@numba.extending.lower_builtin(JaggedArrayNumba, numba.types.Array, numba.types.Array, AwkwardArrayType)
+def _JaggedArray_init_array(context, builder, sig, args):
+    startstype, stopstype, contenttype = sig.args
+    starts, stops, content = args
+
+    if context.enable_nrt:
+        context.nrt.incref(builder, startstype, starts)
+        context.nrt.incref(builder, stopstype, stops)
+        context.nrt.incref(builder, contenttype, content)
+
+    array = numba.cgutils.create_struct_proxy(sig.return_type)(context, builder)
+    array.starts = starts
+    array.stops = stops
+    array.content = content
+    array.iscompact = context.get_constant(numba.types.boolean, False)   # unless you reproduce that logic here or call out to Python
+    return array._getvalue()
+
 ######################################################################## lower methods in Numba
+
+@numba.extending.lower_builtin(len, JaggedArrayType)
+def _JaggedArray_lower_len(context, builder, sig, args):
+    arraytype, = sig.args
+    arrayval, = args
+
+    array = numba.cgutils.create_struct_proxy(arraytype)(context, builder, value=arrayval)
+
+    return numba.targets.arrayobj.array_len(context, builder, numba.types.intp(arraytype.startstype), (array.starts,))
+    
