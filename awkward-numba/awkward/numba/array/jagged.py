@@ -389,7 +389,166 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
 
 @numba.generated_jit(nopython=True)
 def _JaggedArray_bytype_getitem_next(array, head, tail, advanced):
-    raise NotImplementedError
+    intp_maxval = numba.types.intp.maxval
+
+    if isinstance(head, numba.types.Integer):
+        if isinstance(array.contenttype, numba.types.Array):
+            def getitem(array, head, tail, advanced):
+                content = numpy.empty(len(array.starts), array.content.dtype)
+                for i in range(len(array.starts)):
+                    norm = head
+                    if norm < 0:
+                        norm += array.stops[i] - array.starts[i]
+                    j = array.starts[i] + norm
+                    if j >= array.stops[i]:
+                        raise ValueError("integer index is beyond the range of one of the JaggedArray starts/stops pairs")
+                    content[i] = array.content[j]
+                return _JaggedArray_getitem_next(array.content, tail, advanced)
+
+        else:
+            def getitem(array, head, tail, advanced):
+                index = numpy.empty(len(array.starts), numpy.int64)
+                for i in range(len(array.starts)):
+                    norm = head
+                    if norm < 0:
+                        norm += array.stops[i] - array.starts[i]
+                    j = array.starts[i] + norm
+                    if j >= array.stops[i]:
+                        raise ValueError("integer index is beyond the range of one of the JaggedArray starts/stops pairs")
+                    index[i] = j
+                return _JaggedArray_getitem_next(array.content[index], tail, advanced)
+
+    elif isinstance(head, numba.types.SliceType):
+        def getitem(array, head, tail, advanced):
+            if head.step == 0:
+                raise ValueError("slice step cannot be zero")
+
+            offsets = numpy.empty(len(array.starts) + 1, numpy.int64)
+            index = numpy.empty(len(array.content), numpy.int64)
+            k = 0
+            for i in range(len(array.starts)):
+                length = array.stops[i] - array.starts[i]
+                a = head.start
+                b = head.stop
+                c = head.step
+                if c == intp_maxval:
+                    c = 1
+
+                if a == intp_maxval and c > 0:
+                    a = 0
+                elif a == intp_maxval:
+                    a = length - 1
+                elif a < 0:
+                    a += length
+
+                if b == intp_maxval and c > 0:
+                    b = length
+                elif b == intp_maxval:
+                    b = -1
+                elif b < 0:
+                    b += length
+
+                if c > 0:
+                    if b <= a:
+                        a = 0
+                        b = 0
+                    if a < 0:
+                        a = 0
+                    elif a > length:
+                        a = length
+                    if b < 0:
+                        b = 0
+                    elif b > length:
+                        b = length
+                else:
+                    if a <= b:
+                        a = 0
+                        b = 0
+                    if a < -1:
+                        a = -1
+                    elif a >= length:
+                        a = length - 1
+                    if b < -1:
+                        b = -1
+                    elif b >= length:
+                        b = length - 1
+
+                for j in range(a, b, c):
+                    index[k] = array.starts[i] + j
+                    k += 1
+                offsets[i + 1] = k
+
+            starts = offsets[:-1]
+            stops = offsets[1:]
+            next = _JaggedArray_getitem_next(array.content[index[:k]], tail, _spread_advanced(starts, stops, advanced))
+            return _JaggedArray_lower_new(array, starts, stops, next, True)
+                
+    elif isinstance(head, numba.types.Array):
+        if advanced == NOTADVANCED:
+            def getitem(array, head, tail, advanced):
+                offsets = numpy.empty(len(array.starts) + 1, numpy.int64)
+                index = numpy.empty(len(head)*len(array.starts), numpy.int64)
+                nextadvanced = numpy.empty(len(index), numpy.int64)
+
+                k = 0
+                for i in range(len(array.starts)):
+                    length = array.stops[i] - array.starts[i]
+
+                    for j in range(len(head)):
+                        norm = head[j]
+                        if norm < 0:
+                            norm += length
+                        if norm < 0 or norm >= length:
+                            raise IndexError("advanced index is out of bounds in JaggedArray")
+                        index[k] = array.starts[i] + norm
+                        nextadvanced[k] = j
+                        k += 1
+                    offsets[i + 1] = k
+
+                starts = offsets[:-1]
+                stops = offsets[1:]
+                next = _JaggedArray_getitem_next(array.content[index], tail, nextadvanced)
+                return _JaggedArray_lower_new(array, starts, stops, next, True)
+
+        else:
+            def getitem(array, head, tail, advanced):
+                index = numpy.empty(len(array.starts), numpy.int64)
+                nextadvanced = numpy.empty(len(index), numpy.int64)
+
+                for i in range(len(advanced)):
+                    length = array.stops[i] - array.starts[i]
+                    if advanced[i] >= len(head):
+                        raise IndexError("advanced index lengths do not match")
+                    norm = head[advanced[i]]
+                    if norm < 0:
+                        norm += length
+                    if norm < 0 or norm >= length:
+                        raise IndexError("advanced index is out of bounds in JaggedArray")
+                    index[i] = array.starts[i] + norm
+                    nextadvanced[i] = i
+
+                next = getitem_next(array.content[index], tail, nextadvanced)
+                return next
+
+    else:
+        raise AssertionError(head)
+
+    return getitem
+
+@numba.generated_jit(nopython=True)
+def _spread_advanced(starts, stops, advanced):
+    if isinstance(advanced, numba.types.NoneType):
+        return lambda starts, stops, advanced: advanced
+    else:
+        def impl(starts, stops, advanced):
+            counts = stops - starts
+            nextadvanced = numpy.empty(counts.sum(), numpy.int64)
+            k = 0
+            for i in range(len(counts)):
+                nextadvanced[k : k + counts[i]] = advanced[i]
+                k += length
+            return nextadvanced
+        return impl
 
 ######################################################################## other lowered methods in Numba
 

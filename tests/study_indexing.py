@@ -59,8 +59,8 @@ def getitem_integer(array, head, tail, advanced):
 def getitem_slice3(array, head, tail, advanced):
     if head.step == 0:
         raise ValueError
-    starts = numpy.full(len(array.starts), 999, int)
-    stops = numpy.full(len(array.stops), 999, int)
+    offsets = numpy.full(len(array.starts) + 1, 999, int)
+    offsets[0] = 0
     index = numpy.full(len(array.content), 999, int)  # too big, but okay
     k = 0
     for i in range(len(array.starts)):
@@ -106,18 +106,19 @@ def getitem_slice3(array, head, tail, advanced):
             elif b >= length:
                 b = length - 1
 
-        starts[i] = k
         for j in range(a, b, c):
             index[k] = array.starts[i] + j
             k += 1
-        stops[i] = k
+        offsets[i + 1] = k
 
+    starts = offsets[:-1]
+    stops = offsets[1:]
     next = getitem_next(array.content[index[:k]], tail, spread_advanced(starts, stops, advanced))
     return awkward.JaggedArray(starts, stops, next)
 
 def getitem_intarray_none(array, head, tail, advanced):
-    starts = numpy.full(len(array.starts), 999, int)
-    stops = numpy.full(len(array.stops), 999, int)
+    offsets = numpy.full(len(array.starts) + 1, 999, int)
+    offsets[0] = 0
     index = numpy.full(len(head)*len(array.starts), 999, int)
     nextadvanced = numpy.full(len(index), 999, int)
 
@@ -125,7 +126,6 @@ def getitem_intarray_none(array, head, tail, advanced):
     for i in range(len(array.starts)):
         length = array.stops[i] - array.starts[i]
 
-        starts[i] = k
         for j in range(len(head)):
             norm = head[j]
             if norm < 0:
@@ -135,8 +135,10 @@ def getitem_intarray_none(array, head, tail, advanced):
             index[k] = array.starts[i] + norm
             nextadvanced[k] = j
             k += 1
-        stops[i] = k
+        offsets[i + 1] = k
 
+    starts = offsets[:-1]
+    stops = offsets[1:]
     next = getitem_next(array.content[index], tail, nextadvanced)
     return awkward.JaggedArray(starts, stops, next)
 
@@ -148,12 +150,12 @@ def getitem_intarray_some(array, head, tail, advanced):
         length = array.stops[i] - array.starts[i]
         if advanced[i] >= len(head):
             raise IndexError("advanced index lengths do not match")
-        normj = head[advanced[i]]
-        if normj < 0:
-            normj += length
-        if normj < 0 or normj >= length:
+        norm = head[advanced[i]]
+        if norm < 0:
+            norm += length
+        if norm < 0 or norm >= length:
             raise IndexError("advanced index is out of bounds in JaggedArray")
-        index[i] = array.starts[i] + normj
+        index[i] = array.starts[i] + norm
         nextadvanced[i] = i
 
     next = getitem_next(array.content[index], tail, nextadvanced)
