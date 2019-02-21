@@ -184,30 +184,30 @@ def getitem_next(array, slices, advanced):
     else:
         raise NotImplementedError(head)
 
-def getitem_enter(array, slices):
-    if len(slices) == 0:
+def getitem_enter(array, where):
+    if len(where) == 0:
         return array
 
     arraylen = 0
-    for x in slices:
+    for x in where:
         if isinstance(x, numpy.ndarray) and len(x.shape) == 1:
             if issubclass(x.dtype.type, (numpy.bool_, numpy.bool)):
                 arraylen = max(arraylen, numpy.count_nonzero(x))
             else:
                 arraylen = max(arraylen, len(x))
 
-    newslices = []
-    for x in slices:
+    newwhere = []
+    for x in where:
         if isinstance(x, numpy.ndarray) and len(x.shape) == 1 and issubclass(x.dtype.type, (numpy.bool, numpy.bool_)):
-            newslices.append(numpy.nonzero(x)[0])
+            newwhere.append(numpy.nonzero(x)[0])
         elif isinstance(x, int) and arraylen != 0:
-            newslices.append(numpy.full(arraylen, x, int))
+            newwhere.append(numpy.full(arraylen, x, int))
         elif isinstance(x, numpy.ndarray) and x.shape == (1,):
-            newslices.append(numpy.full(arraylen, x, int))
+            newwhere.append(numpy.full(arraylen, x, int))
         else:
-            newslices.append(x)
+            newwhere.append(x)
 
-    fake = getitem_next(awkward.JaggedArray([0], [len(array)], array), newslices, None)
+    fake = getitem_next(awkward.JaggedArray([0], [len(array)], array), newwhere, None)
     if isinstance(fake, numpy.ndarray):
         return fake[0]
     else:
