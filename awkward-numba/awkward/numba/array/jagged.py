@@ -30,6 +30,7 @@
 
 import operator
 
+import numpy
 import numba
 import numba.typing.arraydecl
 
@@ -136,16 +137,18 @@ class JaggedArrayType(AwkwardArrayType):
         self.contenttype = contenttype
         self.special = special
 
-    def getitem(self, where):
-        head = numba.types.Tuple(where.types[0])
-        if isinstance(head, numba.types.Integer) and isinstance(self.content, numba.types.Array):
-            return numba.typing.arraydecl.get_array_index_type(self.content, tail).result
+    def getitem(self, wheretype):
+        headtype = wheretype.types[0]
+        tailtype = numba.types.Tuple(wheretype.types[1:])
+        if isinstance(headtype, numba.types.Integer) and isinstance(self.contenttype, numba.types.Array):
+            return numba.typing.arraydecl.get_array_index_type(self.contenttype, tailtype).result
 
-        fake = _JaggedArray_typer_getitem(JaggedArrayType(numba.types.int64[:], numba.types.int64[:], self), where, NOTADVANCED)
+        fake = _JaggedArray_typer_getitem(JaggedArrayType(numba.types.int64[:], numba.types.int64[:], self), wheretype, NOTADVANCED)
+
         if isinstance(fake, numba.types.Array):
             return fake.dtype
         else:
-            return fake.content
+            return fake.contenttype
 
 def _JaggedArray_typer_getitem(arraytype, wheretype, advancedtype):
     if len(wheretype.types) == 0:
@@ -197,10 +200,10 @@ def _JaggedArray_unbox(typ, obj, c):
     iscompact_obj = c.pyapi.object_getattr_string(obj, "iscompact")
 
     array = numba.cgutils.create_struct_proxy(typ)(c.context, c.builder)
-    array.starts = c.pyapi_to_native_value(typ.startstype, starts_obj).value
-    array.stops = c.pyapi_to_native_value(typ.stopstype, stops_obj).value
-    array.content = c.pyapi_to_native_value(typ.contenttype, content_obj).value
-    array.iscompact = c.pyapi_to_native_value(numba.types.boolean, iscompact_obj).value
+    array.starts = c.pyapi.to_native_value(typ.startstype, starts_obj).value
+    array.stops = c.pyapi.to_native_value(typ.stopstype, stops_obj).value
+    array.content = c.pyapi.to_native_value(typ.contenttype, content_obj).value
+    array.iscompact = c.pyapi.to_native_value(numba.types.boolean, iscompact_obj).value
 
     c.pyapi.decref(starts_obj)
     c.pyapi.decref(stops_obj)
@@ -260,18 +263,18 @@ def _JaggedArray_init_array(context, builder, sig, args):
     array.iscompact = context.get_constant(numba.types.boolean, False)   # unless you reproduce that logic here or call out to Python
     return array._getvalue()
 
-def _JaggedArray_copy(array, starts, stops, content, iscompact):
+def _JaggedArray_new(array, starts, stops, content, iscompact):
     pass
 
-@numba.extending.type_callable(_JaggedArray_copy)
-def _JaggedArray_type_copy(context):
+@numba.extending.type_callable(_JaggedArray_new)
+def _JaggedArray_type_new(context):
     def typer(arraytype, startstype, stopstype, contenttype, iscompacttype):
         return arraytype
     return typer
 
-@numba.extending.lower_builtin(_JaggedArray_copy, JaggedArrayType, numba.types.Array, numba.types.Array, numba.types.Array, numba.types.Boolean)
-@numba.extending.lower_builtin(_JaggedArray_copy, JaggedArrayType, numba.types.Array, numba.types.Array, AwkwardArrayType, numba.types.Boolean)
-def _JaggedArray_lower_copy(context, builder, sig, args):
+@numba.extending.lower_builtin(_JaggedArray_new, JaggedArrayType, numba.types.Array, numba.types.Array, numba.types.Array, numba.types.Boolean)
+@numba.extending.lower_builtin(_JaggedArray_new, JaggedArrayType, numba.types.Array, numba.types.Array, AwkwardArrayType, numba.types.Boolean)
+def _JaggedArray_lower_new(context, builder, sig, args):
     arraytype, startstype, stopstype, contenttype, iscompacttype = sig.args
     arrayval, startsval, stopsval, contentval, iscompactval = args
 
@@ -355,7 +358,7 @@ def _JaggedArray_lower_getitem_slice(context, builder, sig, args):
                                          builder.icmp_signed("==", slice.step, context.get_constant(numba.types.intp, numba.types.intp.maxval))))
 
     contenttype = arraytype.contenttype
-    return _JaggedArray_lower_copy(context, builder, arraytype(arraytype, startstype, stopstype, contenttype, numba.types.boolean), (arrayval, starts, stops, array.content, iscompact))
+    return _JaggedArray_lower_new(context, builder, arraytype(arraytype, startstype, stopstype, contenttype, numba.types.boolean), (arrayval, starts, stops, array.content, iscompact))
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Array)
 def _JaggedArray_lower_getitem_array(context, builder, sig, args):
@@ -371,7 +374,7 @@ def _JaggedArray_lower_getitem_array(context, builder, sig, args):
     stops = numba.targets.arrayobj.fancy_getitem_array(context, builder, stopstype(stopstype, wheretype), (array.stops, whereval))
 
     contenttype = arraytype.contenttype
-    return _JaggedArray_lower_copy(context, builder, arraytype(arraytype, startstype, stopstype, contenttype, numba.types.boolean), (arrayval, starts, stops, array.content, context.get_constant(numba.types.boolean, False)))
+    return _JaggedArray_lower_new(context, builder, arraytype(arraytype, startstype, stopstype, contenttype, numba.types.boolean), (arrayval, starts, stops, array.content, context.get_constant(numba.types.boolean, False)))
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.BaseTuple)
 def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
@@ -395,7 +398,7 @@ class _JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
     key = JaggedArrayType
 
     # @numba.typing.templates.bound_function("name-of-method")
-    # def resolve_copy(self, arraytype, args, kwargs):
+    # def resolve_name-of-method(self, arraytype, args, kwargs):
     #     standard typer...
 
 @numba.extending.overload_method(JaggedArrayType, "compact")
@@ -405,12 +408,18 @@ def _JaggedArray_compact(arraytype):
             if array.iscompact:
                 return array
             if len(array.starts) == 0:
-                return _JaggedArray_copy(array, array.starts, array.starts, array.content[0:0], True)
+                tmp1 = array
+                tmp2 = array.starts
+                tmp3 = array.stops[0:0]
+                tmp4 = array.content[0:0]
+                tmp5 = True
+                return _JaggedArray_new(tmp1, tmp2, tmp3, tmp4, tmp5)
+                # return _JaggedArray_new(array, array.starts, array.stops[0:0], array.content[0:0], True)
 
             if array.starts.shape != array.stops.shape:
                 raise ValueError("JaggedArray.starts must have the same shape as JaggedArray.stops")
-            flatstarts = array.starts.revel()
-            flatstops = array.stops.revel()
+            flatstarts = array.starts.ravel()
+            flatstops = array.stops.ravel()
 
             offsets = numpy.empty(len(flatstarts) + 1, flatstarts.dtype)
             offsets[0] = 0
@@ -430,19 +439,19 @@ def _JaggedArray_compact(arraytype):
             starts = offsets[:-1].reshape(array.starts.shape)
             stops = offsets[1:].reshape(array.starts.shape)    # intentional
             content = array.content[index]
-            return _JaggedArray_copy(array, starts, stops, content, True)
+            return _JaggedArray_new(array, starts, stops, content, True)
 
     elif isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.contenttype, numba.types.Array):
         def impl(array):
             if array.iscompact:
                 return array
             if len(array.starts) == 0:
-                return _JaggedArray_copy(array, array.starts, array.starts, array.content[0:0], True)
+                return _JaggedArray_new(array, array.starts, array.stops[0:0], array.content[0:0], True)
 
             if array.starts.shape != array.stops.shape:
                 raise ValueError("JaggedArray.starts must have the same shape as JaggedArray.stops")
-            flatstarts = array.starts.revel()
-            flatstops = array.stops.revel()
+            flatstarts = array.starts.ravel()
+            flatstops = array.stops.ravel()
 
             offsets = numpy.empty(len(flatstarts) + 1, flatstarts.dtype)
             offsets[0] = 0
@@ -461,7 +470,7 @@ def _JaggedArray_compact(arraytype):
 
             starts = offsets[:-1].reshape(array.starts.shape)
             stops = offsets[1:].reshape(array.starts.shape)    # intentional
-            return _JaggedArray_copy(array, starts, stops, content, True)
+            return _JaggedArray_new(array, starts, stops, content, True)
 
     return impl
 

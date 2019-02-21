@@ -111,25 +111,26 @@ class AwkwardArrayType(numba.types.Type):
 class _AwkwardArrayType_type_len(numba.typing.templates.AbstractTemplate):
     def generic(self, args, kwargs):
         if len(args) == 1 and len(kwargs) == 0:
-            array, = args
-            if isinstance(array, AwkwardArrayType):
-                return numba.typing.templates.signature(numba.types.intp, array)
+            arraytype, = args
+            if isinstance(arraytype, AwkwardArrayType):
+                return numba.typing.templates.signature(numba.types.intp, arraytype)
 
 @numba.typing.templates.infer_global(operator.getitem)
 class _AwkwardArrayType_type_getitem(numba.typing.templates.AbstractTemplate):
     def generic(self, args, kwargs):
         if len(args) == 2 and len(kwargs) == 0:
-            array, where = args
-            if isinstance(array, AwkwardArrayType):
-                if not isinstance(where, numba.types.BaseTuple):
-                    where = numba.types.Tuple((where,))
-                if len(where.types) == 0:
-                    return array
+            arraytype, wheretype = args
+            if isinstance(arraytype, AwkwardArrayType):
+                original_wheretype = wheretype
+                if not isinstance(wheretype, numba.types.BaseTuple):
+                    wheretype = numba.types.Tuple((wheretype,))
+                if len(wheretype.types) == 0:
+                    return arraytype
 
-                if any(isinstace(x, numba.types.Array) and x.ndim == 1 for x in where):
-                    where = numba.types.Tuple(tuple(numba.types.Array(x, 1, "C") if isinstance(x, numba.types.Integer) else x for x in where))
+                if any(isinstance(x, numba.types.Array) and x.ndim == 1 for x in wheretype.types):
+                    wheretype = numba.types.Tuple(tuple(numba.types.Array(x, 1, "C") if isinstance(x, numba.types.Integer) else x for x in wheretype))
 
-                return numba.typing.templates.signature(arraytype.getitem(where))
+                return numba.typing.templates.signature(arraytype.getitem(wheretype), arraytype, original_wheretype)
 
 def clsrepr(cls):
     import awkward.array
@@ -153,7 +154,7 @@ def clsrepr(cls):
         bases = ", ".join(clsrepr(x) for x in cls.__bases__ if x is not object)
         if len(bases) != 0:
             bases = "<" + bases + ">"
-        return "{0}.{1}{2}".format(x.__module__, x.__name__, bases)
+        return "{0}.{1}{2}".format(cls.__module__, cls.__name__, bases)
 
 def sliceval2(context, builder, start, stop):
     out = context.make_helper(builder, numba.types.slice2_type)

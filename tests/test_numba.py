@@ -45,105 +45,105 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
-    # def test_innumba_unbox(self):
-    #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    #     a2 = JaggedArray.fromcounts([2, 0, 1], a)
-    #     @numba.njit
-    #     def test(x):
-    #         return 3.14
-    #     test(a)
-    #     test(a2)
+    def test_numba_unbox(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = JaggedArray.fromcounts([2, 0, 1], a)
+        @numba.njit
+        def test(x):
+            return 3.14
+        test(a)
+        test(a2)
 
-    # def test_innumba_box(self):
-    #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    #     a2 = JaggedArray.fromcounts([2, 0, 1], a)
-    #     @numba.njit
-    #     def test(x):
-    #         return x
-    #     assert test(a).tolist() == a.tolist()
-    #     assert test(a2).tolist() == a2.tolist()
+    def test_numba_box(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = JaggedArray.fromcounts([2, 0, 1], a)
+        @numba.njit
+        def test(x):
+            return x
+        assert test(a).tolist() == a.tolist()
+        assert test(a2).tolist() == a2.tolist()
 
-    # def test_innumba_init(self):
-    #     @numba.njit
-    #     def test(starts, stops, content):
-    #         return JaggedArray(starts, stops, content)
-    #     starts = numpy.array([0, 3, 3])
-    #     stops = numpy.array([3, 3, 5])
-    #     content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
-    #     z = test(starts, stops, content)
-    #     assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
-    #     assert z.starts is starts
-    #     assert z.stops is stops
-    #     assert z.content is content
-    #     z = test(starts, stops, content)
-    #     assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
-    #     assert z.starts is starts
-    #     assert z.stops is stops
-    #     assert z.content is content
-    #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    #     starts2 = numpy.array([0, 2, 2])
-    #     stops2 = numpy.array([2, 2, 3])
-    #     assert test(starts2, stops2, a).tolist() == [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
+    def test_numba_init(self):
+        @numba.njit
+        def test(starts, stops, content):
+            return JaggedArray(starts, stops, content)
+        starts = numpy.array([0, 3, 3])
+        stops = numpy.array([3, 3, 5])
+        content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
+        z = test(starts, stops, content)
+        assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+        assert z.starts is starts
+        assert z.stops is stops
+        assert z.content is content
+        z = test(starts, stops, content)
+        assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+        assert z.starts is starts
+        assert z.stops is stops
+        assert z.content is content
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        starts2 = numpy.array([0, 2, 2])
+        stops2 = numpy.array([2, 2, 3])
+        assert test(starts2, stops2, a).tolist() == [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
 
-    # def test_innumba_copy(self):
-    #     @numba.njit
-    #     def test(x, starts, stops, content):
-    #         return awkward_numba.register.JaggedArray_copy(x, starts, stops, content, False)
-    #     starts = numpy.array([0, 3, 3])
-    #     stops = numpy.array([3, 3, 5])
-    #     content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
-    #     a = awkward_numba.JaggedArray.fromiter([[999.9], [3.14], [2.2, 2.2, 2.2]])
-    #     a2 = awkward_numba.JaggedArray.fromcounts([2, 0, 1], a)
-    #     z = test(a, starts, stops, content)
-    #     assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
-    #     assert isinstance(z, awkward_numba.JaggedArray)
-    #     assert type(z) is not awkward.JaggedArray
-    #     starts2 = numpy.array([0, 2, 2])
-    #     stops2 = numpy.array([2, 2, 3])
-    #     z2 = test(a2, starts2, stops2, z)
-    #     assert z2.tolist() == [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
-    #     assert isinstance(z2, awkward_numba.JaggedArray)
-    #     assert type(z2) is not awkward.JaggedArray
+    def test_numba_new(self):
+        @numba.njit
+        def test(x, starts, stops, content):
+            return awkward_numba.array.jagged._JaggedArray_new(x, starts, stops, content, False)
+        starts = numpy.array([0, 3, 3])
+        stops = numpy.array([3, 3, 5])
+        content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
+        a = awkward_numba.JaggedArray.fromiter([[999.9], [3.14], [2.2, 2.2, 2.2]])
+        a2 = awkward_numba.JaggedArray.fromcounts([2, 0, 1], a)
+        z = test(a, starts, stops, content)
+        assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+        assert isinstance(z, awkward_numba.JaggedArray)
+        assert type(z) is not awkward.JaggedArray
+        starts2 = numpy.array([0, 2, 2])
+        stops2 = numpy.array([2, 2, 3])
+        z2 = test(a2, starts2, stops2, z)
+        assert z2.tolist() == [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
+        assert isinstance(z2, awkward_numba.JaggedArray)
+        assert type(z2) is not awkward.JaggedArray
 
-    # def test_innumba_compact(self):
-    #     @numba.njit
-    #     def test(x):
-    #         return x.compact()
-    #     starts = numpy.array([0, 3, 4])
-    #     stops = numpy.array([3, 3, 6])
-    #     content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
-    #     a = JaggedArray(starts, stops, content)
-    #     a2 = JaggedArray([1, 0, 0], [3, 0, 1], a)
-    #     z = test(a)
-    #     assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
-    #     assert z.content.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
-    #     assert z.iscompact
-    #     z2 = test(a2)
-    #     assert z2.tolist() == [[[], [4.4, 5.5]], [], [[1.1, 2.2, 3.3]]]
-    #     assert z2.content.tolist() == [[], [4.4, 5.5], [1.1, 2.2, 3.3]]
-    #     assert z2.iscompact
+    def test_numba_compact(self):
+        @numba.njit
+        def test(x):
+            return x.compact()
+        starts = numpy.array([0, 3, 4])
+        stops = numpy.array([3, 3, 6])
+        content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
+        a = JaggedArray(starts, stops, content)
+        a2 = JaggedArray([1, 0, 0], [3, 0, 1], a)
+        z = test(a)
+        assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+        assert z.content.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
+        assert z.iscompact
+        z2 = test(a2)
+        assert z2.tolist() == [[[], [4.4, 5.5]], [], [[1.1, 2.2, 3.3]]]
+        assert z2.content.tolist() == [[], [4.4, 5.5], [1.1, 2.2, 3.3]]
+        assert z2.iscompact
 
-    # def test_innumba_flatten(self):
-    #     @numba.njit
-    #     def test(x):
-    #         return x.flatten()
-    #     starts = numpy.array([0, 3, 4])
-    #     stops = numpy.array([3, 3, 6])
-    #     content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
-    #     a = JaggedArray(starts, stops, content)
-    #     z = test(a)
-    #     assert z.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
+    def test_numba_flatten(self):
+        @numba.njit
+        def test(x):
+            return x.flatten()
+        starts = numpy.array([0, 3, 4])
+        stops = numpy.array([3, 3, 6])
+        content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
+        a = JaggedArray(starts, stops, content)
+        z = test(a)
+        assert z.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
 
-    # def test_innumba_len(self):
-    #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    #     a2 = JaggedArray.fromcounts([2, 1], a)
-    #     @numba.njit
-    #     def test1(x):
-    #         return len(x)
-    #     assert test1(a) == 3
-    #     assert test1(a2) == 2
+    def test_numba_len(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = JaggedArray.fromcounts([2, 1], a)
+        @numba.njit
+        def test1(x):
+            return len(x)
+        assert test1(a) == 3
+        assert test1(a2) == 2
 
-    # def test_innumba_getitem_integer(self):
+    # def test_numba_getitem_integer(self):
     #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     #     a2 = JaggedArray.fromcounts([2, 0, 1], a)
     #     @numba.njit
@@ -165,7 +165,7 @@ class Test(unittest.TestCase):
     #     assert test2(a2, 2).tolist() == [[4.4, 5.5]]
     #     assert test2(a2, 0).content.tolist() == a.content.tolist()
 
-    # def test_innumba_getitem_slice(self):
+    # def test_numba_getitem_slice(self):
     #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     #     a2 = JaggedArray.fromcounts([2, 0, 1], a)   # [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
     #     @numba.njit
@@ -176,7 +176,7 @@ class Test(unittest.TestCase):
     #     assert test1(a2, 0, 2).tolist() == [[[1.1, 2.2, 3.3], []], []]
     #     assert test1(a2, 1, 3).tolist() == [[], [[4.4, 5.5]]]
 
-    # def test_innumba_getitem_intarray(self):
+    # def test_numba_getitem_intarray(self):
     #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     #     starts = numpy.array([0, 3, 4])
     #     stops = numpy.array([3, 3, 6])
@@ -204,7 +204,7 @@ class Test(unittest.TestCase):
     #     a3 = JaggedArray.fromcounts([2, 0, 1], a)
     #     assert test1(a3, index).tolist() == [[[4.4, 5.5]], [[4.4, 5.5]], [[1.1, 2.2, 3.3], []], []]
 
-    # def test_innumba_getitem_boolarray(self):
+    # def test_numba_getitem_boolarray(self):
     #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     #     starts = numpy.array([0, 3, 4])
     #     stops = numpy.array([3, 3, 6])
@@ -232,14 +232,14 @@ class Test(unittest.TestCase):
     #     a3 = JaggedArray.fromcounts([2, 0, 1], a)
     #     assert test1(a3, index).tolist() == [[], [[4.4, 5.5]]]
 
-    # def test_innumba_getitem_tuple_integer(self):
+    # def test_numba_getitem_tuple_integer(self):
     #     a = JaggedArray([[0], [3], [3]], [[3], [3], [5]], [1.1, 2.2, 3.3, 4.4, 5.5])  # [[[1.1 2.2 3.3]] [[]] [[4.4 5.5]]]
     #     @numba.njit
     #     def test1(x, i, j):
     #         return x[i, j]
     #     assert test1(a, 0, 0).tolist() == [1.1, 2.2, 3.3]
 
-    # def test_innumba_getitem_tuple_slice(self):
+    # def test_numba_getitem_tuple_slice(self):
     #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     #     a2 = JaggedArray.fromcounts([2, 0, 1], a)   # [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
     #     @numba.njit
@@ -257,7 +257,7 @@ class Test(unittest.TestCase):
     #         return x[i:j, k]
     #     assert test2(a, 0, 2, 0).tolist() == [[1.1, 2.2, 3.3], []]
 
-    # def test_innumba_getitem_tuple_slice_integer(self):
+    # def test_numba_getitem_tuple_slice_integer(self):
     #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [4.4, 5.5], [6.6, 7.7], [8.8, 9.9]])
     #     a2 = JaggedArray.fromcounts([2, 2], a)
     #     @numba.njit
@@ -266,7 +266,7 @@ class Test(unittest.TestCase):
     #     assert test3(a, 0, 2, 1).tolist() == [2.2, 5.5]
     #     assert test3(a2, 0, 2, 1).tolist() == [[4.4, 5.5], [8.8, 9.9]]
 
-    # def test_innumba_getitem_tuple_slice_slice(self):
+    # def test_numba_getitem_tuple_slice_slice(self):
     #     a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [4.4, 5.5], [6.6, 7.7], [8.8, 9.9]])
     #     a2 = JaggedArray.fromcounts([2, 2], a)
     #     @numba.njit
@@ -281,21 +281,21 @@ class Test(unittest.TestCase):
     #     assert test4(a, 0, 2, -2, None).tolist() == [[2.2, 3.3], [4.4, 5.5]]
     #     assert test4(a2, 0, 2, 1, 2).tolist() == [[[4.4, 5.5]], [[8.8, 9.9]]]
 
-    # def test_innumba_getitem_tuple_boolarray(self):
+    # def test_numba_getitem_tuple_boolarray(self):
     #     a = JaggedArray([[0], [3], [3]], [[3], [3], [5]], [1.1, 2.2, 3.3, 4.4, 5.5])  # [[[1.1 2.2 3.3]] [[]] [[4.4 5.5]]]
     #     @numba.njit
     #     def test1(x, i, j):
     #         return x[i, j]
     #     assert test1(a, numpy.array([True, False, True]), 0).tolist() == [[1.1, 2.2, 3.3], [4.4, 5.5]]
 
-    # def test_innumba_getitem_tuple_intarray(self):
+    # def test_numba_getitem_tuple_intarray(self):
     #     a = JaggedArray([[0], [3], [3]], [[3], [3], [5]], [1.1, 2.2, 3.3, 4.4, 5.5])  # [[[1.1 2.2 3.3]] [[]] [[4.4 5.5]]]
     #     @numba.njit
     #     def test1(x, i, j):
     #         return x[i, j]
     #     assert test1(a, numpy.array([2, 0]), 0).tolist() == [[4.4, 5.5], [1.1, 2.2, 3.3]]
 
-    # def test_innumba_getitem_tuple_slice_boolarray(self):
+    # def test_numba_getitem_tuple_slice_boolarray(self):
     #     a = numpy.arange(36).reshape(4, 3, 3)
     #     a2 = awkward.fromiter(a)
     #     @numba.njit
@@ -322,7 +322,7 @@ class Test(unittest.TestCase):
     #     print(test4.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])))
     #     print(test4(a2, numpy.array([True, False, True]), numpy.array([True, True, False])))
 
-    # def test_innumba_getitem_tuple_slice_intarray(self):
+    # def test_numba_getitem_tuple_slice_intarray(self):
     #     a = numpy.arange(36).reshape(4, 3, 3)
     #     a2 = awkward.fromiter(a)
     #     @numba.njit
