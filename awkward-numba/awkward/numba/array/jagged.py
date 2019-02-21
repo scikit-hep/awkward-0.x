@@ -397,19 +397,19 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
 
     newwhereval = context.make_tuple(builder, newwheretype, tuple(newwherevals))
 
-    # fake = getitem_next(awkward.JaggedArray([0], [len(array)], array), newwhere, None)
-    # if isinstance(fake, numpy.ndarray):
-    #     return fake[0]
-    # else:
-    #     return fake.content[fake.starts[0]:fake.stops[-1]]
+    def fake1(array, newwhere):
+        return _JaggedArray_getitem_next(awkward.array.jagged.JaggedArray([0], [len(array)], array), newwhere, None)[0]
 
-    HERE
+    def fake2(array, newwhere):
+        out = _JaggedArray_getitem_next(awkward.array.jagged.JaggedArray([0], [len(array)], array), newwhere, None)
+        return out.content[out.starts[0]:out.stops[-1]]
 
-    faketype = JaggedArrayType(arraytype, numba.types)
+    if all(isinstance(x, numba.types.Integer) for x in newwheretype):
+        fake = fake1
+    else:
+        fake = fake2
 
-
-    fake = _JaggedArray_lower_new(context, builder, )
-
+    return context.compile_internal(builder, fake, sig.return_value(arraytype, newwheretype), (arrayval, newwhereval))
 
 @numba.generated_jit(nopython=True)
 def _JaggedArray_getitem_enter_arraylen(whereitem, arraylen):
