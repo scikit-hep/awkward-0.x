@@ -232,6 +232,14 @@ class Test(unittest.TestCase):
         a3 = JaggedArray.fromcounts([2, 0, 1], a)
         assert test1(a3, index).tolist() == [[], [[4.4, 5.5]]]
 
+    def test_numba_getitem_tuple_integer(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        @numba.njit
+        def test1(x, i):
+            return x[i,]
+        print(test1(a, 2))
+
+
     # def test_numba_getitem_tuple_integer(self):
     #     a = JaggedArray([[0], [3], [3]], [[3], [3], [5]], [1.1, 2.2, 3.3, 4.4, 5.5])  # [[[1.1 2.2 3.3]] [[]] [[4.4 5.5]]]
     #     @numba.njit

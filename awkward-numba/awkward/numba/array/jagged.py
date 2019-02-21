@@ -388,40 +388,48 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
         arraylenval = inline(context, builder, _JaggedArray_getitem_enter_arraylen, numba.types.int64(whereitemtype, numba.types.int64), (whereitemval, builder.load(arraylen)))
         builder.store(arraylenval, arraylen)
 
-    arraylenval = builder.load(arraylen)
-    newwheretype = numba.types.Tuple(tuple(_JaggedArray_getitem_enter_toadvanced_typer(x) for x in wheretype))
-    newwherevals = []
-    for i, (old, new) in enumerate(zip(wheretype.types, newwheretype.types)):
-        whereitemval = builder.extract_value(whereval, i)
-        newwherevals.append(inline(context, builder, _JaggedArray_getitem_enter_toadvanced, new(old, numba.types.int64), (whereitemval, arraylenval)))
-
-    newwhereval = context.make_tuple(builder, newwheretype, tuple(newwherevals))
+    if any(isinstance(x, numba.types.Array) for x in wheretype.types):
+        arraylenval = builder.load(arraylen)
+        newwheretype = numba.types.Tuple(tuple(_JaggedArray_getitem_enter_toadvanced_typer(x) for x in wheretype))
+        newwherevals = []
+        for i, (old, new) in enumerate(zip(wheretype.types, newwheretype.types)):
+            whereitemval = builder.extract_value(whereval, i)
+            newwherevals.append(inline(context, builder, _JaggedArray_getitem_enter_toadvanced, new(old, numba.types.int64), (whereitemval, arraylenval)))
+        newwhereval = context.make_tuple(builder, newwheretype, tuple(newwherevals))
+    else:
+        newwheretype = wheretype
+        newwhereval = whereval
 
     def fake1(array, newwhere):
-        return _JaggedArray_getitem_next(awkward.array.jagged.JaggedArray([0], [len(array)], array), newwhere, None)[0]
+        return _JaggedArray_getitem_next(awkward.array.jagged.JaggedArray(numpy.array([0], numpy.int64), numpy.array([len(array)], numpy.int64), array), newwhere, None)[0]
 
     def fake2(array, newwhere):
-        out = _JaggedArray_getitem_next(awkward.array.jagged.JaggedArray([0], [len(array)], array), newwhere, None)
+        out = _JaggedArray_getitem_next(awkward.array.jagged.JaggedArray(numpy.array([0], numpy.int64), numpy.array([len(array)], numpy.int64), array), newwhere, None)
         return out.content[out.starts[0]:out.stops[-1]]
 
-    if all(isinstance(x, numba.types.Integer) for x in newwheretype):
+    print(wheretype)
+    print(newwheretype)
+
+    if all(isinstance(x, numba.types.Integer) for x in newwheretype.types):
+        print("fake1")
         fake = fake1
     else:
+        print("fake2")
         fake = fake2
 
-    return context.compile_internal(builder, fake, sig.return_value(arraytype, newwheretype), (arrayval, newwhereval))
+    return context.compile_internal(builder, fake, sig.return_type(arraytype, newwheretype), (arrayval, newwhereval))
 
 @numba.generated_jit(nopython=True)
 def _JaggedArray_getitem_enter_arraylen(whereitem, arraylen):
     if isinstance(whereitem, numba.types.Array) and isinstance(whereitem.dtype, numba.types.Boolean):
-        return lambda whereitem: max(arraylen, numpy.count_nonzero(whereitem))
+        return lambda whereitem, arraylen: max(arraylen, numpy.count_nonzero(whereitem))
     elif isinstance(whereitem, numba.types.Array):
-        return lambda whereitem: max(arraylen, len(whereitem))
+        return lambda whereitem, arraylen: max(arraylen, len(whereitem))
     else:
-        return lambda whereitem: arraylen
+        return lambda whereitem, arraylen: arraylen
 
 def _JaggedArray_getitem_enter_toadvanced_typer(whereitemtype):
-    if isinstance(whereitem, (numba.types.Array, numba.types.Integer)):
+    if isinstance(whereitemtype, (numba.types.Array, numba.types.Integer)):
         return numba.types.Array(numba.types.int64, 1, "C")
     else:
         return whereitemtype
@@ -455,7 +463,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
     headval = numba.targets.tupleobj.static_getitem_tuple(context, builder, headtype(wheretype, numba.types.int64), (whereval, 0))
     tailval = numba.targets.tupleobj.static_getitem_tuple(context, builder, tailtype(wheretype, numba.types.slice2_type), (whereval, slice(1, None)))
 
-    sig = sig.return_value(arraytype, headtype, tailtype, advancedtype)
+    sig = sig.return_type(arraytype, headtype, tailtype, advancedtype)
     args = (arrayval, headval, tailval, advancedval)
     return inline(context, builder, _JaggedArray_bytype_getitem_next, sig, args)
 
