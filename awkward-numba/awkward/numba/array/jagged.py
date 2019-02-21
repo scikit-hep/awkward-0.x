@@ -39,6 +39,8 @@ from .base import AwkwardArrayType
 from .base import clsrepr
 from .base import ISADVANCED
 from .base import NOTADVANCED
+from .base import sliceval2
+from .base import sliceval3
 
 ######################################################################## optimized functions (hidden)
 
@@ -242,19 +244,34 @@ def _JaggedArray_type_init(context):
 @numba.extending.lower_builtin(JaggedArrayNumba, numba.types.Array, numba.types.Array, AwkwardArrayType)
 def _JaggedArray_init_array(context, builder, sig, args):
     startstype, stopstype, contenttype = sig.args
-    starts, stops, content = args
+    startsval, stopsval, contentval = args
 
     if context.enable_nrt:
-        context.nrt.incref(builder, startstype, starts)
-        context.nrt.incref(builder, stopstype, stops)
-        context.nrt.incref(builder, contenttype, content)
+        context.nrt.incref(builder, startstype, startsval)
+        context.nrt.incref(builder, stopstype, stopsval)
+        context.nrt.incref(builder, contenttype, contentval)
 
     array = numba.cgutils.create_struct_proxy(sig.return_type)(context, builder)
-    array.starts = starts
-    array.stops = stops
-    array.content = content
+    array.starts = startsval
+    array.stops = stopsval
+    array.content = contentval
     array.iscompact = context.get_constant(numba.types.boolean, False)   # unless you reproduce that logic here or call out to Python
     return array._getvalue()
+
+######################################################################## utilities
+
+def _check_startstop_contentlen(context, builder, starttype, startval, stoptype, stopval, contenttype, contentval):
+    if isinstance(contenttype, numba.types.Array):
+        contentlen = numba.targets.arrayobj.array_len(context, builder, numba.types.intp(contenttype), (contentval,))
+    else:
+        contentlen = _JaggedArray_lower_len(context, builder, numba.types.intp(contenttype), (contentval,))
+
+    with builder.if_then(builder.or_(builder.or_(builder.icmp_signed("<", startval, context.get_constant(starttype, 0)),
+                                                 builder.icmp_signed("<", stopval, context.get_constant(stoptype, 0))),
+                                     builder.or_(builder.icmp_signed(">=", startval, contentlen),
+                                                 builder.icmp_signed(">", stopval, contentlen))),
+                         likely=False):
+        context.call_conv.return_user_exc(builder, ValueError, ("JaggedArray.starts or JaggedArray.stops is beyond the range of JaggedArray.content",))
 
 ######################################################################## lower methods in Numba
 
@@ -266,4 +283,21 @@ def _JaggedArray_lower_len(context, builder, sig, args):
     array = numba.cgutils.create_struct_proxy(arraytype)(context, builder, value=arrayval)
 
     return numba.targets.arrayobj.array_len(context, builder, numba.types.intp(arraytype.startstype), (array.starts,))
-    
+
+@numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
+def _JaggedArray_getitem_lower_integer(context, builder, sig, args):
+    arraytype, wheretype = sig.args
+    arrayval, whereval = args
+
+    array = numba.cgutils.create_struct_proxy(arraytype)(context, builder, value=arrayval)
+
+    startstype = arraytype.startstype
+    start = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, startstype.dtype(startstype, wheretype), (array.starts, whereval))
+
+    stopstype = arraytype.stopstype
+    stop = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, stopstype.dtype(stopstype, wheretype), (array.stops, whereval))
+
+    contenttype = arraytype.contenttype
+    _check_startstop_contentlen(context, builder, startstype.dtype, start, stopstype.dtype, stop, contenttype, array.content)
+
+    HERE

@@ -155,5 +155,19 @@ def clsrepr(cls):
             bases = "<" + bases + ">"
         return "{0}.{1}{2}".format(x.__module__, x.__name__, bases)
 
+def sliceval2(context, builder, start, stop):
+    out = context.make_helper(builder, numba.types.slice2_type)
+    out.start = start
+    out.stop = stop
+    out.step = context.get_constant(numba.types.intp, 1)
+    return out._getvalue()
+
+def sliceval3(context, builder, start, stop, step):
+    out = context.make_helper(builder, numba.types.slice3_type)
+    out.start = start
+    out.stop = stop
+    out.step = step
+    return out._getvalue()
+
 ISADVANCED = numba.types.Array(numba.types.int64, 1, "C")
 NOTADVANCED = numba.types.none
