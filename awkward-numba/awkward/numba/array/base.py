@@ -108,20 +108,28 @@ class AwkwardArrayType(numba.types.Type):
     pass
 
 @numba.typing.templates.infer_global(len)
-class AwkwardArrayType_type_len(numba.typing.templates.AbstractTemplate):
+class _AwkwardArrayType_type_len(numba.typing.templates.AbstractTemplate):
     def generic(self, args, kwargs):
         if len(args) == 1 and len(kwargs) == 0:
-            arraytype, = args
-            if isinstance(arraytype, AwkwardArrayType):
-                return numba.typing.templates.signature(numba.types.intp, arraytype)
+            array, = args
+            if isinstance(array, AwkwardArrayType):
+                return numba.typing.templates.signature(numba.types.intp, array)
 
 @numba.typing.templates.infer_global(operator.getitem)
-class AwkwardArrayType_type_getitem(numba.typing.templates.AbstractTemplate):
+class _AwkwardArrayType_type_getitem(numba.typing.templates.AbstractTemplate):
     def generic(self, args, kwargs):
         if len(args) == 2 and len(kwargs) == 0:
-            arraytype, wheretype = args
-            if isinstance(arraytype, AwkwardArrayType):
-                return numba.typing.templates.signature(arraytype.getitem(wheretype))
+            array, where = args
+            if isinstance(array, AwkwardArrayType):
+                if not isinstance(where, numba.types.BaseTuple):
+                    where = numba.types.Tuple((where,))
+                if len(where.types) == 0:
+                    return array
+
+                if any(isinstace(x, numba.types.Array) and x.ndim == 1 for x in where):
+                    where = numba.types.Tuple(tuple(numba.types.Array(x, 1, "C") if isinstance(x, numba.types.Integer) else x for x in where))
+
+                return numba.typing.templates.signature(arraytype.getitem(where))
 
 def clsrepr(cls):
     import awkward.array

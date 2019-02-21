@@ -29,9 +29,16 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import numba
+import numba.typing.arraydecl
 
 import awkward.array.jagged
 from .base import NumbaMethods
+from .base import AwkwardArrayType
+from .base import clsrepr
+from .base import ISADVANCED
+from .base import NOTADVANCED
+
+######################################################################## optimized functions (hidden)
 
 @numba.njit
 def _offsets2parents_fill(offsets, parents):
@@ -70,6 +77,8 @@ def _argminmax_fillmax(starts, stops, content, output):
                     bestj = j - starts[i]
             output[k] = bestj
             k += 1
+
+######################################################################## Numba-accelerated interface
 
 class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     @classmethod
@@ -110,3 +119,51 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
 
     def _argminmax_general(self, ismin):
         raise RuntimeError("helper function not needed in JaggedArrayNumba")
+
+######################################################################## register types in Numba
+
+class JaggedArrayType(AwkwardArrayType):
+    def __init__(self, starts, stops, content, special=awkward.array.jagged.JaggedArray):
+        super(JaggedArrayType, self).__init__(name="JaggedArrayType({0}, {1}, {2}{3})".format(starts.name, stops.name, content.name, "" if special is awkward.array.jagged.JaggedArray else clsrepr(special)))
+        if starts.ndim != stops.ndim:
+            raise ValueError("JaggedArray.starts must have the same number of dimensions as JaggedArray.stops")
+        self.starts = starts
+        self.stops = stops
+        self.content = content
+        self.special = special
+
+    def getitem(self, where):
+        head = numba.types.Tuple(where.types[0])
+        if isinstance(head, numba.types.Integer) and isinstance(self.content, numba.types.Array):
+            return numba.typing.arraydecl.get_array_index_type(self.content, tail).result
+
+        fake = _JaggedArray_getitem_typer(JaggedArrayType(numba.types.int64[:], numba.types.int64[:], self), where, NOTADVANCED)
+        if isinstance(fake, numba.types.Array):
+            return fake.dtype
+        else:
+            return fake.content
+
+def _JaggedArray_getitem_typer(array, where, advanced):
+    if len(where.types) == 0:
+        return array
+
+    assert array.starts.ndim == array.stops.ndim == 1
+
+    isarray = (isinstance(where.types[0], numba.types.Array) and where.types[0].ndim == 1)
+
+    content = _JaggedArray_getitem_typer(array.content, numba.types.Tuple(where.types[1:]), ISADVANCED if isarray else advanced)
+
+    if isinstance(where.types[0], numba.types.Integer) or (advanced == ISADVANCED and isarray):
+        return content
+    elif isinstance(where.types[0], numba.types.SliceType) or (advanced == NOTADVANCED and isarray):
+        return JaggedArrayType(array.starts, array.stops, content, special=array.special)
+    else:
+        raise TypeError("cannot be used for indexing: {0}".format(where))
+
+
+
+
+
+######################################################################## model and boxing
+
+######################################################################## lower methods in Numba
