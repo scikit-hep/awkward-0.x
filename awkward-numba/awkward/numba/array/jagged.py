@@ -169,6 +169,10 @@ def _JaggedArray_getitem_next(array, where):
 def _JaggedArray_type_getitem_next(context):
     return _JaggedArray_typer_getitem
 
+@numba.extending.typeof_impl.register(awkward.array.jagged.JaggedArray)
+def _JaggedArray_typeof(val, c):
+    return JaggedArrayType(numba.typeof(val.starts), numba.typeof(val.stops), numba.typeof(val.content), special=type(val))
+
 ######################################################################## model and boxing
 
 @numba.extending.register_model(JaggedArrayType)
@@ -312,7 +316,7 @@ def _JaggedArray_lower_len(context, builder, sig, args):
 ######################################################################## lowered getitem
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
-def _JaggedArray_lower_integer_getitem(context, builder, sig, args):
+def _JaggedArray_lower_getitem_integer(context, builder, sig, args):
     arraytype, wheretype = sig.args
     arrayval, whereval = args
 
@@ -330,10 +334,10 @@ def _JaggedArray_lower_integer_getitem(context, builder, sig, args):
     if isinstance(contenttype, numba.types.Array):
         return numba.targets.arrayobj.getitem_arraynd_intp(context, builder, contenttype(contenttype, numba.types.slice2_type), (array.content, sliceval2(context, builder, start, stop)))
     else:
-        return _JaggedArray_lower_slice_getitem(context, builder, contenttype(contenttype, numba.types.slice2_type), (array.content, sliceval2(context, builder, start, stop)))
+        return _JaggedArray_lower_getitem_slice(context, builder, contenttype(contenttype, numba.types.slice2_type), (array.content, sliceval2(context, builder, start, stop)))
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
-def _JaggedArray_lower_slice_getitem(context, builder, sig, args):
+def _JaggedArray_lower_getitem_slice(context, builder, sig, args):
     arraytype, wheretype = sig.args
     arrayval, whereval = args
 
@@ -354,7 +358,7 @@ def _JaggedArray_lower_slice_getitem(context, builder, sig, args):
     return _JaggedArray_lower_copy(context, builder, arraytype(arraytype, startstype, stopstype, contenttype, numba.types.boolean), (arrayval, starts, stops, array.content, iscompact))
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Array)
-def _JaggedArray_lower_array_getitem(context, builder, sig, args):
+def _JaggedArray_lower_getitem_array(context, builder, sig, args):
     arraytype, wheretype = sig.args
     arrayval, whereval = args
 
@@ -369,8 +373,105 @@ def _JaggedArray_lower_array_getitem(context, builder, sig, args):
     contenttype = arraytype.contenttype
     return _JaggedArray_lower_copy(context, builder, arraytype(arraytype, startstype, stopstype, contenttype, numba.types.boolean), (arrayval, starts, stops, array.content, context.get_constant(numba.types.boolean, False)))
 
+@numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.BaseTuple)
+def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
+    raise NotImplementedError
 
+@numba.extending.lower_builtin(_JaggedArray_getitem_next, numba.types.Array, numba.types.BaseTuple, numba.types.NoneType)
+@numba.extending.lower_builtin(_JaggedArray_getitem_next, JaggedArrayType, numba.types.BaseTuple, numba.types.NoneType)
+@numba.extending.lower_builtin(_JaggedArray_getitem_next, numba.types.Array, numba.types.BaseTuple, numba.types.Array)
+@numba.extending.lower_builtin(_JaggedArray_getitem_next, JaggedArrayType, numba.types.BaseTuple, numba.types.Array)
+def _JaggedArray_lower_getitem_next(context, builder, sig, args):
+    raise NotImplemenetedError
 
+@numba.generated_jit(nopython=True)
+def _JaggedArray_bytype_getitem_next(array, head, tail, advanced):
+    raise NotImplementedError
 
-    
 ######################################################################## other lowered methods in Numba
+
+@numba.typing.templates.infer_getattr
+class _JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
+    key = JaggedArrayType
+
+    # @numba.typing.templates.bound_function("name-of-method")
+    # def resolve_copy(self, arraytype, args, kwargs):
+    #     standard typer...
+
+@numba.extending.overload_method(JaggedArrayType, "compact")
+def _JaggedArray_compact(arraytype):
+    if isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.contenttype, AwkwardArrayType):
+        def impl(array):
+            if array.iscompact:
+                return array
+            if len(array.starts) == 0:
+                return _JaggedArray_copy(array, array.starts, array.starts, array.content[0:0], True)
+
+            if array.starts.shape != array.stops.shape:
+                raise ValueError("JaggedArray.starts must have the same shape as JaggedArray.stops")
+            flatstarts = array.starts.revel()
+            flatstops = array.stops.revel()
+
+            offsets = numpy.empty(len(flatstarts) + 1, flatstarts.dtype)
+            offsets[0] = 0
+            for i in range(len(flatstarts)):
+                count = flatstops[i] - flatstarts[i]
+                if count < 0:
+                    raise ValueError("JaggedArray.stops[i] must be greater than or equal to JaggedArray.starts[i] for all i")
+                offsets[i + 1] = offsets[i] + count
+
+            index = numpy.empty(offsets[-1], numpy.int64)
+            k = 0
+            for i in range(len(flatstarts)):
+                for j in range(flatstarts[i], flatstops[i]):
+                    index[k] = j
+                    k += 1
+
+            starts = offsets[:-1].reshape(array.starts.shape)
+            stops = offsets[1:].reshape(array.starts.shape)    # intentional
+            content = array.content[index]
+            return _JaggedArray_copy(array, starts, stops, content, True)
+
+    elif isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.contenttype, numba.types.Array):
+        def impl(array):
+            if array.iscompact:
+                return array
+            if len(array.starts) == 0:
+                return _JaggedArray_copy(array, array.starts, array.starts, array.content[0:0], True)
+
+            if array.starts.shape != array.stops.shape:
+                raise ValueError("JaggedArray.starts must have the same shape as JaggedArray.stops")
+            flatstarts = array.starts.revel()
+            flatstops = array.stops.revel()
+
+            offsets = numpy.empty(len(flatstarts) + 1, flatstarts.dtype)
+            offsets[0] = 0
+            for i in range(len(flatstarts)):
+                count = flatstops[i] - flatstarts[i]
+                if count < 0:
+                    raise ValueError("JaggedArray.stops[i] must be greater than or equal to JaggedArray.starts[i] for all i")
+                offsets[i + 1] = offsets[i] + count
+
+            content = numpy.empty(offsets[-1], array.content.dtype)
+            k = 0
+            for i in range(len(flatstarts)):
+                for j in range(flatstarts[i], flatstops[i]):
+                    content[k] = array.content[j]
+                    k += 1
+
+            starts = offsets[:-1].reshape(array.starts.shape)
+            stops = offsets[1:].reshape(array.starts.shape)    # intentional
+            return _JaggedArray_copy(array, starts, stops, content, True)
+
+    return impl
+
+@numba.extending.overload_method(JaggedArrayType, "flatten")
+def _JaggedArray_flatten(arraytype):
+    if isinstance(arraytype, JaggedArrayType):
+        def impl(array):
+            if len(array.starts) == 0:
+                return array.content[0:0]
+            else:
+                a = array.compact()
+                return a.content[a.starts[0]:a.stops[-1]]
+    return impl
