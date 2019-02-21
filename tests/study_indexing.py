@@ -215,18 +215,42 @@ slices = [2, slice(None), slice(2, 4), slice(1, None, 2), slice(None, None, -1),
 
 a = numpy.arange(4**4).reshape(4, 4, 4, 4)
 a2 = awkward.fromiter(a)
+
 for x in slices:
+    print(x)
     assert a[x,].tolist() == getitem_enter(a2, (x,)).tolist()
     for y in slices:
+        print(x, y)
         assert a[x, y].tolist() == getitem_enter(a2, (x, y)).tolist()
         for z in slices:
+            print(x, y, z)
+            assert a[x, y, z].tolist() == getitem_enter(a2, (x, y, z)).tolist()
+
+tmp = a2.content.content.content.tolist()
+tmp.insert(4, 999)
+a2.content.content.stops = a2.content.content.stops.copy()
+a2.content.content.starts[1:] += 1
+a2.content.content.stops[1:] += 1
+a2.content.content.content = tmp
+
+for x in slices:
+    print(x)
+    assert a[x,].tolist() == getitem_enter(a2, (x,)).tolist()
+    for y in slices:
+        print(x, y)
+        assert a[x, y].tolist() == getitem_enter(a2, (x, y)).tolist()
+        for z in slices:
+            print(x, y, z)
             assert a[x, y, z].tolist() == getitem_enter(a2, (x, y, z)).tolist()
 
 a = numpy.arange(4**3).reshape(4, 4, 4)
 a2 = awkward.fromiter(a)
 for x in slices:
+    print(x)
     assert a[x,].tolist() == getitem_enter(a2, (x,)).tolist()
     for y in slices:
+        print(x, y)
         assert a[x, y].tolist() == getitem_enter(a2, (x, y)).tolist()
         for z in slices:
+            print(x, y, z)
             assert a[x, y, z].tolist() == getitem_enter(a2, (x, y, z)).tolist()
