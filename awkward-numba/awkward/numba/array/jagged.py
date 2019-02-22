@@ -381,6 +381,15 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
     arraytype, wheretype = sig.args
     arrayval, whereval = args
 
+    if len(wheretype.types) == 1:
+        if isinstance(wheretype.types[0], numba.types.Integer):
+            getitem = _JaggedArray_lower_getitem_integer
+        elif isinstance(wheretype.types[0], numba.types.SliceType):
+            getitem = _JaggedArray_lower_getitem_slice
+        elif isinstance(wheretype.types[0], numba.types.Array):
+            getitem = _JaggedArray_lower_getitem_array
+        return getitem(context, builder, sig.return_type(arraytype, wheretype.types[0]), (arrayval, builder.extract_value(whereval, 0)))
+
     if any(isinstance(x, numba.types.Array) for x in wheretype.types):
         arraylen = numba.cgutils.alloca_once_value(builder, context.get_constant(numba.types.int64, 0))
         for i, whereitemtype in enumerate(wheretype.types):
@@ -487,6 +496,48 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
                         raise ValueError("integer index is beyond the range of one of the JaggedArray starts/stops pairs")
                     index[i] = j
                 return _JaggedArray_getitem_next(array.content[index], tail, advanced)
+
+    elif isinstance(headtype, numba.types.SliceType) and headtype.members == 2 and advancedtype == NOTADVANCED and not any(isinstance(x, numba.types.Array) for x in tailtype):
+        intp_maxval = numba.types.intp.maxval
+
+        def getitem(array, head, tail, advanced):
+            if (head.start == 0 or head.start == intp_maxval) and head.stop == intp_maxval:
+                next = _JaggedArray_getitem_next(array.content, tail, advanced)
+                return _JaggedArray_new(array, array.starts, array.stops, next, True)
+
+            starts = numpy.empty(len(array.starts), numpy.int64)
+            stops = numpy.empty(len(array.starts), numpy.int64)
+            for i in range(len(array.starts)):
+                length = array.stops[i] - array.starts[i]
+                a = head.start
+                b = head.stop
+
+                if a == intp_maxval:
+                    a = 0
+                elif a < 0:
+                    a += length
+                if b == intp_maxval:
+                    b = length
+                elif b < 0:
+                    b += length
+
+                if b <= a:
+                    a = 0
+                    b = 0
+                if a < 0:
+                    a = 0
+                elif a > length:
+                    a = length
+                if b < 0:
+                    b = 0
+                elif b > length:
+                    b = length
+
+                starts[i] = array.starts[i] + a
+                stops[i] = array.starts[i] + b
+
+            next = _JaggedArray_getitem_next(array.content, tail, advanced)
+            return _JaggedArray_new(array, starts, stops, next, True)
 
     elif isinstance(headtype, numba.types.SliceType):
         intp_maxval = numba.types.intp.maxval

@@ -57,6 +57,10 @@ def getitem_integer(array, head, tail, advanced):
     return next
 
 def getitem_slice2(array, head, tail, advanced):
+    if (head.start is None or head.start == 0) and head.stop is None:
+        next = getitem_next(array.content, tail, advanced)
+        return awkward.JaggedArray(array.starts, array.stops, next)
+
     starts = numpy.full(len(array.starts), 999, int)
     stops = numpy.full(len(array.starts), 999, int)
     for i in range(len(array.starts)):
@@ -92,10 +96,6 @@ def getitem_slice2(array, head, tail, advanced):
 def getitem_slice3(array, head, tail, advanced):
     if head.step == 0:
         raise ValueError
-
-    # if head.start is None and head.stop is None and (head.step is None or head.step == 1):
-    #     next = getitem_next(array.content[array.starts[0]:array.stops[-1]], tail, spread_advanced(array.starts, array.stops, advanced))
-    #     return awkward.JaggedArray(array.starts, array.stops, next)
 
     offsets = numpy.full(len(array.starts) + 1, 999, int)
     offsets[0] = 0
