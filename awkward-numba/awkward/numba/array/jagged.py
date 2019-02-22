@@ -158,9 +158,9 @@ def _JaggedArray_typer_getitem(arraytype, wheretype, advancedtype):
 
     contenttype = _JaggedArray_typer_getitem(arraytype.contenttype, numba.types.Tuple(wheretype.types[1:]), ISADVANCED if isarray else advancedtype)
 
-    if isinstance(wheretype.types[0], numba.types.Integer) or (advancedtype == ISADVANCED and isarray):
+    if isinstance(wheretype.types[0], numba.types.Integer) or (isarray and advancedtype == ISADVANCED):
         return contenttype
-    elif isinstance(wheretype.types[0], numba.types.SliceType) or (advancedtype == NOTADVANCED and isarray):
+    elif isinstance(wheretype.types[0], numba.types.SliceType) or (isarray and advancedtype == NOTADVANCED):
         return JaggedArrayType(arraytype.startstype, arraytype.stopstype, contenttype, special=arraytype.special)
     else:
         raise TypeError("cannot be used for indexing: {0}".format(wheretype))
@@ -269,7 +269,7 @@ def _JaggedArray_new(array, starts, stops, content, iscompact):
 @numba.extending.type_callable(_JaggedArray_new)
 def _JaggedArray_type_new(context):
     def typer(arraytype, startstype, stopstype, contenttype, iscompacttype):
-        return arraytype
+        return JaggedArrayType(startstype, stopstype, contenttype, special=arraytype.special)
     return typer
 
 @numba.extending.lower_builtin(_JaggedArray_new, JaggedArrayType, numba.types.Array, numba.types.Array, numba.types.Array, numba.types.Boolean)
@@ -640,13 +640,7 @@ def _JaggedArray_compact(arraytype):
             if array.iscompact:
                 return array
             if len(array.starts) == 0:
-                tmp1 = array
-                tmp2 = array.starts
-                tmp3 = array.stops[0:0]
-                tmp4 = array.content[0:0]
-                tmp5 = True
-                return _JaggedArray_new(tmp1, tmp2, tmp3, tmp4, tmp5)
-                # return _JaggedArray_new(array, array.starts, array.stops[0:0], array.content[0:0], True)
+                return _JaggedArray_new(array, array.starts, array.stops[0:0], array.content[0:0], True)
 
             if array.starts.shape != array.stops.shape:
                 raise ValueError("JaggedArray.starts must have the same shape as JaggedArray.stops")
