@@ -386,7 +386,7 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
         for i, whereitemtype in enumerate(wheretype.types):
             if isinstance(whereitemtype, numba.types.Array):
                 if isinstance(whereitemtype.dtype, numba.types.Boolean):
-                    enter_arraylen = lambda whereitem, arraylen: max(arraylen, numpy.count_nonzero(whereitem))
+                    enter_arraylen = lambda whereitem, arraylen: max(arraylen, whereitem.astype(numpy.int64).sum())
                 else:
                     enter_arraylen = lambda whereitem, arraylen: max(arraylen, len(whereitem))
 
@@ -398,8 +398,8 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
         newwheretype = []
         newwherevals = []
         for i, old in enumerate(wheretype.types):
-            if isinstance(old, numba.types.Array) and isinstance(wheretype.dtype, numba.types.Boolean):
-                toadvanced = lambda whereitem, arraylen: numba.nonzero(whereitem)[0]
+            if isinstance(old, numba.types.Array) and isinstance(old.dtype, numba.types.Boolean):
+                toadvanced = lambda whereitem, arraylen: numpy.where(whereitem)[0]
             elif isinstance(old, numba.types.Array):
                 toadvanced = lambda whereitem, arraylen: numpy.full(arraylen, whereitem[0], numpy.int64) if len(whereitem) == 1 else whereitem
             elif isinstance(old, numba.types.Integer):
@@ -407,9 +407,10 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
             else:
                 toadvanced = None
 
+            whereitemval = builder.extract_value(whereval, i)
             if toadvanced is None:
                 newwheretype.append(old)
-                newwherevals.append(builder.extract_value(whereval, i))
+                newwherevals.append(whereitemval)
             else:
                 new = numba.types.Array(numba.types.int64, 1, "C") if isinstance(old, (numba.types.Array, numba.types.Integer)) else old
                 newwheretype.append(new)
@@ -426,6 +427,7 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
         return out.content[out.starts[0]:out.stops[-1]]
 
     fake = fake1 if all(isinstance(x, numba.types.Integer) for x in wheretype.types) else fake2
+
     return context.compile_internal(builder, fake, sig.return_type(arraytype, wheretype), (arrayval, whereval))
 
 @numba.generated_jit(nopython=True)
@@ -556,7 +558,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
             return _JaggedArray_new(array, starts, stops, next, True)
 
     elif isinstance(headtype, numba.types.Array):
-        if advanced == NOTADVANCED:
+        if advancedtype == NOTADVANCED:
             def getitem(array, head, tail, advanced):
                 offsets = numpy.empty(len(array.starts) + 1, numpy.int64)
                 offsets[0] = 0
@@ -600,7 +602,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
                     index[i] = array.starts[i] + norm
                     nextadvanced[i] = i
 
-                next = getitem_next(array.content[index], tail, nextadvanced)
+                next = _JaggedArray_getitem_next(array.content[index], tail, nextadvanced)
                 return next
 
     else:
