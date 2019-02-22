@@ -28,8 +28,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import functools
 import math
 import numbers
+import operator
 import os
 from collections import OrderedDict
 try:
@@ -1162,6 +1164,28 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 out = self.JaggedArray(self._starts.reshape(-1), self._stops.reshape(-1), self._content)
             return out._tojagged(offsets[:-1], offsets[1:], copy=False)._content
+
+    def structure1d(self, levellimit=None):
+        if len(self._starts) > len(self._stops):
+            raise ValueError("starts must have the same (or shorter) length than stops")
+        if self._starts.shape[1:] != self._stops.shape[1:]:
+            raise ValueError("starts and stops must have the same dimensionality (shape[1:])")
+
+        out = self
+        if (levellimit is None or levellimit > 0) and isinstance(self._content, awkward.array.base.AwkwardArray):
+            out = self.copy(content=self._content.structure1d(None if levellimit is None else levellimit - 1))
+
+        while len(out._starts.shape) > 1:
+            last = out._starts.shape[-1]
+            length = functools.reduce(operator.mul, out._starts.shape[:-1], 1)
+            offsets = self.numpy.arange(0, (length + 1)*last, last)
+            outerstarts = offsets[:-1].reshape(out._starts.shape[:-2] + (-1,))
+            outerstops = offsets[1:].reshape(out._stops.shape[:-2] + (-1,))
+            innerstarts = out._starts.reshape(-1)
+            innerstops = out._stops.reshape(-1)
+            out = self.copy(starts=outerstarts, stops=outerstops, content=self.copy(starts=innerstarts, stops=innerstops, content=out._content))
+
+        return out
 
     def _hasjagged(self):
         return True
