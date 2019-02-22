@@ -463,7 +463,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
         return arrayval
 
     if arraytype.startstype.ndim != 1 or arraytype.stopstype.ndim != 1:
-        raise NotImplementedError("multidimensional starts and stops not supported in __getitem__ yet")
+        raise NotImplementedError("multidimensional starts and stops not supported; call structure1d() first")
 
     headtype = wheretype.types[0]
     tailtype = numba.types.Tuple(wheretype.types[1:])
@@ -684,9 +684,20 @@ def _spread_advanced(starts, stops, advanced):
 class _JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
     key = JaggedArrayType
 
-    # @numba.typing.templates.bound_function("name-of-method")
-    # def resolve_name-of-method(self, arraytype, args, kwargs):
-    #     standard typer...
+#     @numba.typing.templates.bound_function("structure1d")
+#     def resolve_structure1d(self, arraytype, args, kwargs):
+#         if len(args) == 0:
+#             return arraytype()
+#         elif len(args) == 1 and isinstance(args[0], numba.types.NoneType):
+#             return arraytype(args[0])
+#         elif len(args) == 1 and isinstance(args[0], numba.types.Integer):
+#             return arraytype(args[0])
+
+# @numba.extending.lower_builtin("structure1d", JaggedArrayType)
+# def _JaggedArray_lower_structure1d_1(context, builder, sig, args):
+#     arraytype, = sig.args
+#     arrayval, = args
+#     return _JaggedArray_lower_structure1d_3(context, builder, sig.return_type(arraytype, numba.types.int64), (arrayval, context.get_constant(numba.types.int64, -1),))
 
 @numba.extending.overload_method(JaggedArrayType, "compact")
 def _JaggedArray_compact(arraytype):
