@@ -447,13 +447,13 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
     arraytype, wheretype, advancedtype = sig.args
     arrayval, whereval, advancedval = args
 
-    if arraytype.startstype.ndim != 1 or arraytype.stopstype.ndim != 1:
-        raise NotImplementedError("multidimensional starts and stops not supported in __getitem__ yet")
-
     if len(wheretype.types) == 0:
         if context.enable_nrt:
             context.nrt.incref(builder, arraytype, arrayval)
         return arrayval
+
+    if arraytype.startstype.ndim != 1 or arraytype.stopstype.ndim != 1:
+        raise NotImplementedError("multidimensional starts and stops not supported in __getitem__ yet")
 
     headtype = wheretype.types[0]
     tailtype = numba.types.Tuple(wheretype.types[1:])
@@ -472,7 +472,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
                     if j >= array.stops[i]:
                         raise ValueError("integer index is beyond the range of one of the JaggedArray starts/stops pairs")
                     content[i] = array.content[j]
-                return _JaggedArray_getitem_next(array.content, tail, advanced)
+                return _JaggedArray_getitem_next(content, tail, advanced)
 
         else:
             def getitem(array, head, tail, advanced):
@@ -495,6 +495,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
                 raise ValueError("slice step cannot be zero")
 
             offsets = numpy.empty(len(array.starts) + 1, numpy.int64)
+            offsets[0] = 0
             index = numpy.empty(len(array.content), numpy.int64)
             k = 0
             for i in range(len(array.starts)):
@@ -558,6 +559,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
         if advanced == NOTADVANCED:
             def getitem(array, head, tail, advanced):
                 offsets = numpy.empty(len(array.starts) + 1, numpy.int64)
+                offsets[0] = 0
                 index = numpy.empty(len(head)*len(array.starts), numpy.int64)
                 nextadvanced = numpy.empty(len(index), numpy.int64)
 
@@ -604,9 +606,20 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
     else:
         raise AssertionError(head)
 
+    # tmpsig = numba.types.none(arraytype)
+    # tmpargs = (arrayval,)
+    # if sig.args not in _printit.overloads:
+    #     _printit.compile(tmpsig)
+    # cres = _printit.overloads[tmpsig.args]
+    # cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, tmpsig, tmpargs, loc=None)
+    
     sig = sig.return_type(arraytype, headtype, tailtype, advancedtype)
     args = (arrayval, headval, tailval, advancedval)
     return context.compile_internal(builder, getitem, sig, args)
+
+# @numba.njit
+# def _printit(x):
+#     print(x, x.starts, x.stops, x.content)
 
 @numba.generated_jit(nopython=True)
 def _spread_advanced(starts, stops, advanced):
