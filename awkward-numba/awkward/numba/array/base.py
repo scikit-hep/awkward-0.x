@@ -171,6 +171,8 @@ def sliceval3(context, builder, start, stop, step):
     return out._getvalue()
 
 def inline(context, builder, function, sig, args):
+    print("inline", function, sig)
+
     if sig.args not in function.overloads:
         function.compile(sig)
     cres = function.overloads[sig.args]

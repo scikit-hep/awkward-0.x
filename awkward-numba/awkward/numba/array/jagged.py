@@ -382,13 +382,19 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
     arraytype, wheretype = sig.args
     arrayval, whereval = args
 
-    arraylen = numba.cgutils.alloca_once_value(builder, context.get_constant(numba.types.int64, 0))
-    for i, whereitemtype in enumerate(wheretype.types):
-        whereitemval = builder.extract_value(whereval, i)
-        arraylenval = inline(context, builder, _JaggedArray_getitem_enter_arraylen, numba.types.int64(whereitemtype, numba.types.int64), (whereitemval, builder.load(arraylen)))
-        builder.store(arraylenval, arraylen)
-
     if any(isinstance(x, numba.types.Array) for x in wheretype.types):
+        arraylen = numba.cgutils.alloca_once_value(builder, context.get_constant(numba.types.int64, 0))
+        for i, whereitemtype in enumerate(wheretype.types):
+            if isinstance(whereitemtype, numba.types.Array):
+                if isinstance(whereitemtype.dtype, numba.types.Boolean):
+                    enter_arraylen = lambda whereitem, arraylen: max(arraylen, numpy.count_nonzero(whereitem))
+                else:
+                    enter_arraylen = lambda whereitem, arraylen: max(arraylen, len(whereitem))
+
+                whereitemval = builder.extract_value(whereval, i)
+                arraylenval = context.compile_internal(builder, enter_arraylen, numba.types.int64(whereitemtype, numba.types.int64), (whereitemval, builder.load(arraylen)))
+                builder.store(arraylenval, arraylen)
+
         arraylenval = builder.load(arraylen)
         newwheretype = numba.types.Tuple(tuple(_JaggedArray_getitem_enter_toadvanced_typer(x) for x in wheretype))
         newwherevals = []
@@ -407,26 +413,8 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
         out = _JaggedArray_getitem_next(awkward.array.jagged.JaggedArray(numpy.array([0], numpy.int64), numpy.array([len(array)], numpy.int64), array), newwhere, None)
         return out.content[out.starts[0]:out.stops[-1]]
 
-    print(wheretype)
-    print(newwheretype)
-
-    if all(isinstance(x, numba.types.Integer) for x in newwheretype.types):
-        print("fake1")
-        fake = fake1
-    else:
-        print("fake2")
-        fake = fake2
-
+    fake = fake1 if all(isinstance(x, numba.types.Integer) for x in newwheretype.types) else fake2
     return context.compile_internal(builder, fake, sig.return_type(arraytype, newwheretype), (arrayval, newwhereval))
-
-@numba.generated_jit(nopython=True)
-def _JaggedArray_getitem_enter_arraylen(whereitem, arraylen):
-    if isinstance(whereitem, numba.types.Array) and isinstance(whereitem.dtype, numba.types.Boolean):
-        return lambda whereitem, arraylen: max(arraylen, numpy.count_nonzero(whereitem))
-    elif isinstance(whereitem, numba.types.Array):
-        return lambda whereitem, arraylen: max(arraylen, len(whereitem))
-    else:
-        return lambda whereitem, arraylen: arraylen
 
 def _JaggedArray_getitem_enter_toadvanced_typer(whereitemtype):
     if isinstance(whereitemtype, (numba.types.Array, numba.types.Integer)):
