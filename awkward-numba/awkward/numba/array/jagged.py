@@ -447,6 +447,9 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
     arraytype, wheretype, advancedtype = sig.args
     arrayval, whereval, advancedval = args
 
+    if arraytype.startstype.ndim != 1 or arraytype.stopstype.ndim != 1:
+        raise NotImplementedError("multidimensional starts and stops not supported in __getitem__ yet")
+
     if len(wheretype.types) == 0:
         if context.enable_nrt:
             context.nrt.incref(builder, arraytype, arrayval)
@@ -549,7 +552,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
             starts = offsets[:-1]
             stops = offsets[1:]
             next = _JaggedArray_getitem_next(array.content[index[:k]], tail, _spread_advanced(starts, stops, advanced))
-            return _JaggedArray_lower_new(array, starts, stops, next, True)
+            return _JaggedArray_new(array, starts, stops, next, True)
 
     elif isinstance(headtype, numba.types.Array):
         if advanced == NOTADVANCED:
@@ -576,7 +579,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
                 starts = offsets[:-1]
                 stops = offsets[1:]
                 next = _JaggedArray_getitem_next(array.content[index], tail, nextadvanced)
-                return _JaggedArray_lower_new(array, starts, stops, next, True)
+                return _JaggedArray_new(array, starts, stops, next, True)
 
         else:
             def getitem(array, head, tail, advanced):
