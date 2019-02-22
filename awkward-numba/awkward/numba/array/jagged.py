@@ -42,7 +42,6 @@ from .base import ISADVANCED
 from .base import NOTADVANCED
 from .base import sliceval2
 from .base import sliceval3
-from .base import inline
 
 ######################################################################## optimized functions (hidden)
 
@@ -396,32 +395,39 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
                 builder.store(arraylenval, arraylen)
 
         arraylenval = builder.load(arraylen)
-        newwheretype = numba.types.Tuple(tuple(_JaggedArray_getitem_enter_toadvanced_typer(x) for x in wheretype))
+        newwheretype = []
         newwherevals = []
-        for i, (old, new) in enumerate(zip(wheretype.types, newwheretype.types)):
-            whereitemval = builder.extract_value(whereval, i)
-            newwherevals.append(inline(context, builder, _JaggedArray_getitem_enter_toadvanced, new(old, numba.types.int64), (whereitemval, arraylenval)))
-        newwhereval = context.make_tuple(builder, newwheretype, tuple(newwherevals))
-    else:
-        newwheretype = wheretype
-        newwhereval = whereval
+        for i, old in enumerate(wheretype.types):
+            if isinstance(old, numba.types.Array) and isinstance(wheretype.dtype, numba.types.Boolean):
+                toadvanced = lambda whereitem, arraylen: numba.nonzero(whereitem)[0]
+            elif isinstance(old, numba.types.Array):
+                toadvanced = lambda whereitem, arraylen: numpy.full(arraylen, whereitem[0], numpy.int64) if len(whereitem) == 1 else whereitem
+            elif isinstance(old, numba.types.Integer):
+                toadvanced = lambda whereitem, arraylen: numpy.full(arraylen, whereitem, numpy.int64)
+            else:
+                toadvanced = None
 
-    def fake1(array, newwhere):
-        return _JaggedArray_getitem_next(awkward.array.jagged.JaggedArray(numpy.array([0], numpy.int64), numpy.array([len(array)], numpy.int64), array), newwhere, None)[0]
+            if toadvanced is None:
+                newwheretype.append(old)
+                newwherevals.append(builder.extract_value(whereval, i))
+            else:
+                new = numba.types.Array(numba.types.int64, 1, "C") if isinstance(old, (numba.types.Array, numba.types.Integer)) else old
+                newwheretype.append(new)
+                newwherevals.append(context.compile_internal(builder, toadvanced, new(old, numba.types.int64), (whereitemval, arraylenval)))
 
-    def fake2(array, newwhere):
-        out = _JaggedArray_getitem_next(awkward.array.jagged.JaggedArray(numpy.array([0], numpy.int64), numpy.array([len(array)], numpy.int64), array), newwhere, None)
+        wheretype = numba.types.Tuple(tuple(newwheretype))
+        whereval = context.make_tuple(builder, wheretype, tuple(newwherevals))
+
+    def fake1(array, where):
+        return _JaggedArray_getitem_next(awkward.array.jagged.JaggedArray(numpy.array([0], numpy.int64), numpy.array([len(array)], numpy.int64), array), where, None)[0]
+
+    def fake2(array, where):
+        out = _JaggedArray_getitem_next(awkward.array.jagged.JaggedArray(numpy.array([0], numpy.int64), numpy.array([len(array)], numpy.int64), array), where, None)
         return out.content[out.starts[0]:out.stops[-1]]
 
-    fake = fake1 if all(isinstance(x, numba.types.Integer) for x in newwheretype.types) else fake2
-    return context.compile_internal(builder, fake, sig.return_type(arraytype, newwheretype), (arrayval, newwhereval))
+    fake = fake1 if all(isinstance(x, numba.types.Integer) for x in wheretype.types) else fake2
+    return context.compile_internal(builder, fake, sig.return_type(arraytype, wheretype), (arrayval, whereval))
 
-def _JaggedArray_getitem_enter_toadvanced_typer(whereitemtype):
-    if isinstance(whereitemtype, (numba.types.Array, numba.types.Integer)):
-        return numba.types.Array(numba.types.int64, 1, "C")
-    else:
-        return whereitemtype
-    
 @numba.generated_jit(nopython=True)
 def _JaggedArray_getitem_enter_toadvanced(whereitem, arraylen):
     if isinstance(whereitem, numba.types.Array) and isinstance(whereitem.dtype, numba.types.Boolean):
@@ -451,16 +457,8 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
     headval = numba.targets.tupleobj.static_getitem_tuple(context, builder, headtype(wheretype, numba.types.int64), (whereval, 0))
     tailval = numba.targets.tupleobj.static_getitem_tuple(context, builder, tailtype(wheretype, numba.types.slice2_type), (whereval, slice(1, None)))
 
-    sig = sig.return_type(arraytype, headtype, tailtype, advancedtype)
-    args = (arrayval, headval, tailval, advancedval)
-    return inline(context, builder, _JaggedArray_bytype_getitem_next, sig, args)
-
-@numba.generated_jit(nopython=True)
-def _JaggedArray_bytype_getitem_next(array, head, tail, advanced):
-    intp_maxval = numba.types.intp.maxval
-
-    if isinstance(head, numba.types.Integer):
-        if isinstance(array.contenttype, numba.types.Array):
+    if isinstance(headtype, numba.types.Integer):
+        if isinstance(arraytype.contenttype, numba.types.Array):
             def getitem(array, head, tail, advanced):
                 content = numpy.empty(len(array.starts), array.content.dtype)
                 for i in range(len(array.starts)):
@@ -486,7 +484,9 @@ def _JaggedArray_bytype_getitem_next(array, head, tail, advanced):
                     index[i] = j
                 return _JaggedArray_getitem_next(array.content[index], tail, advanced)
 
-    elif isinstance(head, numba.types.SliceType):
+    elif isinstance(headtype, numba.types.SliceType):
+        intp_maxval = numba.types.intp.maxval
+
         def getitem(array, head, tail, advanced):
             if head.step == 0:
                 raise ValueError("slice step cannot be zero")
@@ -551,7 +551,7 @@ def _JaggedArray_bytype_getitem_next(array, head, tail, advanced):
             next = _JaggedArray_getitem_next(array.content[index[:k]], tail, _spread_advanced(starts, stops, advanced))
             return _JaggedArray_lower_new(array, starts, stops, next, True)
 
-    elif isinstance(head, numba.types.Array) and isinstance(head.dtype, numba.types.Integer) and head.ndim == 1:
+    elif isinstance(headtype, numba.types.Array):
         if advanced == NOTADVANCED:
             def getitem(array, head, tail, advanced):
                 offsets = numpy.empty(len(array.starts) + 1, numpy.int64)
@@ -601,7 +601,9 @@ def _JaggedArray_bytype_getitem_next(array, head, tail, advanced):
     else:
         raise AssertionError(head)
 
-    return getitem
+    sig = sig.return_type(arraytype, headtype, tailtype, advancedtype)
+    args = (arrayval, headval, tailval, advancedval)
+    return context.compile_internal(builder, getitem, sig, args)
 
 @numba.generated_jit(nopython=True)
 def _spread_advanced(starts, stops, advanced):

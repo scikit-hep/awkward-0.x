@@ -237,8 +237,7 @@ class Test(unittest.TestCase):
         @numba.njit
         def test1(x, i):
             return x[i,]
-        print(test1(a, 2))
-
+        assert test1(a, 2).tolist() == [4.4, 5.5]
 
     # def test_numba_getitem_tuple_integer(self):
     #     a = JaggedArray([[0], [3], [3]], [[3], [3], [5]], [1.1, 2.2, 3.3, 4.4, 5.5])  # [[[1.1 2.2 3.3]] [[]] [[4.4 5.5]]]

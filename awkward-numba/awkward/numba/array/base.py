@@ -170,13 +170,5 @@ def sliceval3(context, builder, start, stop, step):
     out.step = step
     return out._getvalue()
 
-def inline(context, builder, function, sig, args):
-    print("inline", function, sig)
-
-    if sig.args not in function.overloads:
-        function.compile(sig)
-    cres = function.overloads[sig.args]
-    return cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, sig, args, loc=None)
-
 ISADVANCED = numba.types.Array(numba.types.int64, 1, "C")
 NOTADVANCED = numba.types.none
