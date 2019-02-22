@@ -289,51 +289,53 @@ class Test(unittest.TestCase):
 
     def test_numba_getitem_tuple_boolarray(self):
         a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [4.4, 5.5], [6.6, 7.7], [8.8, 9.9]])
-        a2 = JaggedArray.fromcounts([2, 2], a)
+        a2 = JaggedArray.fromcounts([2, 2], a)   # [[[1.1, 2.2, 3.3], [4.4, 5.5]], [[6.6, 7.7], [8.8, 9.9]]]
         @numba.njit
         def test1(x, i, j):
             return x[i, j]
         assert test1(a, numpy.array([True, False, True, False]), 1).tolist() == [2.2, 7.7]
+        assert test1(a2, numpy.array([False, True]), 1).tolist() == [[8.8, 9.9]]
 
-    # def test_numba_getitem_tuple_intarray(self):
-    #     a = JaggedArray([[0], [3], [3]], [[3], [3], [5]], [1.1, 2.2, 3.3, 4.4, 5.5])  # [[[1.1 2.2 3.3]] [[]] [[4.4 5.5]]]
-    #     @numba.njit
-    #     def test1(x, i, j):
-    #         return x[i, j]
-    #     assert test1(a, numpy.array([2, 0]), 0).tolist() == [[4.4, 5.5], [1.1, 2.2, 3.3]]
+    def test_numba_getitem_tuple_intarray(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [4.4, 5.5], [6.6, 7.7], [8.8, 9.9]])
+        a2 = JaggedArray.fromcounts([2, 2], a)   # [[[1.1, 2.2, 3.3], [4.4, 5.5]], [[6.6, 7.7], [8.8, 9.9]]]
+        @numba.njit
+        def test1(x, i, j):
+            return x[i, j]
+        assert test1(a, numpy.array([2, 0]), 1).tolist() == [7.7, 2.2]
+        assert test1(a2, numpy.array([1, 0, 0]), 1).tolist() == [[8.8, 9.9], [4.4, 5.5], [4.4, 5.5]]
 
-    # def test_numba_getitem_tuple_slice_boolarray(self):
-    #     a = numpy.arange(36).reshape(4, 3, 3)
-    #     a2 = awkward.fromiter(a)
-    #     @numba.njit
-    #     def test1(x, i):
-    #         return x[1:3, i]
-    #     assert test1(a, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
-    #     assert test1(a2, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
-    #     @numba.njit
-    #     def test2(x, i, j):
-    #         return x[1:3, i, j]
-    #     assert test2.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[9, 16], [18, 25]]
-    #     assert test2(a2, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[9, 16], [18, 25]]
-    #     a = numpy.arange(27).reshape(3, 3, 3)
-    #     a2 = awkward.fromiter(a)
-    #     @numba.njit
-    #     def test3(x, i, j):
-    #         return x[i, j]
-    #     assert test3.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[0, 1, 2], [21, 22, 23]]
-    #     assert test3(a2, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[0, 1, 2], [21, 22, 23]]
-    #     print(a2)
-    #     @numba.njit
-    #     def test4(x, i, j):
-    #         return x[i, :, j]
-    #     print(test4.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])))
-    #     print(test4(a2, numpy.array([True, False, True]), numpy.array([True, True, False])))
+    def test_numba_getitem_tuple_slice_boolarray(self):
+        a = numpy.arange(36).reshape(4, 3, 3)
+        a2 = awkward.fromiter(a)
+        @numba.njit
+        def test1(x, i):
+            return x[1:3, i]
+        assert test1(a, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
+        assert test1(a2, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
+        @numba.njit
+        def test2(x, i, j):
+            return x[1:3, i, j]
+        assert test2.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[9, 16], [18, 25]]
+        assert test2(a2, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[9, 16], [18, 25]]
+        a = numpy.arange(27).reshape(3, 3, 3)
+        a2 = awkward.fromiter(a)
+        @numba.njit
+        def test3(x, i, j):
+            return x[i, j]
+        assert test3.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[0, 1, 2], [21, 22, 23]]
+        assert test3(a2, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[0, 1, 2], [21, 22, 23]]
+        @numba.njit
+        def test4(x, i, j):
+            return x[i, :, j]
+        assert test4.py_func(a, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[0, 3, 6], [19, 22, 25]]
+        assert test4(a2, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[0, 3, 6], [19, 22, 25]]
 
-    # def test_numba_getitem_tuple_slice_intarray(self):
-    #     a = numpy.arange(36).reshape(4, 3, 3)
-    #     a2 = awkward.fromiter(a)
-    #     @numba.njit
-    #     def test1(x, i):
-    #         return x[1:3, i]
-    #     assert test1(a, numpy.array([1, 0, 2])).tolist() == [[[12, 13, 14], [9, 10, 11], [15, 16, 17]], [[21, 22, 23], [18, 19, 20], [24, 25, 26]]]
-    #     assert test1(a2, numpy.array([1, 0, 2])).tolist() == [[[12, 13, 14], [9, 10, 11], [15, 16, 17]], [[21, 22, 23], [18, 19, 20], [24, 25, 26]]]
+    def test_numba_getitem_tuple_slice_intarray(self):
+        a = numpy.arange(36).reshape(4, 3, 3)
+        a2 = awkward.fromiter(a)
+        @numba.njit
+        def test1(x, i):
+            return x[1:3, i]
+        assert test1(a, numpy.array([1, 0, 2])).tolist() == [[[12, 13, 14], [9, 10, 11], [15, 16, 17]], [[21, 22, 23], [18, 19, 20], [24, 25, 26]]]
+        assert test1(a2, numpy.array([1, 0, 2])).tolist() == [[[12, 13, 14], [9, 10, 11], [15, 16, 17]], [[21, 22, 23], [18, 19, 20], [24, 25, 26]]]

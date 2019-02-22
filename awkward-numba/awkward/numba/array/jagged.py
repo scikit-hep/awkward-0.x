@@ -427,7 +427,6 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
         return out.content[out.starts[0]:out.stops[-1]]
 
     fake = fake1 if all(isinstance(x, numba.types.Integer) for x in wheretype.types) else fake2
-
     return context.compile_internal(builder, fake, sig.return_type(arraytype, wheretype), (arrayval, whereval))
 
 @numba.generated_jit(nopython=True)
@@ -608,20 +607,9 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
     else:
         raise AssertionError(head)
 
-    # tmpsig = numba.types.none(arraytype)
-    # tmpargs = (arrayval,)
-    # if sig.args not in _printit.overloads:
-    #     _printit.compile(tmpsig)
-    # cres = _printit.overloads[tmpsig.args]
-    # cres.target_context.get_function(cres.entry_point, cres.signature)._imp(context, builder, tmpsig, tmpargs, loc=None)
-    
     sig = sig.return_type(arraytype, headtype, tailtype, advancedtype)
     args = (arrayval, headval, tailval, advancedval)
     return context.compile_internal(builder, getitem, sig, args)
-
-# @numba.njit
-# def _printit(x):
-#     print(x, x.starts, x.stops, x.content)
 
 @numba.generated_jit(nopython=True)
 def _spread_advanced(starts, stops, advanced):
@@ -633,6 +621,7 @@ def _spread_advanced(starts, stops, advanced):
             nextadvanced = numpy.empty(counts.sum(), numpy.int64)
             k = 0
             for i in range(len(counts)):
+                length = counts[i]
                 nextadvanced[k : k + counts[i]] = advanced[i]
                 k += length
             return nextadvanced
