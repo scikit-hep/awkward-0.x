@@ -1171,9 +1171,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if self._starts.shape[1:] != self._stops.shape[1:]:
             raise ValueError("starts and stops must have the same dimensionality (shape[1:])")
 
+        if levellimit is None:
+            levellimit = -1
+
         out = self
-        if (levellimit is None or levellimit > 0) and isinstance(self._content, awkward.array.base.AwkwardArray):
-            out = self.copy(content=self._content.structure1d(None if levellimit is None else levellimit - 1))
+        if levellimit != 0 and isinstance(self._content, awkward.array.base.AwkwardArray):
+            out = self.copy(content=self._content.structure1d(levellimit - 1))
 
         while len(out._starts.shape) > 1:
             last = out._starts.shape[-1]
