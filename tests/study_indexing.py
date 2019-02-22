@@ -56,9 +56,47 @@ def getitem_integer(array, head, tail, advanced):
     next = getitem_next(array.content[index], tail, advanced)    
     return next
 
+def getitem_slice2(array, head, tail, advanced):
+    starts = numpy.full(len(array.starts), 999, int)
+    stops = numpy.full(len(array.starts), 999, int)
+    for i in range(len(array.starts)):
+        length = array.stops[i] - array.starts[i]
+        a, b = head.start, head.stop
+
+        if a is None:
+            a = 0
+        elif a < 0:
+            a += length
+        if b is None:
+            b = length
+        elif b < 0:
+            b += length
+
+        if b <= a:
+            a, b = 0, 0
+        if a < 0:
+            a = 0
+        elif a > length:
+            a = length
+        if b < 0:
+            b = 0
+        elif b > length:
+            b = length
+
+        starts[i] = array.starts[i] + a
+        stops[i] = array.starts[i] + b
+
+    next = getitem_next(array.content, tail, advanced)
+    return awkward.JaggedArray(starts, stops, next)
+
 def getitem_slice3(array, head, tail, advanced):
     if head.step == 0:
         raise ValueError
+
+    # if head.start is None and head.stop is None and (head.step is None or head.step == 1):
+    #     next = getitem_next(array.content[array.starts[0]:array.stops[-1]], tail, spread_advanced(array.starts, array.stops, advanced))
+    #     return awkward.JaggedArray(array.starts, array.stops, next)
+
     offsets = numpy.full(len(array.starts) + 1, 999, int)
     offsets[0] = 0
     index = numpy.full(len(array.content), 999, int)  # too big, but okay
@@ -161,16 +199,19 @@ def getitem_intarray_some(array, head, tail, advanced):
     next = getitem_next(array.content[index], tail, nextadvanced)
     return next
 
-def getitem_next(array, slices, advanced):
-    if len(slices) == 0:
+def getitem_next(array, where, advanced):
+    if len(where) == 0:
         return array
     if isinstance(array, numpy.ndarray):
-        return array[slices]
+        return array[where]
     
-    head = slices[0]
-    tail = slices[1:]
+    head = where[0]
+    tail = where[1:]
     if isinstance(head, int):
         return getitem_integer(array, head, tail, advanced)
+
+    elif isinstance(head, slice) and (head.step is None or head.step == 1) and advanced is None and not any(isinstance(x, numpy.ndarray) for x in where):
+        return getitem_slice2(array, head, tail, advanced)
 
     elif isinstance(head, slice):
         return getitem_slice3(array, head, tail, advanced)
