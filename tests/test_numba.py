@@ -339,3 +339,23 @@ class Test(unittest.TestCase):
             return x[1:3, i]
         assert test1(a, numpy.array([1, 0, 2])).tolist() == [[[12, 13, 14], [9, 10, 11], [15, 16, 17]], [[21, 22, 23], [18, 19, 20], [24, 25, 26]]]
         assert test1(a2, numpy.array([1, 0, 2])).tolist() == [[[12, 13, 14], [9, 10, 11], [15, 16, 17]], [[21, 22, 23], [18, 19, 20], [24, 25, 26]]]
+
+    def test_numba_getitem_jagged_boolarray(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = JaggedArray.fromcounts([2, 0, 1], a)
+        @numba.njit
+        def test1(x, i):
+            return x[i]
+        assert test1(a, awkward.fromiter([[True, False, True], [], [False, True]])).tolist() == [[1.1, 3.3], [], [5.5]]
+        assert test1(a2, awkward.fromiter([[True, False], [], [True]])).tolist() == [[[1.1, 2.2, 3.3]], [], [[4.4, 5.5]]]
+        assert test1(a2, awkward.fromiter([[[True, False, True], []], [], [[False, True]]])).tolist() == [[[1.1, 3.3], []], [], [[5.5]]]
+
+    def test_numba_getitem_jagged_intarray(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = JaggedArray.fromcounts([2, 0, 1], a)
+        @numba.njit
+        def test1(x, i):
+            return x[i]
+        assert test1(a, awkward.fromiter([[2, 0, 0], [], [1]])).tolist() == [[3.3, 1.1, 1.1], [], [5.5]]
+        assert test1(a2, awkward.fromiter([[1, 0], [], [0]])).tolist() == [[[], [1.1, 2.2, 3.3]], [], [[4.4, 5.5]]]
+        assert test1(a2, awkward.fromiter([[[2, 0, 0], []], [], [[1]]])).tolist() == [[[3.3, 1.1, 1.1], []], [], [[5.5]]]
