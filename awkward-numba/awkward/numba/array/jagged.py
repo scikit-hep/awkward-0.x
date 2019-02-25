@@ -228,59 +228,16 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
 
     # def _reduce(self, ufunc, identity, dtype, regularaxis):
 
-    # def argmin(self):
-
-    # def argmax(self):
+    @numba.njit
+    def argmin(self):
+        return self.argmin()
 
     @numba.njit
+    def argmax(self):
+        return self.argmax()
+
     def _argminmax(self, ismin):
-        if len(self.content.shape) != 1:
-            raise ValueError("cannot compute argmin/argmax because content is not one-dimensional")
-
-        flatstarts = self.starts.reshape(-1)
-        flatstops = self.stops.reshape(-1)
-
-        offsets = numpy.empty(len(flatstarts) + 1, numpy.int64)
-        offsets[0] = 0
-        for i in range(len(flatstarts)):
-            if flatstarts[i] == flatstops[i]:
-                offsets[i + 1] = offsets[i]
-            else:
-                offsets[i + 1] = offsets[i] + 1
-
-        starts, stops = offsets[:-1], offsets[1:]
-        starts = starts.reshape(self.starts.shape)
-        stops = stops.reshape(self.stops.shape)
-
-        output = numpy.empty(offsets[-1], dtype=numpy.int64)
-
-        if ismin:
-            k = 0
-            for i in range(len(flatstarts)):
-                if flatstops[i] != flatstarts[i]:
-                    best = self.content[flatstarts[i]]
-                    bestj = 0
-                    for j in range(flatstarts[i] + 1, flatstops[i]):
-                        if self.content[j] < best:
-                            best = self.content[j]
-                            bestj = j - flatstarts[i]
-                    output[k] = bestj
-                    k += 1
-
-        else:
-            k = 0
-            for i in range(len(flatstarts)):
-                if flatstops[i] != flatstarts[i]:
-                    best = self.content[flatstarts[i]]
-                    bestj = 0
-                    for j in range(flatstarts[i] + 1, flatstops[i]):
-                        if self.content[j] > best:
-                            best = self.content[j]
-                            bestj = j - flatstarts[i]
-                    output[k] = bestj
-                    k += 1
-
-        return _JaggedArray_new(self, starts, stops, output, True)
+        raise RuntimeError("helper function not needed in JaggedArrayNumba")
 
     def _argminmax_general(self, ismin):
         raise RuntimeError("helper function not needed in JaggedArrayNumba")
@@ -1043,6 +1000,8 @@ def _JaggedArray_compact(arraytype):
             content = array.content[index]
             return _JaggedArray_new(array, starts, stops, content, True)
 
+        return impl
+
     elif isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.contenttype, numba.types.Array):
         def impl(array):
             if array.iscompact:
@@ -1074,7 +1033,7 @@ def _JaggedArray_compact(arraytype):
             stops = offsets[1:].reshape(array.starts.shape)    # intentional
             return _JaggedArray_new(array, starts, stops, content, True)
 
-    return impl
+        return impl
 
 @numba.extending.overload_method(JaggedArrayType, "flatten")
 def _JaggedArray_flatten(arraytype):
@@ -1085,4 +1044,76 @@ def _JaggedArray_flatten(arraytype):
             else:
                 a = array.compact()
                 return a.content[a.starts[0]:a.stops[-1]]
-    return impl
+        return impl
+
+@numba.extending.overload_method(JaggedArrayType, "argmin")
+def _JaggedArray_argmin(arraytype):
+    if isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.contenttype, AwkwardArrayType):
+        def impl(array):
+            return _JaggedArray_new(array, array.starts, array.stops, _JaggedArray_argmin(array.content), array.iscompact)
+        return impl
+    elif isinstance(arraytype, JaggedArrayType):
+        def impl(array):
+            return _JaggedArray_argminmax(array, True)
+        return impl
+
+@numba.extending.overload_method(JaggedArrayType, "argmax")
+def _JaggedArray_argmax(arraytype):
+    if isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.contenttype, AwkwardArrayType):
+        def impl(array):
+            return _JaggedArray_new(array, array.starts, array.stops, _JaggedArray_argmax(array.content), array.iscompact)
+        return impl
+    elif isinstance(arraytype, JaggedArrayType):
+        def impl(array):
+            return _JaggedArray_argminmax(array, False)
+        return impl
+    
+@numba.njit
+def _JaggedArray_argminmax(array, ismin):
+    if len(array.content.shape) != 1:
+        raise NotImplementedError("content is not one-dimensional")
+
+    flatstarts = array.starts.reshape(-1)
+    flatstops = array.stops.reshape(-1)
+
+    offsets = numpy.empty(len(flatstarts) + 1, numpy.int64)
+    offsets[0] = 0
+    for i in range(len(flatstarts)):
+        if flatstarts[i] == flatstops[i]:
+            offsets[i + 1] = offsets[i]
+        else:
+            offsets[i + 1] = offsets[i] + 1
+
+    starts, stops = offsets[:-1], offsets[1:]
+    starts = starts.reshape(array.starts.shape)
+    stops = stops.reshape(array.stops.shape)
+
+    output = numpy.empty(offsets[-1], dtype=numpy.int64)
+
+    if ismin:
+        k = 0
+        for i in range(len(flatstarts)):
+            if flatstops[i] != flatstarts[i]:
+                best = array.content[flatstarts[i]]
+                bestj = 0
+                for j in range(flatstarts[i] + 1, flatstops[i]):
+                    if array.content[j] < best:
+                        best = array.content[j]
+                        bestj = j - flatstarts[i]
+                output[k] = bestj
+                k += 1
+
+    else:
+        k = 0
+        for i in range(len(flatstarts)):
+            if flatstops[i] != flatstarts[i]:
+                best = array.content[flatstarts[i]]
+                bestj = 0
+                for j in range(flatstarts[i] + 1, flatstops[i]):
+                    if array.content[j] > best:
+                        best = array.content[j]
+                        bestj = j - flatstarts[i]
+                output[k] = bestj
+                k += 1
+
+    return _JaggedArray_new(array, starts, stops, output, True)
