@@ -45,6 +45,17 @@ from awkward.numba.array.table import TableNumba as Table
 from awkward.numba.array.union import UnionArrayNumba as UnionArray
 from awkward.numba.array.virtual import VirtualArrayNumba as VirtualArray
 
+import awkward.generate
+def fromiter(iterable, awkwardlib=None, **options):
+    if awkwardlib is None:
+        awkwardlib = "awkward.numba"
+    return awkward.generate.fromiter(iterable, awkwardlib=awkwardlib, **options)
+
+def fromiterchunks(iterable, chunksize, awkwardlib=None, **options):
+    if awkwardlib is None:
+        awkwardlib = "awkward.numba"
+    return awkward.generate.fromiterchunks(iterable, chunksize, awkwardlib=awkwardlib, **options)
+
 # convenient access to the version number
 from awkward.version import __version__
 

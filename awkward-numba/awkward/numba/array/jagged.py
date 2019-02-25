@@ -53,6 +53,7 @@ from .base import sliceval3
 class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     # @classmethod
     # def offsetsaliased(cls, starts, stops):
+    ### base implementation is fine and don't need in Numba
 
     @classmethod
     def counts2offsets(cls, counts):
@@ -86,105 +87,174 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
             k += 1
         return parents
 
-    # @classmethod
-    # def startsstops2parents(cls, starts, stops):
+    @classmethod
+    def startsstops2parents(cls, starts, stops):
+        return cls._startsstops2parents(starts, stops)
 
-    # @classmethod
-    # def parents2startsstops(cls, parents, length=None):
+    @staticmethod
+    @numba.njit
+    def _startsstops2parents(starts, stops):
+        out = numpy.full(stops.max(), -1, numpy.int64)
+        for i in range(len(starts)):
+            out[starts[i]:stops[i]] = i
+        return out
+
+    @classmethod
+    def parents2startsstops(cls, parents, length=None):
+        if length is None:
+            length = parents.max() + 1
+        return cls._parents2startsstops(parents, length)
+
+    @staticmethod
+    @numba.njit
+    def _parents2startsstops(parents, length):
+        starts = numpy.zeros(length, numpy.int64)
+        stops = numpy.zeros(length, numpy.int64)
+
+        last = -1
+        for k in range(len(parents)):
+            this = parents[k]
+            if last != this:
+                if last >= 0 and last < length:
+                    stops[last] = k
+                if this >= 0 and this < length:
+                    starts[this] = k
+            last = this
+
+        if last != -1:
+            stops[last] = len(parents)
+
+        return starts, stops
 
     # @classmethod
     # def uniques2offsetsparents(cls, uniques):
+    ### base implementation is fine and don't need in Numba
 
     # def __init__(self, starts, stops, content):
+    ### base implementation is fine and already exposed in Numba
 
-    # @classmethod
-    # def fromiter(cls, iterable):
+    @classmethod
+    def fromiter(cls, iterable):
+        import awkward.numba
+        return awkward.numba.fromiter(iterable)
 
     # @classmethod
     # def fromoffsets(cls, offsets, content):
+    ### base implementation is fine and don't need in Numba
 
     # @classmethod
     # def fromcounts(cls, counts, content):
+    ### base implementation is fine and don't need in Numba
 
     # @classmethod
     # def fromparents(cls, parents, content, length=None):
+    ### base implementation is fine and don't need in Numba
 
     # @classmethod
     # def fromuniques(cls, uniques, content):
+    ### base implementation is fine and don't need in Numba
 
     # @classmethod
     # def fromindex(cls, index, content, validate=True):
+    ### base implementation is fine and don't need in Numba
 
     # @classmethod
     # def fromjagged(cls, jagged):
+    ### base implementation is fine and don't need in Numba
 
     # @classmethod
     # def fromregular(cls, regular):
+    ### base implementation is fine and don't need in Numba
 
     # @classmethod
     # def fromfolding(cls, content, size):
+    ### base implementation is fine and don't need in Numba
 
     # def copy(self, starts=None, stops=None, content=None):
+    ### base implementation is fine and don't need in Numba
 
     # def deepcopy(self, starts=None, stops=None, content=None):
+    ### base implementation is fine and don't need in Numba
 
     # def empty_like(self, **overrides):
+    ### base implementation is fine and don't need in Numba
 
     # def zeros_like(self, **overrides):
+    ### base implementation is fine and don't need in Numba
 
     # def ones_like(self, **overrides):
+    ### base implementation is fine and don't need in Numba
 
     # def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    ### base implementation is fine and don't need in Numba
 
     # @property
     # def starts(self):
+    ### base implementation is fine and already exposed in Numba
 
     # @starts.setter
     # def starts(self, value):
+    ### base implementation is fine and don't need in Numba
         
     # @property
     # def stops(self):
+    ### base implementation is fine and already exposed in Numba
 
     # @stops.setter
     # def stops(self, value):
+    ### base implementation is fine and don't need in Numba
 
     # @property
     # def content(self):
+    ### base implementation is fine and already exposed in Numba
 
     # @content.setter
     # def content(self, value):
+    ### base implementation is fine and don't need in Numba
 
     # @property
     # def offsets(self):
+    ### base implementation is fine and already exposed in Numba
 
     # @offsets.setter
     # def offsets(self, value):
+    ### base implementation is fine and don't need in Numba
 
     # @property
     # def counts(self):
+    ### base implementation is fine and already exposed in Numba
 
     # @counts.setter
     # def counts(self, value):
+    ### base implementation is fine and don't need in Numba
 
     # @property
     # def parents(self):
+    ### base implementation is fine and already exposed in Numba
 
     # @parents.setter
     # def parents(self, value):
+    ### base implementation is fine and don't need in Numba
 
     # @property
     # def index(self):
+    ### base implementation is fine and already exposed in Numba
 
     # def __len__(self):
+    ### base implementation is fine and already exposed in Numba
 
     # def _gettype(self, seen):
+    ### base implementation is fine and don't need in Numba
 
-    # def _valid(self):
+    def _valid(self):
+        pass             # do validation in place from now on
 
     # @staticmethod
     # def _validstartsstops(starts, stops):
+    ### base implementation is fine and don't need in Numba
 
     # def __iter__(self, checkiter=True):
+    ### base implementation is fine and already exposed in Numba
 
     def __getitem__(self, where):
         if not isinstance(where, tuple):
@@ -257,6 +327,9 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
         for i in range(len(inputs)):
             if isinstance(inputs[i], awkward.array.jagged.JaggedArray):
                 inputs[i] = inputs[i].compact()
+                shift = inputs[i].starts[0]
+                if shift != 0:
+                    inputs[i] = inputs[i].copy(inputs[i].starts - shift, inputs[i].stops - shift, inputs[i].content[shift:])
                 if first is None:
                     first = inputs[i]
                 elif first.starts[0] != inputs[i].starts[0] or not numpy.array_equal(first.stops, inputs[i].stops):
@@ -1118,6 +1191,48 @@ class _JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
 #     arraytype, = sig.args
 #     arrayval, = args
 #     return _JaggedArray_lower_structure1d_3(context, builder, sig.return_type(arraytype, numba.types.int64), (arrayval, context.get_constant(numba.types.int64, -1),))
+
+@numba.extending.overload_attribute(JaggedArrayType, "offsets")
+def _JaggedArray_offsets(arraytype):
+    if arraytype.startstype.ndim == 1:
+        def impl(array):
+            offsets = numpy.empty(len(array.starts) + 1, numpy.int64)
+            if len(array.starts) == 0:
+                offsets[0] = 0
+                return offsets
+            offsets = array.starts[0]
+            for i in range(1, len(array.starts)):
+                if array.starts[i + 1] != array.stops[i]:
+                    raise ValueError("starts and stops are not compatible with a single offsets array; call jagged.compact() first")
+                offsets[i] = array.stops[i]
+            return offsets
+        return impl
+    else:
+        raise TypeError("len(starts.shape) must be 1 to compute offsets; call jagged.structure1d() first")
+
+@numba.extending.overload_attribute(JaggedArrayType, "counts")
+def _JaggedArray_counts(arraytype):
+    def impl(array):
+        return array.stops - array.starts
+    return impl
+
+@numba.extending.overload_attribute(JaggedArrayType, "parents")
+def _JaggedArray_parents(arraytype):
+    def impl(array):
+        out = numpy.full(array.stops.max(), -1, numpy.int64)
+        for i in range(len(array.starts)):
+            out[array.starts[i]:array.stops[i]] = i
+        return out
+    return impl
+
+@numba.extending.overload_attribute(JaggedArrayType, "index")
+def _JaggedArray_index(arraytype):
+    def impl(array):
+        out = numpy.full(array.stops.max(), -1, numpy.int64)
+        for i in range(len(array.starts)):
+            for j in range(array.starts[i], array.stops[i]):
+                out[j] = j - array.starts[i]
+        return JaggedArray(array.starts, array.stops, out, array.iscompact)
 
 @numba.extending.overload_method(JaggedArrayType, "compact")
 def _JaggedArray_compact(arraytype):

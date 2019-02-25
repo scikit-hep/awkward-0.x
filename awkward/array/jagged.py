@@ -433,7 +433,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @property
     def index(self):
         out = self.numpy.arange(len(self._content), dtype=self.INDEXTYPE)
-        return self.copy(content=(out - out[self._starts[self.parents]]))
+        return self.JaggedArray(self._starts, self._stops, (out - out[self._starts[self.parents]]))
 
     def __len__(self):
         return len(self._starts)
