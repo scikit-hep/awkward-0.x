@@ -163,7 +163,7 @@ class JaggedArrayType(AwkwardArrayType):
 
     @property
     def getitem_impl(self):
-        return _JaggedArray_lower_getitem_integer
+        return lambda context, builder, sig, args: _JaggedArray_lower_getitem_integer(context, builder, sig, args, checkvalid=False)
 
 def _JaggedArray_typer_getitem_jagged(arraytype, headtype):
     if isinstance(headtype.contenttype, JaggedArrayType):
@@ -344,7 +344,7 @@ def _JaggedArray_lower_len(context, builder, sig, args):
 ######################################################################## lowered getitem
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Integer)
-def _JaggedArray_lower_getitem_integer(context, builder, sig, args):
+def _JaggedArray_lower_getitem_integer(context, builder, sig, args, checkvalid=True):
     arraytype, wheretype = sig.args
     arrayval, whereval = args
 
@@ -357,7 +357,8 @@ def _JaggedArray_lower_getitem_integer(context, builder, sig, args):
     stop = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, stopstype.dtype(stopstype, wheretype), (array.stops, whereval))
 
     contenttype = arraytype.contenttype
-    _check_startstop_contentlen(context, builder, startstype.dtype, start, stopstype.dtype, stop, contenttype, array.content)
+    if checkvalid:
+        _check_startstop_contentlen(context, builder, startstype.dtype, start, stopstype.dtype, stop, contenttype, array.content)
 
     if isinstance(contenttype, numba.types.Array):
         return numba.targets.arrayobj.getitem_arraynd_intp(context, builder, contenttype(contenttype, numba.types.slice2_type), (array.content, sliceval2(context, builder, start, stop)))
@@ -409,6 +410,30 @@ def _JaggedArray_lower_getitem_jaggedarray(context, builder, sig, args):
         def getitem(array, where):
             return _JaggedArray_new(array, array.starts, array.stops, array.content[where.content], True)
 
+    elif isinstance(wheretype, JaggedArrayType) and isinstance(wheretype.contenttype.dtype, numba.types.Boolean) and isinstance(arraytype.contenttype, numba.types.Array):
+        def getitem(array, where):
+            if len(array) != len(where):
+                raise IndexError("jagged index must have the same (outer) length as the JaggedArray it indexes")
+            offsets = numpy.empty(len(array.starts) + 1, numpy.int64)
+            offsets[0] = 0
+            content = numpy.empty(where.content.astype(numpy.int64).sum(), array.content.dtype)
+            k = 0
+            for i in range(len(array.starts)):
+                length = array.stops[i] - array.starts[i]
+                wherei = where[i]
+                if len(wherei) > length:
+                    raise IndexError("jagged index is out of bounds in JaggedArray")
+
+                for j in range(len(wherei)):
+                    if wherei[j]:
+                        content[k] = array.content[array.starts[i] + j]
+                        k += 1
+                offsets[i + 1] = k
+
+            starts = offsets[:-1]
+            stops = offsets[1:]
+            return _JaggedArray_new(array, starts, stops, content, True)
+
     elif isinstance(wheretype, JaggedArrayType) and isinstance(wheretype.contenttype.dtype, numba.types.Boolean):
         def getitem(array, where):
             if len(array) != len(where):
@@ -432,6 +457,32 @@ def _JaggedArray_lower_getitem_jaggedarray(context, builder, sig, args):
             starts = offsets[:-1]
             stops = offsets[1:]
             return _JaggedArray_new(array, starts, stops, array.content[index[:k]], True)
+
+    elif isinstance(wheretype, JaggedArrayType) and isinstance(wheretype.contenttype.dtype, numba.types.Integer) and isinstance(arraytype.contenttype, numba.types.Array):
+        def getitem(array, where):
+            if len(array) != len(where):
+                raise IndexError("jagged index must have the same (outer) length as the JaggedArray it indexes")
+            offsets = numpy.empty(len(array.starts) + 1, numpy.int64)
+            offsets[0] = 0
+            content = numpy.empty(len(where.content), array.content.dtype)
+            k = 0
+            for i in range(len(array.starts)):
+                length = array.stops[i] - array.starts[i]
+                wherei = where[i]
+
+                for j in range(len(wherei)):
+                    norm = wherei[j]
+                    if norm < 0:
+                        norm += length
+                    if norm < 0 or norm >= length:
+                        raise IndexError("jagged index is out of bounds in JaggedArray")
+                    content[k] = array.content[array.starts[i] + norm]
+                    k += 1
+                offsets[i + 1] = k
+
+            starts = offsets[:-1]
+            stops = offsets[1:]
+            return _JaggedArray_new(array, starts, stops, content, True)
 
     elif isinstance(wheretype, JaggedArrayType) and isinstance(wheretype.contenttype.dtype, numba.types.Integer):
         def getitem(array, where):
@@ -457,7 +508,7 @@ def _JaggedArray_lower_getitem_jaggedarray(context, builder, sig, args):
 
             starts = offsets[:-1]
             stops = offsets[1:]
-            return _JaggedArray_new(array, starts, stops, array.content[index[:k]], True)
+            return _JaggedArray_new(array, starts, stops, array.content[index], True)
 
     else:
         raise AssertionError(where)
@@ -591,7 +642,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
         def getitem(array, head, tail, advanced):
             if (head.start == 0 or head.start == intp_maxval) and head.stop == intp_maxval:
                 next = _JaggedArray_getitem_next(array.content, tail, advanced)
-                return _JaggedArray_new(array, array.starts, array.stops, next, True)
+                return _JaggedArray_new(array, array.starts, array.stops, next, array.iscompact)
 
             starts = numpy.empty(len(array.starts), numpy.int64)
             stops = numpy.empty(len(array.starts), numpy.int64)
@@ -625,7 +676,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
                 stops[i] = array.starts[i] + b
 
             next = _JaggedArray_getitem_next(array.content, tail, advanced)
-            return _JaggedArray_new(array, starts, stops, next, True)
+            return _JaggedArray_new(array, starts, stops, next, False)
 
     elif isinstance(headtype, numba.types.SliceType):
         intp_maxval = numba.types.intp.maxval
