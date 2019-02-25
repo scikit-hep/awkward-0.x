@@ -49,15 +49,36 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     # @classmethod
     # def offsetsaliased(cls, starts, stops):
 
-    # @classmethod
-    # def counts2offsets(cls, counts):
+    @classmethod
+    def counts2offsets(cls, counts):
+        return cls._counts2offsets(counts)
+
+    @staticmethod
+    @numba.njit
+    def _counts2offsets(counts):
+        offsets = numpy.empty(len(counts) + 1, dtype=numpy.int64)
+        offsets[0] = 0
+        for i in range(len(counts)):
+            offsets[i + 1] = offsets[i] + counts[i]
+        return offsets
 
     @classmethod
     def offsets2parents(cls, offsets):
+        return cls._offsets2parents(offsets)
+
+    @staticmethod
+    @numba.njit
+    def _offsets2parents(offsets):
         if len(offsets) == 0:
             raise ValueError("offsets must have at least one element")
-        parents = cls.numpy.empty(offsets[-1], dtype=cls.JaggedArray.fget(None).INDEXTYPE)
-        _offsets2parents_fill(offsets, parents)
+        parents = numpy.empty(offsets[-1], dtype=numpy.int64)
+        j = 0
+        k = -1
+        for i in offsets:
+            while j < i:
+                parents[j] = k
+                j += 1
+            k += 1
         return parents
 
     # @classmethod
@@ -160,7 +181,9 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
 
     # def __iter__(self, checkiter=True):
 
-    # def __getitem__(self, where):
+    @numba.njit
+    def __getitem__(self, where):
+        return self[where]
 
     # def __setitem__(self, where, what):
 
@@ -209,33 +232,55 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
 
     # def argmax(self):
 
+    @numba.njit
     def _argminmax(self, ismin):
-        if len(self._starts) == len(self._stops) == 0:
-            return self.copy()
+        if len(self.content.shape) != 1:
+            raise ValueError("cannot compute argmin/argmax because content is not one-dimensional")
 
-        if len(self._content.shape) != 1:
-            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
+        flatstarts = self.starts.reshape(-1)
+        flatstops = self.stops.reshape(-1)
 
-        # subarray with counts > 0 --> counts = 1
-        counts = (self.counts != 0).astype(self.INDEXTYPE).reshape(-1)
-        # offsets for these 0 or 1 counts (involves a cumsum)
-        offsets = self.counts2offsets(counts)
-        # starts and stops derived from offsets and reshaped to original starts and stops (see specification)
+        offsets = numpy.empty(len(flatstarts) + 1, numpy.int64)
+        offsets[0] = 0
+        for i in range(len(flatstarts)):
+            if flatstarts[i] == flatstops[i]:
+                offsets[i + 1] = offsets[i]
+            else:
+                offsets[i + 1] = offsets[i] + 1
+
         starts, stops = offsets[:-1], offsets[1:]
+        starts = starts.reshape(self.starts.shape)
+        stops = stops.reshape(self.stops.shape)
 
-        starts = starts.reshape(self._starts.shape[:-1] + (-1,))
-        stops = stops.reshape(self._stops.shape[:-1] + (-1,))
+        output = numpy.empty(offsets[-1], dtype=numpy.int64)
 
-        # content to fit the new offsets
-        content = awkward.util.numpy.empty(offsets[-1], dtype=self.INDEXTYPE)
-
-        # fill the new content
         if ismin:
-            _argminmax_fillmin(self._starts.reshape(-1), self._stops.reshape(-1), self._content, content)
-        else:
-            _argminmax_fillmax(self._starts.reshape(-1), self._stops.reshape(-1), self._content, content)
+            k = 0
+            for i in range(len(flatstarts)):
+                if flatstops[i] != flatstarts[i]:
+                    best = self.content[flatstarts[i]]
+                    bestj = 0
+                    for j in range(flatstarts[i] + 1, flatstops[i]):
+                        if self.content[j] < best:
+                            best = self.content[j]
+                            bestj = j - flatstarts[i]
+                    output[k] = bestj
+                    k += 1
 
-        return self.copy(starts=starts, stops=stops, content=content)
+        else:
+            k = 0
+            for i in range(len(flatstarts)):
+                if flatstops[i] != flatstarts[i]:
+                    best = self.content[flatstarts[i]]
+                    bestj = 0
+                    for j in range(flatstarts[i] + 1, flatstops[i]):
+                        if self.content[j] > best:
+                            best = self.content[j]
+                            bestj = j - flatstarts[i]
+                    output[k] = bestj
+                    k += 1
+
+        return _JaggedArray_new(self, starts, stops, output, True)
 
     def _argminmax_general(self, ismin):
         raise RuntimeError("helper function not needed in JaggedArrayNumba")
@@ -250,46 +295,6 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     # def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
 
     # def pandas(self):
-
-######################################################################## cacheable helpers
-
-@numba.njit
-def _offsets2parents_fill(offsets, parents):
-    j = 0
-    k = -1
-    for i in offsets:
-        while j < i:
-            parents[j] = k
-            j += 1
-        k += 1
-
-@numba.njit
-def _argminmax_fillmin(starts, stops, content, output):
-    k = 0
-    for i in range(len(starts)):
-        if stops[i] != starts[i]:
-            best = content[starts[i]]
-            bestj = 0
-            for j in range(starts[i] + 1, stops[i]):
-                if content[j] < best:
-                    best = content[j]
-                    bestj = j - starts[i]
-            output[k] = bestj
-            k += 1
-
-@numba.njit
-def _argminmax_fillmax(starts, stops, content, output):
-    k = 0
-    for i in range(len(starts)):
-        if stops[i] != starts[i]:
-            best = content[starts[i]]
-            bestj = 0
-            for j in range(starts[i] + 1, stops[i]):
-                if content[j] > best:
-                    best = content[j]
-                    bestj = j - starts[i]
-            output[k] = bestj
-            k += 1
 
 ######################################################################## register types in Numba
 
