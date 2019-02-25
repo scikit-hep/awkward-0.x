@@ -432,6 +432,11 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
 
     @awkward.util.bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
+        if isinstance(arrays, (numpy.ndarray, awkward.array.base.AwkwardArray)):
+            arrays = (arrays,)
+        else:
+            arrays = tuple(arrays)
+
         if isclassmethod: 
             cls = cls_or_self
             if not all(isinstance(x, JaggedArray) for x in arrays):
@@ -441,19 +446,12 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
             cls = self.__class__
             if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
                 raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
-            arrays = (self,) + tuple(arrays)
+            arrays = (self,) + arrays
 
-        HERE
+        if len(arrays) == 0:
+            raise TypeError("concatenate requires at least one array")
 
-    @staticmethod
-    @numba.njit
-    def _concatenate0(arrays):
-        pass
-
-    @staticmethod
-    @numba.njit
-    def _concatenateN(arrays, axis):
-        pass
+        return _JaggedArray_concatenate_njit(arrays, axis)
 
     # @awkward.util.bothmethod
     # def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
@@ -1197,11 +1195,53 @@ def _spread_advanced(starts, stops, advanced):
 
 
 
-######################################################################## other lowered methods in Numba
+######################################################################## other lowered methods in Numba, including reducers
 
 @numba.typing.templates.infer_getattr
 class _JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
     key = JaggedArrayType
+
+    def resolve_reducer(self, arraytype, args, kwargs, endtype):
+        if len(args) == 0 and len(kwargs) == 0:
+            if isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.content, JaggedArrayType):
+                contenttype = self.resolve_any(arraytype.content, args, kwargs)
+                return JaggedArrayType(arraytype.startstype, arraytype.stopstype, contenttype, special=JaggedArrayNumba)()
+            elif isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.content, numba.types.Array):
+                if endtype is None:
+                    endtype = arraytype.content.dtype
+                return numba.types.Array(endtype, 1, arraytype.content.layout)
+
+    @numba.typing.templates.bound_function("any")
+    def resolve_any(self, arraytype, args, kwargs):
+        return self.resolve_reducer(arraytype, args, kwargs, numba.types.boolean)
+
+    @numba.typing.templates.bound_function("all")
+    def resolve_all(self, arraytype, args, kwargs):
+        return self.resolve_reducer(arraytype, args, kwargs, numba.types.boolean)
+
+    @numba.typing.templates.bound_function("count")
+    def resolve_count(self, arraytype, args, kwargs):
+        return self.resolve_reducer(arraytype, args, kwargs, numba.types.int64)
+
+    @numba.typing.templates.bound_function("count_nonzero")
+    def resolve_count_nonzero(self, arraytype, args, kwargs):
+        return self.resolve_reducer(arraytype, args, kwargs, numba.types.int64)
+
+    @numba.typing.templates.bound_function("sum")
+    def resolve_sum(self, arraytype, args, kwargs):
+        return self.resolve_reducer(arraytype, args, kwargs, None)
+
+    @numba.typing.templates.bound_function("prod")
+    def resolve_prod(self, arraytype, args, kwargs):
+        return self.resolve_reducer(arraytype, args, kwargs, None)
+
+    @numba.typing.templates.bound_function("min")
+    def resolve_min(self, arraytype, args, kwargs):
+        return self.resolve_reducer(arraytype, args, kwargs, None)
+
+    @numba.typing.templates.bound_function("max")
+    def resolve_max(self, arraytype, args, kwargs):
+        return self.resolve_reducer(arraytype, args, kwargs, None)
 
 #     @numba.typing.templates.bound_function("structure1d")
 #     def resolve_structure1d(self, arraytype, args, kwargs):
@@ -1217,6 +1257,19 @@ class _JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
 #     arraytype, = sig.args
 #     arrayval, = args
 #     return _JaggedArray_lower_structure1d_3(context, builder, sig.return_type(arraytype, numba.types.int64), (arrayval, context.get_constant(numba.types.int64, -1),))
+
+@numba.extending.lower_builtin("sum", JaggedArrayType)
+def _JaggedArray_lower_sum(context, builder, sig, args):
+    arraytype, = sig.args
+    arrayval, = args
+
+    if isinstance(arratype.contenttype, JaggedArrayType):
+        HERE
+
+
+
+
+
 
 @numba.extending.overload_attribute(JaggedArrayType, "offsets")
 def _JaggedArray_offsets(arraytype):
@@ -1424,3 +1477,18 @@ def _JaggedArray_argminmax(array, ismin):
                 k += 1
 
     return _JaggedArray_new(array, starts, stops, output, True)
+
+@numba.njit
+def _JaggedArray_concatenate_njit(arrays, axis):
+    return _JaggedArray_concatenate(arrays, axis)
+
+def _JaggedArray_concatenate(arrays, axis):
+    pass
+
+@numba.extending.type_callable(_JaggedArray_concatenate)
+def _JaggedArray_concatenate(context):
+    return None
+
+@numba.extending.lower_builtin(_JaggedArray_concatenate, numba.types.Tuple, numba.types.Integer)
+def _JaggedArray_lower_concatenate(context, builder, sig, args):
+    raise NotImplementedError
