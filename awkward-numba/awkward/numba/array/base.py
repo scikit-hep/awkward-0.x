@@ -107,6 +107,8 @@ class NumbaMethods(object):
 class AwkwardArrayType(numba.types.Type):
     pass
 
+######################################################################## getitem
+
 @numba.typing.templates.infer_global(len)
 class _AwkwardArrayType_type_len(numba.typing.templates.AbstractTemplate):
     def generic(self, args, kwargs):
@@ -131,6 +133,63 @@ class _AwkwardArrayType_type_getitem(numba.typing.templates.AbstractTemplate):
                     wheretype = numba.types.Tuple(tuple(numba.types.Array(x, 1, "C") if isinstance(x, numba.types.Integer) else x for x in wheretype))
 
                 return numba.typing.templates.signature(arraytype.getitem(wheretype), arraytype, original_wheretype)
+
+######################################################################## iteration
+
+@numba.typing.templates.infer
+class _AwkwardArrayType_type_getiter(numba.typing.templates.AbstractTemplate):
+    key = "getiter"
+    def generic(self, args, kwargs):
+        if len(args) == 1 and len(kwargs) == 0:
+            arraytype, = args
+            if isinstance(arraytype, AwkwardArrayType):
+                return numba.typing.templates.signature(AwkwardArrayIteratorType(arraytype), arraytype)
+
+class AwkwardArrayIteratorType(numba.types.common.SimpleIteratorType):
+    def __init__(self, arraytype):
+        self.arraytype = arraytype
+        super(AwkwardArrayIteratorType, self).__init__("iter({0})".format(self.arraytype.name), self.arraytype.contenttype)
+
+@numba.datamodel.registry.register_default(AwkwardArrayIteratorType)
+class AwkwardArrayIteratorModel(numba.datamodel.models.StructModel):
+    def __init__(self, dmm, fe_type):
+        members = [("index", numba.types.EphemeralPointer(numba.types.int64)),
+                   ("array", fe_type.arraytype)]
+        super(AwkwardArrayIteratorModel, self).__init__(dmm, fe_type, members)
+
+@numba.extending.lower_builtin("getiter", AwkwardArrayType)
+def _AwkwardArray_lower_getiter(context, builder, sig, args):
+    arraytype, = sig.args
+    arrayval, = args
+
+    iterator = context.make_helper(builder, sig.return_type)
+    iterator.index = numba.cgutils.alloca_once_value(builder, context.get_constant(numba.types.int64, 0))
+    iterator.array = arrayval
+
+    if context.enable_nrt:
+        context.nrt.incref(builder, arraytype, arrayval)
+
+    return numba.targets.imputils.impl_ret_new_ref(context, builder, sig.return_type, iterator._getvalue())
+
+@numba.extending.lower_builtin("iternext", AwkwardArrayIteratorType)
+@numba.targets.imputils.iternext_impl
+def _AwkwardArray_lower_iternext(context, builder, sig, args, result):
+    iteratortype, = sig.args
+    iteratorval, = args
+
+    iterator = context.make_helper(builder, iteratortype, value=iteratorval)
+    array = numba.cgutils.create_struct_proxy(iteratortype.arraytype)(context, builder, value=iterator.array)
+
+    index = builder.load(iterator.index)
+    is_valid = builder.icmp_signed("<", index, iteratortype.arraytype.len_impl(context, builder, numba.types.intp(iteratortype.arraytype), (iterator.array,)))
+    result.set_valid(is_valid)
+
+    with builder.if_then(is_valid, likely=True):
+        result.yield_(iteratortype.arraytype.getitem_impl(context, builder, iteratortype.yield_type(iteratortype.arraytype, numba.types.int64), (iterator.array, index)))
+        nextindex = numba.cgutils.increment_index(builder, index)
+        builder.store(nextindex, iterator.index)
+
+######################################################################## utilities
 
 def clsrepr(cls):
     import awkward.array

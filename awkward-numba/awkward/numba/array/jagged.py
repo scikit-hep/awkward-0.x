@@ -127,6 +127,10 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
 
 ######################################################################## register types in Numba
 
+@numba.extending.typeof_impl.register(awkward.array.jagged.JaggedArray)
+def _JaggedArray_typeof(val, c):
+    return JaggedArrayType(numba.typeof(val.starts), numba.typeof(val.stops), numba.typeof(val.content), special=type(val))
+
 class JaggedArrayType(AwkwardArrayType):
     def __init__(self, startstype, stopstype, contenttype, special=awkward.array.jagged.JaggedArray):
         super(JaggedArrayType, self).__init__(name="JaggedArrayType({0}, {1}, {2}{3})".format(startstype.name, stopstype.name, contenttype.name, "" if special is awkward.array.jagged.JaggedArray else clsrepr(special)))
@@ -152,6 +156,14 @@ class JaggedArrayType(AwkwardArrayType):
                 return fake.dtype
             else:
                 return fake.contenttype
+
+    @property
+    def len_impl(self):
+        return _JaggedArray_lower_len
+
+    @property
+    def getitem_impl(self):
+        return _JaggedArray_lower_getitem_integer
 
 def _JaggedArray_typer_getitem_jagged(arraytype, headtype):
     if isinstance(headtype.contenttype, JaggedArrayType):
@@ -188,10 +200,6 @@ def _JaggedArray_getitem_next(array, where):
 @numba.extending.type_callable(_JaggedArray_getitem_next)
 def _JaggedArray_type_getitem_next(context):
     return _JaggedArray_typer_getitem
-
-@numba.extending.typeof_impl.register(awkward.array.jagged.JaggedArray)
-def _JaggedArray_typeof(val, c):
-    return JaggedArrayType(numba.typeof(val.starts), numba.typeof(val.stops), numba.typeof(val.content), special=type(val))
 
 ######################################################################## model and boxing
 

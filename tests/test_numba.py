@@ -359,3 +359,24 @@ class Test(unittest.TestCase):
         assert test1(a, awkward.fromiter([[2, 0, 0], [], [1]])).tolist() == [[3.3, 1.1, 1.1], [], [5.5]]
         assert test1(a2, awkward.fromiter([[1, 0], [], [0]])).tolist() == [[[], [1.1, 2.2, 3.3]], [], [[4.4, 5.5]]]
         assert test1(a2, awkward.fromiter([[[2, 0, 0], []], [], [[1]]])).tolist() == [[[3.3, 1.1, 1.1], []], [], [[5.5]]]
+
+    def test_numba_getiter(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = JaggedArray.fromcounts([2, 0, 1], a)
+        @numba.njit
+        def test1(x):
+            out = 0.0
+            for xi in x:
+                for xij in xi:
+                    out += xij
+            return out
+        assert test1(a) == 16.5
+        @numba.njit
+        def test2(x):
+            out = 0.0
+            for xi in x:
+                for xij in xi:
+                    for xijk in xij:
+                        out += xijk
+            return out
+        assert test2(a2) == 16.5
