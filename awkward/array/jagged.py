@@ -756,7 +756,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def _broadcast(self, data):
-        data = self._util_toarray(data, self._content.dtype)
+        assert isinstance(data, self.numpy.ndarray)
+        # data = self._util_toarray(data, self._content.dtype)
         good = (self.parents >= 0)
         content = self.numpy.empty(len(self.parents), dtype=data.dtype)
         if len(data.shape) == 0:

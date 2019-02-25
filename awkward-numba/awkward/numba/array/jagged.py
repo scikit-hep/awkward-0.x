@@ -202,15 +202,34 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
         if len(newwhere) == 1:
             newwhere = newwhere[0]
             
-        return self._getitem(newwhere)
+        return self._getitem_impl(newwhere)
 
     @numba.njit
-    def _getitem(self, newwhere):
+    def _getitem_impl(self, newwhere):
         return self[newwhere]
 
     # def __setitem__(self, where, what):
 
-    # def _broadcast(self, data):
+    @numba.generated_jit(nopython=True)
+    def _broadcast(self, data):
+        if isinstance(data, numba.types.Array):
+            def impl(self, data):
+                if self.starts.shape != data.shape:
+                    raise ValueError("cannot broadcast Numpy array to match a JaggedArray with a different length (or more generally, starts.shape)")
+                content = numpy.empty(len(self.content), data.dtype)
+                flatstarts = self.starts.reshape(-1)
+                flatstops = self.stops.reshape(-1)
+                flatdata = data.reshape(-1)
+                for i in range(len(flatstarts)):
+                    content[flatstarts[i]:flatstops[i]] = flatdata[i]
+                return _JaggedArray_new(self, self.starts, self.stops, content, self.iscompact)
+            return impl
+
+        else:
+            def impl(self, data):
+                content = numpy.full(len(self.content), data)
+                return _JaggedArray_new(self, self.starts, self.stops, content, self.iscompact)
+            return impl
 
     # def _tojagged(self, starts=None, stops=None, copy=True):
 
@@ -293,6 +312,7 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     # def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
 
     # def pandas(self):
+    ### base implementation is fine
 
 ######################################################################## register types in Numba
 
@@ -1047,8 +1067,8 @@ def _JaggedArray_compact(arraytype):
 
             if array.starts.shape != array.stops.shape:
                 raise ValueError("JaggedArray.starts must have the same shape as JaggedArray.stops")
-            flatstarts = array.starts.ravel()
-            flatstops = array.stops.ravel()
+            flatstarts = array.starts.reshape(-1)
+            flatstops = array.stops.reshape(-1)
 
             offsets = numpy.empty(len(flatstarts) + 1, flatstarts.dtype)
             offsets[0] = 0
