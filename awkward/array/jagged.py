@@ -1408,10 +1408,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         return cls(starts, stops, content)
 
-    @classmethod
-    def stack(cls, first, *rest):    # each item in first followed by second, etc.
-        raise NotImplementedError
-
     @awkward.util.bothmethod
     def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
         if isclassmethod:

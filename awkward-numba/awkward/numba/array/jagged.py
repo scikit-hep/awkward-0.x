@@ -357,7 +357,11 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
         else:
             return self.Methods.maybemixin(type(result), self.JaggedArray)(first.starts, first.stops, result)
 
-    # def regular(self):
+    @numba.njit
+    def regular(self):
+        return self.regular()
+
+    ### FIXME: this whole section can't be done until we have Tables
 
     # def _argpairs(self):
 
@@ -378,6 +382,7 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     # def cross(self, other, nested=False):
 
     # def _canuseoffset(self):
+    ### base implementation is fine and don't need in Numba
 
     # @property
     # def iscompact(self):
@@ -400,10 +405,11 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
         elif self.iscompact:
             return self._content[self._starts[0]:self.stops[-1]]  # no underscore in stops
         else:
-            return self.compact()._content
+            out = self.compact()
+            return out._content[out._starts[0]:out.stops[0]]      # no underscore in stops
 
     # def structure1d(self, levellimit=None):
-    ### base implementation is fine and can't(?) be exposed in Numba (type manipulation is hard)
+    ### base implementation is fine and can't(?) be exposed in Numba (type manipulation is hard!)
 
     # def _hasjagged(self):
     ### base implementation is fine
@@ -424,14 +430,34 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     def _argminmax_general(self, ismin):
         raise RuntimeError("helper function not needed in JaggedArrayNumba")
 
-    # @awkward.util.bothmethod
-    # def concatenate(isclassmethod, cls_or_self, arrays):
+    @awkward.util.bothmethod
+    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
+        if isclassmethod: 
+            cls = cls_or_self
+            if not all(isinstance(x, JaggedArray) for x in arrays):
+                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
+        else:
+            self = cls_or_self
+            cls = self.__class__
+            if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
+                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
+            arrays = (self,) + tuple(arrays)
 
-    # @classmethod
-    # def stack(cls, first, *rest):    # each item in first followed by second, etc.
+        HERE
+
+    @staticmethod
+    @numba.njit
+    def _concatenate0(arrays):
+        pass
+
+    @staticmethod
+    @numba.njit
+    def _concatenateN(arrays, axis):
+        pass
 
     # @awkward.util.bothmethod
     # def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
+    ### FIXME: can't do this one until we have Tables
 
     # def pandas(self):
     ### base implementation is fine
@@ -1233,6 +1259,20 @@ def _JaggedArray_index(arraytype):
             for j in range(array.starts[i], array.stops[i]):
                 out[j] = j - array.starts[i]
         return JaggedArray(array.starts, array.stops, out, array.iscompact)
+
+@numba.extending.overload_method(JaggedArrayType, "regular")
+def _JaggedArray_regular(arraytype):
+    if not isinstance(arraytype.contenttype, numba.types.Array):
+        raise TypeError("JaggedArray.content must be a Numpy array to use jagged.regular()")
+    def impl(array):
+        count = -1
+        for i in range(len(array.starts)):
+            if count == -1:
+                count = array.stops[i] - array.starts[i]
+            elif count != array.stops[i] - array.starts[i]:
+                raise ValueError("JaggedArray is not regular: different elements have different counts")
+        return array.content.reshape(array.starts.shape + (count,))
+    return impl
 
 @numba.extending.overload_method(JaggedArrayType, "compact")
 def _JaggedArray_compact(arraytype):
