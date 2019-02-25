@@ -43,7 +43,215 @@ from .base import NOTADVANCED
 from .base import sliceval2
 from .base import sliceval3
 
-######################################################################## optimized functions (hidden)
+######################################################################## Numba-accelerated interface
+
+class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
+    # @classmethod
+    # def offsetsaliased(cls, starts, stops):
+
+    # @classmethod
+    # def counts2offsets(cls, counts):
+
+    @classmethod
+    def offsets2parents(cls, offsets):
+        if len(offsets) == 0:
+            raise ValueError("offsets must have at least one element")
+        parents = cls.numpy.empty(offsets[-1], dtype=cls.JaggedArray.fget(None).INDEXTYPE)
+        _offsets2parents_fill(offsets, parents)
+        return parents
+
+    # @classmethod
+    # def startsstops2parents(cls, starts, stops):
+
+    # @classmethod
+    # def parents2startsstops(cls, parents, length=None):
+
+    # @classmethod
+    # def uniques2offsetsparents(cls, uniques):
+
+    # def __init__(self, starts, stops, content):
+
+    # @classmethod
+    # def fromiter(cls, iterable):
+
+    # @classmethod
+    # def fromoffsets(cls, offsets, content):
+
+    # @classmethod
+    # def fromcounts(cls, counts, content):
+
+    # @classmethod
+    # def fromparents(cls, parents, content, length=None):
+
+    # @classmethod
+    # def fromuniques(cls, uniques, content):
+
+    # @classmethod
+    # def fromindex(cls, index, content, validate=True):
+
+    # @classmethod
+    # def fromjagged(cls, jagged):
+
+    # @classmethod
+    # def fromregular(cls, regular):
+
+    # @classmethod
+    # def fromfolding(cls, content, size):
+
+    # def copy(self, starts=None, stops=None, content=None):
+
+    # def deepcopy(self, starts=None, stops=None, content=None):
+
+    # def empty_like(self, **overrides):
+
+    # def zeros_like(self, **overrides):
+
+    # def ones_like(self, **overrides):
+
+    # def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+
+    # @property
+    # def starts(self):
+
+    # @starts.setter
+    # def starts(self, value):
+        
+    # @property
+    # def stops(self):
+
+    # @stops.setter
+    # def stops(self, value):
+
+    # @property
+    # def content(self):
+
+    # @content.setter
+    # def content(self, value):
+
+    # @property
+    # def offsets(self):
+
+    # @offsets.setter
+    # def offsets(self, value):
+
+    # @property
+    # def counts(self):
+
+    # @counts.setter
+    # def counts(self, value):
+
+    # @property
+    # def parents(self):
+
+    # @parents.setter
+    # def parents(self, value):
+
+    # @property
+    # def index(self):
+
+    # def __len__(self):
+
+    # def _gettype(self, seen):
+
+    # def _valid(self):
+
+    # @staticmethod
+    # def _validstartsstops(starts, stops):
+
+    # def __iter__(self, checkiter=True):
+
+    # def __getitem__(self, where):
+
+    # def __setitem__(self, where, what):
+
+    # def _broadcast(self, data):
+
+    # def _tojagged(self, starts=None, stops=None, copy=True):
+
+    # def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+
+    # def regular(self):
+
+    # def _argpairs(self):
+
+    # def _argdistincts(self, absolute):
+
+    # def argdistincts(self, nested=False):
+
+    # def distincts(self, nested=False):
+
+    # def argpairs(self, nested=False):
+
+    # def pairs(self, nested=False):
+
+    # def _argcross(self, other):
+
+    # def argcross(self, other, nested=False):
+
+    # def cross(self, other, nested=False):
+
+    # def _canuseoffset(self):
+
+    # @property
+    # def iscompact(self):
+
+    # def compact(self):
+
+    # def flatten(self, axis=0):
+
+    # def structure1d(self, levellimit=None):
+
+    # def _hasjagged(self):
+
+    # def _reduce(self, ufunc, identity, dtype, regularaxis):
+
+    # def argmin(self):
+
+    # def argmax(self):
+
+    def _argminmax(self, ismin):
+        if len(self._starts) == len(self._stops) == 0:
+            return self.copy()
+
+        if len(self._content.shape) != 1:
+            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
+
+        # subarray with counts > 0 --> counts = 1
+        counts = (self.counts != 0).astype(self.INDEXTYPE).reshape(-1)
+        # offsets for these 0 or 1 counts (involves a cumsum)
+        offsets = self.counts2offsets(counts)
+        # starts and stops derived from offsets and reshaped to original starts and stops (see specification)
+        starts, stops = offsets[:-1], offsets[1:]
+
+        starts = starts.reshape(self._starts.shape[:-1] + (-1,))
+        stops = stops.reshape(self._stops.shape[:-1] + (-1,))
+
+        # content to fit the new offsets
+        content = awkward.util.numpy.empty(offsets[-1], dtype=self.INDEXTYPE)
+
+        # fill the new content
+        if ismin:
+            _argminmax_fillmin(self._starts.reshape(-1), self._stops.reshape(-1), self._content, content)
+        else:
+            _argminmax_fillmax(self._starts.reshape(-1), self._stops.reshape(-1), self._content, content)
+
+        return self.copy(starts=starts, stops=stops, content=content)
+
+    def _argminmax_general(self, ismin):
+        raise RuntimeError("helper function not needed in JaggedArrayNumba")
+
+    # @awkward.util.bothmethod
+    # def concatenate(isclassmethod, cls_or_self, arrays):
+
+    # @classmethod
+    # def stack(cls, first, *rest):    # each item in first followed by second, etc.
+
+    # @awkward.util.bothmethod
+    # def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
+
+    # def pandas(self):
+
+######################################################################## cacheable helpers
 
 @numba.njit
 def _offsets2parents_fill(offsets, parents):
@@ -82,48 +290,6 @@ def _argminmax_fillmax(starts, stops, content, output):
                     bestj = j - starts[i]
             output[k] = bestj
             k += 1
-
-######################################################################## Numba-accelerated interface
-
-class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
-    @classmethod
-    def offsets2parents(cls, offsets):
-        if len(offsets) == 0:
-            raise ValueError("offsets must have at least one element")
-        parents = cls.numpy.empty(offsets[-1], dtype=cls.JaggedArray.fget(None).INDEXTYPE)
-        _offsets2parents_fill(offsets, parents)
-        return parents
-
-    def _argminmax(self, ismin):
-        if len(self._starts) == len(self._stops) == 0:
-            return self.copy()
-
-        if len(self._content.shape) != 1:
-            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
-
-        # subarray with counts > 0 --> counts = 1
-        counts = (self.counts != 0).astype(self.INDEXTYPE).reshape(-1)
-        # offsets for these 0 or 1 counts (involves a cumsum)
-        offsets = self.counts2offsets(counts)
-        # starts and stops derived from offsets and reshaped to original starts and stops (see specification)
-        starts, stops = offsets[:-1], offsets[1:]
-
-        starts = starts.reshape(self._starts.shape[:-1] + (-1,))
-        stops = stops.reshape(self._stops.shape[:-1] + (-1,))
-
-        # content to fit the new offsets
-        content = awkward.util.numpy.empty(offsets[-1], dtype=self.INDEXTYPE)
-
-        # fill the new content
-        if ismin:
-            _argminmax_fillmin(self._starts.reshape(-1), self._stops.reshape(-1), self._content, content)
-        else:
-            _argminmax_fillmax(self._starts.reshape(-1), self._stops.reshape(-1), self._content, content)
-
-        return self.copy(starts=starts, stops=stops, content=content)
-
-    def _argminmax_general(self, ismin):
-        raise RuntimeError("helper function not needed in JaggedArrayNumba")
 
 ######################################################################## register types in Numba
 
