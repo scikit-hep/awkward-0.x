@@ -29,11 +29,16 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import operator
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 import numpy
 import numba
 import numba.typing.arraydecl
 
+import awkward.array.base
 import awkward.array.jagged
 from .base import NumbaMethods
 from .base import AwkwardArrayType
@@ -181,9 +186,27 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
 
     # def __iter__(self, checkiter=True):
 
-    @numba.njit
     def __getitem__(self, where):
-        return self[where]
+        if not isinstance(where, tuple):
+            where = (where,)
+        if len(where) == 0:
+            return self
+
+        newwhere = ()
+        for x in where:
+            if isinstance(x, Iterable) and not isinstance(x, (numpy.ndarray, awkward.array.base.AwkwardArray)):
+                newwhere = newwhere + (numpy.array(x),)
+            else:
+                newwhere = newwhere + (x,)
+
+        if len(newwhere) == 1:
+            newwhere = newwhere[0]
+            
+        return self._getitem(newwhere)
+
+    @numba.njit
+    def _getitem(self, newwhere):
+        return self[newwhere]
 
     # def __setitem__(self, where, what):
 
@@ -217,14 +240,32 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
 
     # @property
     # def iscompact(self):
+    ### base implementation is fine and already exposed in Numba
 
-    # def compact(self):
+    @numba.njit
+    def compact(self):
+        return self.compact()
 
-    # def flatten(self, axis=0):
+    def flatten(self, axis=0):
+        if not self._util_isinteger(axis) or axis < 0:
+            raise TypeError("axis must be a non-negative integer (can't count from the end)")
+        if axis > 0:
+            if isinstance(self._content, JaggedArray):
+                counts = self.JaggedArray.fromcounts(self.counts, self._content.counts).sum()
+                return self.JaggedArray.fromcounts(counts, self._content.flatten(axis=axis - 1))
+
+        if len(self) == 0:
+            return self._content[0:0]
+        elif self.iscompact:
+            return self._content[self._starts[0]:self.stops[-1]]  # no underscore in stops
+        else:
+            return self.compact()._content
 
     # def structure1d(self, levellimit=None):
+    ### base implementation is fine and can't(?) be exposed in Numba (type manipulation is hard)
 
     # def _hasjagged(self):
+    ### base implementation is fine
 
     # def _reduce(self, ufunc, identity, dtype, regularaxis):
 
@@ -264,26 +305,44 @@ class JaggedArrayType(AwkwardArrayType):
         super(JaggedArrayType, self).__init__(name="JaggedArrayType({0}, {1}, {2}{3})".format(startstype.name, stopstype.name, contenttype.name, "" if special is awkward.array.jagged.JaggedArray else clsrepr(special)))
         if startstype.ndim != stopstype.ndim:
             raise ValueError("JaggedArray.starts must have the same number of dimensions as JaggedArray.stops")
+        if startstype.ndim == 0:
+            raise ValueError("JaggedArray.starts and JaggedArray.stops must have at least one dimension")
         self.startstype = startstype
         self.stopstype = stopstype
         self.contenttype = contenttype
         self.special = special
 
     def getitem(self, wheretype):
-        headtype = wheretype.types[0]
-        tailtype = numba.types.Tuple(wheretype.types[1:])
-        if isinstance(headtype, numba.types.Integer) and isinstance(self.contenttype, numba.types.Array):
-            return numba.typing.arraydecl.get_array_index_type(self.contenttype, tailtype).result
+        if self.startstype.ndim > 1 and not any(isinstance(x, (numba.types.Array, JaggedArrayType)) for x in wheretype.types[:self.startstype.ndim]):
+            headtype = numba.types.Tuple(wheretype.types[:self.startstype.ndim])
+            tailtype = numba.types.Tuple(wheretype.types[self.startstype.ndim:])
 
-        if isinstance(headtype, JaggedArrayType) and len(tailtype.types) == 0:
-            return _JaggedArray_typer_getitem_jagged(self, headtype)
+            outstartstype = numba.typing.arraydecl.get_array_index_type(self.startstype, headtype).result
+            outstopstype = numba.typing.arraydecl.get_array_index_type(self.stopstype, headtype).result
+            if isinstance(self.contenttype, JaggedArrayType):
+                outcontenttype = self.contenttype.getitem(tailtype)
+            else:
+                outcontenttype = numba.typing.arraydecl.get_array_index_type(self.contenttype, tailtype).result
+
+            assert isinstance(outstartstype, numba.types.Array) == isinstance(outstopstype, numba.types.Array)
+            if isinstance(outstartstype, numba.types.Array):
+                return JaggedArrayType(outstartstype, outstopstype, outcontenttype, special=self.special)
+            else:
+                return outcontenttype
 
         else:
-            fake = _JaggedArray_typer_getitem(JaggedArrayType(numba.types.int64[:], numba.types.int64[:], self), wheretype, NOTADVANCED)
-            if isinstance(fake, numba.types.Array):
-                return fake.dtype
+            headtype = wheretype.types[0]
+            tailtype = numba.types.Tuple(wheretype.types[1:])
+
+            if isinstance(headtype, JaggedArrayType) and len(tailtype.types) == 0:
+                return _JaggedArray_typer_getitem_jagged(self, headtype)
+
             else:
-                return fake.contenttype
+                fake = _JaggedArray_typer_getitem(JaggedArrayType(numba.types.int64[:], numba.types.int64[:], self), wheretype, NOTADVANCED)
+                if isinstance(fake, numba.types.Array):
+                    return fake.dtype
+                else:
+                    return fake.contenttype
 
     @property
     def len_impl(self):
@@ -308,6 +367,9 @@ def _JaggedArray_typer_getitem_jagged(arraytype, headtype):
 def _JaggedArray_typer_getitem(arraytype, wheretype, advancedtype):
     if len(wheretype.types) == 0:
         return arraytype
+
+    if arraytype.startstype.ndim != 1 or arraytype.stopstype.ndim != 1:
+        raise NotImplementedError("multidimensional starts and stops not supported; call structure1d() first")
 
     isarray = (isinstance(wheretype.types[0], numba.types.Array) and wheretype.types[0].ndim == 1)
 
@@ -479,19 +541,30 @@ def _JaggedArray_lower_getitem_integer(context, builder, sig, args, checkvalid=T
     array = numba.cgutils.create_struct_proxy(arraytype)(context, builder, value=arrayval)
 
     startstype = arraytype.startstype
-    start = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, startstype.dtype(startstype, wheretype), (array.starts, whereval))
-
     stopstype = arraytype.stopstype
-    stop = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, stopstype.dtype(stopstype, wheretype), (array.stops, whereval))
-
     contenttype = arraytype.contenttype
-    if checkvalid:
-        _check_startstop_contentlen(context, builder, startstype.dtype, start, stopstype.dtype, stop, contenttype, array.content)
 
-    if isinstance(contenttype, numba.types.Array):
-        return numba.targets.arrayobj.getitem_arraynd_intp(context, builder, contenttype(contenttype, numba.types.slice2_type), (array.content, sliceval2(context, builder, start, stop)))
+    if startstype.ndim == 1:
+        start = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, startstype.dtype(startstype, wheretype), (array.starts, whereval))
+        stop = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, stopstype.dtype(stopstype, wheretype), (array.stops, whereval))
+
+        if checkvalid:
+            _check_startstop_contentlen(context, builder, startstype.dtype, start, stopstype.dtype, stop, contenttype, array.content)
+
+        if isinstance(contenttype, numba.types.Array):
+            return numba.targets.arrayobj.getitem_arraynd_intp(context, builder, contenttype(contenttype, numba.types.slice2_type), (array.content, sliceval2(context, builder, start, stop)))
+        else:
+            return _JaggedArray_lower_getitem_slice(context, builder, contenttype(contenttype, numba.types.slice2_type), (array.content, sliceval2(context, builder, start, stop)))
+
     else:
-        return _JaggedArray_lower_getitem_slice(context, builder, contenttype(contenttype, numba.types.slice2_type), (array.content, sliceval2(context, builder, start, stop)))
+        outstartstype = numba.types.Array(startstype.dtype, startstype.ndim - 1, startstype.layout)
+        outstopstype = numba.types.Array(stopstype.dtype, stopstype.ndim - 1, stopstype.layout)
+
+        starts = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, outstartstype(startstype, wheretype), (array.starts, whereval))
+        stops = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, outstopstype(stopstype, wheretype), (array.stops, whereval))
+
+        outtype = JaggedArrayType(outstartstype, outstopstype, contenttype, special=arraytype.special)
+        return _JaggedArray_lower_new(context, builder, outtype(arraytype, outstartstype, outstopstype, contenttype, numba.types.boolean), (arrayval, starts, stops, array.content, array.iscompact))
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
 def _JaggedArray_lower_getitem_slice(context, builder, sig, args):
@@ -728,9 +801,6 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
         if context.enable_nrt:
             context.nrt.incref(builder, arraytype, arrayval)
         return arrayval
-
-    if arraytype.startstype.ndim != 1 or arraytype.stopstype.ndim != 1:
-        raise NotImplementedError("multidimensional starts and stops not supported; call structure1d() first")
 
     headtype = wheretype.types[0]
     tailtype = numba.types.Tuple(wheretype.types[1:])
@@ -1084,9 +1154,8 @@ def _JaggedArray_argminmax(array, ismin):
         else:
             offsets[i + 1] = offsets[i] + 1
 
-    starts, stops = offsets[:-1], offsets[1:]
-    starts = starts.reshape(array.starts.shape)
-    stops = stops.reshape(array.stops.shape)
+    starts = offsets[:-1].reshape(array.starts.shape)
+    stops = offsets[1:].reshape(array.stops.shape)
 
     output = numpy.empty(offsets[-1], dtype=numpy.int64)
 
