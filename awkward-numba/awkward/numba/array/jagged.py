@@ -212,7 +212,20 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
 
     @numba.generated_jit(nopython=True)
     def _broadcast(self, data):
-        if isinstance(data, numba.types.Array):
+        assert not isinstance(data, JaggedArrayType)
+
+        if isinstance(data, AwkwardArrayType):
+            def impl(self, data):
+                if len(self.starts) != len(data):
+                    raise ValueError("cannot broadcast AwkwardArray to match JaggedArray with a different length")
+                if len(self.starts.shape) != 1:
+                    raise ValueError("cannot broadcast AwkwardArray to match JaggedArray that has len(starts.shape) != 1; call jagged.structure1d() first")
+                index = numpy.empty(len(self.content), numpy.int64)
+                for i in range(len(self.starts)):
+                    index[self.starts[i]:self.stops[i]] = i
+                return _JaggedArray_new(self, self.starts, self.stops, data[index], self.iscompact)
+
+        elif isinstance(data, numba.types.Array):
             def impl(self, data):
                 if self.starts.shape != data.shape:
                     raise ValueError("cannot broadcast Numpy array to match a JaggedArray with a different length (or more generally, starts.shape)")
@@ -233,7 +246,43 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
 
     # def _tojagged(self, starts=None, stops=None, copy=True):
 
-    # def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if "out" in kwargs:
+            raise NotImplementedError("in-place operations not supported")
+        if method != "__call__":
+            return NotImplemented
+
+        first = None
+        inputs = list(inputs)
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], awkward.array.jagged.JaggedArray):
+                inputs[i] = inputs[i].compact()
+                if first is None:
+                    first = inputs[i]
+                elif first.starts[0] != inputs[i].starts[0] or not numpy.array_equal(first.stops, inputs[i].stops):
+                    raise ValueError("JaggedArrays in Numpy ufunc have incompatible structure")
+
+        assert first is not None
+
+        for i in range(len(inputs)):
+            if isinstance(inputs[i], awkward.array.jagged.JaggedArray):
+                pass
+            elif isinstance(inputs[i], awkward.array.base.AwkwardArray):
+                inputs[i] = first._broadcast(inputs[i])
+            elif isinstance(inputs[i], Iterable):
+                inputs[i] = first._broadcast(numpy.array(inputs[i], copy=False))
+            else:
+                inputs[i] = first._broadcast(inputs[i])
+
+        for i in range(len(inputs)):
+            inputs[i] = inputs[i]._content
+
+        result = getattr(ufunc, method)(*inputs, **kwargs)
+
+        if isinstance(result, tuple):
+            return tuple(self.Methods.maybemixin(type(x), self.JaggedArray)(first.starts, first.stops, x) if isinstance(x, (numpy.ndarray, awkward.array.base.AwkwardArray)) else x for x in result)
+        else:
+            return self.Methods.maybemixin(type(result), self.JaggedArray)(first.starts, first.stops, result)
 
     # def regular(self):
 
@@ -389,7 +438,7 @@ def _JaggedArray_typer_getitem(arraytype, wheretype, advancedtype):
         return arraytype
 
     if arraytype.startstype.ndim != 1 or arraytype.stopstype.ndim != 1:
-        raise NotImplementedError("multidimensional starts and stops not supported; call structure1d() first")
+        raise NotImplementedError("multidimensional starts and stops not supported; call jagged.structure1d() first")
 
     isarray = (isinstance(wheretype.types[0], numba.types.Array) and wheretype.types[0].ndim == 1)
 
@@ -1034,6 +1083,20 @@ def _spread_advanced(starts, stops, advanced):
                 k += length
             return nextadvanced
         return impl
+
+######################################################################## overloading ufuncs
+
+### See numba.typing.npydecl for typing, and then maybe lower as usual?
+
+### @numba.extending.lower_builtin(numpy.add, JaggedArrayType, JaggedArrayType)
+### @numba.extending.lower_builtin(numpy.add, JaggedArrayType, numba.types.Array)
+### @numba.extending.lower_builtin(numpy.add, numba.types.Array, JaggedArrayType)
+### ???
+
+
+
+
+
 
 ######################################################################## other lowered methods in Numba
 

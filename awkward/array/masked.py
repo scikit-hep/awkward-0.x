@@ -255,7 +255,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         index[tokeep] = self.numpy.arange(self.numpy.count_nonzero(tokeep))
 
         if isinstance(result, tuple):
-            return tuple(self.Methods.maybemixin(type(x), IndexedMaskedArray)(index, x, maskedwhen=-1) if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+            return tuple(self.Methods.maybemixin(type(x), IndexedMaskedArray)(index, x, maskedwhen=-1) if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardArray)) else x for x in result)
         elif method == "at":
             return None
         else:
