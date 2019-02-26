@@ -1203,13 +1203,13 @@ class _JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
 
     def resolve_reducer(self, arraytype, args, kwargs, endtype):
         if len(args) == 0 and len(kwargs) == 0:
-            if isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.content, JaggedArrayType):
-                contenttype = self.resolve_any(arraytype.content, args, kwargs)
-                return JaggedArrayType(arraytype.startstype, arraytype.stopstype, contenttype, special=JaggedArrayNumba)()
-            elif isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.content, numba.types.Array):
+            if isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.contenttype, JaggedArrayType):
+                contenttype = self.resolve_reducer(arraytype.contenttype, args, kwargs, endtype)
+                return JaggedArrayType(arraytype.startstype, arraytype.stopstype, contenttype.return_type, special=JaggedArrayNumba)()
+            elif isinstance(arraytype, JaggedArrayType) and isinstance(arraytype.contenttype, numba.types.Array):
                 if endtype is None:
-                    endtype = arraytype.content.dtype
-                return numba.types.Array(endtype, 1, arraytype.content.layout)
+                    endtype = arraytype.contenttype.dtype
+                return numba.types.Array(endtype, 1, arraytype.contenttype.layout)()
 
     @numba.typing.templates.bound_function("any")
     def resolve_any(self, arraytype, args, kwargs):
@@ -1258,18 +1258,30 @@ class _JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
 #     arrayval, = args
 #     return _JaggedArray_lower_structure1d_3(context, builder, sig.return_type(arraytype, numba.types.int64), (arrayval, context.get_constant(numba.types.int64, -1),))
 
-@numba.extending.lower_builtin("sum", JaggedArrayType)
-def _JaggedArray_lower_sum(context, builder, sig, args):
+def _JaggedArray_lower_reduce_descend(which, context, builder, sig, args):
     arraytype, = sig.args
     arrayval, = args
+    array = numba.cgutils.create_struct_proxy(arraytype)(context, builder, value=arrayval)
+    content = which(context, builder, sig.return_type.contenttype(arraytype.contenttype), (array.content,))
+    return _JaggedArray_lower_new(context, builder, sig.return_type(arraytype, arraytype.startstype, arraytype.stopstype, sig.return_type.contenttype, numba.types.boolean), (arrayval, array.starts, array.stops, content, array.iscompact))
 
-    if isinstance(arratype.contenttype, JaggedArrayType):
-        HERE
+@numba.extending.lower_builtin("sum", JaggedArrayType)
+def _JaggedArray_lower_sum(context, builder, sig, args):
+    if isinstance(sig.args[0].contenttype, JaggedArrayType):
+        return _JaggedArray_lower_reduce_descend(_JaggedArray_lower_sum, context, builder, sig, args)
 
+    def run(array):
+        out = numpy.empty(array.starts.shape, array.content.dtype)
+        flatout = out.reshape(-1)
+        flatstarts = array.starts.reshape(-1)
+        flatstops = array.stops.reshape(-1)
+        for i in range(len(flatstarts)):
+            flatout[i] = 0
+            for j in range(flatstarts[i], flatstops[i]):
+                flatout[i] += array.content[j]
+        return out
 
-
-
-
+    return context.compile_internal(builder, run, sig, args)
 
 @numba.extending.overload_attribute(JaggedArrayType, "offsets")
 def _JaggedArray_offsets(arraytype):
