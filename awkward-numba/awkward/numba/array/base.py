@@ -34,6 +34,14 @@ import numpy
 import numba
 
 class NumbaMethods(object):
+    NUMBA_DEFAULTTYPE = numba.from_dtype(numpy.float64)
+    NUMBA_CHARTYPE    = numba.from_dtype(numpy.uint8)
+    NUMBA_INDEXTYPE   = numba.from_dtype(numpy.int64)
+    NUMBA_TAGTYPE     = numba.from_dtype(numpy.uint8)
+    NUMBA_MASKTYPE    = numba.from_dtype(numpy.bool_)
+    NUMBA_BITMASKTYPE = numba.from_dtype(numpy.uint8)
+    NUMBA_BOOLTYPE    = numba.from_dtype(numpy.bool_)
+
     @property
     def ChunkedArray(self):
         import awkward.numba.array.chunked

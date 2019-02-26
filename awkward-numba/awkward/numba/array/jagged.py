@@ -503,7 +503,7 @@ class JaggedArrayType(AwkwardArrayType):
                 return _JaggedArray_typer_getitem_jagged(self, headtype)
 
             else:
-                fake = _JaggedArray_typer_getitem(JaggedArrayType(numba.types.int64[:], numba.types.int64[:], self), wheretype, NOTADVANCED)
+                fake = _JaggedArray_typer_getitem(JaggedArrayType(JaggedArrayNumba.NUMBA_INDEXTYPE[:], JaggedArrayNumba.NUMBA_INDEXTYPE[:], self), wheretype, NOTADVANCED)
                 if isinstance(fake, numba.types.Array):
                     return fake.dtype
                 else:
@@ -564,7 +564,7 @@ class JaggedArrayModel(numba.datamodel.models.StructModel):
         members = [("starts", fe_type.startstype),
                    ("stops", fe_type.stopstype),
                    ("content", fe_type.contenttype),
-                   ("iscompact", numba.types.boolean)]
+                   ("iscompact", JaggedArrayNumba.NUMBA_BOOLTYPE)]
         super(JaggedArrayModel, self).__init__(dmm, fe_type, members)
 
 numba.extending.make_attribute_wrapper(JaggedArrayType, "starts", "starts")
@@ -583,7 +583,7 @@ def _JaggedArray_unbox(typ, obj, c):
     array.starts = c.pyapi.to_native_value(typ.startstype, starts_obj).value
     array.stops = c.pyapi.to_native_value(typ.stopstype, stops_obj).value
     array.content = c.pyapi.to_native_value(typ.contenttype, content_obj).value
-    array.iscompact = c.pyapi.to_native_value(numba.types.boolean, iscompact_obj).value
+    array.iscompact = c.pyapi.to_native_value(JaggedArrayNumba.NUMBA_BOOLTYPE, iscompact_obj).value
 
     c.pyapi.decref(starts_obj)
     c.pyapi.decref(stops_obj)
@@ -640,7 +640,7 @@ def _JaggedArray_init_array(context, builder, sig, args):
     array.starts = startsval
     array.stops = stopsval
     array.content = contentval
-    array.iscompact = context.get_constant(numba.types.boolean, False)   # unless you reproduce that logic here or call out to Python
+    array.iscompact = context.get_constant(JaggedArrayNumba.NUMBA_BOOLTYPE, False)   # unless you reproduce that logic here or call out to Python
     return array._getvalue()
 
 def _JaggedArray_new(array, starts, stops, content, iscompact):
@@ -729,7 +729,7 @@ def _JaggedArray_lower_getitem_integer(context, builder, sig, args, checkvalid=T
         stops = numba.targets.arrayobj.getitem_arraynd_intp(context, builder, outstopstype(stopstype, wheretype), (array.stops, whereval))
 
         outtype = JaggedArrayType(outstartstype, outstopstype, contenttype, special=arraytype.special)
-        return _JaggedArray_lower_new(context, builder, outtype(arraytype, outstartstype, outstopstype, contenttype, numba.types.boolean), (arrayval, starts, stops, array.content, array.iscompact))
+        return _JaggedArray_lower_new(context, builder, outtype(arraytype, outstartstype, outstopstype, contenttype, JaggedArrayNumba.NUMBA_BOOLTYPE), (arrayval, starts, stops, array.content, array.iscompact))
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.SliceType)
 def _JaggedArray_lower_getitem_slice(context, builder, sig, args):
@@ -750,7 +750,7 @@ def _JaggedArray_lower_getitem_slice(context, builder, sig, args):
                                          builder.icmp_signed("==", slice.step, context.get_constant(numba.types.intp, numba.types.intp.maxval))))
 
     contenttype = arraytype.contenttype
-    return _JaggedArray_lower_new(context, builder, arraytype(arraytype, startstype, stopstype, contenttype, numba.types.boolean), (arrayval, starts, stops, array.content, iscompact))
+    return _JaggedArray_lower_new(context, builder, arraytype(arraytype, startstype, stopstype, contenttype, JaggedArrayNumba.NUMBA_BOOLTYPE), (arrayval, starts, stops, array.content, iscompact))
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, numba.types.Array)
 def _JaggedArray_lower_getitem_array(context, builder, sig, args):
@@ -766,7 +766,7 @@ def _JaggedArray_lower_getitem_array(context, builder, sig, args):
     stops = numba.targets.arrayobj.fancy_getitem_array(context, builder, stopstype(stopstype, wheretype), (array.stops, whereval))
 
     contenttype = arraytype.contenttype
-    return _JaggedArray_lower_new(context, builder, arraytype(arraytype, startstype, stopstype, contenttype, numba.types.boolean), (arrayval, starts, stops, array.content, context.get_constant(numba.types.boolean, False)))
+    return _JaggedArray_lower_new(context, builder, arraytype(arraytype, startstype, stopstype, contenttype, JaggedArrayNumba.NUMBA_BOOLTYPE), (arrayval, starts, stops, array.content, context.get_constant(JaggedArrayNumba.NUMBA_BOOLTYPE, False)))
 
 @numba.extending.lower_builtin(operator.getitem, JaggedArrayType, JaggedArrayType)
 def _JaggedArray_lower_getitem_jaggedarray(context, builder, sig, args):
@@ -896,7 +896,7 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
         return getitem(context, builder, sig.return_type(arraytype, wheretype.types[0]), (arrayval, builder.extract_value(whereval, 0)))
 
     if any(isinstance(x, numba.types.Array) for x in wheretype.types):
-        arraylen = numba.cgutils.alloca_once_value(builder, context.get_constant(numba.types.int64, 0))
+        arraylen = numba.cgutils.alloca_once_value(builder, context.get_constant(JaggedArrayNumba.NUMBA_INDEXTYPE, 0))
         for i, whereitemtype in enumerate(wheretype.types):
             if isinstance(whereitemtype, numba.types.Array):
                 if isinstance(whereitemtype.dtype, numba.types.Boolean):
@@ -905,7 +905,7 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
                     enter_arraylen = lambda whereitem, arraylen: max(arraylen, len(whereitem))
 
                 whereitemval = builder.extract_value(whereval, i)
-                arraylenval = context.compile_internal(builder, enter_arraylen, numba.types.int64(whereitemtype, numba.types.int64), (whereitemval, builder.load(arraylen)))
+                arraylenval = context.compile_internal(builder, enter_arraylen, JaggedArrayNumba.NUMBA_INDEXTYPE(whereitemtype, JaggedArrayNumba.NUMBA_INDEXTYPE), (whereitemval, builder.load(arraylen)))
                 builder.store(arraylenval, arraylen)
 
         arraylenval = builder.load(arraylen)
@@ -926,9 +926,9 @@ def _JaggedArray_lower_getitem_enter(context, builder, sig, args):
                 newwheretype.append(old)
                 newwherevals.append(whereitemval)
             else:
-                new = numba.types.Array(numba.types.int64, 1, "C") if isinstance(old, (numba.types.Array, numba.types.Integer)) else old
+                new = numba.types.Array(JaggedArrayNumba.NUMBA_INDEXTYPE, 1, "C") if isinstance(old, (numba.types.Array, numba.types.Integer)) else old
                 newwheretype.append(new)
-                newwherevals.append(context.compile_internal(builder, toadvanced, new(old, numba.types.int64), (whereitemval, arraylenval)))
+                newwherevals.append(context.compile_internal(builder, toadvanced, new(old, JaggedArrayNumba.NUMBA_INDEXTYPE), (whereitemval, arraylenval)))
 
         wheretype = numba.types.Tuple(tuple(newwheretype))
         whereval = context.make_tuple(builder, wheretype, tuple(newwherevals))
@@ -969,7 +969,7 @@ def _JaggedArray_lower_getitem_next(context, builder, sig, args):
 
     headtype = wheretype.types[0]
     tailtype = numba.types.Tuple(wheretype.types[1:])
-    headval = numba.targets.tupleobj.static_getitem_tuple(context, builder, headtype(wheretype, numba.types.int64), (whereval, 0))
+    headval = numba.targets.tupleobj.static_getitem_tuple(context, builder, headtype(wheretype, JaggedArrayNumba.NUMBA_INDEXTYPE), (whereval, 0))
     tailval = numba.targets.tupleobj.static_getitem_tuple(context, builder, tailtype(wheretype, numba.types.slice2_type), (whereval, slice(1, None)))
 
     if isinstance(headtype, numba.types.Integer):
@@ -1212,19 +1212,19 @@ class _JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
 
     @numba.typing.templates.bound_function("any")
     def resolve_any(self, arraytype, args, kwargs):
-        return self.resolve_reducer(arraytype, args, kwargs, numba.types.boolean)
+        return self.resolve_reducer(arraytype, args, kwargs, JaggedArrayNumba.NUMBA_BOOLTYPE)
 
     @numba.typing.templates.bound_function("all")
     def resolve_all(self, arraytype, args, kwargs):
-        return self.resolve_reducer(arraytype, args, kwargs, numba.types.boolean)
+        return self.resolve_reducer(arraytype, args, kwargs, JaggedArrayNumba.NUMBA_BOOLTYPE)
 
     @numba.typing.templates.bound_function("count")
     def resolve_count(self, arraytype, args, kwargs):
-        return self.resolve_reducer(arraytype, args, kwargs, numba.types.int64)
+        return self.resolve_reducer(arraytype, args, kwargs, JaggedArrayNumba.NUMBA_INDEXTYPE)
 
     @numba.typing.templates.bound_function("count_nonzero")
     def resolve_count_nonzero(self, arraytype, args, kwargs):
-        return self.resolve_reducer(arraytype, args, kwargs, numba.types.int64)
+        return self.resolve_reducer(arraytype, args, kwargs, JaggedArrayNumba.NUMBA_INDEXTYPE)
 
     @numba.typing.templates.bound_function("sum")
     def resolve_sum(self, arraytype, args, kwargs):
@@ -1255,14 +1255,14 @@ class _JaggedArrayType_type_methods(numba.typing.templates.AttributeTemplate):
 # def _JaggedArray_lower_structure1d_1(context, builder, sig, args):
 #     arraytype, = sig.args
 #     arrayval, = args
-#     return _JaggedArray_lower_structure1d_3(context, builder, sig.return_type(arraytype, numba.types.int64), (arrayval, context.get_constant(numba.types.int64, -1),))
+#     return _JaggedArray_lower_structure1d_3(context, builder, sig.return_type(arraytype, JaggedArrayNumba.NUMBA_INDEXTYPE), (arrayval, context.get_constant(JaggedArrayNumba.NUMBA_INDEXTYPE, -1),))
 
 def _JaggedArray_lower_reduce_descend(which, context, builder, sig, args):
     arraytype, = sig.args
     arrayval, = args
     array = numba.cgutils.create_struct_proxy(arraytype)(context, builder, value=arrayval)
     content = which(context, builder, sig.return_type.contenttype(arraytype.contenttype), (array.content,))
-    return _JaggedArray_lower_new(context, builder, sig.return_type(arraytype, arraytype.startstype, arraytype.stopstype, sig.return_type.contenttype, numba.types.boolean), (arrayval, array.starts, array.stops, content, array.iscompact))
+    return _JaggedArray_lower_new(context, builder, sig.return_type(arraytype, arraytype.startstype, arraytype.stopstype, sig.return_type.contenttype, JaggedArrayNumba.NUMBA_BOOLTYPE), (arrayval, array.starts, array.stops, content, array.iscompact))
 
 @numba.extending.lower_builtin("any", JaggedArrayType)
 def _JaggedArray_lower_any(context, builder, sig, args):
