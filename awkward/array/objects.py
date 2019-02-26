@@ -141,8 +141,9 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
     @generator.setter
     def generator(self, value):
-        if not callable(value):
-            raise TypeError("generator must be a callable (of one argument: the array slice)")
+        if self.check_prop_valid:
+            if not callable(value):
+                raise TypeError("generator must be a callable (of one argument: the array slice)")
         self._generator = value
 
     @property
@@ -161,8 +162,9 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
     @kwargs.setter
     def kwargs(self, value):
-        if not isinstance(value, dict):
-            raise TypeError("kwargs must be a dict")
+        if self.check_prop_valid:
+            if not isinstance(value, dict):
+                raise TypeError("kwargs must be a dict")
         self._kwargs = dict(value)
 
     def __len__(self):
@@ -172,7 +174,8 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         return self._generator
 
     def _valid(self):
-        pass
+        if self.check_whole_valid:
+            pass
         
     def __iter__(self, checkiter=True):
         if checkiter:

@@ -106,10 +106,11 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     @index.setter
     def index(self, value):
         value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("index must have integer dtype")
-        if (value < 0).any():
-            raise ValueError("index must be a non-negative array")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("index must have integer dtype")
+            if (value < 0).any():
+                raise ValueError("index must be a non-negative array")
         self._index = value
         self._inverse = None
         self._isvalid = False
@@ -133,11 +134,12 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         return out
 
     def _valid(self):
-        if not self._isvalid:
-            if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
-                raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
+        if self.check_whole_valid:
+            if not self._isvalid:
+                if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
+                    raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
 
-            self._isvalid = True
+                self._isvalid = True
 
     def __iter__(self, checkiter=True):
         if checkiter:
@@ -314,10 +316,11 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     @length.setter
     def length(self, value):
-        if not self._util_isinteger(value):
-            raise TypeError("length must be an integer")
-        if value < 0:
-            raise ValueError("length must be a non-negative integer") 
+        if self.check_prop_valid:
+            if not self._util_isinteger(value):
+                raise TypeError("length must be an integer")
+            if value < 0:
+                raise ValueError("length must be a non-negative integer") 
         self._length = value
 
     @property
@@ -327,14 +330,15 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     @index.setter
     def index(self, value):
         value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("index must have integer dtype")
-        if len(value.shape) != 1:
-            raise ValueError("index must be one-dimensional")
-        if (value < 0).any():
-            raise ValueError("index must be a non-negative array")
-        if len(value) > 0 and not (value[1:] >= value[:-1]).all():
-            raise ValueError("index must be monatonically increasing")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("index must have integer dtype")
+            if len(value.shape) != 1:
+                raise ValueError("index must be one-dimensional")
+            if (value < 0).any():
+                raise ValueError("index must be a non-negative array")
+            if len(value) > 0 and not (value[1:] >= value[:-1]).all():
+                raise ValueError("index must be monatonically increasing")
         self._index = value
         self._inverse = None
         self._isvalid = False
@@ -376,11 +380,12 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         return self._length
 
     def _valid(self):
-        if not self._isvalid:
-            if len(self._index) > len(self._content):
-                raise ValueError("length of index ({0}) must not be greater than the length of content ({1})".format(len(self._index), len(self._content)))
+        if self.check_whole_valid:
+            if not self._isvalid:
+                if len(self._index) > len(self._content):
+                    raise ValueError("length of index ({0}) must not be greater than the length of content ({1})".format(len(self._index), len(self._content)))
 
-            self._isvalid = True
+                self._isvalid = True
 
     def __iter__(self, checkiter=True):
         if checkiter:

@@ -314,12 +314,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @starts.setter
     def starts(self, value):
         value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("starts must have integer dtype")
-        if len(value.shape) == 0:
-            raise ValueError("starts must have at least one dimension")
-        if (value < 0).any():
-            raise ValueError("starts must be a non-negative array")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("starts must have integer dtype")
+            if len(value.shape) == 0:
+                raise ValueError("starts must have at least one dimension")
+            if (value < 0).any():
+                raise ValueError("starts must be a non-negative array")
         self._starts = value
         self._offsets, self._counts, self._parents = None, None, None
         self._isvalid = False
@@ -331,12 +332,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @stops.setter
     def stops(self, value):
         value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("stops must have integer dtype")
-        if len(value.shape) == 0:
-            raise ValueError("stops must have at least one dimension")
-        if (value < 0).any():
-            raise ValueError("stops must be a non-negative array")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("stops must have integer dtype")
+            if len(value.shape) == 0:
+                raise ValueError("stops must have at least one dimension")
+            if (value < 0).any():
+                raise ValueError("stops must be a non-negative array")
         self._stops = value
         self._offsets, self._counts, self._parents = None, None, None
         self._isvalid = False
@@ -368,12 +370,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @offsets.setter
     def offsets(self, value):
         value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("offsets must have integer dtype")
-        if len(value.shape) != 1 or (value < 0).any():
-            raise ValueError("offsets must be a one-dimensional, non-negative array")
-        if len(value) == 0:
-            raise ValueError("offsets must be non-empty")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("offsets must have integer dtype")
+            if len(value.shape) != 1 or (value < 0).any():
+                raise ValueError("offsets must be a one-dimensional, non-negative array")
+            if len(value) == 0:
+                raise ValueError("offsets must be non-empty")
         self._starts = value[:-1]
         self._stops = value[1:]
         self._offsets = value
@@ -390,12 +393,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @counts.setter
     def counts(self, value):
         value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("counts must have integer dtype")
-        if len(value.shape) == 0:
-            raise ValueError("counts must have at least one dimension")
-        if (value < 0).any():
-            raise ValueError("counts must be a non-negative array")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("counts must have integer dtype")
+            if len(value.shape) == 0:
+                raise ValueError("counts must have at least one dimension")
+            if (value < 0).any():
+                raise ValueError("counts must be a non-negative array")
         offsets = self.counts2offsets(value.reshape(-1))
         self._starts = offsets[:-1].reshape(value.shape)
         self._stops = offsets[1:].reshape(value.shape)
@@ -417,10 +421,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @parents.setter
     def parents(self, value):
         value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("parents must have integer dtype")
-        if len(value.shape) == 0:
-            raise ValueError("parents must have at least one dimension")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("parents must have integer dtype")
+            if len(value.shape) == 0:
+                raise ValueError("parents must have at least one dimension")
         self._starts, self._stops = self.parents2startsstops(value)
         self._offsets, self._counts = None, None
         self._parents = value
@@ -440,31 +445,36 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if not self._isvalid:
             if self.offsetsaliased(self._starts, self._stops):
                 self._offsets = self._starts.base
-                if not (self._offsets[1:] >= self._offsets[:-1]).all():
-                    raise ValueError("offsets must be monatonically increasing")
-                if self._offsets.max() > len(self._content):
-                    raise ValueError("maximum offset {0} is beyond the length of the content ({1})".format(self._offsets.max(), len(self._content)))
+                if self.check_whole_valid:
+                    if not (self._offsets[1:] >= self._offsets[:-1]).all():
+                        raise ValueError("offsets must be monatonically increasing")
+                    if self._offsets.max() > len(self._content):
+                        raise ValueError("maximum offset {0} is beyond the length of the content ({1})".format(self._offsets.max(), len(self._content)))
 
             else:
-                self._validstartsstops(self._starts, self._stops)
+                if self.check_whole_valid:
+                    self._validstartsstops(self._starts, self._stops)
                 nonempty = (self._starts != self._stops)
                 starts = self._starts[nonempty].reshape(-1)
-                if len(starts) != 0 and starts.reshape(-1).max() >= len(self._content):
-                    raise ValueError("maximum start ({0}) is at or beyond the length of the content ({1})".format(starts.reshape(-1).max(), len(self._content)))
+                if self.check_whole_valid:
+                    if len(starts) != 0 and starts.reshape(-1).max() >= len(self._content):
+                        raise ValueError("maximum start ({0}) is at or beyond the length of the content ({1})".format(starts.reshape(-1).max(), len(self._content)))
                 stops = self._stops[nonempty].reshape(-1)
-                if len(stops) != 0 and stops.reshape(-1).max() > len(self._content):
-                    raise ValueError("maximum stop ({0}) is beyond the length of the content ({1})".format(self._stops.reshape(-1).max(), len(self._content)))
+                if self.check_whole_valid:
+                    if len(stops) != 0 and stops.reshape(-1).max() > len(self._content):
+                        raise ValueError("maximum stop ({0}) is beyond the length of the content ({1})".format(self._stops.reshape(-1).max(), len(self._content)))
 
             self._isvalid = True
 
-    @staticmethod
-    def _validstartsstops(starts, stops):
-        if len(starts) > len(stops):
-            raise ValueError("starts must have the same (or shorter) length than stops")
-        if starts.shape[1:] != stops.shape[1:]:
-            raise ValueError("starts and stops must have the same dimensionality (shape[1:])")
-        if not (stops >= starts).all():
-            raise ValueError("stops must be greater than or equal to starts")
+    @classmethod
+    def _validstartsstops(cls, starts, stops):
+        if cls.check_whole_valid:
+            if len(starts) > len(stops):
+                raise ValueError("starts must have the same (or shorter) length than stops")
+            if starts.shape[1:] != stops.shape[1:]:
+                raise ValueError("starts and stops must have the same dimensionality (shape[1:])")
+            if not (stops >= starts).all():
+                raise ValueError("stops must be greater than or equal to starts")
 
     def __iter__(self, checkiter=True):
         if checkiter:
