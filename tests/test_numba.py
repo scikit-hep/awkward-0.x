@@ -415,10 +415,10 @@ class Test(unittest.TestCase):
         assert numba.njit()(lambda x: x.sum())(a2).tolist() == [[6, 0], [], [9]]
         assert numba.njit()(lambda x: x.prod())(a).tolist() == [6, 1, 20]
         assert numba.njit()(lambda x: x.prod())(a2).tolist() == [[6, 1], [], [20]]
-        assert numba.njit()(lambda x: x.min())(a).tolist() == [1, 9223372036854775807, 4]
-        assert numba.njit()(lambda x: x.min())(a2).tolist() == [[1, 9223372036854775807], [], [4]]
-        assert numba.njit()(lambda x: x.max())(a).tolist() == [3, -9223372036854775808, 5]
-        assert numba.njit()(lambda x: x.max())(a2).tolist() == [[3, -9223372036854775808], [], [5]]
+        assert numba.njit()(lambda x: x.min())(a).tolist() == [1, numpy.iinfo(numpy.int64).max, 4]
+        assert numba.njit()(lambda x: x.min())(a2).tolist() == [[1, numpy.iinfo(numpy.int64).max], [], [4]]
+        assert numba.njit()(lambda x: x.max())(a).tolist() == [3, numpy.iinfo(numpy.int64).min, 5]
+        assert numba.njit()(lambda x: x.max())(a2).tolist() == [[3, numpy.iinfo(numpy.int64).min], [], [5]]
 
         a = awkward.numba.fromiter([[True, False, True], [], [False, True]])
         a2 = awkward.numba.JaggedArray.fromcounts([2, 0, 1], a)
