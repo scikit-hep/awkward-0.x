@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import operator
+import math
 try:
     from collections.abc import Iterable
 except ImportError:
@@ -1265,11 +1266,80 @@ def _JaggedArray_lower_reduce_descend(which, context, builder, sig, args):
     content = which(context, builder, sig.return_type.contenttype(arraytype.contenttype), (array.content,))
     return _JaggedArray_lower_new(context, builder, sig.return_type(arraytype, arraytype.startstype, arraytype.stopstype, sig.return_type.contenttype, numba.types.boolean), (arrayval, array.starts, array.stops, content, array.iscompact))
 
+@numba.extending.lower_builtin("any", JaggedArrayType)
+def _JaggedArray_lower_any(context, builder, sig, args):
+    if isinstance(sig.args[0].contenttype, JaggedArrayType):
+        return _JaggedArray_lower_reduce_descend(_JaggedArray_lower_any, context, builder, sig, args)
+    def run(array):
+        out = numpy.empty(array.starts.shape, numpy.bool_)
+        flatout = out.reshape(-1)
+        flatstarts = array.starts.reshape(-1)
+        flatstops = array.stops.reshape(-1)
+        for i in range(len(flatstarts)):
+            flatout[i] = False
+            for j in range(flatstarts[i], flatstops[i]):
+                if not math.isnan(array.content[j]) and array.content[j] != 0:
+                    flatout[i] = True
+                    break
+        return out
+    return context.compile_internal(builder, run, sig, args)
+
+@numba.extending.lower_builtin("all", JaggedArrayType)
+def _JaggedArray_lower_all(context, builder, sig, args):
+    if isinstance(sig.args[0].contenttype, JaggedArrayType):
+        return _JaggedArray_lower_reduce_descend(_JaggedArray_lower_all, context, builder, sig, args)
+    def run(array):
+        out = numpy.empty(array.starts.shape, numpy.bool_)
+        flatout = out.reshape(-1)
+        flatstarts = array.starts.reshape(-1)
+        flatstops = array.stops.reshape(-1)
+        for i in range(len(flatstarts)):
+            flatout[i] = True
+            for j in range(flatstarts[i], flatstops[i]):
+                if not math.isnan(array.content[j]) and array.content[j] == 0:
+                    flatout[i] = False
+                    break
+        return out
+    return context.compile_internal(builder, run, sig, args)
+
+@numba.extending.lower_builtin("count", JaggedArrayType)
+def _JaggedArray_lower_count(context, builder, sig, args):
+    if isinstance(sig.args[0].contenttype, JaggedArrayType):
+        return _JaggedArray_lower_reduce_descend(_JaggedArray_lower_count, context, builder, sig, args)
+    def run(array):
+        out = numpy.empty(array.starts.shape, numpy.int64)
+        flatout = out.reshape(-1)
+        flatstarts = array.starts.reshape(-1)
+        flatstops = array.stops.reshape(-1)
+        for i in range(len(flatstarts)):
+            flatout[i] = 0
+            for j in range(flatstarts[i], flatstops[i]):
+                if not math.isnan(array.content[j]):
+                    flatout[i] += 1
+        return out
+    return context.compile_internal(builder, run, sig, args)
+
+@numba.extending.lower_builtin("count_nonzero", JaggedArrayType)
+def _JaggedArray_lower_count_nonzero(context, builder, sig, args):
+    if isinstance(sig.args[0].contenttype, JaggedArrayType):
+        return _JaggedArray_lower_reduce_descend(_JaggedArray_lower_count_nonzero, context, builder, sig, args)
+    def run(array):
+        out = numpy.empty(array.starts.shape, numpy.int64)
+        flatout = out.reshape(-1)
+        flatstarts = array.starts.reshape(-1)
+        flatstops = array.stops.reshape(-1)
+        for i in range(len(flatstarts)):
+            flatout[i] = 0
+            for j in range(flatstarts[i], flatstops[i]):
+                if not math.isnan(array.content[j]) and array.content[j] != 0:
+                    flatout[i] += 1
+        return out
+    return context.compile_internal(builder, run, sig, args)
+
 @numba.extending.lower_builtin("sum", JaggedArrayType)
 def _JaggedArray_lower_sum(context, builder, sig, args):
     if isinstance(sig.args[0].contenttype, JaggedArrayType):
         return _JaggedArray_lower_reduce_descend(_JaggedArray_lower_sum, context, builder, sig, args)
-
     def run(array):
         out = numpy.empty(array.starts.shape, array.content.dtype)
         flatout = out.reshape(-1)
@@ -1278,10 +1348,77 @@ def _JaggedArray_lower_sum(context, builder, sig, args):
         for i in range(len(flatstarts)):
             flatout[i] = 0
             for j in range(flatstarts[i], flatstops[i]):
-                flatout[i] += array.content[j]
+                if not math.isnan(array.content[j]):
+                    flatout[i] += array.content[j]
         return out
-
     return context.compile_internal(builder, run, sig, args)
+
+@numba.extending.lower_builtin("prod", JaggedArrayType)
+def _JaggedArray_lower_prod(context, builder, sig, args):
+    if isinstance(sig.args[0].contenttype, JaggedArrayType):
+        return _JaggedArray_lower_reduce_descend(_JaggedArray_lower_prod, context, builder, sig, args)
+    def run(array):
+        out = numpy.empty(array.starts.shape, array.content.dtype)
+        flatout = out.reshape(-1)
+        flatstarts = array.starts.reshape(-1)
+        flatstops = array.stops.reshape(-1)
+        for i in range(len(flatstarts)):
+            flatout[i] = 1
+            for j in range(flatstarts[i], flatstops[i]):
+                if not math.isnan(array.content[j]):
+                    flatout[i] *= array.content[j]
+        return out
+    return context.compile_internal(builder, run, sig, args)
+
+@numba.extending.lower_builtin("min", JaggedArrayType)
+def _JaggedArray_lower_min(context, builder, sig, args):
+    if isinstance(sig.args[0].contenttype, JaggedArrayType):
+        return _JaggedArray_lower_reduce_descend(_JaggedArray_lower_min, context, builder, sig, args)
+    def run(array, identity):
+        out = numpy.empty(array.starts.shape, array.content.dtype)
+        flatout = out.reshape(-1)
+        flatstarts = array.starts.reshape(-1)
+        flatstops = array.stops.reshape(-1)
+        for i in range(len(flatstarts)):
+            flatout[i] = identity
+            for j in range(flatstarts[i], flatstops[i]):
+                if not math.isnan(array.content[j]) and array.content[j] < flatout[i]:
+                    flatout[i] = array.content[j]
+        return out
+    datatype = sig.args[0].contenttype.dtype
+    if isinstance(datatype, numba.types.Boolean):
+        identity = True
+    elif isinstance(datatype, numba.types.Integer):
+        identity = datatype.maxval
+    else:
+        identity = numpy.inf
+        datatype = numba.types.float64
+    return context.compile_internal(builder, run, sig.return_type(sig.args[0], datatype), (args[0], context.get_constant(datatype, identity)))
+
+@numba.extending.lower_builtin("max", JaggedArrayType)
+def _JaggedArray_lower_max(context, builder, sig, args):
+    if isinstance(sig.args[0].contenttype, JaggedArrayType):
+        return _JaggedArray_lower_reduce_descend(_JaggedArray_lower_max, context, builder, sig, args)
+    def run(array, identity):
+        out = numpy.empty(array.starts.shape, array.content.dtype)
+        flatout = out.reshape(-1)
+        flatstarts = array.starts.reshape(-1)
+        flatstops = array.stops.reshape(-1)
+        for i in range(len(flatstarts)):
+            flatout[i] = identity
+            for j in range(flatstarts[i], flatstops[i]):
+                if not math.isnan(array.content[j]) and array.content[j] > flatout[i]:
+                    flatout[i] = array.content[j]
+        return out
+    datatype = sig.args[0].contenttype.dtype
+    if isinstance(datatype, numba.types.Boolean):
+        identity = False
+    elif isinstance(datatype, numba.types.Integer):
+        identity = datatype.minval
+    else:
+        identity = -numpy.inf
+        datatype = numba.types.float64
+    return context.compile_internal(builder, run, sig.return_type(sig.args[0], datatype), (args[0], context.get_constant(datatype, identity)))
 
 @numba.extending.overload_attribute(JaggedArrayType, "offsets")
 def _JaggedArray_offsets(arraytype):
