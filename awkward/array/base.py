@@ -44,7 +44,8 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     allow_tonumpy = True
     allow_iter = True
-    # TODO for 1.0: add check_prop_valid and check_whole_valid parameters
+    check_prop_valid = True
+    check_whole_valid = True
 
     numpy = numpy
     DEFAULTTYPE = numpy.dtype(numpy.float64)

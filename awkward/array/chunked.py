@@ -95,10 +95,11 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     @chunks.setter
     def chunks(self, value):
-        try:
-            iter(value)
-        except TypeError:
-            raise TypeError("chunks must be iterable")
+        if self.check_prop_valid:
+            try:
+                iter(value)
+            except TypeError:
+                raise TypeError("chunks must be iterable")
         self._chunks = [self._util_toarray(x, self.DEFAULTTYPE) for x in value]
         self._types = [None] * len(self._chunks)
 
@@ -108,11 +109,12 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     @counts.setter
     def counts(self, value):
-        try:
-            if not all(self._util_isinteger(x) and x >= 0 for x in value):
-                raise ValueError("counts must contain only non-negative integers")
-        except TypeError:
-            raise TypeError("counts must be iterable")
+        if self.check_prop_valid:
+            try:
+                if not all(self._util_isinteger(x) and x >= 0 for x in value):
+                    raise ValueError("counts must contain only non-negative integers")
+            except TypeError:
+                raise TypeError("counts must be iterable")
         self._counts = list(value)
         self._offsets = None
 
@@ -133,8 +135,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def knowcounts(self, until=None):
         if until is None:
             until = len(self._chunks)
-        if not 0 <= until <= len(self._chunks):
-            raise ValueError("cannot knowcounts until chunkid {0} with {1} chunks".format(until, len(self._chunks)))
+        until = min(until, len(self._chunks))
         for i in range(len(self._counts), until):
             self._counts.append(len(self._chunks[i]))
 
@@ -264,11 +265,12 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         return [slice(start, stop) for start, stop in zip(offsets[:-1], offsets[1:])]
 
     def _valid(self):
-        if len(self._counts) > len(self._chunks):
-            raise ValueError("ChunkArray has more counts than chunks")
-        for i, count in enumerate(self._counts):
-            if count != len(self._chunks[i]):
-                raise ValueError("count[{0}] does not agree with len(chunk[{0}])".format(i))
+        if self.check_whole_valid:
+            if len(self._counts) > len(self._chunks):
+                raise ValueError("ChunkArray has more counts than chunks")
+            for i, count in enumerate(self._counts):
+                if count != len(self._chunks[i]):
+                    raise ValueError("count[{0}] does not agree with len(chunk[{0}])".format(i))
         self._gettype({})
 
     def __str__(self):
@@ -455,7 +457,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
                 elif self._util_isnumpy(self.type):
                     out = self.numpy.empty((len(head),) + self.type.shape[1:], dtype=self.type.dtype)
-                    self.knowcounts(chunkid.max())
+                    self.knowcounts(chunkid.max() + 1)
                     offsets = self.offsets
 
                     for cid in self.numpy.unique(chunkid):
@@ -587,7 +589,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     def _hasjagged(self):
         for chunkid in range(len(self._chunks)):
-            self.knowcounts(until=chunkid)
+            self.knowcounts(chunkid + 1)
             if self._counts[chunkid] > 0:
                 return self._util_hasjagged(self._chunks[chunkid])
         else:
@@ -650,7 +652,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     @property
     def columns(self):
         for chunkid in range(len(self._chunks)):
-            self.knowcounts(until=chunkid)
+            self.knowcounts(chunkid + 1)
             if self._counts[chunkid] > 0:
                 return self._chunks[chunkid].columns
 
@@ -720,14 +722,14 @@ class AppendableArray(ChunkedArray):
         if self._util_isinteger(value) and value > 0:
             self._chunkshape = (value,)
         else:
-            try:
-                for x in value:
-                    assert self._util_isinteger(x) and x > 0
-            except TypeError:
-                raise TypeError("chunkshape must be a positive integer or a tuple of integers")
-            except AssertionError:
-                raise ValueError("chunkshape must be a positive integer or tuple of positive integers")
-            else:
+            if self.check_prop_valid:
+                try:
+                    for x in value:
+                        assert self._util_isinteger(x) and x > 0
+                except TypeError:
+                    raise TypeError("chunkshape must be a positive integer or a tuple of integers")
+                except AssertionError:
+                    raise ValueError("chunkshape must be a positive integer or tuple of positive integers")
                 self._chunkshape = tuple(value)
 
     @property
@@ -744,16 +746,18 @@ class AppendableArray(ChunkedArray):
 
     @chunks.setter
     def chunks(self, value):
-        try:
-            iter(value)
-        except TypeError:
-            raise TypeError("chunks must be iterable")
+        if self.check_prop_valid:
+            try:
+                iter(value)
+            except TypeError:
+                raise TypeError("chunks must be iterable")
         chunks = [self._util_toarray(x, self.DEFAULTTYPE, self.numpy.ndarray) for x in value]
-        for chunk in chunks:
-            if chunk.dtype != self._dtype:
-                raise ValueError("cannot assign chunk with dtype ({0}) to an AppendableArray with dtype ({1})".format(chunk.dtype, self._dtype))
-            if chunk.shape[1:] != self._chunkshape[1:]:
-                raise ValueError("cannot assign chunk with dimensionality ({0}) to an AppendableArray with dimensionality ({1}), where dimensionality is shape[1:]".format(chunk.shape[1:], self._chunkshape[1:]))
+        if self.check_prop_valid:
+            for chunk in chunks:
+                if chunk.dtype != self._dtype:
+                    raise ValueError("cannot assign chunk with dtype ({0}) to an AppendableArray with dtype ({1})".format(chunk.dtype, self._dtype))
+                if chunk.shape[1:] != self._chunkshape[1:]:
+                    raise ValueError("cannot assign chunk with dimensionality ({0}) to an AppendableArray with dimensionality ({1}), where dimensionality is shape[1:]".format(chunk.shape[1:], self._chunkshape[1:]))
         self._chunks = chunks
         self._counts = [len(x) for x in self._chunks]
         self._types = [None] * len(self._chunks)
@@ -780,7 +784,8 @@ class AppendableArray(ChunkedArray):
         return sum(self._counts)
 
     def _valid(self):
-        pass
+        if self.check_whole_valid:
+            pass
 
     def __setitem__(self, where, what):
         raise TypeError("array has no Table, cannot assign columns")

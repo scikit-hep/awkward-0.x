@@ -121,10 +121,11 @@ class UnionArray(awkward.array.base.AwkwardArray):
     @tags.setter
     def tags(self, value):
         value = self._util_toarray(value, self.TAGTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("tags must have integer dtype")
-        if (value < 0).any():
-            raise ValueError("tags must be a non-negative array")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("tags must have integer dtype")
+            if (value < 0).any():
+                raise ValueError("tags must be a non-negative array")
         self._tags = value
         self._isvalid = False
 
@@ -135,10 +136,11 @@ class UnionArray(awkward.array.base.AwkwardArray):
     @index.setter
     def index(self, value):
         value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("index must have integer dtype")
-        if (value < 0).any():
-            raise ValueError("index must be a non-negative array")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("index must have integer dtype")
+            if (value < 0).any():
+                raise ValueError("index must be a non-negative array")
         self._index = value
         self._isvalid = False
 
@@ -148,13 +150,15 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     @contents.setter
     def contents(self, value):
-        try:
-            iter(value)
-        except TypeError:
-            raise TypeError("contents must be iterable")
+        if self.check_prop_valid:
+            try:
+                iter(value)
+            except TypeError:
+                raise TypeError("contents must be iterable")
         value = tuple(self._util_toarray(x, self.DEFAULTTYPE) for x in value)
-        if len(value) == 0:
-            raise ValueError("contents must be non-empty")
+        if self.check_prop_valid:
+            if len(value) == 0:
+                raise ValueError("contents must be non-empty")
         self._contents = value
         self._dtype = None
         self._isvalid = False
@@ -233,23 +237,24 @@ class UnionArray(awkward.array.base.AwkwardArray):
         return out
 
     def _valid(self):
-        if not self._isvalid:
-            if len(self._tags.shape) > len(self._index.shape):
-                raise ValueError("tags length ({0}) must be less than or equal to index length ({1})".format(len(self._tags.shape), len(self._index.shape)))
+        if self.check_whole_valid:
+            if not self._isvalid:
+                if len(self._tags.shape) > len(self._index.shape):
+                    raise ValueError("tags length ({0}) must be less than or equal to index length ({1})".format(len(self._tags.shape), len(self._index.shape)))
 
-            if self._tags.shape[1:] != self._index.shape[1:]:
-                raise ValueError("tags dimensionality ({0}) must be equal to index dimensionality ({1})".format(self._tags.shape[1:], self._index.shape[1:]))
+                if self._tags.shape[1:] != self._index.shape[1:]:
+                    raise ValueError("tags dimensionality ({0}) must be equal to index dimensionality ({1})".format(self._tags.shape[1:], self._index.shape[1:]))
 
-            if len(self._tags.reshape(-1)) > 0 and self._tags.reshape(-1).max() >= len(self._contents):
-                raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(self._tags.reshape(-1).max(), len(self._contents)))
+                if len(self._tags.reshape(-1)) > 0 and self._tags.reshape(-1).max() >= len(self._contents):
+                    raise ValueError("maximum tag is {0} but there are only {1} contents arrays".format(self._tags.reshape(-1).max(), len(self._contents)))
 
-            index = self._index[:len(self._tags)]
-            for tag in self.numpy.unique(self._tags):
-                maxindex = index[self._tags == tag].reshape(-1).max()
-                if maxindex >= len(self._contents[tag]):
-                    raise ValueError("maximum index ({0}) must be less than the length of all contents arrays ({1})".format(maxindex, len(self._contents[tag])))
+                index = self._index[:len(self._tags)]
+                for tag in self.numpy.unique(self._tags):
+                    maxindex = index[self._tags == tag].reshape(-1).max()
+                    if maxindex >= len(self._contents[tag]):
+                        raise ValueError("maximum index ({0}) must be less than the length of all contents arrays ({1})".format(maxindex, len(self._contents[tag])))
 
-            self._isvalid = True
+                self._isvalid = True
 
     def __iter__(self, checkiter=True):
         if checkiter:

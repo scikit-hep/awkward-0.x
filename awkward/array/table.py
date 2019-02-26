@@ -250,8 +250,9 @@ class Table(awkward.array.base.AwkwardArray):
 
     @rowname.setter
     def rowname(self, value):
-        if not isinstance(value, awkward.util.string):
-            raise TypeError("rowname must be a string")
+        if self.check_prop_valid:
+            if not isinstance(value, awkward.util.string):
+                raise TypeError("rowname must be a string")
         self._rowname = value
 
     @classmethod
@@ -368,8 +369,9 @@ class Table(awkward.array.base.AwkwardArray):
 
     @contents.setter
     def contents(self, value):
-        if not isinstance(value, dict) or not all(isinstance(n, awkward.util.string) for n in value):
-            raise TypeError("contents must be a dict from strings to arrays")
+        if self.check_prop_valid:
+            if not isinstance(value, dict) or not all(isinstance(n, awkward.util.string) for n in value):
+                raise TypeError("contents must be a dict from strings to arrays")
         for n in list(value):
             value[n] = self._util_toarray(value[n], self.DEFAULTTYPE)
         self._contents = value
@@ -503,7 +505,8 @@ class Table(awkward.array.base.AwkwardArray):
                 raise TypeError("cannot interpret dtype {0} as a fancy index or mask".format(head.dtype))
 
     def _valid(self):
-        pass
+        if self.check_whole_valid:
+            pass
 
     def __iter__(self, checkiter=True):
         if checkiter:

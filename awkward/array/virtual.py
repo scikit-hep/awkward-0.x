@@ -162,8 +162,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @generator.setter
     def generator(self, value):
-        if not callable(value):
-            raise TypeError("generator must be a callable")
+        if self.check_prop_valid:
+            if not callable(value):
+                raise TypeError("generator must be a callable")
         self._generator = value
 
 
@@ -183,8 +184,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @kwargs.setter
     def kwargs(self, value):
-        if not isinstance(value, dict):
-            raise TypeError("kwargs must be a dict")
+        if self.check_prop_valid:
+            if not isinstance(value, dict):
+                raise TypeError("kwargs must be a dict")
         self._kwargs = dict(value)
 
     @property
@@ -193,8 +195,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @cache.setter
     def cache(self, value):
-        if not value is None and not (callable(getattr(value, "__getitem__", None)) and callable(getattr(value, "__setitem__", None)) and callable(getattr(value, "__delitem__", None))):
-            raise TypeError("cache must be None, a dict, or have __getitem__/__setitem__/__delitem__ methods")
+        if self.check_prop_valid:
+            if not value is None and not (callable(getattr(value, "__getitem__", None)) and callable(getattr(value, "__setitem__", None)) and callable(getattr(value, "__delitem__", None))):
+                raise TypeError("cache must be None, a dict, or have __getitem__/__setitem__/__delitem__ methods")
         self._cache = value
 
     @property
@@ -203,8 +206,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @persistentkey.setter
     def persistentkey(self, value):
-        if value is not None and not isinstance(value, awkward.util.string):
-            raise TypeError("persistentkey must be None or a string")
+        if self.check_prop_valid:
+            if value is not None and not isinstance(value, awkward.util.string):
+                raise TypeError("persistentkey must be None or a string")
         self._persistentkey = value
 
     @property
@@ -213,8 +217,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @persistvirtual.setter
     def persistvirtual(self, value):
-        if not isinstance(value, (bool, self.numpy.bool_, self.numpy.bool)):
-            raise TypeError("persistvirtual must be boolean")
+        if self.check_prop_valid:
+            if not isinstance(value, (bool, self.numpy.bool_, self.numpy.bool)):
+                raise TypeError("persistvirtual must be boolean")
         self._persistvirtual = bool(value)
 
     def _gettype(self, seen):
@@ -232,15 +237,17 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @type.setter
     def type(self, value):
-        if value is not None and not isinstance(value, awkward.type.ArrayType):
-            raise TypeError("type must be None or an awkward type (to set Numpy parameters, use awkward.util.fromnumpy(shape, dtype, masked=False))")
+        if self.check_prop_valid:
+            if value is not None and not isinstance(value, awkward.type.ArrayType):
+                raise TypeError("type must be None or an awkward type (to set Numpy parameters, use awkward.util.fromnumpy(shape, dtype, masked=False))")
         self._type = value
 
     def __len__(self):
         return self.shape[0]
 
     def _valid(self):
-        pass
+        if self.check_whole_valid:
+            pass
 
     @property
     def key(self):
