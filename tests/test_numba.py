@@ -380,3 +380,61 @@ class Test(unittest.TestCase):
                         out += xijk
             return out
         assert test2(a2) == 16.5
+
+    def test_numba_reducers(self):
+        a = awkward.numba.fromiter([[0, numpy.nan, 3.3], [], [4, 5]])
+        a2 = awkward.numba.JaggedArray.fromcounts([2, 0, 1], a)
+        assert numba.njit()(lambda x: x.any())(a).tolist() == [True, False, True]
+        assert numba.njit()(lambda x: x.any())(a2).tolist() == [[True, False], [], [True]]
+        assert numba.njit()(lambda x: x.all())(a).tolist() == [False, True, True]
+        assert numba.njit()(lambda x: x.all())(a2).tolist() == [[False, True], [], [True]]
+        assert numba.njit()(lambda x: x.count())(a).tolist() == [2, 0, 2]
+        assert numba.njit()(lambda x: x.count())(a2).tolist() == [[2, 0], [], [2]]
+        assert numba.njit()(lambda x: x.count_nonzero())(a).tolist() == [1, 0, 2]
+        assert numba.njit()(lambda x: x.count_nonzero())(a2).tolist() == [[1, 0], [], [2]]
+        assert numba.njit()(lambda x: x.sum())(a).tolist() == [3.3, 0.0, 9.0]
+        assert numba.njit()(lambda x: x.sum())(a2).tolist() == [[3.3, 0.0], [], [9.0]]
+        assert numba.njit()(lambda x: x.prod())(a).tolist() == [0.0, 1.0, 20.0]
+        assert numba.njit()(lambda x: x.prod())(a2).tolist() == [[0.0, 1.0], [], [20.0]]
+        assert numba.njit()(lambda x: x.min())(a).tolist() == [0.0, numpy.inf, 4.0]
+        assert numba.njit()(lambda x: x.min())(a2).tolist() == [[0.0, numpy.inf], [], [4.0]]
+        assert numba.njit()(lambda x: x.max())(a).tolist() == [3.3, -numpy.inf, 5.0]
+        assert numba.njit()(lambda x: x.max())(a2).tolist() == [[3.3, -numpy.inf], [], [5.0]]
+
+        a = awkward.numba.fromiter([[1, 2, 3], [], [4, 5]])
+        a2 = awkward.numba.JaggedArray.fromcounts([2, 0, 1], a)
+        assert numba.njit()(lambda x: x.any())(a).tolist() == [True, False, True]
+        assert numba.njit()(lambda x: x.any())(a2).tolist() == [[True, False], [], [True]]
+        assert numba.njit()(lambda x: x.all())(a).tolist() == [True, True, True]
+        assert numba.njit()(lambda x: x.all())(a2).tolist() == [[True, True], [], [True]]
+        assert numba.njit()(lambda x: x.count())(a).tolist() == [3, 0, 2]
+        assert numba.njit()(lambda x: x.count())(a2).tolist() == [[3, 0], [], [2]]
+        assert numba.njit()(lambda x: x.count_nonzero())(a).tolist() == [3, 0, 2]
+        assert numba.njit()(lambda x: x.count_nonzero())(a2).tolist() == [[3, 0], [], [2]]
+        assert numba.njit()(lambda x: x.sum())(a).tolist() == [6, 0, 9]
+        assert numba.njit()(lambda x: x.sum())(a2).tolist() == [[6, 0], [], [9]]
+        assert numba.njit()(lambda x: x.prod())(a).tolist() == [6, 1, 20]
+        assert numba.njit()(lambda x: x.prod())(a2).tolist() == [[6, 1], [], [20]]
+        assert numba.njit()(lambda x: x.min())(a).tolist() == [1, 9223372036854775807, 4]
+        assert numba.njit()(lambda x: x.min())(a2).tolist() == [[1, 9223372036854775807], [], [4]]
+        assert numba.njit()(lambda x: x.max())(a).tolist() == [3, -9223372036854775808, 5]
+        assert numba.njit()(lambda x: x.max())(a2).tolist() == [[3, -9223372036854775808], [], [5]]
+
+        a = awkward.numba.fromiter([[True, False, True], [], [False, True]])
+        a2 = awkward.numba.JaggedArray.fromcounts([2, 0, 1], a)
+        assert numba.njit()(lambda x: x.any())(a).tolist() == [True, False, True]
+        assert numba.njit()(lambda x: x.any())(a2).tolist() == [[True, False], [], [True]]
+        assert numba.njit()(lambda x: x.all())(a).tolist() == [False, True, False]
+        assert numba.njit()(lambda x: x.all())(a2).tolist() == [[False, True], [], [False]]
+        assert numba.njit()(lambda x: x.count())(a).tolist() == [3, 0, 2]
+        assert numba.njit()(lambda x: x.count())(a2).tolist() == [[3, 0], [], [2]]
+        assert numba.njit()(lambda x: x.count_nonzero())(a).tolist() == [2, 0, 1]
+        assert numba.njit()(lambda x: x.count_nonzero())(a2).tolist() == [[2, 0], [], [1]]
+        assert numba.njit()(lambda x: x.sum())(a).tolist() == [True, False, True]
+        assert numba.njit()(lambda x: x.sum())(a2).tolist() == [[True, False], [], [True]]
+        assert numba.njit()(lambda x: x.prod())(a).tolist() == [False, True, False]
+        assert numba.njit()(lambda x: x.prod())(a2).tolist() == [[False, True], [], [False]]
+        assert numba.njit()(lambda x: x.min())(a).tolist() == [False, True, False]
+        assert numba.njit()(lambda x: x.min())(a2).tolist() == [[False, True], [], [False]]
+        assert numba.njit()(lambda x: x.max())(a).tolist() == [True, False, True]
+        assert numba.njit()(lambda x: x.max())(a2).tolist() == [[True, False], [], [True]]
