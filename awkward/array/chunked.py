@@ -135,8 +135,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def knowcounts(self, until=None):
         if until is None:
             until = len(self._chunks)
-        if not 0 <= until <= len(self._chunks):
-            raise ValueError("cannot knowcounts until chunkid {0} with {1} chunks".format(until, len(self._chunks)))
+        until = min(until, len(self._chunks))
         for i in range(len(self._counts), until):
             self._counts.append(len(self._chunks[i]))
 
