@@ -431,28 +431,26 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     def _argminmax_general(self, ismin):
         raise RuntimeError("helper function not needed in JaggedArrayNumba")
 
-    @awkward.util.bothmethod
-    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
-        if isinstance(arrays, (numpy.ndarray, awkward.array.base.AwkwardArray)):
-            arrays = (arrays,)
-        else:
-            arrays = tuple(arrays)
-
-        if isclassmethod: 
-            cls = cls_or_self
-            if not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
-        else:
-            self = cls_or_self
-            cls = self.__class__
-            if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
-            arrays = (self,) + arrays
-
-        if len(arrays) == 0:
-            raise TypeError("concatenate requires at least one array")
-
-        return _JaggedArray_concatenate_njit(arrays, axis)
+    # @awkward.util.bothmethod
+    # def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
+    #     if isinstance(arrays, (numpy.ndarray, awkward.array.base.AwkwardArray)):
+    #         arrays = (arrays,)
+    #     else:
+    #         arrays = tuple(arrays)
+    #     if isclassmethod:
+    #         cls = cls_or_self
+    #         if not all(isinstance(x, awkward.array.jagged.JaggedArray) for x in arrays):
+    #             raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
+    #     else:
+    #         self = cls_or_self
+    #         cls = self.__class__
+    #         if not isinstance(self, awkward.array.jagged.JaggedArray) or not all(isinstance(x, awkward.array.jagged.JaggedArray) for x in arrays):
+    #             raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
+    #         arrays = (self,) + arrays
+    #     if len(arrays) == 0:
+    #         raise TypeError("concatenate requires at least one array")
+    #     return _JaggedArray_concatenate_njit(arrays, axis)
+    ### FIXME: left unfinished
 
     # @awkward.util.bothmethod
     # def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
