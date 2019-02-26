@@ -133,8 +133,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         return all(x is not None for x in self._types)
 
     def knowcounts(self, until=None):
-        print("knowcounts", until)
-
         if until is None:
             until = len(self._chunks)
         if not 0 <= until <= len(self._chunks):
@@ -460,7 +458,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
                 elif self._util_isnumpy(self.type):
                     out = self.numpy.empty((len(head),) + self.type.shape[1:], dtype=self.type.dtype)
-                    self.knowcounts(chunkid.max())
+                    self.knowcounts(chunkid.max() + 1)
                     offsets = self.offsets
 
                     for cid in self.numpy.unique(chunkid):
@@ -592,7 +590,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     def _hasjagged(self):
         for chunkid in range(len(self._chunks)):
-            self.knowcounts(until=(chunkid + 1))
+            self.knowcounts(chunkid + 1)
             if self._counts[chunkid] > 0:
                 return self._util_hasjagged(self._chunks[chunkid])
         else:
@@ -655,7 +653,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     @property
     def columns(self):
         for chunkid in range(len(self._chunks)):
-            self.knowcounts(until=chunkid)
+            self.knowcounts(chunkid + 1)
             if self._counts[chunkid] > 0:
                 return self._chunks[chunkid].columns
 
