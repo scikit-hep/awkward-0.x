@@ -14,7 +14,7 @@ from .util import NDArrayOperatorsMixin
 import awkward.persist
 import awkward.type
 
-@pd.api.extensions.register_extension_dtype
+#@pd.api.extensions.register_extension_dtype
 class AwkwardType(ExtensionDtype):
     name = 'awkward'
     type = 'awkward-array'
@@ -397,61 +397,4 @@ class AwkwardArray(NDArrayOperatorsMixin):
                 ufunc is cls.numpy.not_equal or
                 ufunc is cls.numpy.greater or
                 ufunc is cls.numpy.greater_equal)
-
-# -----------------------------------------------------------------------------
-# Accessor
-# -----------------------------------------------------------------------------
-
-@pd.api.extensions.register_series_accessor("awkward")
-class AwkwardAccessor(object):
-    i0 = DelegatedProperty("i0")
-    i1 = DelegatedProperty("i1")
-    i2 = DelegatedProperty("i2")
-    i3 = DelegatedProperty("i3")
-    i4 = DelegatedProperty("i4")
-    i5 = DelegatedProperty("i5")
-    i6 = DelegatedProperty("i6")
-    i7 = DelegatedProperty("i7")
-    i8 = DelegatedProperty("i8")
-    i9 = DelegatedProperty("i9")
-
-    type = DelegatedProperty("type")
-    dtype = DelegatedProperty("dtype")
-    shape = DelegatedProperty("shape")
-    size = DelegatedProperty("size")
-
-    ChunkedArray = DelegatedProperty("ChunkedArray")
-    AppendableArray = DelegatedProperty("AppendableArray")
-    IndexedArray = DelegatedProperty("IndexedArray")
-    SparseArray = DelegatedProperty("SparsedArray")
-    JaggedArray = DelegatedProperty("JaggedArray")
-    MaskedArray = DelegatedProperty("MaskedArray")
-    BitMaskedArray = DelegatedProperty("BitMaskedArray")
-    IndexedMaskedArray = DelegatedProperty("BitMaskedArray")
-    Methods = DelegatedProperty("Methods")
-    ObjectArray = DelegatedProperty("ObjectArray")
-    StingArray = DelegatedProperty("StingArray")
-    Table = DelegatedProperty("Table")
-    UnionArray = DelegatedProperty("UnionArray")
-    VirtualArray = DelegatedProperty("VirtualArray")
-
-    _util_isinteger = DelegatedMethod("_util_is_integer")
-    _util_isintegertype = DelegatedMethod("_util_is_integertype")
-    _util_toarray = DelegatedMethod("_util_toarray")
-    _util_arraystr_draw = DelegatedMethod("_util_arraystr_draw")
-    _util_arraystr = DelegatedMethod("_util_arraystr")
-    _util_isnumpy = DelegatedMethod("_util_isnumpy")
-    _util_deepcopy = DelegatedMethod("util_deepcopy")
-    _util_hasjagged = DelegatedMethod("_util_hasjagged")
-    _util_reduce = DelegatedMethod("_util_reduce")
-    _util_concatenate = DelegatedMethod("_util_reduce")
-    _util_isstringslice = DelegatedMethod("_util_isstringslice")
-    _util_iscomparison = DelegatedMethod("_util_iscomparison")
-    #tolist = DelegatedMethod("tolist")
-
-    def tolist(self, other):
-        return delegated_method(self.tolist)
-    
-    def content(self, other):
-        return delegated_method(self.content)
 
