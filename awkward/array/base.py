@@ -413,6 +413,11 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                 ufunc is cls.numpy.greater or
                 ufunc is cls.numpy.greater_equal)
 
+try:
+    from awkward.pandas.base import AwkwardArray
+except ImportError:
+    from awkward.array.base import AwkwardArray
+
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class
