@@ -62,7 +62,7 @@ whitelist = [["awkward.util", "frombuffer"],
              ["awkward", "Table"],
              ["awkward", "numpy", "frombuffer"],
              ["awkward.persist", "*"],
-             ["awkward.arrow", "ParquetFile", "fromjson"]]
+             ["awkward.arrow", "_ParquetFile", "fromjson"]]
 
 def frompython(obj):
     return base64.b64encode(pickle.dumps(obj)).decode("ascii")

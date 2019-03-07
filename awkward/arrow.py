@@ -30,6 +30,8 @@
 
 import json
 
+import numpy
+
 import awkward.array.chunked
 import awkward.array.indexed
 import awkward.array.jagged
@@ -128,8 +130,15 @@ def schema2type(schema):
 ################################################################################ value conversions
 
 def toarrow(obj):
+    import pyarrow
+
+    if isinstance(obj, numpy.ndarray):
+        pass
+
     raise NotImplementedError
 
+
+    
 def fromarrow(obj, awkwardlib=None):
     import pyarrow
     awkwardlib = awkward.util.awkwardlib(awkwardlib)
@@ -140,7 +149,7 @@ def fromarrow(obj, awkwardlib=None):
 
     def popbuffers(tpe, buffers):
         if isinstance(tpe, pyarrow.lib.DictionaryType):
-            content = view(tpe.dictionary)
+            content = fromarrow(tpe.dictionary)
             index = popbuffers(tpe.index_type, buffers)
             if isinstance(index, awkwardlib.BitMaskedArray):
                 return awkwardlib.BitMaskedArray(index.mask, awkwardlib.IndexedArray(index.content, content), maskedwhen=index.maskedwhen, lsborder=index.lsborder)
@@ -254,19 +263,19 @@ def fromarrow(obj, awkwardlib=None):
         if len(chunks) == 1:
             return chunks[0]
         else:
-            return awkwardlib.ChunkedArray([view(x) for x in chunks], counts=[len(x) for x in chunks])
+            return awkwardlib.ChunkedArray([fromarrow(x) for x in chunks], counts=[len(x) for x in chunks])
 
     elif isinstance(obj, pyarrow.lib.RecordBatch):
         out = awkwardlib.Table()
         for n, x in zip(obj.schema.names, obj.columns):
-            out[n] = view(x)
+            out[n] = fromarrow(x)
         return out
 
     elif isinstance(obj, pyarrow.lib.Table):
         chunks = []
         counts = []
         for batch in obj.to_batches():
-            chunk = view(batch)
+            chunk = fromarrow(batch)
             if len(chunk) > 0:
                 chunks.append(chunk)
                 counts.append(len(chunk))
@@ -293,7 +302,7 @@ class _ParquetFile(object):
 
     def _init(self):
         import pyarrow.parquet
-        self.parquetfile = pyarrow.parquet._ParquetFile(self.file, metadata=self.metadata, common_metadata=self.common_metadata)
+        self.parquetfile = pyarrow.parquet.ParquetFile(self.file, metadata=self.metadata, common_metadata=self.common_metadata)
         self.type = schema2type(self.parquetfile.schema.to_arrow_schema())
         
     def __getstate__(self):
@@ -307,7 +316,7 @@ class _ParquetFile(object):
         self._init()
 
     def __call__(self, rowgroup, column):
-        return view(self.parquetfile.read_row_group(rowgroup, columns=[column]))[column]
+        return fromarrow(self.parquetfile.read_row_group(rowgroup, columns=[column]))[column]
 
     def tojson(self):
         json.dumps([self.file, self.metadata, self.common_metadata])
