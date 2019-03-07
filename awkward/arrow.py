@@ -40,6 +40,8 @@ import awkward.array.virtual
 import awkward.type
 import awkward.util
 
+################################################################################ type conversions
+
 def schema2type(schema):
     import pyarrow
 
@@ -123,7 +125,12 @@ def schema2type(schema):
 
     return out
 
-def view(obj, awkwardlib=None):
+################################################################################ value conversions
+
+def toarrow(obj):
+    raise NotImplementedError
+
+def fromarrow(obj, awkwardlib=None):
     import pyarrow
     awkwardlib = awkward.util.awkwardlib(awkwardlib)
     ARROW_BITMASKTYPE = awkwardlib.numpy.uint8
@@ -271,7 +278,12 @@ def view(obj, awkwardlib=None):
     else:
         raise NotImplementedError(type(obj))
 
-class ParquetFile(object):
+################################################################################ Parquet file handling
+
+def toparquet(obj):
+    raise NotImplementedError
+
+class _ParquetFile(object):
     def __init__(self, file, cache=None, metadata=None, common_metadata=None):
         self.file = file
         self.cache = cache
@@ -281,7 +293,7 @@ class ParquetFile(object):
 
     def _init(self):
         import pyarrow.parquet
-        self.parquetfile = pyarrow.parquet.ParquetFile(self.file, metadata=self.metadata, common_metadata=self.common_metadata)
+        self.parquetfile = pyarrow.parquet._ParquetFile(self.file, metadata=self.metadata, common_metadata=self.common_metadata)
         self.type = schema2type(self.parquetfile.schema.to_arrow_schema())
         
     def __getstate__(self):
@@ -304,10 +316,10 @@ class ParquetFile(object):
     @classmethod
     def fromjson(cls, state):
         return cls(state["file"], cache=None, metadata=state["metadata"], common_metadata=state["common_metadata"])
-        
+
 def fromparquet(file, awkwardlib=None, cache=None, persistvirtual=False, metadata=None, common_metadata=None):
     awkwardlib = awkward.util.awkwardlib(awkwardlib)
-    parquetfile = ParquetFile(file, cache=cache, metadata=metadata, common_metadata=common_metadata)
+    parquetfile = _ParquetFile(file, cache=cache, metadata=metadata, common_metadata=common_metadata)
     columns = parquetfile.type.columns
 
     chunks = []
