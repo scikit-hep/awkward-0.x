@@ -132,13 +132,59 @@ def schema2type(schema):
 def toarrow(obj):
     import pyarrow
 
-    if isinstance(obj, numpy.ndarray):
-        pass
+    def recurse(data, mask):
+        if isinstance(data, numpy.ndarray):
+            return pyarrow.array(data, mask=mask)
 
-    raise NotImplementedError
+        elif isinstance(data, awkward.array.chunked.ChunkedArray):   # includes AppendableArray
+            raise NotImplementedError(type(data))
 
+        elif isinstance(data, awkward.array.indexed.IndexedArray):
+            return recurse(data.content[data.index], mask)
 
-    
+        elif isinstance(data, awkward.array.indexed.SparseArray):
+            raise NotImplementedError(type(data))
+
+        elif isinstance(data, awkward.array.jagged.JaggedArray):
+            raise NotImplementedError(type(data))
+
+        elif isinstance(data, awkward.array.masked.MaskedArray):   # includes BitMaskedArray
+            thismask = data.boolmask(maskedwhen=True)
+            if mask is not None:
+                thismask = mask & thismask
+            return recurse(data.content, thismask)
+
+        elif isinstance(data, awkward.array.masked.IndexedMaskedArray):
+            thismask = data.boolmask(maskedwhen=True)
+            if mask is not None:
+                thismask = mask & thismask
+            if len(data.content) == 0:
+                content = data.numpy.empty(len(data.mask), dtype=data.DEFAULTTYPE)
+            else:
+                content = data.content[data.mask]
+            return recurse(content, thismask)
+
+        elif isinstance(data, awkward.array.objects.ObjectArray):
+            # drop Python object generation, which Arrow can't handle while being multilingual
+            return recurse(data.content, mask)
+
+        elif isinstance(data, awkward.array.objects.StringArray):
+            raise NotImplementedError(type(data))
+
+        elif isinstance(data, awkward.array.table.Table):
+            raise NotImplementedError(type(data))
+
+        elif isinstance(data, awkward.array.union.UnionArray):
+            raise NotImplementedError(type(data))
+
+        elif isinstance(data, awkward.array.virtual.VirtualArray):
+            return recurse(data.array, mask)
+
+        else:
+            raise TypeError("cannot convert type {0} to Arrow".format(type(data)))
+
+    return recurse(obj, None)
+
 def fromarrow(obj, awkwardlib=None):
     import pyarrow
     awkwardlib = awkward.util.awkwardlib(awkwardlib)
