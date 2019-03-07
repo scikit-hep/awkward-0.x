@@ -137,16 +137,22 @@ def toarrow(obj):
             return pyarrow.array(data, mask=mask)
 
         elif isinstance(data, awkward.array.chunked.ChunkedArray):   # includes AppendableArray
+            # TODO: I think Arrow has different chunking schemes, depending on whether this is
+            #       just a column or a whole Arrow table/batch/thing.
             raise NotImplementedError(type(data))
 
         elif isinstance(data, awkward.array.indexed.IndexedArray):
-            return recurse(data.content[data.index], mask)
+            if mask is None:
+                return pyarrow.DictionaryArray.from_arrays(data.index, recurse(data.content, mask))
+            else:
+                return recurse(data.content[data.index], mask)
 
         elif isinstance(data, awkward.array.indexed.SparseArray):
-            raise NotImplementedError(type(data))
+            return recurse(data.dense, mask)
 
         elif isinstance(data, awkward.array.jagged.JaggedArray):
-            raise NotImplementedError(type(data))
+            data = data.compact()
+            return pyarrow.ListArray.from_arrays(data.offsets, recurse(data.content))
 
         elif isinstance(data, awkward.array.masked.MaskedArray):   # includes BitMaskedArray
             thismask = data.boolmask(maskedwhen=True)
@@ -165,10 +171,16 @@ def toarrow(obj):
             return recurse(content, thismask)
 
         elif isinstance(data, awkward.array.objects.ObjectArray):
-            # drop Python object generation, which Arrow can't handle while being multilingual
+            # throw away Python object interpretation, which Arrow can't handle while being multilingual
             return recurse(data.content, mask)
 
         elif isinstance(data, awkward.array.objects.StringArray):
+            data = data.compact()
+
+            # I don't understand this
+            # pyarrow.StringArray.from_buffers(2, pyarrow.py_buffer(numpy.array([0, 5, 10])), pyarrow.py_buffer(b"helloHELLO"), offset=0)
+            # returns ["", "hello"]
+
             raise NotImplementedError(type(data))
 
         elif isinstance(data, awkward.array.table.Table):
