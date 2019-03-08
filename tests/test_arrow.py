@@ -28,6 +28,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os.path
+import sys
 import unittest
 
 import pytest
@@ -217,6 +219,8 @@ class Test(unittest.TestCase):
     def test_arrow_strings(self):
         if pyarrow is None:
             pytest.skip("unable to import pyarrow")
+        elif sys.version_info[0] < 3:
+            pytest.skip("skipping strings test in Python 2")
         else:
             a = pyarrow.array(["one", "two", "three", u"fo\u2014ur", "five"])
             assert awkward.arrow.fromarrow(a).tolist() == ["one", "two", "three", u"fo\u2014ur", "five"]
@@ -224,6 +228,8 @@ class Test(unittest.TestCase):
     def test_arrow_strings_null(self):
         if pyarrow is None:
             pytest.skip("unable to import pyarrow")
+        elif sys.version_info[0] < 3:
+            pytest.skip("skipping strings test in Python 2")
         else:
             a = pyarrow.array(["one", "two", None, u"fo\u2014ur", "five"])
             assert awkward.arrow.fromarrow(a).tolist() == ["one", "two", None, u"fo\u2014ur", "five"]
@@ -408,3 +414,22 @@ class Test(unittest.TestCase):
             b = awkward.deserialize(storage)
             assert b["b"].tolist() == [[1, 2, 3], [], [None], None, [4, 5, 6], [2, 1, 3], [], [None], None, [4, 5, 6], [1, 2, 3], [], [None], None, [4, 5, 6], [2, 1, 3], [], [None], None, [4, 5, 6]] 
             assert a["c"].tolist() == [[[1.1, 2.2]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[2.2, 1.1]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[1.1, 2.2]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[2.2 , 1.1]], None, [[3.3, None], []], [], [None, [4.4, 5.5]]]
+
+def test_arrow_writeparquet2(tmp_path):
+    if pyarrow is None:
+        pytest.skip("unable to import pyarrow")
+    else:
+        filename = os.path.join(str(tmp_path), "tmp.parquet")
+
+    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    b = awkward.fromiter([100, 200, None])
+
+    awkward.toparquet([b, b, b], filename)
+    assert awkward.fromparquet(filename).tolist() == [100, 200, None, 100, 200, None, 100, 200, None]
+
+    awkward.toparquet(a, filename)
+    assert awkward.fromparquet(filename).tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+
+    awkward.toparquet(awkward.Table(x=a, y=b), filename)
+    c = awkward.fromparquet(filename)
+    assert c.tolist() == [{'x': [1.1, 2.2, 3.3], 'y': 100}, {'x': [], 'y': 200}, {'x': [4.4, 5.5], 'y': None}]

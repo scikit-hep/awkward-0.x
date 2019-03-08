@@ -36,7 +36,7 @@ addons:
       - python-setuptools
 
 script:
-  python setup.py pytest
+  pytest -v tests
 
 install:
   - pip install --upgrade setuptools_scm

@@ -32,6 +32,7 @@ import json
 
 import numpy
 
+import awkward.array.base
 import awkward.array.chunked
 import awkward.array.indexed
 import awkward.array.jagged
@@ -359,8 +360,52 @@ def fromarrow(obj, awkwardlib=None):
 
 ################################################################################ Parquet file handling
 
-def toparquet(obj):
-    raise NotImplementedError
+def toparquet(obj, where, **options):
+    import pyarrow.parquet
+
+    options["where"] = where
+
+    def convert(obj):
+        if isinstance(obj, awkward.array.table.Table):
+            return pyarrow.Table.from_batches([pyarrow.RecordBatch.from_arrays([toarrow(x) for x in obj.contents.values()], list(obj.contents))])
+        elif isinstance(obj, (awkward.array.base.AwkwardArray, numpy.ndarray)):
+            return pyarrow.Table.from_batches([pyarrow.RecordBatch.from_arrays([toarrow(obj)], [""])])
+        else:
+            raise TypeError("cannot write iterator of {0} to Parquet file".format(type(obj)))
+
+    if isinstance(obj, (awkward.array.base.AwkwardArray, numpy.ndarray)):
+        arritem = convert(obj)
+        options["schema"] = arritem.schema
+        writer = pyarrow.parquet.ParquetWriter(**options)
+        writer.write_table(arritem)
+        writer.close()
+
+    else:
+        try:
+            obj = iter(obj)
+        except TypeError:
+            raise TypeError("cannot write {0} to Parquet file".format(type(obj)))
+        try:
+            awkitem = next(obj)
+        except StopIteration:
+            raise ValueError("iterable is empty")
+
+        arritem = convert(awkitem)
+        if "schema" not in options:
+            options["schema"] = arritem.schema
+        writer = pyarrow.parquet.ParquetWriter(**options)
+        writer.write_table(arritem)
+
+        try:
+            while True:
+                try:
+                    awkitem = next(obj)
+                except StopIteration:
+                    break
+                else:
+                    writer.write_table(convert(awkitem))
+        finally:
+            writer.close()
 
 class _ParquetFile(object):
     def __init__(self, file, cache=None, metadata=None, common_metadata=None):
@@ -406,9 +451,14 @@ def fromparquet(file, awkwardlib=None, cache=None, persistvirtual=False, metadat
     for i in range(parquetfile.parquetfile.num_row_groups):
         numrows = parquetfile.parquetfile.metadata.row_group(i).num_rows
         if numrows > 0:
-            chunk = awkwardlib.Table()
-            for n in columns:
-                chunk[n] = awkwardlib.VirtualArray(parquetfile, (i, n), cache=cache, type=awkwardlib.type.ArrayType(numrows, parquetfile.type[n]), persistvirtual=persistvirtual)
+            if columns == [""]:
+                chunk = awkwardlib.VirtualArray(parquetfile, (i, ""), cache=cache, type=awkwardlib.type.ArrayType(numrows, parquetfile.type[""]), persistvirtual=persistvirtual)
+            else:
+                chunk = awkwardlib.Table()
+                for n in columns:
+                    q = awkwardlib.VirtualArray(parquetfile, (i, n), cache=cache, type=awkwardlib.type.ArrayType(numrows, parquetfile.type[n]), persistvirtual=persistvirtual)
+                    chunk.contents[n] = q
+
             chunks.append(chunk)
             counts.append(numrows)
 
