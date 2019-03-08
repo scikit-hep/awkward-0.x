@@ -44,6 +44,24 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
+    def test_arrow_toarrow(self):
+        try:
+            import uproot_methods
+        except ImportError:
+            pytest.skip("unable to import uproot_methods")
+        else:
+            jet_m   = awkward.fromiter([[60.0, 70.0, 80.0], [], [90.0, 100.0]])
+            jet_pt  = awkward.fromiter([[10.0, 20.0, 30.0], [], [40.0, 50.0]])
+            jet_eta = awkward.fromiter([[-3.0, -2.0, 2.0],  [], [-1.0, 1.0]])
+            jet_phi = awkward.fromiter([[-1.5,  0.0, 1.5],  [], [0.78, -0.78]])
+            jets    = uproot_methods.TLorentzVectorArray.from_ptetaphim(jet_pt, jet_eta, jet_phi, jet_m)
+
+            assert list(awkward.arrow.toarrow(jets)) == [[{"fPt": 10.0, "fEta": -3.0, "fPhi": -1.5, "fMass": 60.0}, {"fPt": 20.0, "fEta": -2.0, "fPhi": 0.0, "fMass": 70.0}, {"fPt": 30.0, "fEta": 2.0, "fPhi": 1.5, "fMass": 80.0}], [], [{"fPt": 40.0, "fEta": -1.0, "fPhi": 0.78, "fMass": 90.0}, {"fPt": 50.0, "fEta": 1.0, "fPhi": -0.78, "fMass": 100.0}]]
+
+            # FIXME: it might be possible to avoid this "mask push-down" in Arrow, but I don't know how
+            maskedjets = awkward.MaskedArray([False, False, True], jets, maskedwhen=True)
+            assert list(awkward.arrow.toarrow(maskedjets)) == [[{"fPt": 10.0, "fEta": -3.0, "fPhi": -1.5, "fMass": 60.0}, {"fPt": 20.0, "fEta": -2.0, "fPhi": 0.0, "fMass": 70.0}, {"fPt": 30.0, "fEta": 2.0, "fPhi": 1.5, "fMass": 80.0}], [], [{"fPt": None, "fEta": None, "fPhi": None, "fMass": None}, {"fPt": None, "fEta": None, "fPhi": None, "fMass": None}]]
+
     def test_arrow_array(self):
         if pyarrow is not None:
             a = pyarrow.array([1.1, 2.2, 3.3, 4.4, 5.5])

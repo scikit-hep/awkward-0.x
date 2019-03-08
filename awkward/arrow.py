@@ -139,7 +139,7 @@ def toarrow(obj):
         elif isinstance(data, awkward.array.chunked.ChunkedArray):   # includes AppendableArray
             # TODO: I think Arrow has different chunking schemes, depending on whether this is
             #       just a column or a whole Arrow table/batch/thing.
-            raise NotImplementedError(type(data))
+            raise NotImplementedError("I'm putting off ChunkedArrays for now")
 
         elif isinstance(data, awkward.array.indexed.IndexedArray):
             if mask is None:
@@ -152,7 +152,9 @@ def toarrow(obj):
 
         elif isinstance(data, awkward.array.jagged.JaggedArray):
             data = data.compact()
-            return pyarrow.ListArray.from_arrays(data.offsets, recurse(data.content))
+            if mask is not None:
+                mask = data._broadcast(mask).flatten()
+            return pyarrow.ListArray.from_arrays(data.offsets, recurse(data.content, mask))
 
         elif isinstance(data, awkward.array.masked.MaskedArray):   # includes BitMaskedArray
             thismask = data.boolmask(maskedwhen=True)
@@ -175,19 +177,29 @@ def toarrow(obj):
             return recurse(data.content, mask)
 
         elif isinstance(data, awkward.array.objects.StringArray):
-            data = data.compact()
+            # data = data.compact()
+            raise NotImplementedError("I don't know how to make an Arrow StringArray")
 
             # I don't understand this
             # pyarrow.StringArray.from_buffers(2, pyarrow.py_buffer(numpy.array([0, 5, 10])), pyarrow.py_buffer(b"helloHELLO"), offset=0)
             # returns ["", "hello"]
-
-            raise NotImplementedError(type(data))
+            # ???
 
         elif isinstance(data, awkward.array.table.Table):
-            raise NotImplementedError(type(data))
+            return pyarrow.StructArray.from_arrays([recurse(x, mask) for x in data.contents.values()], list(data.contents))
 
         elif isinstance(data, awkward.array.union.UnionArray):
-            raise NotImplementedError(type(data))
+            contents = []
+            for i, x in enumerate(data.contents):
+                if mask is None:
+                    thismask = None
+                else:
+                    thistags = (data.tags == i)
+                    thismask = data.numpy.empty(len(x), dtype=data.MASKTYPE)
+                    thismask[data.index[thistags]] = mask[thistags]    # hmm... data.index could have repeats; the Arrow mask in that case would not be well-defined...
+                contents.append(recurse(x, thismask))
+
+            return pyarrow.UnionArray.from_dense(pyarrow.array(data.tags.astype(numpy.int8)), pyarrow.array(data.index.astype(numpy.int32)), contents)
 
         elif isinstance(data, awkward.array.virtual.VirtualArray):
             return recurse(data.array, mask)
