@@ -376,6 +376,13 @@ class Table(awkward.array.base.AwkwardArray):
             value[n] = self._util_toarray(value[n], self.DEFAULTTYPE)
         self._contents = value
 
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return sum(x.nbytes if isinstance(x, self.numpy.ndarray) else x._getnbytes(seen) for x in self._contents.values())
+
     def __len__(self):
         return self._length()
 

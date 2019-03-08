@@ -124,6 +124,13 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         self._content = self._util_toarray(value, self.DEFAULTTYPE)
         self._isvalid = False
 
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return self._index.nbytes + (self._content.nbytes if isinstance(self._content, self.numpy.ndarray) else self._content._getnbytes(seen))
+
     def __len__(self):
         return len(self._index)
 
@@ -375,6 +382,13 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _gettype(self, seen):
         return awkward.type._fromarray(self._content, seen)
+
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return self._index.nbytes + (self._content.nbytes if isinstance(self._content, self.numpy.ndarray) else self._content._getnbytes(seen))
 
     def __len__(self):
         return self._length

@@ -241,6 +241,13 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
         return self._dtype
 
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return sum(x.nbytes if isinstance(x, self.numpy.ndarray) else x._getnbytes(seen) for x in self._contents)
+
     def __len__(self):
         return len(self._tags)
 

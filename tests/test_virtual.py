@@ -40,6 +40,10 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
+    def test_virtual_nbytes(self):
+        assert isinstance(VirtualArray(lambda: [1, 2, 3]).nbytes, int)
+        assert VirtualArray(lambda: [1, 2, 3], nbytes=12345).nbytes == 12345
+
     def test_virtual_nocache(self):
         a = VirtualArray(lambda: [1, 2, 3])
         assert not a.ismaterialized

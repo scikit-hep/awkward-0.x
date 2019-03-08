@@ -435,6 +435,16 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out = self.numpy.arange(len(self._content), dtype=self.INDEXTYPE)
         return self.copy(content=(out - out[self._starts[self.parents]]))
 
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            if self.offsetsaliased(self._starts, self._stops):
+                return self._starts.base.nbytes + (self._content.nbytes if isinstance(self._content, self.numpy.ndarray) else self._content._getnbytes(seen))
+            else:
+                return self._starts.nbytes + self._stops.nbytes + (self._content.nbytes if isinstance(self._content, self.numpy.ndarray) else self._content._getnbytes(seen))
+
     def __len__(self):
         return len(self._starts)
 
