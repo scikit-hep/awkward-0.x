@@ -133,52 +133,50 @@ def schema2type(schema):
 def toarrow(obj):
     import pyarrow
 
-    def recurse(data, mask):
-        if isinstance(data, numpy.ndarray):
-            return pyarrow.array(data, mask=mask)
+    def recurse(obj, mask):
+        if isinstance(obj, numpy.ndarray):
+            return pyarrow.array(obj, mask=mask)
 
-        elif isinstance(data, awkward.array.chunked.ChunkedArray):   # includes AppendableArray
-            # TODO: I think Arrow has different chunking schemes, depending on whether this is
-            #       just a column or a whole Arrow table/batch/thing.
-            raise NotImplementedError("I'm putting off ChunkedArrays for now")
+        elif isinstance(obj, awkward.array.chunked.ChunkedArray):   # includes AppendableArray
+            raise TypeError("only top-level ChunkedArrays can be converted to Arrow (as RecordBatches)")
 
-        elif isinstance(data, awkward.array.indexed.IndexedArray):
+        elif isinstance(obj, awkward.array.indexed.IndexedArray):
             if mask is None:
-                return pyarrow.DictionaryArray.from_arrays(data.index, recurse(data.content, mask))
+                return pyarrow.DictionaryArray.from_arrays(obj.index, recurse(obj.content, mask))
             else:
-                return recurse(data.content[data.index], mask)
+                return recurse(obj.content[obj.index], mask)
 
-        elif isinstance(data, awkward.array.indexed.SparseArray):
-            return recurse(data.dense, mask)
+        elif isinstance(obj, awkward.array.indexed.SparseArray):
+            return recurse(obj.dense, mask)
 
-        elif isinstance(data, awkward.array.jagged.JaggedArray):
-            data = data.compact()
+        elif isinstance(obj, awkward.array.jagged.JaggedArray):
+            obj = obj.compact()
             if mask is not None:
-                mask = data._broadcast(mask).flatten()
-            return pyarrow.ListArray.from_arrays(data.offsets, recurse(data.content, mask))
+                mask = obj._broadcast(mask).flatten()
+            return pyarrow.ListArray.from_arrays(obj.offsets, recurse(obj.content, mask))
 
-        elif isinstance(data, awkward.array.masked.MaskedArray):   # includes BitMaskedArray
-            thismask = data.boolmask(maskedwhen=True)
+        elif isinstance(obj, awkward.array.masked.IndexedMaskedArray):
+            thismask = obj.boolmask(maskedwhen=True)
             if mask is not None:
                 thismask = mask & thismask
-            return recurse(data.content, thismask)
-
-        elif isinstance(data, awkward.array.masked.IndexedMaskedArray):
-            thismask = data.boolmask(maskedwhen=True)
-            if mask is not None:
-                thismask = mask & thismask
-            if len(data.content) == 0:
-                content = data.numpy.empty(len(data.mask), dtype=data.DEFAULTTYPE)
+            if len(obj.content) == 0:
+                content = obj.numpy.empty(len(obj.mask), dtype=obj.DEFAULTTYPE)
             else:
-                content = data.content[data.mask]
+                content = obj.content[obj.mask]
             return recurse(content, thismask)
 
-        elif isinstance(data, awkward.array.objects.ObjectArray):
-            # throw away Python object interpretation, which Arrow can't handle while being multilingual
-            return recurse(data.content, mask)
+        elif isinstance(obj, awkward.array.masked.MaskedArray):   # includes BitMaskedArray
+            thismask = obj.boolmask(maskedwhen=True)
+            if mask is not None:
+                thismask = mask & thismask
+            return recurse(obj.content, thismask)
 
-        elif isinstance(data, awkward.array.objects.StringArray):
-            # data = data.compact()
+        elif isinstance(obj, awkward.array.objects.ObjectArray):
+            # throw away Python object interpretation, which Arrow can't handle while being multilingual
+            return recurse(obj.content, mask)
+
+        elif isinstance(obj, awkward.array.objects.StringArray):
+            # obj = obj.compact()
             raise NotImplementedError("I don't know how to make an Arrow StringArray")
 
             # I don't understand this
@@ -186,29 +184,57 @@ def toarrow(obj):
             # returns ["", "hello"]
             # ???
 
-        elif isinstance(data, awkward.array.table.Table):
-            return pyarrow.StructArray.from_arrays([recurse(x, mask) for x in data.contents.values()], list(data.contents))
+            # Also, be sure to check for the difference between strings and bytes!
 
-        elif isinstance(data, awkward.array.union.UnionArray):
+        elif isinstance(obj, awkward.array.table.Table):
+            return pyarrow.StructArray.from_arrays([recurse(x, mask) for x in obj.contents.values()], list(obj.contents))
+
+        elif isinstance(obj, awkward.array.union.UnionArray):
             contents = []
-            for i, x in enumerate(data.contents):
+            for i, x in enumerate(obj.contents):
                 if mask is None:
                     thismask = None
                 else:
-                    thistags = (data.tags == i)
-                    thismask = data.numpy.empty(len(x), dtype=data.MASKTYPE)
-                    thismask[data.index[thistags]] = mask[thistags]    # hmm... data.index could have repeats; the Arrow mask in that case would not be well-defined...
+                    thistags = (obj.tags == i)
+                    thismask = obj.numpy.empty(len(x), dtype=obj.MASKTYPE)
+                    thismask[obj.index[thistags]] = mask[thistags]    # hmm... obj.index could have repeats; the Arrow mask in that case would not be well-defined...
                 contents.append(recurse(x, thismask))
 
-            return pyarrow.UnionArray.from_dense(pyarrow.array(data.tags.astype(numpy.int8)), pyarrow.array(data.index.astype(numpy.int32)), contents)
+            return pyarrow.UnionArray.from_dense(pyarrow.array(obj.tags.astype(numpy.int8)), pyarrow.array(obj.index.astype(numpy.int32)), contents)
 
-        elif isinstance(data, awkward.array.virtual.VirtualArray):
-            return recurse(data.array, mask)
+        elif isinstance(obj, awkward.array.virtual.VirtualArray):
+            return recurse(obj.array, mask)
 
         else:
-            raise TypeError("cannot convert type {0} to Arrow".format(type(data)))
+            raise TypeError("cannot convert type {0} to Arrow".format(type(obj)))
 
-    return recurse(obj, None)
+    if isinstance(obj, awkward.array.chunked.ChunkedArray):   # includes AppendableArray
+        batches = []
+        for chunk in obj.chunks:
+            arr = toarrow(chunk)
+            if isinstance(arr, pyarrow.Table):
+                batches.extend(arr.to_batches())
+            else:
+                batches.append(pyarrow.RecordBatch.from_arrays([arr], [""]))
+        return pyarrow.Table.from_batches(batches)
+
+    elif isinstance(obj, awkward.array.masked.IndexedMaskedArray) and isinstance(obj.content, awkward.array.table.Table):
+        mask = obj.boolmask(maskedwhen=True)
+        if len(obj.content) == 0:
+            content = obj.numpy.empty(len(obj.mask), dtype=obj.DEFAULTTYPE)
+        else:
+            content = obj.content[obj.mask]
+        return pyarrow.Table.from_batches([pyarrow.RecordBatch.from_arrays([recurse(x, mask) for x in obj.content.contents.values()], list(obj.content.contents))])
+
+    elif isinstance(obj, awkward.array.masked.MaskedArray) and isinstance(obj.content, awkward.array.table.Table):   # includes BitMaskedArray
+        mask = obj.boolmask(maskedwhen=True)
+        return pyarrow.Table.from_batches([pyarrow.RecordBatch.from_arrays([recurse(x, mask) for x in obj.content.contents.values()], list(obj.content.contents))])
+
+    elif isinstance(obj, awkward.array.table.Table):
+        return pyarrow.Table.from_batches([pyarrow.RecordBatch.from_arrays([recurse(x, None) for x in obj.contents.values()], list(obj.contents))])
+
+    else:
+        return recurse(obj, None)
 
 def fromarrow(obj, awkwardlib=None):
     import pyarrow
@@ -242,7 +268,7 @@ def fromarrow(obj, awkwardlib=None):
         elif isinstance(tpe, pyarrow.lib.ListType):
             content = popbuffers(tpe.value_type, buffers)
             offsets = awkwardlib.numpy.frombuffer(buffers.pop(), dtype=ARROW_INDEXTYPE)
-            out = awkwardlib.JaggedArray.fromoffsets(offsets, content)
+            out = awkwardlib.JaggedArray.fromoffsets(offsets, content[:offsets[-1]])
             mask = buffers.pop()
             if mask is not None:
                 mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
@@ -257,6 +283,12 @@ def fromarrow(obj, awkwardlib=None):
             assert buffers.pop() is None
             tags = awkwardlib.numpy.frombuffer(buffers.pop(), dtype=ARROW_TAGTYPE)
             index = awkwardlib.numpy.arange(len(tags), dtype=ARROW_INDEXTYPE)
+            for i in range(len(contents)):
+                these = index[tags == i]
+                if len(these) == 0:
+                    contents[i] = contents[i][0:0]
+                else:
+                    contents[i] = contents[i][: these[-1] + 1]
             out = awkwardlib.UnionArray(tags, index, contents)
             mask = buffers.pop()
             if mask is not None:
@@ -271,6 +303,12 @@ def fromarrow(obj, awkwardlib=None):
                 contents.insert(0, popbuffers(tpe[i].type, buffers))
             index = awkwardlib.numpy.frombuffer(buffers.pop(), dtype=ARROW_INDEXTYPE)
             tags = awkwardlib.numpy.frombuffer(buffers.pop(), dtype=ARROW_TAGTYPE)
+            for i in range(len(contents)):
+                these = index[tags == i]
+                if len(these) == 0:
+                    contents[i] = contents[i][0:0]
+                else:
+                    contents[i] = contents[i][: these.max() + 1]
             out = awkwardlib.UnionArray(tags, index, contents)
             mask = buffers.pop()
             if mask is not None:
@@ -282,7 +320,7 @@ def fromarrow(obj, awkwardlib=None):
         elif tpe == pyarrow.string():
             content = awkwardlib.numpy.frombuffer(buffers.pop(), dtype=ARROW_CHARTYPE)
             offsets = awkwardlib.numpy.frombuffer(buffers.pop(), dtype=ARROW_INDEXTYPE)
-            out = awkwardlib.StringArray.fromoffsets(offsets, content, encoding="utf-8")
+            out = awkwardlib.StringArray.fromoffsets(offsets, content[:offsets[-1]], encoding="utf-8")
             mask = buffers.pop()
             if mask is not None:
                 mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
@@ -293,7 +331,7 @@ def fromarrow(obj, awkwardlib=None):
         elif tpe == pyarrow.binary():
             content = awkwardlib.numpy.frombuffer(buffers.pop(), dtype=ARROW_CHARTYPE)
             offsets = awkwardlib.numpy.frombuffer(buffers.pop(), dtype=ARROW_INDEXTYPE)
-            out = awkwardlib.StringArray.fromoffsets(offsets, content, encoding=None)
+            out = awkwardlib.StringArray.fromoffsets(offsets, content[:offsets[-1]], encoding=None)
             mask = buffers.pop()
             if mask is not None:
                 mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
@@ -365,16 +403,42 @@ def toparquet(obj, where, **options):
 
     options["where"] = where
 
-    def convert(obj):
-        if isinstance(obj, awkward.array.table.Table):
-            return pyarrow.Table.from_batches([pyarrow.RecordBatch.from_arrays([toarrow(x) for x in obj.contents.values()], list(obj.contents))])
-        elif isinstance(obj, (awkward.array.base.AwkwardArray, numpy.ndarray)):
-            return pyarrow.Table.from_batches([pyarrow.RecordBatch.from_arrays([toarrow(obj)], [""])])
+    def convert(obj, message):
+        if isinstance(obj, (awkward.array.base.AwkwardArray, numpy.ndarray)):
+            out = toarrow(obj)
+            if isinstance(out, pyarrow.Table):
+                return out
+            else:
+                return pyarrow.Table.from_batches([pyarrow.RecordBatch.from_arrays([out], [""])])
         else:
-            raise TypeError("cannot write iterator of {0} to Parquet file".format(type(obj)))
+            raise TypeError(message)
 
-    if isinstance(obj, (awkward.array.base.AwkwardArray, numpy.ndarray)):
-        arritem = convert(obj)
+    if isinstance(obj, awkward.array.chunked.ChunkedArray):
+        obj = iter(obj.chunks)
+        try:
+            awkitem = next(obj)
+        except StopIteration:
+            raise ValueError("iterable is empty")
+
+        arritem = convert(awkitem, None)
+        if "schema" not in options:
+            options["schema"] = arritem.schema
+        writer = pyarrow.parquet.ParquetWriter(**options)
+        writer.write_table(arritem)
+
+        try:
+            while True:
+                try:
+                    awkitem = next(obj)
+                except StopIteration:
+                    break
+                else:
+                    writer.write_table(convert(awkitem, None))
+        finally:
+            writer.close()
+
+    elif isinstance(obj, (awkward.array.base.AwkwardArray, numpy.ndarray)):
+        arritem = convert(obj, None)
         options["schema"] = arritem.schema
         writer = pyarrow.parquet.ParquetWriter(**options)
         writer.write_table(arritem)
@@ -390,7 +454,7 @@ def toparquet(obj, where, **options):
         except StopIteration:
             raise ValueError("iterable is empty")
 
-        arritem = convert(awkitem)
+        arritem = convert(awkitem, "cannot write iterator of {0} to Parquet file".format(type(awkitem)))
         if "schema" not in options:
             options["schema"] = arritem.schema
         writer = pyarrow.parquet.ParquetWriter(**options)
@@ -403,7 +467,7 @@ def toparquet(obj, where, **options):
                 except StopIteration:
                     break
                 else:
-                    writer.write_table(convert(awkitem))
+                    writer.write_table(convert(awkitem, "cannot write iterator of {0} to Parquet file".format(type(awkitem))))
         finally:
             writer.close()
 

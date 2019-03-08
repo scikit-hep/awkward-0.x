@@ -415,11 +415,11 @@ class Test(unittest.TestCase):
             assert b["b"].tolist() == [[1, 2, 3], [], [None], None, [4, 5, 6], [2, 1, 3], [], [None], None, [4, 5, 6], [1, 2, 3], [], [None], None, [4, 5, 6], [2, 1, 3], [], [None], None, [4, 5, 6]] 
             assert a["c"].tolist() == [[[1.1, 2.2]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[2.2, 1.1]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[1.1, 2.2]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[2.2 , 1.1]], None, [[3.3, None], []], [], [None, [4.4, 5.5]]]
 
-def test_arrow_writeparquet2(tmp_path):
+def test_arrow_writeparquet2(tmpdir):
     if pyarrow is None:
         pytest.skip("unable to import pyarrow")
     else:
-        filename = os.path.join(str(tmp_path), "tmp.parquet")
+        filename = os.path.join(str(tmpdir), "tmp.parquet")
 
     a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     b = awkward.fromiter([100, 200, None])
@@ -433,3 +433,17 @@ def test_arrow_writeparquet2(tmp_path):
     awkward.toparquet(awkward.Table(x=a, y=b), filename)
     c = awkward.fromparquet(filename)
     assert c.tolist() == [{'x': [1.1, 2.2, 3.3], 'y': 100}, {'x': [], 'y': 200}, {'x': [4.4, 5.5], 'y': None}]
+
+    awkward.toparquet(c, filename)
+    d = awkward.fromparquet(filename)
+    assert c.tolist() == d.tolist()
+    assert isinstance(c, awkward.ChunkedArray) and isinstance(d, awkward.ChunkedArray)
+    assert len(c.chunks) == 1 and len(d.chunks) == 1
+    assert isinstance(c.chunks[0], awkward.Table) and isinstance(d.chunks[0], awkward.Table)
+    assert c.chunks[0].columns == d.chunks[0].columns
+    assert isinstance(c.chunks[0]["x"], awkward.BitMaskedArray) and isinstance(d.chunks[0]["x"], awkward.BitMaskedArray)
+    assert c.chunks[0]["x"].boolmask().tolist() == d.chunks[0]["x"].boolmask().tolist()
+    assert isinstance(c.chunks[0]["x"].content, awkward.JaggedArray) and isinstance(d.chunks[0]["x"].content, awkward.JaggedArray)
+    assert isinstance(c.chunks[0]["x"].content.content, awkward.BitMaskedArray) and isinstance(d.chunks[0]["x"].content.content, awkward.BitMaskedArray)
+    assert c.chunks[0]["x"].content.content.boolmask().tolist() == d.chunks[0]["x"].content.content.boolmask().tolist()
+    assert isinstance(c.chunks[0]["x"].content.content.content, numpy.ndarray) and isinstance(d.chunks[0]["x"].content.content.content, numpy.ndarray)
