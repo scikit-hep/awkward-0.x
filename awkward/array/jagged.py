@@ -788,8 +788,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out._parents = self.parents
             return out
 
+        elif isinstance(data, Iterable):
+            return self._broadcast(self.numpy.array(data))
+
         else:
-            return self._broadcast(self.numpy.array([data]))
+            return self._broadcast(self.numpy.array([data])[0])
 
     def _tojagged(self, starts=None, stops=None, copy=True):
         if starts is None and stops is None:
