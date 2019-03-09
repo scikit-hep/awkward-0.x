@@ -225,7 +225,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromjagged(cls, jagged):
-        jagged = jagged._tojagged(copy=False)
         return cls(jagged._starts, jagged._stops, jagged._content)
 
     @classmethod
@@ -432,8 +431,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @property
     def index(self):
-        out = self.numpy.arange(len(self._content), dtype=self.INDEXTYPE)
-        return self.copy(content=(out - out[self._starts[self.parents]]))
+        tmp = self.compact()
+        out = self.numpy.arange(len(tmp._content), dtype=self.INDEXTYPE)
+        return self.copy(starts=tmp._starts, stops=tmp._stops, content=(out - tmp._starts[tmp.parents]))
 
     def _getnbytes(self, seen):
         if id(self) in seen:
@@ -766,7 +766,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _broadcast(self, data):
         if isinstance(data, JaggedArray):
-            return data._tojagged(self._starts, self.stops, copy=False)
+            if not self.numpy.array_equal(self.counts, data.counts):
+                raise ValueError("cannot broadcast JaggedArray to match JaggedArray with a different counts")
+            if len(self._starts) == 0:
+                return self.copy(content=data._content)
+            data = data.compact()
+            return self.copy(content=data._content[self.IndexedArray.invert((self.index + self._starts)._content)])
 
         elif isinstance(data, awkward.array.base.AwkwardArray):
             if len(self._starts) != len(data):
