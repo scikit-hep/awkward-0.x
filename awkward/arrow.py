@@ -152,7 +152,7 @@ def toarrow(obj):
         elif isinstance(obj, awkward.array.jagged.JaggedArray):
             obj = obj.compact()
             if mask is not None:
-                mask = obj._broadcast(mask).flatten()
+                mask = obj.tojagged(mask).flatten()
             return pyarrow.ListArray.from_arrays(obj.offsets, recurse(obj.content, mask))
 
         elif isinstance(obj, awkward.array.masked.IndexedMaskedArray):
