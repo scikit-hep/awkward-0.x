@@ -771,16 +771,31 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
     def _broadcast(self, data):
-        data = self._util_toarray(data, self._content.dtype)
-        good = (self.parents >= 0)
-        content = self.numpy.empty(len(self.parents), dtype=data.dtype)
-        if len(data.shape) == 0:
-            content[good] = data
+        if isinstance(data, JaggedArray):
+            return data._tojagged(self._starts, self.stops, copy=False)
+
+        elif isinstance(data, awkward.array.base.AwkwardArray):
+            if len(self._starts) != len(data):
+                raise ValueError("cannot broadcast AwkwardArray to match JaggedArray with a different length")
+            if len(self._starts) == 0:
+                return self.copy(content=data)
+            out = self.copy(content=data[self.parents])
+            out._parents = self.parents
+            return out
+
+        elif isinstance(data, self.numpy.ndarray):
+            content = self.numpy.empty(len(self.parents), dtype=data.dtype)
+            if len(data.shape) == 0 or (len(data.shape) == 1 and data.shape[0] == 1):
+                content[:] = data
+            else:
+                good = (self.parents >= 0)
+                content[good] = data[self.parents[good]]
+            out = self.copy(content=content)
+            out._parents = self.parents
+            return out
+
         else:
-            content[good] = data[self.parents[good]]
-        out = self.copy(content=content)
-        out._parents = self.parents
-        return out
+            return self._broadcast(self.numpy.array([data]))
 
     def _tojagged(self, starts=None, stops=None, copy=True):
         if starts is None and stops is None:
