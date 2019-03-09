@@ -167,6 +167,13 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
                 raise TypeError("kwargs must be a dict")
         self._kwargs = dict(value)
 
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return (self._content.nbytes if isinstance(self._content, self.numpy.ndarray) else self._content._getnbytes(seen))
+
     def __len__(self):
         return len(self._content)
 

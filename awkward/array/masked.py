@@ -149,6 +149,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def maskedwhen(self, value):
         self._maskedwhen = bool(value)
 
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return self._mask.nbytes + (self._content.nbytes if isinstance(self._content, self.numpy.ndarray) else self._content._getnbytes(seen))
+
     def __len__(self):
         return len(self._mask)
 

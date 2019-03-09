@@ -135,6 +135,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def size(self):
         return len(self)
 
+    @property
+    def nbytes(self):
+        return self._getnbytes(set())
+
     def tolist(self):
         import awkward.array.table
         out = []
