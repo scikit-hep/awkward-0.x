@@ -792,7 +792,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self._broadcast(self.numpy.array(data))
 
         else:
-            return self._broadcast(self.numpy.array([data])[0])
+            return self._broadcast(self.numpy.array([data]))
 
     def _tojagged(self, starts=None, stops=None, copy=True):
         if starts is None and stops is None:
