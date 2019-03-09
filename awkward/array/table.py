@@ -581,12 +581,20 @@ class Table(awkward.array.base.AwkwardArray):
             raise ValueError("new columns can only be attached to the original Table, not a view (try table.base['col'] = array)")
 
         if isinstance(where, awkward.util.string):
+            try:
+                len(what)
+            except TypeError:
+                what = self.numpy.full(len(self), what)
             self._contents[where] = self._util_toarray(what, self.DEFAULTTYPE)
 
         elif self._util_isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
+                try:
+                    len(y)
+                except TypeError:
+                    y = self.numpy.full(len(self), y)
                 self._contents[x] = self._util_toarray(y, self.DEFAULTTYPE)
 
         else:

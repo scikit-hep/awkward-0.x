@@ -753,19 +753,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def __setitem__(self, where, what):
         if isinstance(where, awkward.util.string):
-            if isinstance(what, JaggedArray):
-                self._content[where] = what._tojagged(self._starts, self._stops, copy=False)._content
-            else:
-                self._content[where] = self._broadcast(what)._content
+            self._content[where] = self._broadcast(what)._content
 
         elif self._util_isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
-                if isinstance(y, JaggedArray):
-                    self._content[x] = y._tojagged(self._starts, self._stops, copy=False)._content
-                else:
-                    self._content[x] = self._broadcast(y)._content
+                self._content[x] = self._broadcast(y)._content
                 
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
