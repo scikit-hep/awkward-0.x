@@ -433,7 +433,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def index(self):
         tmp = self.compact()
         out = self.numpy.arange(len(tmp._content), dtype=self.INDEXTYPE)
-        return self.copy(starts=tmp._starts, stops=tmp._stops, content=(out - tmp._starts[tmp.parents]))
+        return self.JaggedArray(tmp._starts, tmp._stops, (out - tmp._starts[tmp.parents]))
 
     def _getnbytes(self, seen):
         if id(self) in seen:
@@ -766,12 +766,21 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def tojagged(self, data):
         if isinstance(data, JaggedArray):
-            if not self.numpy.array_equal(self.counts, data.counts):
+            selfcounts = self.stops - self._starts
+            datacounts = data.stops - data._starts
+            if not self.numpy.array_equal(selfcounts, datacounts):
                 raise ValueError("cannot broadcast JaggedArray to match JaggedArray with a different counts")
             if len(self._starts) == 0:
                 return self.copy(content=data._content)
+
+            tmp = self.compact()
+            assert self.offsetsaliased(tmp._starts, tmp._stops)   # because that's what compact means
+            tmpparents = self.offsets2parents(tmp._starts.base)
+
+            index = self.JaggedArray(tmp._starts, tmp._stops, (self.numpy.arange(tmp._stops[-1], dtype=self.INDEXTYPE) - tmp._starts[tmpparents]))
+
             data = data.compact()
-            return self.copy(content=data._content[self.IndexedArray.invert((self.index + self._starts)._content)])
+            return self.copy(content=data._content[self.IndexedArray.invert((index + self._starts)._content)])
 
         elif isinstance(data, awkward.array.base.AwkwardArray):
             if len(self._starts) != len(data):
