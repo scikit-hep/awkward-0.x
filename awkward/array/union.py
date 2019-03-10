@@ -121,7 +121,23 @@ class UnionArray(awkward.array.base.AwkwardArray):
     @tags.setter
     def tags(self, value):
         value = self._util_toarray(value, self.TAGTYPE, self.numpy.ndarray)
+        tagsmax = value.max()
+        if tagsmax <= self.numpy.iinfo(self.TAGTYPE).max:
+            value = value.astype(self.TAGTYPE)
+        elif tagsmax <= self.numpy.iinfo(self.numpy.uint8).max:
+            value = value.astype(self.numpy.uint8)
+        elif tagsmax <= self.numpy.iinfo(self.numpy.uint16).max:
+            value = value.astype(self.numpy.uint16)
+        elif tagsmax <= self.numpy.iinfo(self.numpy.uint32).max:
+            value = value.astype(self.numpy.uint32)
+        elif tagsmax <= self.numpy.iinfo(self.numpy.uint64).max:
+            value = value.astype(self.numpy.uint64)
+        else:
+            raise ValueError("maximum tag must be at most {0}".format(self.numpy.iinfo(self.numpy.uint64).max))
+
         if self.check_prop_valid:
+            if len(value) == 0:
+                raise ValueError("tags must be non-empty")
             if not self._util_isintegertype(value.dtype.type):
                 raise TypeError("tags must have integer dtype")
             if (value < 0).any():
@@ -224,6 +240,13 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 self._dtype = self.numpy.dtype(self.numpy.object_)
 
         return self._dtype
+
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return sum(x.nbytes if isinstance(x, self.numpy.ndarray) else x._getnbytes(seen) for x in self._contents)
 
     def __len__(self):
         return len(self._tags)

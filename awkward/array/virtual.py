@@ -57,19 +57,20 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         def __getstate__(self):
             raise RuntimeError("VirtualArray.TransientKeys are not unique across processes, and hence should not be serialized")
 
-    def __init__(self, generator, args=(), kwargs={}, cache=None, persistentkey=None, type=None, persistvirtual=True):
+    def __init__(self, generator, args=(), kwargs={}, cache=None, persistentkey=None, type=None, nbytes=None, persistvirtual=True):
         self.generator = generator
         self.args = args
         self.kwargs = kwargs
         self.cache = cache
         self.persistentkey = persistentkey
         self.type = type
+        self.nbytes = nbytes
         self.persistvirtual = persistvirtual
         self._array = None
         self._setitem = None
         self._delitem = None
 
-    def copy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, persistvirtual=None):
+    def copy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, nbytes=None, persistvirtual=None):
         # FIXME: arguments through **kwargs because undef is different from None (None has meaning for some of them)
         out = self.__class__.__new__(self.__class__)
         out._generator = self._generator
@@ -78,6 +79,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         out._cache = self._cache
         out._persistentkey = self._persistentkey
         out._type = self._type
+        out._nbytes = self._nbytes
         out._persistvirtual = self._persistvirtual
         out._array = self._array
         if self._setitem is None:
@@ -100,12 +102,14 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             out.persistentkey = persistentkey
         if type is not None:
             out.type = type
+        if nbytes is not None:
+            out.nbytes = nbytes
         if persistvirtual is not None:
             out.persistvirtual = persistvirtual
         return out
 
-    def deepcopy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, persistvirtual=None):
-        out = self.copy(generator=generator, args=arge, kwargs=kwargs, cache=cache, persistentkey=persistentkey, type=type, persistvirtual=persistvirtual)
+    def deepcopy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, nbytes=None, persistvirtual=None):
+        out = self.copy(generator=generator, args=arge, kwargs=kwargs, cache=cache, persistentkey=persistentkey, type=type, nbytes=nbytes, persistvirtual=persistvirtual)
         out._array = self._util_deepcopy(out._array)
         if out._setitem is not None:
             for n in list(out._setitem):
@@ -241,6 +245,31 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             if value is not None and not isinstance(value, awkward.type.ArrayType):
                 raise TypeError("type must be None or an awkward type (to set Numpy parameters, use awkward.util.fromnumpy(shape, dtype, masked=False))")
         self._type = value
+
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            if self._nbytes is None or self.ismaterialized:
+                array = self.array
+                return (array.nbytes if isinstance(array, self.numpy.ndarray) else array._getnbytes(seen))
+            else:
+                return self._nbytes
+
+    @property
+    def nbytes(self):
+        return self._getnbytes(set())
+
+    @nbytes.setter
+    def nbytes(self, value):
+        if self.check_prop_valid:
+            if value is not None:
+                if not self._util_isinteger(value):
+                    raise TypeError("nbytes must be an integer or None")
+                if value < 0:
+                    raise ValueError("nbytes must be a non-negative integer or None") 
+            self._nbytes = value
 
     def __len__(self):
         return self.shape[0]

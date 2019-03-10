@@ -552,7 +552,17 @@ class OptionType(Type):
 
     @property
     def dtype(self):
-        return self._type.dtype
+        if isinstance(self._type, Type):
+            return self._type.dtype
+
+        elif isinstance(self._type, numpy.dtype):
+            if self._type.subdtype is None:
+                return self._type
+            else:
+                return self._type.subdtype[0]
+
+        else:
+            return numpy.dtype(object)
 
     def _isnumpy(self, seen):
         if id(self) in seen:

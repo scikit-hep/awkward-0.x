@@ -38,6 +38,9 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
+    def test_indexed_nbytes(self):
+        assert isinstance(IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4]).nbytes, int)
+
     def test_indexed_get(self):
         a = IndexedArray([3, 2, 4, 2, 2, 4, 0], [0.0, 1.1, 2.2, 3.3, 4.4])
         assert [x for x in a] == [3.3, 2.2, 4.4, 2.2, 2.2, 4.4, 0.0]

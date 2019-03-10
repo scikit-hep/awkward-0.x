@@ -39,6 +39,17 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
+    def test_object_nbytes(self):
+        class Point(object):
+            def __init__(self, array):
+                self.x, self.y, self.z = array
+            def __repr__(self):
+                return "<Point {0} {1} {2}>".format(self.x, self.y, self.z)
+            def __eq__(self, other):
+                return isinstance(other, Point) and self.x == other.x and self.y == other.y and self.z == other.z
+
+        assert isinstance(ObjectArray([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.9]], Point).nbytes, int)
+
     def test_object_floats(self):
         class Point(object):
             def __init__(self, array):

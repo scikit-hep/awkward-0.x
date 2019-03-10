@@ -1,3 +1,5 @@
+.. image:: docs/source/logo-300px.png
+
 awkward-array
 =============
 

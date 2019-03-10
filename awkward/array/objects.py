@@ -167,6 +167,13 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
                 raise TypeError("kwargs must be a dict")
         self._kwargs = dict(value)
 
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return (self._content.nbytes if isinstance(self._content, self.numpy.ndarray) else self._content._getnbytes(seen))
+
     def __len__(self):
         return len(self._content)
 
@@ -568,3 +575,29 @@ class StringArray(StringMethods, ObjectArray):
         else:
             out = self._content[where]
             return self.__class__(out.starts, out.stops, out.content, self.encoding)
+
+    @property
+    def iscompact(self):
+        return self._content.iscompact
+
+    def compact(self):
+        return self.fromjagged(self._content.compact(), self.encoding)
+
+    def flatten(self):
+        return self.fromjagged(self._content.flatten(), self.encoding)
+
+    @awkward.util.bothmethod
+    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
+        if isclassmethod: 
+            cls = cls_or_self
+            if not all(isinstance(x, StringArray) for x in arrays):
+                raise TypeError("cannot concatenate non-StringArrays with StringArray.concatenate")
+        else:
+            self = cls_or_self
+            cls = self.__class__
+            if not isinstance(self, StringArray) or not all(isinstance(x, StringArray) for x in arrays):
+                raise TypeError("cannot concatenate non-StringArrays with StringArrays.concatenate")
+            arrays = (self,) + tuple(arrays)
+
+        jagged = self.JaggedArray.concatenate([x._content for x in arrays], axis=axis)
+        return self.fromjagged(jagged, self.encoding)
