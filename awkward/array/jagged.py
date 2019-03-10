@@ -323,10 +323,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         self._starts = value
         self._offsets, self._counts, self._parents = None, None, None
         self._isvalid = False
-        
+
     @property
     def stops(self):
-        return self._stops
+        if len(self._stops) == len(self._starts):
+            return self._stops
+        else:
+            return self._stops[:len(self._starts)]
 
     @stops.setter
     def stops(self, value):
@@ -386,7 +389,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def counts(self):
         if self._counts is None:
             self._valid()
-            self._counts = self._stops - self._starts
+            self._counts = self.stops - self._starts
         return self._counts
 
     @counts.setter
@@ -483,7 +486,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 raise ValueError("starts must have the same (or shorter) length than stops")
             if starts.shape[1:] != stops.shape[1:]:
                 raise ValueError("starts and stops must have the same dimensionality (shape[1:])")
-            if not (stops >= starts).all():
+            if not (stops[:len(starts)] >= starts).all():
                 raise ValueError("stops must be greater than or equal to starts")
 
     def __iter__(self, checkiter=True):
@@ -590,7 +593,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                     stack.insert(0, node.counts)
                     node = node.flatten()
 
-                counts = node._stops - node._starts
+                counts = node.stops - node._starts
                 if head < 0:
                     head = counts + head
                 if not self.numpy.bitwise_and(0 <= head, head < counts).all():
@@ -605,7 +608,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 if nslices >= 2:
                     raise NotImplementedError("this implementation cannot slice a JaggedArray in more than two dimensions")
 
-                counts = node._stops - node._starts
+                counts = node.stops - node._starts
                 step = 1 if head.step is None else head.step
 
                 if step == 0:
@@ -851,7 +854,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             if self.offsetsaliased(starts, stops):
                 parents = self.offsets2parents(starts.base)
             elif len(starts.shape) == 1 and self.numpy.array_equal(starts[1:], stops[:-1]):
-                if len(self._stops) == 0:
+                if len(stops) == 0:
                     offsets = self.numpy.array([0], dtype=self.INDEXTYPE)
                 else:
                     offsets = self.numpy.append(starts, stops[-1])
