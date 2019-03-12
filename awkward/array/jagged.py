@@ -1072,9 +1072,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         def root3(a):
             out = 2*np.ones(a.shape, dtype=self.INDEXTYPE)
             mask = a > 0
-            rad = np.power(np.sqrt(3)*np.sqrt(243*a[mask]**2 - 1) + 27*a[mask], 1/3)
+            rad = np.power(np.sqrt(3)*np.sqrt(243*a[mask]**2 - 1) + 27*a[mask], 1./3)
             # 1e-12 to correct rounding error (good to 1000 choose 3)
-            out[mask] = np.floor(np.power(3, -2/3)*rad + np.power(3, -1/3)/rad + 1 + 1e-12)
+            out[mask] = np.floor(np.power(3, -2./3)*rad + np.power(3, -1./3)/rad + 1 + 1e-12)
             return out
 
         def root4(a):
