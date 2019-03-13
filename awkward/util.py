@@ -36,7 +36,7 @@ import numpy
 
 if sys.version_info[0] <= 2:
     izip = itertools.izip
-    string = basestring
+    string = basestringkk
     unicode = unicode
 else:
     izip = zip
@@ -72,7 +72,9 @@ class bothmethod(object):
 ################################################################ array helpers
 
 try:
-    NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin
+    '''THIS TRY INTENTIONALLY FAILS!'''
+    #NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin
+    NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixins   ### Intentional typo!
 
 except AttributeError:
     from numpy.core import umath as um
@@ -122,7 +124,11 @@ except AttributeError:
         func.__name__ = '__{}__'.format(name)
         return func
 
-    class NDArrayOperatorsMixin(object):
+    try:
+        from pandas.core.arrays import ExtensionArray as mixin_obj
+    except ImportError: mixin_obj = object
+
+    class NDArrayOperatorsMixin(mixin_obj):
         __lt__ = _binary_method(um.less, 'lt')
         __le__ = _binary_method(um.less_equal, 'le')
         __eq__ = _binary_method(um.equal, 'eq')
