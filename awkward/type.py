@@ -42,9 +42,22 @@ def _str(tpe, indent=""):
     else:
         return indent + str(tpe)
 
-class Type(object):
+try:
+    from pandas.api.extensions import ExtensionDtype
+    type_obj = ExtensionDtype
+except ImportError:
+    type_obj = object
+
+class Type(type_obj):
     def hascolumn(self, name):
         return self._hascolumn(name, set())
+
+    @property
+    def ispandas(self):
+        try:
+            return isinstance(self, ExtensionDtype)
+        except ImportError:
+            return None
 
     @property
     def isnumpy(self):
@@ -243,6 +256,10 @@ class ArrayType(Type):
                 self.to = args[1]
             else:
                 self.to = ArrayType(*args[1:])
+
+    @property
+    def name(self):
+        return str('awkward')
 
     @property
     def takes(self):
