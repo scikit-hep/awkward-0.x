@@ -1,9 +1,9 @@
 from .base import (
-        AwkwardArray,
         AwkwardType,
+        AwkwardAccessor,
         )
 
 __all__ = [
         'AwkwardType',
-        'AwkwardArray',
+        'AwkwardAcessor',
         ]
