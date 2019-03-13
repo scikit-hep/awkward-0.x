@@ -258,10 +258,6 @@ class ArrayType(Type):
                 self.to = ArrayType(*args[1:])
 
     @property
-    def name(self):
-        return str('awkward')
-
-    @property
     def takes(self):
         return self._takes
 
