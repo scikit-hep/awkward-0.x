@@ -42,22 +42,9 @@ def _str(tpe, indent=""):
     else:
         return indent + str(tpe)
 
-try:
-    from pandas.api.extensions import ExtensionDtype
-    type_obj = ExtensionDtype
-except ImportError:
-    type_obj = object
-
-class Type(type_obj):
+class Type(object):
     def hascolumn(self, name):
         return self._hascolumn(name, set())
-
-    @property
-    def ispandas(self):
-        try:
-            return isinstance(self, ExtensionDtype)
-        except ImportError:
-            return None
 
     @property
     def isnumpy(self):
