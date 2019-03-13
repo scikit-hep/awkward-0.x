@@ -50,9 +50,6 @@ class AwkwardAccessor:
     def content(self, value):
         return delegated_method(self.content, value)
 
-    #def tolist(self, value):
-    #    return delegated_method(self.tolist(), value)
-
 def is_awkward_type(obj):
     t = getattr(obj, 'dtype', obj)
     try:
