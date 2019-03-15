@@ -43,6 +43,8 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def invert(cls, permutation):
+        if permutation.size == 0:
+            return cls.numpy.zeros(0, dtype=cls.IndexedArray.fget(None).INDEXTYPE)
         permutation = permutation.reshape(-1)
         out = cls.numpy.zeros(permutation.max() + 1, dtype=cls.IndexedArray.fget(None).INDEXTYPE)
         identity = cls.numpy.arange(len(permutation))
