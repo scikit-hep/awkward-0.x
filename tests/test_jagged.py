@@ -79,6 +79,16 @@ class Test(unittest.TestCase):
         self.assertEqual(a.starts.tolist(), [0, 2, 3, 4, 7, 9])
         self.assertEqual(a.stops.tolist(), [2, 3, 4, 7, 9, 10])
 
+    def test_jagged_tojagged(self):
+        a = JaggedArray.fromiter([[1], [2, 3], []])
+        assert a.tojagged(a).tolist() == a.tolist()
+        b = numpy.array([3,4,5])
+        assert a.tojagged(b+1).tolist() == JaggedArray.fromiter([[4], [5, 5], []]).tolist()
+        a = JaggedArray.fromiter([[]])
+        assert a.tojagged(a).tolist() == a.tolist()
+        a = JaggedArray.fromiter([[], []])
+        assert a.tojagged(a).tolist() == a.tolist()
+
     def test_jagged_str(self):
         pass
 
