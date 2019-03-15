@@ -92,7 +92,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         changes[-1] = len(parents)
         changes[1:-1] = tmp
 
-        length = parents.max() + 1
+        length = parents.max() + 1 if parents.size > 0 else 0
         starts = cls.numpy.zeros(length, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
         counts = cls.numpy.zeros(length, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
 
