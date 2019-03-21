@@ -51,8 +51,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def offsetsaliased(cls, starts, stops):
         return (isinstance(starts, cls.numpy.ndarray) and isinstance(stops, cls.numpy.ndarray) and
                 starts.base is not None and stops.base is not None and starts.base is stops.base and
-                starts.ctypes.data == starts.base.ctypes.data and
-                stops.ctypes.data == stops.base.ctypes.data + stops.dtype.itemsize and
+                starts.data == starts.data and
+                stops.data == stops.data + stops.dtype.itemsize and
                 len(starts) == len(starts.base) - 1 and
                 len(stops) == len(stops.base) - 1)
 
@@ -505,13 +505,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def __getitem__(self, where):
         self._valid()
 
-        if self._util_isstringslice(where):
-            content = self._content[where]
-            cls = awkward.array.objects.Methods.maybemixin(type(content), self.JaggedArray)
-            out = cls.__new__(cls)
-            out.__dict__.update(self.__dict__)
-            out._content = content
-            return out
+        #if self._util_isstringslice(where):
+        #    content = self._content[where]
+        #    cls = awkward.array.objects.Methods.maybemixin(type(content), self.JaggedArray)
+        #    out = cls.__new__(cls)
+        #    out.__dict__.update(self.__dict__)
+        #    out._content = content
+        #    return out
 
         if isinstance(where, tuple) and len(where) == 0:
             return self
@@ -631,8 +631,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
                     stops = self.numpy.maximum(starts, stops)
 
-                    start = starts.min()
-                    stop = stops.max()
+                    start = self.numpy.asnumpy(starts.min())
+                    stop = self.numpy.asnumpy(stops.max())
                     indexes = self.numpy.empty((len(node), abs(stop - start)), dtype=self.INDEXTYPE)
                     indexes[:, :] = self.numpy.arange(start, stop)
 
@@ -658,8 +658,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
                     stops = self.numpy.minimum(starts, stops)
 
-                    start = starts.max()
-                    stop = stops.min()
+                    start = self.numpy.asnumpy(starts.max())
+                    stop = self.numpy.asnumpy(stops.min())
                     indexes = self.numpy.empty((len(node), abs(stop - start)), dtype=self.INDEXTYPE)
                     indexes[:, :] = self.numpy.arange(start, stop, -1)
 

@@ -31,7 +31,7 @@
 import types
 import numbers
 
-import numpy
+import cupy as numpy
 
 import awkward.persist
 import awkward.type
@@ -148,8 +148,8 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                     out.append(tuple(x[n].tolist() for n in x._table._contents))
                 else:
                     out.append(dict((n, self._try_tolist(x[n])) for n in x._table._contents))
-            elif isinstance(x, self.numpy.ma.core.MaskedConstant):
-                out.append(None)
+            #elif isinstance(x, self.numpy.ma.core.MaskedConstant):
+            #    out.append(None)
             else:
                 out.append(self._try_tolist(x))
         return out

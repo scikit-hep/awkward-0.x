@@ -32,7 +32,7 @@ import math
 import numbers
 from collections import OrderedDict
 
-import numpy
+import cupy as numpy
 
 import awkward.util
 
@@ -648,8 +648,8 @@ def _fromarray(array, seen):
 
             for x in array.shape[:0:-1]:
                 out = ArrayType(x, out)
-            if isinstance(array, numpy.ma.MaskedArray):
-                out = OptionType(out)
+            #if isinstance(array, numpy.ma.MaskedArray):
+            #    out = OptionType(out)
 
             placeholder.value = out
 
