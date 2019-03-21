@@ -1081,10 +1081,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             # good to (at least) 100 choose 4
             return np.floor((np.sqrt(4*np.sqrt(24*a + 1) + 5) + 3)/2).astype(self.INDEXTYPE)
 
-        if n > 4:
+        if n > 5:
             # Need to solve general polynomial \prod_{i<=k} (n-i) / k! = a
             # Not sure if possible, is the Galois group solvable for this class of polynomial?
+            # The first level is a freebie thanks to np.repeat()
+            # I think the nested levels should be too, but could not quite make it work...
             raise NotImplementedError
+        elif n == 5:
+            counts = self.counts*(self.counts - 1)*(self.counts - 2)*(self.counts - 3)*(self.counts - 4)//120
         elif n == 4:
             counts = self.counts*(self.counts - 1)*(self.counts - 2)*(self.counts - 3)//24
         elif n == 3:
@@ -1094,13 +1098,26 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         elif n <= 1:
             raise ValueError("Choosing 0 or 1 items is trivial")
 
+        local = np.arange(self.offsets[-1]) - np.repeat(self.offsets[:-1], self.counts)
         offsets = self.JaggedArray.counts2offsets(counts)
         indices = np.arange(offsets[-1])
         parents = self.JaggedArray.offsets2parents(offsets)
 
-        if n == 4:
-            k4 = indices - offsets[parents]
+        if n == 5:
+            k5 = indices - offsets[parents]
+            i5 = np.repeat(local, local*(local - 1)*(local - 2)*(local - 3)//24)
+            k4 = k5 - i5*(i5 - 1)*(i5 - 2)*(i5 - 3)*(i5 - 4)//120
             i4 = root4(k4)
+            k3 = k4 - i4*(i4 - 1)*(i4 - 2)*(i4 - 3)//24
+            i3 = root3(k3)
+            k2 = k3 - i3*(i3 - 1)*(i3 - 2)//6
+            i2 = root2(k2)
+            k1 = k2 - i2*(i2 - 1)//2
+            i1 = k1
+            out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3, i4, i5))
+        elif n == 4:
+            k4 = indices - offsets[parents]
+            i4 = np.repeat(local, local*(local - 1)*(local - 2)//6)
             k3 = k4 - i4*(i4 - 1)*(i4 - 2)*(i4 - 3)//24
             i3 = root3(k3)
             k2 = k3 - i3*(i3 - 1)*(i3 - 2)//6
@@ -1110,7 +1127,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3, i4))
         elif n == 3:
             k3 = indices - offsets[parents]
-            i3 = root3(k3)
+            i3 = np.repeat(local, local*(local - 1)//2)
             k2 = k3 - i3*(i3 - 1)*(i3 - 2)//6
             i2 = root2(k2)
             k1 = k2 - i2*(i2 - 1)//2
@@ -1118,7 +1135,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3))
         elif n == 2:
             k2 = indices - offsets[parents]
-            i2 = root2(k2)
+            i2 = np.repeat(local, local)
             k1 = k2 - i2*(i2 - 1)//2
             i1 = k1
             out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2))

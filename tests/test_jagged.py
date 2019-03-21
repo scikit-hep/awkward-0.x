@@ -324,6 +324,34 @@ class Test(unittest.TestCase):
             assert c[2].i1.tolist() == i1
             assert c[2].i2.tolist() == i2
             assert c[2].i3.tolist() == i3
+            if i > 20:
+                continue
+            c = a.argchoose(5)
+            assert len(c) == 4
+            assert len(c[0]) == 0
+            assert len(c[1]) == 0
+            assert len(c[2]) == i*(i - 1)*(i - 2)*(i - 3)*(i - 4)//120
+            assert len(c[3]) == 0
+            i0 = []
+            i1 = []
+            i2 = []
+            i3 = []
+            i4 = []
+            for k0 in range(i):
+                for k1 in range(k0):
+                    for k2 in range(k1):
+                        for k3 in range(k2):
+                            for k4 in range(k3):
+                                i0.append(k4)
+                                i1.append(k3)
+                                i2.append(k2)
+                                i3.append(k1)
+                                i4.append(k0)
+            assert c[2].i0.tolist() == i0
+            assert c[2].i1.tolist() == i1
+            assert c[2].i2.tolist() == i2
+            assert c[2].i3.tolist() == i3
+            assert c[2].i4.tolist() == i4
 
     def test_jagged_cross_argnested(self):
         a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
