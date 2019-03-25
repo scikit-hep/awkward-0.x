@@ -1594,23 +1594,37 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 table = first.Table.named("tuple", columns1, *columns2)
             return first.JaggedArray(first._starts, first._stops, table)
 
-    def pad(self, length, maskedwhen=True):
+    def pad(self, length, maskedwhen=True, clip=False):
         flatstarts = self._starts.reshape(-1)
-        almostflat = self._starts.reshape(-1, 1)
 
-        index = self.numpy.arange(length) + almostflat
+        if clip:
+            almostflat = self._starts.reshape(-1, 1)
+            index = self.numpy.arange(length, dtype=self.INDEXTYPE) + almostflat
+            localindex = index - almostflat
+            index = index.reshape(-1)
+            comparator = self.counts.reshape(-1, 1)
+            offsets = self.numpy.arange(0, length*len(flatstarts) + 1, length, dtype=self.INDEXTYPE)
+
+        else:
+            counts = self.numpy.maximum(self.counts.reshape(-1), length)
+            offsets = self.counts2offsets(counts)
+            parents = self.offsets2parents(offsets)
+            localindex = self.numpy.arange(len(parents), dtype=self.INDEXTYPE) - offsets[:-1][parents]
+            index = localindex + flatstarts[parents]
+            comparator = self.counts.reshape(-1)[parents]
+
         if isinstance(maskedwhen, self.numpy.ma.core.MaskedConstant):
             if not isinstance(self._content, self.numpy.ndarray):
                 raise TypeError("numpy.ma.masked can only be used if JaggedArray.content is a Numpy array")
-            mask = ((index - almostflat) >= self.counts.reshape(-1, 1)).reshape(-1)
+            mask = (localindex >= comparator).reshape(-1)
         elif maskedwhen:
-            mask = ((index - almostflat) >= self.counts.reshape(-1, 1)).reshape(-1)
+            mask = (localindex >= comparator).reshape(-1)
         else:
-            mask = ((index - almostflat) < self.counts.reshape(-1, 1)).reshape(-1)
-        index[index >= len(self._content)] = -1
-        content = self._content[index].reshape(-1)
+            mask = (localindex < comparator).reshape(-1)
 
-        offsets = self.numpy.arange(0, length*len(flatstarts) + 1, length)
+        index[index >= len(self._content)] = -1
+        content = self._content[index]
+
         starts = offsets[:-1].reshape((-1,) + self._starts.shape[1:])
         stops = offsets[1:].reshape((-1,) + self._starts.shape[1:])
 
