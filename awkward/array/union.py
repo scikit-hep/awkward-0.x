@@ -478,3 +478,6 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     def astype(self, dtype):
         return self.copy(contents=[x.astype(dtype) for x in self._contents])
+
+    def fillna(self, value):
+        return self.copy(contents=[self._util_fillna(x, value) for x in self._contents])

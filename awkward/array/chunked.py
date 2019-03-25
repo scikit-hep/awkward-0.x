@@ -673,6 +673,16 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             counts.append(self._counts[i])
         return self.copy(chunks=chunks, counts=counts)
 
+    def fillna(self, value):
+        chunks = []
+        counts = []
+        for i, chunk in enumerate(self._chunks):
+            if i >= len(self._counts):
+                self._counts.append(len(chunk))
+            chunks.append(self._util_fillna(chunk, value))
+            counts.append(self._counts[i])
+        return self.copy(chunks=chunks, counts=counts)
+
 class AppendableArray(ChunkedArray):
     """
     AppendableArray
@@ -829,3 +839,9 @@ class AppendableArray(ChunkedArray):
         for chunk in self._chunks:
             chunks.append(chunk.astype(dtype))
         return self.copy(dtype=self.numpy.dtype(dtype), chunks=chunks)
+
+    def fillna(self, value):
+        chunks = []
+        for chunk in self._chunks:
+            chunks.append(self._util_fillna(chunk, value))
+        return self.copy(chunks=chunks)

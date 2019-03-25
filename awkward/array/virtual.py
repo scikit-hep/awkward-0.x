@@ -434,3 +434,6 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def astype(self, dtype):
         return self.array.astype(dtype)
+
+    def fillna(self, value):
+        return self._util_fillna(self.array, value)

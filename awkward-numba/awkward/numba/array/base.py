@@ -30,6 +30,11 @@
 
 class NumbaMethods(object):
     @property
+    def awkward(self):
+        import awkward.numba
+        return awkward.numba
+
+    @property
     def ChunkedArray(self):
         import awkward.numba.array.chunked
         return awkward.numba.array.chunked.ChunkedArrayNumba

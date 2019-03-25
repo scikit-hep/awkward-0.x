@@ -467,3 +467,20 @@ class Test(unittest.TestCase):
         assert b.zip(a).tolist() == [[(10, 1.1), (20, 2.2), (30, 3.3)], [], [(40, 4.4), (50, 5.5)]]
         assert b.zip(c).tolist() == [[(10, 100), (20, 100), (30, 100)], [], [(40, 300), (50, 300)]]
         assert b.zip(d).tolist() == [[(10, 1000), (20, 1000), (30, 1000)], [], [(40, 1000), (50, 1000)]]
+
+    def test_jagged_pad(self):
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        assert a.pad(4, clip=True).tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
+        assert a.pad(4, numpy.ma.masked, clip=True).regular().tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
+
+        assert a.pad(4).tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
+        assert a.pad(4, numpy.ma.masked).regular().tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
+
+        a = awkward.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
+        assert a.pad(3).tolist() == [[1.1, 2.2, 3.3, 4.4, 5.5], [None, None, None], [6.6, 7.7, 8.8], [9.9, None, None]]
+        assert a.pad(3, clip=True).tolist() == [[1.1, 2.2, 3.3], [None, None, None], [6.6, 7.7, 8.8], [9.9, None, None]]
+
+    def test_jagged_fillna(self):
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        assert a.pad(4).fillna(999).tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]
+        assert a.pad(4, numpy.ma.masked).fillna(999).regular().tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]

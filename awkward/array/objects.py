@@ -601,3 +601,6 @@ class StringArray(StringMethods, ObjectArray):
 
         jagged = self.JaggedArray.concatenate([x._content for x in arrays], axis=axis)
         return self.fromjagged(jagged, self.encoding)
+
+    def fillna(self, value):
+        return self

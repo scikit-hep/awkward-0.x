@@ -145,13 +145,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromiter(cls, iterable):
-        # FIXME for 1.0: detect deep jagged arrays and construct them
-        offsets = [0]
-        content = []
-        for x in iterable:
-            offsets.append(offsets[-1] + len(x))
-            content.extend(x)
-        return cls.fromoffsets(offsets, content)
+        import awkward.generate
+        if len(iterable) == 0:
+            return cls.JaggedArray.fget(None)([], [], [])
+        else:
+            return awkward.generate.fromiter(iterable, awkwardlib=cls.awkward.fget(None))
 
     @classmethod
     def fromoffsets(cls, offsets, content):
@@ -1596,20 +1594,41 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 table = first.Table.named("tuple", columns1, *columns2)
             return first.JaggedArray(first._starts, first._stops, table)
 
-    def pandas(self):
-        import pandas
-        self._valid()
+    def pad(self, length, maskedwhen=True, clip=False):
+        flatstarts = self._starts.reshape(-1)
 
-        if isinstance(self._content, self.numpy.ndarray):
-            out = pandas.DataFrame(self._content)
+        if clip:
+            almostflat = self._starts.reshape(-1, 1)
+            index = self.numpy.arange(length, dtype=self.INDEXTYPE) + almostflat
+            localindex = index - almostflat
+            index = index.reshape(-1)
+            comparator = self.counts.reshape(-1, 1)
+            offsets = self.numpy.arange(0, length*len(flatstarts) + 1, length, dtype=self.INDEXTYPE)
+
         else:
-            out = self._content.pandas()
+            counts = self.numpy.maximum(self.counts.reshape(-1), length)
+            offsets = self.counts2offsets(counts)
+            parents = self.offsets2parents(offsets)
+            localindex = self.numpy.arange(len(parents), dtype=self.INDEXTYPE) - offsets[:-1][parents]
+            index = localindex + flatstarts[parents]
+            comparator = self.counts.reshape(-1)[parents]
 
-        if isinstance(self._content, JaggedArray):
-            parents = self._content.tojagged(self.parents)._content
-            index = self._content.tojagged(self.index._content)._content
-            out.index = pandas.MultiIndex.from_arrays([parents, index] + out.index.labels[1:])
+        if isinstance(maskedwhen, self.numpy.ma.core.MaskedConstant):
+            if not isinstance(self._content, self.numpy.ndarray):
+                raise TypeError("numpy.ma.masked can only be used if JaggedArray.content is a Numpy array")
+            mask = (localindex >= comparator).reshape(-1)
+        elif maskedwhen:
+            mask = (localindex >= comparator).reshape(-1)
         else:
-            out.index = pandas.MultiIndex.from_arrays([self.parents, self.index._content])
+            mask = (localindex < comparator).reshape(-1)
 
-        return out
+        index[index >= len(self._content)] = -1
+        content = self._content[index]
+
+        starts = offsets[:-1].reshape((-1,) + self._starts.shape[1:])
+        stops = offsets[1:].reshape((-1,) + self._starts.shape[1:])
+
+        if isinstance(maskedwhen, self.numpy.ma.core.MaskedConstant):
+            return self.copy(starts=starts, stops=stops, content=self.numpy.ma.MaskedArray(content, mask))
+        else:
+            return self.copy(starts=starts, stops=stops, content=self.MaskedArray(mask, content, maskedwhen=maskedwhen))
