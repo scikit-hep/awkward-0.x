@@ -1593,3 +1593,28 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 table = first.Table.named("tuple", columns1, *columns2)
             return first.JaggedArray(first._starts, first._stops, table)
+
+    def pad(self, length, maskedwhen=True):
+        flatstarts = self._starts.reshape(-1)
+        almostflat = self._starts.reshape(-1, 1)
+
+        index = self.numpy.arange(length) + almostflat
+        if isinstance(maskedwhen, self.numpy.ma.core.MaskedConstant):
+            if not isinstance(self._content, self.numpy.ndarray):
+                raise TypeError("numpy.ma.masked can only be used if JaggedArray.content is a Numpy array")
+            mask = ((index - almostflat) >= self.counts.reshape(-1, 1)).reshape(-1)
+        elif maskedwhen:
+            mask = ((index - almostflat) >= self.counts.reshape(-1, 1)).reshape(-1)
+        else:
+            mask = ((index - almostflat) < self.counts.reshape(-1, 1)).reshape(-1)
+        index[index >= len(self._content)] = -1
+        content = self._content[index].reshape(-1)
+
+        offsets = self.numpy.arange(0, length*len(flatstarts) + 1, length)
+        starts = offsets[:-1].reshape((-1,) + self._starts.shape[1:])
+        stops = offsets[1:].reshape((-1,) + self._starts.shape[1:])
+
+        if isinstance(maskedwhen, self.numpy.ma.core.MaskedConstant):
+            return self.copy(starts=starts, stops=stops, content=self.numpy.ma.MaskedArray(content, mask))
+        else:
+            return self.copy(starts=starts, stops=stops, content=self.MaskedArray(mask, content, maskedwhen=maskedwhen))
