@@ -1595,21 +1595,3 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 table = first.Table.named("tuple", columns1, *columns2)
             return first.JaggedArray(first._starts, first._stops, table)
-
-    def pandas(self):
-        import pandas
-        self._valid()
-
-        if isinstance(self._content, self.numpy.ndarray):
-            out = pandas.DataFrame(self._content)
-        else:
-            out = self._content.pandas()
-
-        if isinstance(self._content, JaggedArray):
-            parents = self._content.tojagged(self.parents)._content
-            index = self._content.tojagged(self.index._content)._content
-            out.index = pandas.MultiIndex.from_arrays([parents, index] + out.index.labels[1:])
-        else:
-            out.index = pandas.MultiIndex.from_arrays([self.parents, self.index._content])
-
-        return out
