@@ -423,6 +423,18 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                 ufunc is cls.numpy.greater or
                 ufunc is cls.numpy.greater_equal)
 
+    @classmethod
+    def _util_fillna(cls, array, value):
+        if isinstance(array, cls.numpy.ndarray):
+            data = cls.numpy.ma.getdata(array)
+            mask = cls.numpy.ma.getmask(array)
+            if mask is not cls.numpy.ma.nomask:
+                data[mask] = value
+            data[cls.numpy.isnan(data)] = value
+            return data
+        else:
+            return array.fillna(value)
+
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class
@@ -462,3 +474,6 @@ class AwkwardArrayWithContent(AwkwardArray):
 
     def astype(self, dtype):
         return self.copy(content=self._content.astype(dtype))
+
+    def fillna(self, value):
+        return self.copy(content=self._util_fillna(self._content, value))

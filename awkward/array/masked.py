@@ -305,6 +305,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         content[self.ismasked] = identity
         return content
 
+    def fillna(self, value):
+        out = self._util_fillna(self._content, value)
+        if not isinstance(out, self.numpy.ndarray):
+            out = self.numpy.array(out)
+        out[self.boolmask(maskedwhen=True)] = value
+        return out
+
 class BitMaskedArray(MaskedArray):
     """
     BitMaskedArray
@@ -695,4 +702,11 @@ class IndexedMaskedArray(MaskedArray):
 
         out = self.numpy.full(self._mask.shape + content.shape[1:], identity, dtype=content.dtype)
         out[self.isunmasked] = content[self.mask[self.mask >= 0]]
+        return out
+
+    def fillna(self, value):
+        out = self._util_fillna(self._content, value)
+        if not isinstance(out, self.numpy.ndarray):
+            out = self.numpy.array(out)
+        out[self.mask < 0] = value
         return out

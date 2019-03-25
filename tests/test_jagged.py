@@ -472,3 +472,8 @@ class Test(unittest.TestCase):
         a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         assert a.pad(4).tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
         assert a.pad(4, numpy.ma.masked).regular().tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
+
+    def test_jagged_fillna(self):
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        assert a.pad(4).fillna(999).tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]
+        assert a.pad(4, numpy.ma.masked).fillna(999).regular().tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]

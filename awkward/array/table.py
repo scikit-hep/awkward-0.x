@@ -756,3 +756,9 @@ class Table(awkward.array.base.AwkwardArray):
         for n, x in self._contents.items():
             out[n] = x.astype(dtype)
         return out
+
+    def fillna(self, value):
+        out = self.copy(contents={})
+        for n, x in self._contents.items():
+            out[n] = self._util_fillna(x, value)
+        return out
