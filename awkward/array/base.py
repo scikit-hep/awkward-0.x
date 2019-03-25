@@ -33,6 +33,7 @@ import numbers
 
 import numpy
 
+import awkward
 import awkward.persist
 import awkward.type
 import awkward.util
@@ -46,6 +47,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     allow_iter = True
     check_prop_valid = True
     check_whole_valid = True
+
+    @property
+    def awkward(self):
+        return awkward
 
     numpy = numpy
     DEFAULTTYPE = numpy.dtype(numpy.float64)

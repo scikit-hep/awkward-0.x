@@ -145,13 +145,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromiter(cls, iterable):
-        # FIXME for 1.0: detect deep jagged arrays and construct them
-        offsets = [0]
-        content = []
-        for x in iterable:
-            offsets.append(offsets[-1] + len(x))
-            content.extend(x)
-        return cls.fromoffsets(offsets, content)
+        import awkward.generate
+        if len(iterable) == 0:
+            return cls.JaggedArray.fget(None)([], [], [])
+        else:
+            return awkward.generate.fromiter(iterable, awkwardlib=cls.awkward.fget(None))
 
     @classmethod
     def fromoffsets(cls, offsets, content):
