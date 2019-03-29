@@ -315,7 +315,11 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
                 minsize, tpes, contexts, pair = policy["minsize"], policy["types"], policy["contexts"], policy["pair"]
                 if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(tpes)) and any(fnmatch.fnmatchcase(context, p) for p in contexts):
                     compress, decompress = pair
-                    storage[prefix + str(ident) + suffix] = compress(obj)
+                    if obj.flags.c_contiguous:
+                        compressed = compress(obj)
+                    else:
+                        compressed = compress(obj.copy())
+                    storage[prefix + str(ident) + suffix] = compressed
 
                     return {"id": ident,
                             "call": ["awkward", "numpy", "frombuffer"],
@@ -343,9 +347,11 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
 
                 gen, genname = importlib.import_module(spec[0]), spec[1:]
                 while len(genname) > 0:
+                    if not hasattr(gen, genname[0]):
+                        break
                     gen, genname = getattr(gen, genname[0]), genname[1:]
 
-                if gen is obj:
+                if len(genname) == 0 and gen is obj:
                     return {"id": ident, "function": spec}
 
             if hasattr(obj, "tojson") and hasattr(type(obj), "fromjson") and getattr(importlib.import_module(type(obj).__module__), type(obj).__name__) is type(obj):

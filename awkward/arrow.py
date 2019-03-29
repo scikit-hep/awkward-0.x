@@ -398,7 +398,7 @@ def fromarrow(obj, awkwardlib=None):
 
 ################################################################################ Parquet file handling
 
-def toparquet(obj, where, **options):
+def toparquet(where, obj, **options):
     import pyarrow.parquet
 
     options["where"] = where
