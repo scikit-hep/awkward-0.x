@@ -48,21 +48,27 @@ import awkward.type
 import awkward.version
 
 compression = [
-    {"minsize": 8192, "types": [numpy.bool_, numpy.bool, numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
+        {"minsize": 8192, "types": [numpy.bool_, numpy.bool, numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
     ]
 
 partner = {
-    zlib.compress: ("zlib", "decompress"),
+        zlib.compress: ("zlib", "decompress"),
     }
 
-whitelist = [["awkward.util", "frombuffer"],
-             ["numpy", "frombuffer"],
-             ["zlib", "decompress"],
-             ["awkward", "*Array"],
-             ["awkward", "Table"],
-             ["awkward", "numpy", "frombuffer"],
-             ["awkward.persist", "*"],
-             ["awkward.arrow", "_ParquetFile", "fromjson"]]
+whitelist = [
+        ["numpy", "frombuffer"],
+        ["zlib", "decompress"],
+        ["lzma", "decompress"],
+        ["backports.lzma", "decompress"],
+        ["lz4.block", "decompress"],
+        ["awkward", "*Array"],
+        ["awkward", "Table"],
+        ["awkward", "numpy", "frombuffer"],
+        ["awkward.util", "frombuffer"],
+        ["awkward.persist", "*"],
+        ["awkward.arrow", "_ParquetFile", "fromjson"],
+        ["uproot_methods.classes.*"],
+    ]
 
 def frompython(obj):
     return base64.b64encode(pickle.dumps(obj)).decode("ascii")
