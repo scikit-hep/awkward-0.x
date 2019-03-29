@@ -424,17 +424,17 @@ def test_arrow_writeparquet2(tmpdir):
     a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     b = awkward.fromiter([100, 200, None])
 
-    awkward.toparquet([b, b, b], filename)
+    awkward.toparquet(filename, [b, b, b])
     assert awkward.fromparquet(filename).tolist() == [100, 200, None, 100, 200, None, 100, 200, None]
 
-    awkward.toparquet(a, filename)
+    awkward.toparquet(filename, a)
     assert awkward.fromparquet(filename).tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
 
-    awkward.toparquet(awkward.Table(x=a, y=b), filename)
+    awkward.toparquet(filename, awkward.Table(x=a, y=b))
     c = awkward.fromparquet(filename)
     assert c.tolist() == [{'x': [1.1, 2.2, 3.3], 'y': 100}, {'x': [], 'y': 200}, {'x': [4.4, 5.5], 'y': None}]
 
-    awkward.toparquet(c, filename)
+    awkward.toparquet(filename, c)
     d = awkward.fromparquet(filename)
     assert c.tolist() == d.tolist()
     assert isinstance(c, awkward.ChunkedArray) and isinstance(d, awkward.ChunkedArray)
