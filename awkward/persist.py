@@ -315,7 +315,11 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
                 minsize, tpes, contexts, pair = policy["minsize"], policy["types"], policy["contexts"], policy["pair"]
                 if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(tpes)) and any(fnmatch.fnmatchcase(context, p) for p in contexts):
                     compress, decompress = pair
-                    storage[prefix + str(ident) + suffix] = compress(obj)
+                    if obj.flags.c_contiguous:
+                        compressed = compress(obj)
+                    else:
+                        compressed = compress(obj.copy())
+                    storage[prefix + str(ident) + suffix] = compressed
 
                     return {"id": ident,
                             "call": ["awkward", "numpy", "frombuffer"],
