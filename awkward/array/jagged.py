@@ -999,7 +999,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _argpairs(self):
         self._valid()
-        
+
         counts = self.counts * (self.counts + 1) >> 1    # N * (N + 1) // 2
 
         offsets = self.counts2offsets(counts)
@@ -1055,20 +1055,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out._parents = parents_comb
         return out
 
-    def argdistincts(self, nested=False):
-        out = self._argdistincts(absolute=False)
-
-        if nested:
-            out = self.JaggedArray.fromcounts(self.numpy.maximum(0, self.counts - 1), self.JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
-
-        return out
-
-    def argchoose(self, n, nested=False):
+    def _argchoose(self, n, absolute):
         np = self.numpy
 
         def root2(a):
             return np.floor((1+np.sqrt(8*a+1))/2).astype(self.INDEXTYPE)
-            
+
         def root3(a):
             out = 2*np.ones(a.shape, dtype=self.INDEXTYPE)
             mask = a > 0
@@ -1085,7 +1077,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             # Need to solve general polynomial \prod_{i<=k} (n-i) / k! = a
             # Not sure if possible, is the Galois group solvable for this class of polynomial?
             # The first level is a freebie thanks to np.repeat()
-            # I think the nested levels should be too, but could not quite make it work...
+            # I think the next levels should be too, but could not quite make it work...
             raise NotImplementedError
         elif n == 5:
             counts = self.counts*(self.counts - 1)*(self.counts - 2)*(self.counts - 3)*(self.counts - 4)//120
@@ -1114,6 +1106,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             i2 = root2(k2)
             k1 = k2 - i2*(i2 - 1)//2
             i1 = k1
+            if absolute:
+                starts_parents = self.starts[parents]
+                for idx in [i1, i2, i3, i4, i5]:
+                    idx += starts_parents
             out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3, i4, i5))
         elif n == 4:
             k4 = indices - offsets[parents]
@@ -1124,6 +1120,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             i2 = root2(k2)
             k1 = k2 - i2*(i2 - 1)//2
             i1 = k1
+            if absolute:
+                starts_parents = self.starts[parents]
+                for idx in [i1, i2, i3, i4]:
+                    idx += starts_parents
             out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3, i4))
         elif n == 3:
             k3 = indices - offsets[parents]
@@ -1132,19 +1132,68 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             i2 = root2(k2)
             k1 = k2 - i2*(i2 - 1)//2
             i1 = k1
+            if absolute:
+                starts_parents = self.starts[parents]
+                for idx in [i1, i2, i3]:
+                    idx += starts_parents
             out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3))
         elif n == 2:
             k2 = indices - offsets[parents]
             i2 = np.repeat(local, local)
             k1 = k2 - i2*(i2 - 1)//2
             i1 = k1
+            if absolute:
+                starts_parents = self.starts[parents]
+                for idx in [i1, i2]:
+                    idx += starts_parents
             out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2))
+
+        return out
+
+    def argchoose(self, n):
+        """
+        Return all unique combinations (up to permutation) of n elements,
+        taken without replacement from the indices of the jagged dimension.
+        Combinations are ordered such that those of the first elements precede later ones,
+        e.g. for n=2: (0,1), (0,2), (1,2), (0,3), (1,3), (2,3), (0,4), ...
+        """
+        return self._argchoose(n, absolute=False)
+
+    def choose(self, n):
+        """
+        Return all unique combinations (up to permutation) of n elements,
+        taken without replacement from the contents of the jagged dimension.
+        Combinations are ordered such that those of the first elements precede later ones,
+        e.g. for n=2: (0,1), (0,2), (1,2), (0,3), (1,3), (2,3), (0,4), ...
+        """
+        args = self._argchoose(n, absolute=True)
+        columns = (self.content[args.content[c]] for c in args.columns)
+        out = self.JaggedArray.fromoffsets(args.offsets, self.Table.named("tuple", *columns).flattentuple())
+        return out
+
+    def argdistincts(self, nested=False):
+        """
+        Return all unique combinations (up to permutation) of two elements,
+        taken without replacement from the indices of the jagged dimension.
+        Combinations are ordered lexicographically.
+        nested: Return a doubly-jagged array where the first jagged dimension
+        matches the shape of this array
+        """
+        out = self._argdistincts(absolute=False)
 
         if nested:
             out = self.JaggedArray.fromcounts(self.numpy.maximum(0, self.counts - 1), self.JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
+
         return out
 
     def distincts(self, nested=False):
+        """
+        Return all unique combinations (up to permutation) of two elements,
+        taken without replacement from the contents of the jagged dimension.
+        Combinations are ordered lexicographically.
+        nested: Return a doubly-jagged array where the first jagged dimension
+        matches the shape of this array
+        """
         argpairs = self._argdistincts(absolute=True)
         left = argpairs._content["0"]
         right = argpairs._content["1"]
