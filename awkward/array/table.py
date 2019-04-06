@@ -753,7 +753,7 @@ class Table(awkward.array.base.AwkwardArray):
         for i in range(len(tables)-1):
             assert set(tables[i]._contents) == set(tables[i+1]._contents)
 
-        out = tables[0].copy(contents=OrderedDict())
+        out = tables[0].deepcopy(contents=OrderedDict())
 
         for n in tables[0]._contents:
             content_type = type(tables[0]._contents[n])
