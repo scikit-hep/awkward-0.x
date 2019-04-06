@@ -308,13 +308,9 @@ class Table(awkward.array.base.AwkwardArray):
 
     def deepcopy(self, contents=None):
         out = self.copy(contents=contents)
-        index = out._index()
-        if index is None:
-            out._contents = OrderedDict([(n, self._util_deepcopy(x)) for n, x in out._contents.items()])
-        else:
-            out._contents = OrderedDict([(n, self._util_deepcopy(x[index])) for n, x in out._contents.items()])
-            out._view = None
-            out._base = None
+        out._contents = OrderedDict([(n, self._util_deepcopy(x[out._index()])) for n, x in out._contents.items()])
+        out._view = None
+        out._base = None
         return out
 
     def empty_like(self, **overrides):
@@ -408,7 +404,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     def _index(self):
         if self._view is None:
-            return None
+            return slice(self._length())
 
         elif isinstance(self._view, tuple):
             start, step, length = self._view
@@ -539,12 +535,8 @@ class Table(awkward.array.base.AwkwardArray):
     def __getitem__(self, where):
         if self._util_isstringslice(where):
             if isinstance(where, awkward.util.string):
-                index = self._index()
                 try:
-                    if index is None:
-                        return self._contents[where][:self._length()]
-                    else:
-                        return self._contents[where][index]
+                    return self._contents[where][self._index()]
                 except KeyError:
                     raise ValueError("no column named {0}".format(repr(where)))
             else:
@@ -634,12 +626,8 @@ class Table(awkward.array.base.AwkwardArray):
 
         for x in inputs:
             if isinstance(x, Table):
-                index = x._index()
                 for n, y in x._contents.items():
-                    if index is None:
-                        inputsdict[n].append(y)
-                    else:
-                        inputsdict[n].append(y[index])
+                    inputsdict[n].append(y[x._index()])
             else:
                 for n in inputsdict:
                     inputsdict[n].append(x)
@@ -739,11 +727,7 @@ class Table(awkward.array.base.AwkwardArray):
             }[ufunc])
         out._showdict = True
         for n in self._contents:
-            index = self._index()
-            if index is None:
-                x = self._contents[n][:self._length()]
-            else:
-                x = self._contents[n][index]
+            x = self._contents[n][self._index()]
             out[n] = self.numpy.array([self._util_reduce(x, ufunc, identity, dtype, regularaxis)])
         return out.Row(out, 0)
 
@@ -761,4 +745,24 @@ class Table(awkward.array.base.AwkwardArray):
         out = self.copy(contents={})
         for n, x in self._contents.items():
             out[n] = self._util_fillna(x, value)
+        return out
+
+    @classmethod
+    def _concatenate_axis0(cls, tables):
+
+        for i in range(len(tables)-1):
+            assert set(tables[i]._contents) == set(tables[i+1]._contents)
+
+        out = tables[0].copy(contents=OrderedDict())
+
+        for n in tables[0]._contents:
+            content_type = type(tables[0]._contents[n])
+            if content_type == cls.numpy.ndarray:
+                concatenate = cls.numpy.concatenate
+            else:
+                raise ValueError("Concatenation not implemented for columns of type " + content_type.__name__)
+
+            out._contents[n] = concatenate([t._contents[n] for t in tables], axis=0)
+
+        out._valid()
         return out
