@@ -244,6 +244,12 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def _prepare(self, identity, dtype):
         raise TypeError("cannot call reducer on object array")
 
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        out = arrays[0].copy(content=[])
+        out._content = arrays[0]._content.__class__.concatenate([a._content for a in arrays])
+        return out
+
 ####################################################################### strings
 
 class StringMethods(object):

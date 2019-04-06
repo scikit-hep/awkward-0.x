@@ -113,7 +113,7 @@ class Test(unittest.TestCase):
         ("genrecos.i0.pt", genrecos.i0.pt)
         ("genrecos.i1.pt", genrecos.i1.pt)
 
-    def test_jagged_tlorentzvectorarray_concatenate_axis1(self):
+    def test_jagged_tlorentzvectorarray_concatenate(self):
         jet_m   = awkward.fromiter([[60.0, 70.0, 80.0],       [],     [90.0, 100.0]])
 
         jet_pt  = awkward.fromiter([[10.0, 20.0, 30.0],       [],     [40.0, 50.0]])
@@ -134,9 +134,13 @@ class Test(unittest.TestCase):
         jets = jets.concatenate([jets], axis=1)
         electrons = electrons.concatenate([electrons], axis=1)
 
+        jets = jets.concatenate([jets], axis=0)
+        electrons = electrons.concatenate([electrons], axis=0)
+
         combinations = jets.cross(electrons, nested=True)
 
-        reflist = [[True, False, True, True, False, True], [], [True, False, True, False]]
+        reflist = [[True, False, True, True, False, True], [], [True, False, True, False],
+                   [True, False, True, True, False, True], [], [True, False, True, False]]
         assert (~(delta_r(combinations.i0, combinations.i1) < 0.5).any()).tolist() == reflist
 
 
