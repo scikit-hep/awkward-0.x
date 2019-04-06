@@ -1525,28 +1525,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         newstops.reshape(-1)[flatstarts != flatstops] += 1
         return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
-    @awkward.util.bothmethod
-    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
-        if isclassmethod: 
-            cls = cls_or_self
-            if not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
-        else:
-            self = cls_or_self
-            cls = self.__class__
-            if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
-            arrays = (self,) + tuple(arrays)
-
-        for x in arrays:
-            x._valid()
-
-        if axis == 1:
-            return cls._concatenate_axis1(arrays)
-
-        if axis > 1:
-            raise NotImplementedError
-
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
         starts = cls.numpy.concatenate([x._starts for x in arrays])
         stops = cls.numpy.concatenate([x._stops for x in arrays])
         content = cls._util_concatenate([x._content for x in arrays])

@@ -38,6 +38,8 @@ import awkward.persist
 import awkward.type
 import awkward.util
 
+from awkward.util import bothmethod
+
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     """
     AwkwardArray: abstract base class
@@ -394,6 +396,28 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return cls.numpy.concatenate(arrays)
         else:
             return arrays[0].concatenate(arrays[1:])
+
+    @bothmethod
+    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
+        if isclassmethod: 
+            cls = cls_or_self
+        else:
+            self = cls_or_self
+            cls = self.__class__
+            arrays = (self,) + tuple(arrays)
+
+        if not all(type(x) == type(arrays[0]) for x in arrays):
+            raise TypeError("cannot concatenate arrays of different type with AwkwardArray.concatenate")
+
+        for x in arrays:
+            x.valid()
+
+        if axis == 0:
+            return cls._concatenate_axis0(arrays)
+        elif axis == 1:
+            return cls._concatenate_axis1(arrays)
+        else:
+            raise NotImplementedError
 
     @classmethod
     def _util_isstringslice(cls, where):
