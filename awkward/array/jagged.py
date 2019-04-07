@@ -1525,28 +1525,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         newstops.reshape(-1)[flatstarts != flatstops] += 1
         return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
-    @awkward.util.bothmethod
-    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
-        if isclassmethod: 
-            cls = cls_or_self
-            if not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
-        else:
-            self = cls_or_self
-            cls = self.__class__
-            if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
-            arrays = (self,) + tuple(arrays)
-
-        for x in arrays:
-            x._valid()
-
-        if axis == 1:
-            return cls._concatenate_axis1(arrays)
-
-        if axis > 1:
-            raise NotImplementedError
-
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
         starts = cls.numpy.concatenate([x._starts for x in arrays])
         stops = cls.numpy.concatenate([x._stops for x in arrays])
         content = cls._util_concatenate([x._content for x in arrays])
@@ -1576,10 +1556,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         np = cls.numpy
 
         flatarrays = [a.flatten() for a in arrays]
-        n = len(arrays)
-
-        if any(not isinstance(a, np.ndarray) for a in flatarrays):
-            raise NotImplementedError
+        n_arrays = len(arrays)
 
         # the first step is to get the starts and stops for the stacked structure
         counts = np.vstack([a.counts for a in arrays])
@@ -1587,27 +1564,60 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         offsets = cls.counts2offsets(flat_counts)
         starts, stops = offsets[:-1], offsets[1:]
 
-        # find most general type with a tentative sum which implements the right type-promotion,
-        # except for booleans which would get promoted to integers when summing
-        dtype = np.dtype(sum([x[0] for x in flatarrays if len(x) != 0]), False)
-        allbools = not np.any([a.dtype != np.dtype(bool) for a in flatarrays])
-        dtype = np.dtype(bool) if allbools else dtype
-
         n_content = sum([len(a) for a in flatarrays])
+        content_type = type(flatarrays[0])
 
-        # use masks for each of the arrays so we can fill the stacked content array at the right indices
-        content = np.zeros(n_content, dtype=dtype)
-        for i in range(n):
+        # get masks for each of the arrays so we can fill the stacked content array at the right indices
+        def get_mask(array_index):
             working_array = np.zeros(n_content+1, dtype=cls.INDEXTYPE)
-            starts_i = starts[i::n]
-            stops_i = stops[i::n]
+            starts_i = starts[i::n_arrays]
+            stops_i = stops[i::n_arrays]
             not_empty = starts_i != stops_i
             working_array[starts_i[not_empty]] += 1
             working_array[stops_i[not_empty]] -= 1
             mask = np.array(np.cumsum(working_array)[:-1], dtype=cls.MASKTYPE)
-            content[mask] = flatarrays[i]
+            return mask
 
-        return cls(starts[::n], stops[n-1::n], content)
+        # find most general type with a tentative sum which implements the right type-promotion,
+        # except for booleans which would get promoted to integers when summing
+        def get_dtype(arrays):
+            dtype = np.dtype(sum([x[0] for x in arrays if len(x) != 0]), False)
+            allbools = not np.any([a.dtype != np.dtype(bool) for a in arrays])
+            dtype = np.dtype(bool) if allbools else dtype
+            return dtype
+
+        if content_type == np.ndarray:
+            content = np.zeros(n_content, dtype=get_dtype(flatarrays))
+
+            for i in range(n_arrays):
+                content[get_mask(i)] = flatarrays[i]
+
+        elif(issubclass(type(flatarrays[0]), awkward.array.objects.ObjectArray)
+                and isinstance(flatarrays[0]._content, awkward.array.table.Table)):
+            tablecontent = OrderedDict()
+
+            tables = [a._content for a in flatarrays]
+
+            # make sure all tables have the same columns
+            for i in range(len(tables)-1):
+                assert set(tables[i]._contents) == set(tables[i+1]._contents)
+
+            # create empty arrays  for each column with the most general dtype
+            for n in tables[0]._contents:
+                dtype = get_dtype([t[n] for t in tables])
+                tablecontent[n] = np.zeros(n_content, dtype=dtype)
+
+            for i in range(n_arrays):
+                mask = get_mask(i)
+                for n in tables[0]._contents:
+                    tablecontent[n][mask] = tables[i][n]
+
+            content = flatarrays[0].copy(content=awkward.array.table.Table(**tablecontent))
+
+        else:
+            raise NotImplementedError("concatenate with axis=1 is not implemented for " + type(arrays[0]).__name__)
+    
+        return arrays[0].__class__(starts[::n_arrays], stops[n_arrays-1::n_arrays], content)
 
     @awkward.util.bothmethod
     def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
