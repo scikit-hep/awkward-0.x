@@ -759,6 +759,8 @@ class Table(awkward.array.base.AwkwardArray):
             content_type = type(tables[0]._contents[n])
             if content_type == cls.numpy.ndarray:
                 concatenate = cls.numpy.concatenate
+            elif callable(getattr(content_type, "concatenate", None)):
+                concatenate = content_type.concatenate
             else:
                 raise ValueError("Concatenation not implemented for columns of type " + content_type.__name__)
 
