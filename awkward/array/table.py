@@ -749,7 +749,6 @@ class Table(awkward.array.base.AwkwardArray):
 
     @classmethod
     def _concatenate_axis0(cls, tables):
-
         for i in range(len(tables)-1):
             assert set(tables[i]._contents) == set(tables[i+1]._contents)
 
@@ -759,10 +758,8 @@ class Table(awkward.array.base.AwkwardArray):
             content_type = type(tables[0]._contents[n])
             if content_type == cls.numpy.ndarray:
                 concatenate = cls.numpy.concatenate
-            elif callable(getattr(content_type, "concatenate", None)):
-                concatenate = content_type.concatenate
             else:
-                raise ValueError("Concatenation not implemented for columns of type " + content_type.__name__)
+                concatenate = content_type.concatenate
 
             out._contents[n] = concatenate([t._contents[n] for t in tables], axis=0)
 
