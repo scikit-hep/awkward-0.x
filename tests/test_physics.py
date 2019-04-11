@@ -114,33 +114,41 @@ class Test(unittest.TestCase):
         ("genrecos.i1.pt", genrecos.i1.pt)
 
     def test_jagged_tlorentzvectorarray_concatenate(self):
-        jet_m   = awkward.fromiter([[60.0, 70.0, 80.0],       [],     [90.0, 100.0]])
 
-        jet_pt  = awkward.fromiter([[10.0, 20.0, 30.0],       [],     [40.0, 50.0]])
-        e_pt    = awkward.fromiter([[20.2, 50.5],             [50.5], [50.5]])
+        def make_jets_and_electrons():
+            jet_m   = awkward.fromiter([[60.0, 70.0, 80.0],       [],     [90.0, 100.0]])
 
-        jet_eta = awkward.fromiter([[-3.0, -2.0, 2.0],        [],     [-1.0, 1.0]])
-        e_eta   = awkward.fromiter([[-2.2, 0.0],              [0.0],  [1.1]])
+            jet_pt  = awkward.fromiter([[10.0, 20.0, 30.0],       [],     [40.0, 50.0]])
+            e_pt    = awkward.fromiter([[20.2, 50.5],             [50.5], [50.5]])
 
-        jet_phi = awkward.fromiter([[-1.5,  0.0, 1.5],        [],     [0.78, -0.78]])
-        e_phi   = awkward.fromiter([[ 0.1, 0.78],             [0.78], [-0.77]])
+            jet_eta = awkward.fromiter([[-3.0, -2.0, 2.0],        [],     [-1.0, 1.0]])
+            e_eta   = awkward.fromiter([[-2.2, 0.0],              [0.0],  [1.1]])
 
-        jets      = uproot_methods.TLorentzVectorArray.from_ptetaphim(jet_pt, jet_eta, jet_phi, jet_m)
-        electrons = uproot_methods.TLorentzVectorArray.from_ptetaphim(e_pt, e_eta, e_phi, 0.000511)
+            jet_phi = awkward.fromiter([[-1.5,  0.0, 1.5],        [],     [0.78, -0.78]])
+            e_phi   = awkward.fromiter([[ 0.1, 0.78],             [0.78], [-0.77]])
+
+            jets      = uproot_methods.TLorentzVectorArray.from_ptetaphim(jet_pt, jet_eta, jet_phi, jet_m)
+            electrons = uproot_methods.TLorentzVectorArray.from_ptetaphim(e_pt, e_eta, e_phi, 0.000511)
+
+            return jets, electrons
+
+        jets0, electrons0 = make_jets_and_electrons()
+        jets1, electrons1 = make_jets_and_electrons()
+        jets2, electrons2 = make_jets_and_electrons()
 
         def delta_r(one, two):
             return one.delta_r(two)
 
-        jets = jets.concatenate([jets], axis=1)
-        electrons = electrons.concatenate([electrons], axis=1)
+        jets01 = jets0.concatenate([jets1], axis=1)
+        electrons01 = electrons0.concatenate([electrons1], axis=1)
 
-        jets = jets.concatenate([jets], axis=0)
-        electrons = electrons.concatenate([electrons], axis=0)
+        jets = jets01.concatenate([jets2], axis=0)
+        electrons = electrons01.concatenate([electrons2], axis=0)
 
         combinations = jets.cross(electrons, nested=True)
 
         reflist = [[True, False, True, True, False, True], [], [True, False, True, False],
-                   [True, False, True, True, False, True], [], [True, False, True, False]]
+                   [True, False, True], [], [True, False]]
         assert (~(delta_r(combinations.i0, combinations.i1) < 0.5).any()).tolist() == reflist
 
 
