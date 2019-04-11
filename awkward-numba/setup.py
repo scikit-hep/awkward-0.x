@@ -16,8 +16,21 @@ setup(name = "awkward-numba",
       version = get_version(),
       packages = find_packages(exclude = ["tests"]),
       scripts = [],
-      description = "Override awkward-array algorithms with Numba implementations.",
-      long_description = "",
+      description = "Allows awkward arrays to be used in Numba-compiled code and optimizes awkward methods with JIT compilation.",
+      long_description = """.. image:: https://raw.githubusercontent.com/scikit-hep/awkward-array/master/docs/source/logo-500px.png
+   :alt: awkward-array
+   :target: https://github.com/scikit-hep/awkward-array
+
+|
+
+Allows awkward arrays to be used in Numba-compiled code and optimizes awkward methods with JIT compilation.
+
+See tests/study_numba_speed.py for an example.
+
+Note: be sure to ``import awkward.numba`` before attempting to use an awkward array in a Numba routine.
+
+Status: only JaggedArrays have been implemented.
+""",
       author = "Jim Pivarski (IRIS-HEP)",
       author_email = "pivarski@princeton.edu",
       maintainer = "Jim Pivarski (IRIS-HEP)",
@@ -30,9 +43,9 @@ setup(name = "awkward-numba",
       setup_requires = ["pytest-runner"],
       tests_require = ["pytest"],
       classifiers = [
-          "Development Status :: 1 - Planning",
+          # "Development Status :: 1 - Planning",
           # "Development Status :: 2 - Pre-Alpha",
-          # "Development Status :: 3 - Alpha",
+          "Development Status :: 3 - Alpha",
           # "Development Status :: 4 - Beta",
           # "Development Status :: 5 - Production/Stable",
           # "Development Status :: 6 - Mature",
