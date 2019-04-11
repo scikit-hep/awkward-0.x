@@ -2,8 +2,10 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
+import functools
 import math
 import numbers
+import operator
 import os
 from collections import OrderedDict
 try:
@@ -783,9 +785,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         elif isinstance(data, Iterable):
             return self.tojagged(self.numpy.array(data))
 
-        else:
-            return self.tojagged(self.numpy.array([data]))
-
     def _tojagged(self, starts=None, stops=None, copy=True):
         if starts is None and stops is None:
             if copy:
@@ -949,7 +948,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         counts = stops - starts
         if isinstance(result, tuple):
-            return tuple(self.Methods.maybemixin(type(x), self.JaggedArray).fromcounts(counts, x) if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+            return tuple(self.Methods.maybemixin(type(x), self.JaggedArray).fromcounts(counts, x) if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardArray)) else x for x in result)
         elif method == "at":
             return None
         else:
@@ -1265,7 +1264,34 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _canuseoffset(self):
         self._valid()
-        return self.offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and self.numpy.array_equal(self._starts[1:], self._stops[:-1]))
+        return self.offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and self.numpy.array_equal(self._starts[1:], self.stops[:-1]))
+
+    @property
+    def iscompact(self):
+        if len(self._starts) == 0:
+            return True
+        else:
+            flatstarts = self._starts.reshape(-1)
+            flatstops = self.stops.reshape(-1)   # no underscore!
+            if not self.offsetsaliased(self._starts, self._stops) and not self.numpy.array_equal(flatstarts[1:], flatstops[:-1]):
+                return False
+            if not self._isvalid and not (flatstops >= flatstarts).all():
+                raise ValueError("offsets must be monatonically increasing")
+            return True
+
+    def compact(self):
+        if self.iscompact:
+            return self
+        else:
+            offsets = self.counts2offsets(self.counts.reshape(-1))
+            if len(self._starts.shape) == 1:
+                tmp = self
+            else:                                                # no underscore!
+                tmp = self.JaggedArray(self._starts.reshape(-1), self.stops.reshape(-1), self._content)
+            out = tmp._tojagged(offsets[:-1], offsets[1:], copy=False)
+            out.starts.shape = self._starts.shape
+            out.stops.shape = self._starts.shape  # intentional: self._stops can too long
+            return out
 
     @property
     def iscompact(self):
@@ -1313,6 +1339,31 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 out = self.JaggedArray(self._starts.reshape(-1), self._stops.reshape(-1), self._content)
             return out._tojagged(offsets[:-1], offsets[1:], copy=False)._content
+
+    def structure1d(self, levellimit=None):
+        if len(self._starts) > len(self._stops):
+            raise ValueError("starts must have the same (or shorter) length than stops")
+        if self._starts.shape[1:] != self._stops.shape[1:]:
+            raise ValueError("starts and stops must have the same dimensionality (shape[1:])")
+
+        if levellimit is None:
+            levellimit = -1
+
+        out = self
+        if levellimit != 0 and isinstance(self._content, awkward.array.base.AwkwardArray):
+            out = self.copy(content=self._content.structure1d(levellimit - 1))
+
+        while len(out._starts.shape) > 1:
+            last = out._starts.shape[-1]
+            length = functools.reduce(operator.mul, out._starts.shape[:-1], 1)
+            offsets = self.numpy.arange(0, (length + 1)*last, last)
+            outerstarts = offsets[:-1].reshape(out._starts.shape[:-2] + (-1,))
+            outerstops = offsets[1:].reshape(out._stops.shape[:-2] + (-1,))
+            innerstarts = out._starts.reshape(-1)
+            innerstops = out._stops.reshape(-1)
+            out = self.copy(starts=outerstarts, stops=outerstops, content=self.copy(starts=innerstarts, stops=innerstops, content=out._content))
+
+        return out
 
     def _hasjagged(self):
         return True

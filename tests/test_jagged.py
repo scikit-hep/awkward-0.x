@@ -528,6 +528,12 @@ class Test(unittest.TestCase):
         assert b.zip(c).tolist() == [[(10, 100), (20, 100), (30, 100)], [], [(40, 300), (50, 300)]]
         assert b.zip(d).tolist() == [[(10, 1000), (20, 1000), (30, 1000)], [], [(40, 1000), (50, 1000)]]
 
+    def test_jagged_structure1d(self):
+        a = awkward.JaggedArray([[0, 3, 3], [5, 8, 10]], [[3, 3, 5], [8, 10, 10]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        assert a.tolist() == a.structure1d().tolist()
+        a = awkward.JaggedArray([[[0], [3], [3]], [[5], [8], [10]]], [[[3], [3], [5]], [[8], [10], [10]]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        assert a.tolist() == a.structure1d().tolist()
+
     def test_jagged_pad(self):
         a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         assert a.pad(4, clip=True).tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]

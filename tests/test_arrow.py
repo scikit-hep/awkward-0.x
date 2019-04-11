@@ -9,11 +9,10 @@ import unittest
 import pytest
 
 import numpy
-try:
-    import pyarrow
-    import pyarrow.parquet
-except ImportError:
-    pyarrow = None
+import pytest
+
+pyarrow = pytest.importorskip("pyarrow")
+# pyarrow_parquet = pytest.importorskip("pyarrow.parquet")
 
 import awkward.arrow
 from awkward import *
