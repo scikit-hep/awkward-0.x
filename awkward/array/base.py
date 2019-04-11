@@ -1,41 +1,18 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019, IRIS-HEP
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# 
-# * Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-# 
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-# 
-# * Neither the name of the copyright holder nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
 import types
 import numbers
 
 import numpy
 
+import awkward
 import awkward.persist
 import awkward.type
 import awkward.util
+
+from awkward.util import bothmethod
 
 class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     """
@@ -46,6 +23,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     allow_iter = True
     check_prop_valid = True
     check_whole_valid = True
+
+    @property
+    def awkward(self):
+        return awkward
 
     numpy = numpy
     DEFAULTTYPE = numpy.dtype(numpy.float64)
@@ -390,6 +371,36 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return arrays[0].concatenate(arrays[1:])
 
+    @bothmethod
+    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
+        if isclassmethod: 
+            cls = cls_or_self
+        else:
+            self = cls_or_self
+            cls = self.__class__
+            arrays = (self,) + tuple(arrays)
+
+        if not all(type(x) == type(arrays[0]) for x in arrays):
+            raise TypeError("cannot concatenate arrays of different type with AwkwardArray.concatenate")
+
+        for x in arrays:
+            x.valid()
+
+        if axis == 0:
+            return cls._concatenate_axis0(arrays)
+        elif axis == 1:
+            return cls._concatenate_axis1(arrays)
+        else:
+            raise NotImplementedError("axis > 1")
+
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        raise NotImplementedError("{0}.concatenate with axis=0 not implemented".format(cls.__name__))
+
+    @classmethod
+    def _concatenate_axis1(cls, arrays):
+        raise NotImplementedError("{0}.concatenate with axis=1 not implemented".format(cls.__name__))
+
     @classmethod
     def _util_isstringslice(cls, where):
         if isinstance(where, awkward.util.string):
@@ -417,6 +428,18 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                 ufunc is cls.numpy.not_equal or
                 ufunc is cls.numpy.greater or
                 ufunc is cls.numpy.greater_equal)
+
+    @classmethod
+    def _util_fillna(cls, array, value):
+        if isinstance(array, cls.numpy.ndarray):
+            data = cls.numpy.ma.getdata(array)
+            mask = cls.numpy.ma.getmask(array)
+            if mask is not cls.numpy.ma.nomask:
+                data[mask] = value
+            data[cls.numpy.isnan(data)] = value
+            return data
+        else:
+            return array.fillna(value)
 
 class AwkwardArrayWithContent(AwkwardArray):
     """
@@ -457,3 +480,6 @@ class AwkwardArrayWithContent(AwkwardArray):
 
     def astype(self, dtype):
         return self.copy(content=self._content.astype(dtype))
+
+    def fillna(self, value):
+        return self.copy(content=self._util_fillna(self._content, value))
