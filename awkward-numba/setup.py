@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/uproot/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
 import os.path
 
