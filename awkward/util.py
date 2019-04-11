@@ -18,10 +18,8 @@ else:
     string = str
     unicode = str
 
-# FIXME: this goes away once everything starts depending on 0.8.0
 frombuffer = numpy.frombuffer
 
-# FIXME: this goes away once everything starts depending on 0.8.0
 def toarray(value, defaultdtype, passthrough=None):
     import awkward.array.base
     return awkward.array.base.AwkwardArray._util_toarray(value, defaultdtype, passthrough=passthrough)
