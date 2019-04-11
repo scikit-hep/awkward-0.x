@@ -2,6 +2,7 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
+import re
 from collections import OrderedDict
 
 import numpy
