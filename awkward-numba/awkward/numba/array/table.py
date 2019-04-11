@@ -156,18 +156,21 @@ def _Table_typeof(val, c):
 class TableType(AwkwardArrayType):
     class RowType(numba.types.Type):
         def __init__(self, rowname, types, special=awkward.array.table.Table.Row):
-            super(RowType, self).__init__(name="TableType({0}, {{{1}}}{2})".format(repr(rowname), ", ".join("{0}: {1}".format(repr(n), t) for n, t in types.items()), "" if special is awkward.array.table.Table.Row else clsrepr(special)))
+            super(RowType, self).__init__(name="RowType({0}, {{{1}}}{2})".format(repr(rowname), ", ".join("{0}: {1}".format(repr(n), t) for n, t in types.items()), "" if special is awkward.array.table.Table.Row else clsrepr(special)))
             self.rowname = rowname
             self.types = types
             self.special = special
 
+    @property
+    def rowtype(self):
+        return TableType.RowType(self.rowname, self.types, special=self.specialrow)
+
     def __init__(self, rowname, types, special=awkward.array.table.Table, specialrow=awkward.array.table.Table.Row):
-        super(TableType, self).__init__(name="TableType({0}, {{{1}}}{2})".format(repr(rowname), ", ".join("{0}: {1}".format(repr(n), t) for n, t in types.items()), "" if special is awkward.array.table.Table else clsrepr(special)))
+        super(TableType, self).__init__(name="TableType({0}, {{{1}}}{2}{3})".format(repr(rowname), ", ".join("{0}: {1}".format(repr(n), t) for n, t in types.items()), "" if special is awkward.array.table.Table else clsrepr(special), "" if specialrow is awkward.array.table.Table.Row else clsrepr(specialrow)))
         self.rowname = rowname
         self.types = types
         self.special = special
         self.specialrow = specialrow
-        self.rowtype = TableType.RowType(rowname, types, special=specialrow)
 
     def getitem(self, wheretype):
         if isinstance(wheretype, numba.types.StringLiteral):
@@ -176,5 +179,25 @@ class TableType(AwkwardArrayType):
             else:
                 raise TypeError("{0} is not a column of Table".format(repr(wheretype.literal_value)))
 
+        # elif literal list/tuple of strings
+
         else:
-            HERE
+            return TableType(self.rowname, OrderedDict((n, x.getitem(wheretype)) for n, x in self.types.items()), special=self.special, specialrow=self.specialrow)
+
+######################################################################## model and boxing
+
+# don't start non-fieldnames with "f"
+def _safename(name):
+    return "f" + _safename._pattern.sub(lambda bad: "_" + "".join("{0:02x}".format(ord(x)) for x in bad.group(0)) + "_", name)
+_safename._pattern = re.compile("[^a-zA-Z0-9]+")
+
+@numba.extending.register_model(TableType)
+class TableModel(numba.datamodel.models.StructModel):
+    def __init__(self, dmm, fe_type):
+        members = [(_safename(n), x) for n, x in fe_type.types.items()]
+        super(TableModel, self).__init__(dmm, fe_type, members)
+
+@numba.extending.unbox(TableType)
+def _TableType_unbox(typ, obj, c):
+    key_objs = [HERE]
+    value_objs = [c.pyapi.object_getitem(obj, n) for n in key_objs]
