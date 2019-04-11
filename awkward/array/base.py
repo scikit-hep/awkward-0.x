@@ -417,7 +417,15 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         elif axis == 1:
             return cls._concatenate_axis1(arrays)
         else:
-            raise NotImplementedError
+            raise NotImplementedError("axis > 1")
+
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        raise NotImplementedError("{0}.concatenate with axis=0 not implemented".format(cls.__name__))
+
+    @classmethod
+    def _concatenate_axis1(cls, arrays):
+        raise NotImplementedError("{0}.concatenate with axis=1 not implemented".format(cls.__name__))
 
     @classmethod
     def _util_isstringslice(cls, where):

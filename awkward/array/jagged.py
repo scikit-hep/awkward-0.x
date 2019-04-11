@@ -1545,7 +1545,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def _concatenate_axis1(cls, arrays):
-
         if len(arrays) == 0:
             raise ValueError("at least one array must be provided")   # this can only happen in the classmethod case
         if any(len(a) != len(arrays[0]) for a in arrays):
@@ -1569,7 +1568,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         # get masks for each of the arrays so we can fill the stacked content array at the right indices
         def get_mask(array_index):
-            working_array = np.zeros(n_content+1, dtype=cls.INDEXTYPE)
+            working_array = np.zeros(n_content + 1, dtype=cls.INDEXTYPE)
             starts_i = starts[i::n_arrays]
             stops_i = stops[i::n_arrays]
             not_empty = starts_i != stops_i
@@ -1588,19 +1587,17 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if content_type == np.ndarray:
             content = np.zeros(n_content, dtype=get_dtype(flatarrays))
-
             for i in range(n_arrays):
                 content[get_mask(i)] = flatarrays[i]
 
-        elif(issubclass(type(flatarrays[0]), awkward.array.objects.ObjectArray)
-                and isinstance(flatarrays[0]._content, awkward.array.table.Table)):
+        elif issubclass(type(flatarrays[0]), awkward.array.objects.ObjectArray) and isinstance(flatarrays[0]._content, awkward.array.table.Table):
             tablecontent = OrderedDict()
-
             tables = [a._content for a in flatarrays]
 
             # make sure all tables have the same columns
-            for i in range(len(tables)-1):
-                assert set(tables[i]._contents) == set(tables[i+1]._contents)
+            for i in range(len(tables) - 1):
+                if set(tables[i]._contents) != set(tables[i+1]._contents):
+                    raise ValueError("cannot concatenate Tables with different fields")
 
             # create empty arrays  for each column with the most general dtype
             for n in tables[0]._contents:
@@ -1616,7 +1613,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         else:
             raise NotImplementedError("concatenate with axis=1 is not implemented for " + type(arrays[0]).__name__)
-    
+
         return arrays[0].__class__(starts[::n_arrays], stops[n_arrays-1::n_arrays], content)
 
     @awkward.util.bothmethod

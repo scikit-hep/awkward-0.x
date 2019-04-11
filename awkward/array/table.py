@@ -749,9 +749,9 @@ class Table(awkward.array.base.AwkwardArray):
 
     @classmethod
     def _concatenate_axis0(cls, tables):
-
         for i in range(len(tables)-1):
-            assert set(tables[i]._contents) == set(tables[i+1]._contents)
+            if set(tables[i]._contents) != set(tables[i+1]._contents):
+                raise ValueError("cannot concatenate Tables with different fields")
 
         out = tables[0].deepcopy(contents=OrderedDict())
 
@@ -760,7 +760,7 @@ class Table(awkward.array.base.AwkwardArray):
             if content_type == cls.numpy.ndarray:
                 concatenate = cls.numpy.concatenate
             else:
-                raise ValueError("Concatenation not implemented for columns of type " + content_type.__name__)
+                concatenate = content_type.concatenate
 
             out._contents[n] = concatenate([t._contents[n] for t in tables], axis=0)
 
