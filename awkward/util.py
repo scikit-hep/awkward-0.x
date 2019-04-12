@@ -17,7 +17,7 @@ import numpy
 
 if sys.version_info[0] <= 2:
     izip = itertools.izip
-    string = basestringkk
+    string = basestring
     unicode = unicode
 else:
     izip = zip
@@ -198,4 +198,4 @@ except AttributeError:
         if hasattr(um, "positive"):
             __pos__ = _unary_method(um.positive, 'pos')
         __abs__ = _unary_method(um.absolute, 'abs')
-        __invert__ = _unary_method(um.invert, 'invert')
+__invert__ = _unary_method(um.invert, 'invert')
