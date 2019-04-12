@@ -741,9 +741,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
-    def _broadcast(self, data):
-        return self.tojagged(data)
-
     def tojagged(self, data):
         if isinstance(data, JaggedArray):
             selfcounts = self.stops - self._starts
