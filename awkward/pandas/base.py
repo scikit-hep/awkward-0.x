@@ -38,17 +38,23 @@ class AwkwardAccessor:
 
     def __init__(self, pandas_obj):
         self._validate(pandas_obj)
-        self.content = pandas_obj.values
-        #self._index = obj.index
-        self.name = pandas_obj.name
+        self._data = pandas_obj.values
+        self._index = pandas_obj.index
+        self._name = pandas_obj.name
 
     @staticmethod
     def _validate(obj):
         if not is_awkward_type(obj):
             raise AttributeError("Cannot use 'awkward' accessor on objects of "
                                  "dtype '{}'.".formate(obj.dtype))
-    def content(self, value):
-        return delegated_method(self.content, value)
+    #def content(self, value):
+    #    return delegated_method(self.content, value)
+
+    #def __getitem__(self, key):
+    #    return delegated_method(self.__getitem__, key)
+
+    def _index(self, value):
+        return delegated_method(self.index, value)
 
 def is_awkward_type(obj):
     t = getattr(obj, 'dtype', obj)

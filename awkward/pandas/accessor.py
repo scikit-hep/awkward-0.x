@@ -13,7 +13,7 @@ class Delegated:
     def __get__(self, obj, type=None):
         index = object.__getattribute__(obj, '_index')
         name = object.__getattribute__(obj, '_name')
-        result = self.__get_result(obj)
+        result = self._get_result(obj)
         return pd.Series(result, index, name=name)
 
 
