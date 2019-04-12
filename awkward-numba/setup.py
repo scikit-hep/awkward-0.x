@@ -17,7 +17,7 @@ setup(name = "awkward-numba",
       packages = find_packages(exclude = ["tests"]),
       scripts = [],
       description = "Allows awkward arrays to be used in Numba-compiled code and optimizes awkward methods with JIT compilation.",
-      long_description = """.. image:: https://raw.githubusercontent.com/scikit-hep/awkward-array/master/docs/source/logo-600px.png
+      long_description = """.. image:: https://raw.githubusercontent.com/scikit-hep/awkward-array/master/docs/source/logo-300px.png
    :alt: awkward-array
    :target: https://github.com/scikit-hep/awkward-array
 
