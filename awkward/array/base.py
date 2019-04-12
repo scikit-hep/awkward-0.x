@@ -482,4 +482,4 @@ class AwkwardArrayWithContent(AwkwardArray):
         return self.copy(content=self._content.astype(dtype))
 
     def fillna(self, value):
-return self.copy(content=self._util_fillna(self._content, value))
+        return self.copy(content=self._util_fillna(self._content, value))
