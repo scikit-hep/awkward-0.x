@@ -46,9 +46,8 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
         if dtype is None:
             dtype = self.dtype
-            return numpy.array(self.tolist(), dtype='object')
 
-        elif dtype == self.numpy.dtype(object):
+        if dtype == self.numpy.dtype(object):
             return self.numpy.array(list(self), dtype=dtype)
         else:
             return self.numpy.fromiter(self, dtype=dtype, count=len(self))
@@ -95,21 +94,8 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         return awkward.type.ArrayType(len(self), awkward.type._resolve(self._gettype({}), {}))
 
     @property
-    def _pdtype(self):
-        return awkward.type.ArrayType(len(self), awkward.type._resolve(self._gettype({}), {}))
-
-    @property
     def dtype(self):
-        #return self.type#.dtype
-        try:
-            from awkward.pandas.base import AwkwardType
-            return AwkwardType()
-        except ImportError:
-            return self.type.dtype
-
-    @property
-    def name(self):
-        return str('awkward')
+        return self.type.dtype
 
     @property
     def shape(self):
@@ -387,7 +373,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     @bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
-        if isclassmethod: 
+        if isclassmethod:
             cls = cls_or_self
         else:
             self = cls_or_self
@@ -496,4 +482,4 @@ class AwkwardArrayWithContent(AwkwardArray):
         return self.copy(content=self._content.astype(dtype))
 
     def fillna(self, value):
-        return self.copy(content=self._util_fillna(self._content, value))
+return self.copy(content=self._util_fillna(self._content, value))
