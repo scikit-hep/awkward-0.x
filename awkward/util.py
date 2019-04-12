@@ -109,9 +109,7 @@ def wrapjaggedmethod(awkcls):
 ################################################################ array helpers
 
 try:
-    '''THIS TRY INTENTIONALLY FAILS!'''
-    #NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin
-    NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixins   ### Intentional typo!
+    NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin
 
 except AttributeError:
     from numpy.core import umath as um
@@ -161,11 +159,7 @@ except AttributeError:
         func.__name__ = '__{}__'.format(name)
         return func
 
-    try:
-        from pandas.core.arrays import ExtensionArray as mixin_obj
-    except ImportError: mixin_obj = object
-
-    class NDArrayOperatorsMixin(mixin_obj):
+    class NDArrayOperatorsMixin(object):
         __lt__ = _binary_method(um.less, 'lt')
         __le__ = _binary_method(um.less_equal, 'le')
         __eq__ = _binary_method(um.equal, 'eq')
