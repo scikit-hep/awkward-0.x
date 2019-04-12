@@ -1790,4 +1790,4 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if isinstance(maskedwhen, self.numpy.ma.core.MaskedConstant):
             return self.copy(starts=starts, stops=stops, content=self.numpy.ma.MaskedArray(content, mask))
         else:
-return self.copy(starts=starts, stops=stops, content=self.MaskedArray(mask, content, maskedwhen=maskedwhen))
+            return self.copy(starts=starts, stops=stops, content=self.MaskedArray(mask, content, maskedwhen=maskedwhen))
