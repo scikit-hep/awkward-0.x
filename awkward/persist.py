@@ -1,32 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019, IRIS-HEP
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# * Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-#
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-#
-# * Neither the name of the copyright holder nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
 import base64
 import fnmatch
@@ -48,21 +22,27 @@ import awkward.type
 import awkward.version
 
 compression = [
-    {"minsize": 8192, "types": [numpy.bool_, numpy.bool, numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
+        {"minsize": 8192, "types": [numpy.bool_, numpy.bool, numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
     ]
 
 partner = {
-    zlib.compress: ("zlib", "decompress"),
+        zlib.compress: ("zlib", "decompress"),
     }
 
-whitelist = [["awkward.util", "frombuffer"],
-             ["numpy", "frombuffer"],
-             ["zlib", "decompress"],
-             ["awkward", "*Array"],
-             ["awkward", "Table"],
-             ["awkward", "numpy", "frombuffer"],
-             ["awkward.persist", "*"],
-             ["awkward.arrow", "ParquetFile", "fromjson"]]
+whitelist = [
+        ["numpy", "frombuffer"],
+        ["zlib", "decompress"],
+        ["lzma", "decompress"],
+        ["backports.lzma", "decompress"],
+        ["lz4.block", "decompress"],
+        ["awkward", "*Array"],
+        ["awkward", "Table"],
+        ["awkward", "numpy", "frombuffer"],
+        ["awkward.util", "frombuffer"],
+        ["awkward.persist", "*"],
+        ["awkward.arrow", "_ParquetFile", "fromjson"],
+        ["uproot_methods.classes.*"],
+    ]
 
 def frompython(obj):
     return base64.b64encode(pickle.dumps(obj)).decode("ascii")
@@ -315,7 +295,11 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
                 minsize, tpes, contexts, pair = policy["minsize"], policy["types"], policy["contexts"], policy["pair"]
                 if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(tpes)) and any(fnmatch.fnmatchcase(context, p) for p in contexts):
                     compress, decompress = pair
-                    storage[prefix + str(ident) + suffix] = compress(obj)
+                    if obj.flags.c_contiguous:
+                        compressed = compress(obj)
+                    else:
+                        compressed = compress(obj.copy())
+                    storage[prefix + str(ident) + suffix] = compressed
 
                     return {"id": ident,
                             "call": ["awkward", "numpy", "frombuffer"],
@@ -343,9 +327,11 @@ def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=
 
                 gen, genname = importlib.import_module(spec[0]), spec[1:]
                 while len(genname) > 0:
+                    if not hasattr(gen, genname[0]):
+                        break
                     gen, genname = getattr(gen, genname[0]), genname[1:]
 
-                if gen is obj:
+                if len(genname) == 0 and gen is obj:
                     return {"id": ident, "function": spec}
 
             if hasattr(obj, "tojson") and hasattr(type(obj), "fromjson") and getattr(importlib.import_module(type(obj).__module__), type(obj).__name__) is type(obj):

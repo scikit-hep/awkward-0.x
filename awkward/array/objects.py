@@ -1,32 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019, IRIS-HEP
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# 
-# * Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-# 
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-# 
-# * Neither the name of the copyright holder nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
 import codecs
 import importlib
@@ -141,8 +115,9 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
     @generator.setter
     def generator(self, value):
-        if not callable(value):
-            raise TypeError("generator must be a callable (of one argument: the array slice)")
+        if self.check_prop_valid:
+            if not callable(value):
+                raise TypeError("generator must be a callable (of one argument: the array slice)")
         self._generator = value
 
     @property
@@ -161,9 +136,17 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
     @kwargs.setter
     def kwargs(self, value):
-        if not isinstance(value, dict):
-            raise TypeError("kwargs must be a dict")
+        if self.check_prop_valid:
+            if not isinstance(value, dict):
+                raise TypeError("kwargs must be a dict")
         self._kwargs = dict(value)
+
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return (self._content.nbytes if isinstance(self._content, self.numpy.ndarray) else self._content._getnbytes(seen))
 
     def __len__(self):
         return len(self._content)
@@ -172,7 +155,8 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         return self._generator
 
     def _valid(self):
-        pass
+        if self.check_whole_valid:
+            pass
         
     def __iter__(self, checkiter=True):
         if checkiter:
@@ -233,6 +217,12 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _prepare(self, identity, dtype):
         raise TypeError("cannot call reducer on object array")
+
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        out = arrays[0].copy(content=[])
+        out._content = arrays[0]._content.__class__.concatenate([a._content for a in arrays])
+        return out
 
 ####################################################################### strings
 
@@ -565,3 +555,32 @@ class StringArray(StringMethods, ObjectArray):
         else:
             out = self._content[where]
             return self.__class__(out.starts, out.stops, out.content, self.encoding)
+
+    @property
+    def iscompact(self):
+        return self._content.iscompact
+
+    def compact(self):
+        return self.fromjagged(self._content.compact(), self.encoding)
+
+    def flatten(self):
+        return self.fromjagged(self._content.flatten(), self.encoding)
+
+    @awkward.util.bothmethod
+    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
+        if isclassmethod: 
+            cls = cls_or_self
+            if not all(isinstance(x, StringArray) for x in arrays):
+                raise TypeError("cannot concatenate non-StringArrays with StringArray.concatenate")
+        else:
+            self = cls_or_self
+            cls = self.__class__
+            if not isinstance(self, StringArray) or not all(isinstance(x, StringArray) for x in arrays):
+                raise TypeError("cannot concatenate non-StringArrays with StringArrays.concatenate")
+            arrays = (self,) + tuple(arrays)
+
+        jagged = self.JaggedArray.concatenate([x._content for x in arrays], axis=axis)
+        return self.fromjagged(jagged, self.encoding)
+
+    def fillna(self, value):
+        return self

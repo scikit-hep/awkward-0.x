@@ -1,32 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019, IRIS-HEP
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# 
-# * Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-# 
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-# 
-# * Neither the name of the copyright holder nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
 import unittest
 
@@ -39,6 +13,9 @@ from awkward.type import *
 class Test(unittest.TestCase):
     def runTest(self):
         pass
+
+    def test_jagged_nbytes(self):
+        assert isinstance(JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]).nbytes, int)
 
     def test_jagged_init(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
@@ -75,6 +52,16 @@ class Test(unittest.TestCase):
         self.assertEqual(a.tolist(), [[0.0, 1.1], [2.2], [3.3], [4.4, 5.5, 6.6], [7.7, 8.8], [9.9]])
         self.assertEqual(a.starts.tolist(), [0, 2, 3, 4, 7, 9])
         self.assertEqual(a.stops.tolist(), [2, 3, 4, 7, 9, 10])
+
+    def test_jagged_tojagged(self):
+        a = JaggedArray.fromiter([[1], [2, 3], []])
+        assert a.tojagged(a).tolist() == a.tolist()
+        b = numpy.array([3,4,5])
+        assert a.tojagged(b+1).tolist() == JaggedArray.fromiter([[4], [5, 5], []]).tolist()
+        a = JaggedArray.fromiter([[]])
+        assert a.tojagged(a).tolist() == a.tolist()
+        a = JaggedArray.fromiter([[], []])
+        assert a.tojagged(a).tolist() == a.tolist()
 
     def test_jagged_str(self):
         pass
@@ -264,6 +251,92 @@ class Test(unittest.TestCase):
             assert c[2]["0"].tolist() == [x for x, y in zip(left, right) if x != y]
             assert c[2]["1"].tolist() == [y for x, y in zip(left, right) if x != y]
 
+    def test_jagged_argchoose(self):
+        for i in range(50):
+            a = JaggedArray.fromiter([[], [1234], list(range(i)), []])
+            c = a.argchoose(2)
+            assert len(c) == 4
+            assert len(c[0]) == 0
+            assert len(c[1]) == 0
+            assert len(c[2]) == i*(i - 1)//2
+            assert len(c[3]) == 0
+            i0 = []
+            i1 = []
+            for k0 in range(i):
+                for k1 in range(k0):
+                    i0.append(k1)
+                    i1.append(k0)
+            assert c[2].i0.tolist() == i0
+            assert c[2].i1.tolist() == i1
+            c = a.argchoose(3)
+            assert len(c) == 4
+            assert len(c[0]) == 0
+            assert len(c[1]) == 0
+            assert len(c[2]) == i*(i - 1)*(i - 2)//6
+            assert len(c[3]) == 0
+            i0 = []
+            i1 = []
+            i2 = []
+            for k0 in range(i):
+                for k1 in range(k0):
+                    for k2 in range(k1):
+                        i0.append(k2)
+                        i1.append(k1)
+                        i2.append(k0)
+            assert c[2].i0.tolist() == i0
+            assert c[2].i1.tolist() == i1
+            assert c[2].i2.tolist() == i2
+            c = a.argchoose(4)
+            assert len(c) == 4
+            assert len(c[0]) == 0
+            assert len(c[1]) == 0
+            assert len(c[2]) == i*(i - 1)*(i - 2)*(i - 3)//24
+            assert len(c[3]) == 0
+            i0 = []
+            i1 = []
+            i2 = []
+            i3 = []
+            for k0 in range(i):
+                for k1 in range(k0):
+                    for k2 in range(k1):
+                        for k3 in range(k2):
+                            i0.append(k3)
+                            i1.append(k2)
+                            i2.append(k1)
+                            i3.append(k0)
+            assert c[2].i0.tolist() == i0
+            assert c[2].i1.tolist() == i1
+            assert c[2].i2.tolist() == i2
+            assert c[2].i3.tolist() == i3
+            if i > 20:
+                continue
+            c = a.argchoose(5)
+            assert len(c) == 4
+            assert len(c[0]) == 0
+            assert len(c[1]) == 0
+            assert len(c[2]) == i*(i - 1)*(i - 2)*(i - 3)*(i - 4)//120
+            assert len(c[3]) == 0
+            i0 = []
+            i1 = []
+            i2 = []
+            i3 = []
+            i4 = []
+            for k0 in range(i):
+                for k1 in range(k0):
+                    for k2 in range(k1):
+                        for k3 in range(k2):
+                            for k4 in range(k3):
+                                i0.append(k4)
+                                i1.append(k3)
+                                i2.append(k2)
+                                i3.append(k1)
+                                i4.append(k0)
+            assert c[2].i0.tolist() == i0
+            assert c[2].i1.tolist() == i1
+            assert c[2].i2.tolist() == i2
+            assert c[2].i3.tolist() == i3
+            assert c[2].i4.tolist() == i4
+
     def test_jagged_cross_argnested(self):
         a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         b = awkward.fromiter([[100, 200], [300], [400]])
@@ -387,6 +460,25 @@ class Test(unittest.TestCase):
         a_class_concat = JaggedArray.concatenate([a1, a2, a3])
         assert a_class_concat.tolist() == a_orig.tolist()
 
+    def test_jagged_concatenate_axis1(self):
+        a1 = JaggedArray([0, 0, 3, 3, 5], [0, 3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        b1 = JaggedArray([0, 0, 5, 7, 7], [0, 5, 7, 7, 10], [6.5, 7.6, 8.7, 9.8, 10.9, 4.3, 5.4, 1., 2.1, 3.2])
+        c1 = a1.concatenate([b1], axis=1)
+        assert c1.tolist() == [[],[0.,1.1,2.2,6.5,7.6,8.7,9.8,10.9],[4.3,5.4],[3.3,4.4],[5.5,6.6,7.7,8.8,9.9,1.,2.1,3.2]]
+
+        # Check that concatenating boolean arrays does not accidently promote them to integers
+        a2 = JaggedArray([0], [3], [False, False, False])
+        b2 = JaggedArray([0], [3], [True, True, True])
+        c2 = a2.concatenate([b2], axis=1)
+        assert c2.content.dtype == numpy.dtype(bool)
+
+        # Test some masked arrays
+        a3 = a1[[True, True, True, False, True]]
+        b3 = b1[[True, True, True, True, False]]
+        c3 = a3.concatenate([b3], axis=1)
+        assert c3.tolist() == [[],[0.,1.1,2.2,6.5,7.6,8.7,9.8,10.9],[4.3,5.4],[5.5,6.6,7.7,8.8,9.9]]
+
+
     def test_jagged_get(self):
         a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         assert [a[i].tolist() for i in range(len(a))] == [[0.0, 1.1, 2.2], [], [3.3, 4.4, 5.5, 6.6, 7.7], [8.8, 9.9], []]
@@ -435,3 +527,26 @@ class Test(unittest.TestCase):
         assert b.zip(a).tolist() == [[(10, 1.1), (20, 2.2), (30, 3.3)], [], [(40, 4.4), (50, 5.5)]]
         assert b.zip(c).tolist() == [[(10, 100), (20, 100), (30, 100)], [], [(40, 300), (50, 300)]]
         assert b.zip(d).tolist() == [[(10, 1000), (20, 1000), (30, 1000)], [], [(40, 1000), (50, 1000)]]
+
+    def test_jagged_structure1d(self):
+        a = awkward.JaggedArray([[0, 3, 3], [5, 8, 10]], [[3, 3, 5], [8, 10, 10]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        assert a.tolist() == a.structure1d().tolist()
+        a = awkward.JaggedArray([[[0], [3], [3]], [[5], [8], [10]]], [[[3], [3], [5]], [[8], [10], [10]]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        assert a.tolist() == a.structure1d().tolist()
+
+    def test_jagged_pad(self):
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        assert a.pad(4, clip=True).tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
+        assert a.pad(4, numpy.ma.masked, clip=True).regular().tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
+
+        assert a.pad(4).tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
+        assert a.pad(4, numpy.ma.masked).regular().tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
+
+        a = awkward.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
+        assert a.pad(3).tolist() == [[1.1, 2.2, 3.3, 4.4, 5.5], [None, None, None], [6.6, 7.7, 8.8], [9.9, None, None]]
+        assert a.pad(3, clip=True).tolist() == [[1.1, 2.2, 3.3], [None, None, None], [6.6, 7.7, 8.8], [9.9, None, None]]
+
+    def test_jagged_fillna(self):
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        assert a.pad(4).fillna(999).tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]
+        assert a.pad(4, numpy.ma.masked).fillna(999).regular().tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]

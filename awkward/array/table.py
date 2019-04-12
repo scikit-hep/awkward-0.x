@@ -1,32 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019, IRIS-HEP
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# 
-# * Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-# 
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-# 
-# * Neither the name of the copyright holder nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
 import re
 import types
@@ -250,8 +224,9 @@ class Table(awkward.array.base.AwkwardArray):
 
     @rowname.setter
     def rowname(self, value):
-        if not isinstance(value, awkward.util.string):
-            raise TypeError("rowname must be a string")
+        if self.check_prop_valid:
+            if not isinstance(value, awkward.util.string):
+                raise TypeError("rowname must be a string")
         self._rowname = value
 
     @classmethod
@@ -307,13 +282,9 @@ class Table(awkward.array.base.AwkwardArray):
 
     def deepcopy(self, contents=None):
         out = self.copy(contents=contents)
-        index = out._index()
-        if index is None:
-            out._contents = OrderedDict([(n, self._util_deepcopy(x)) for n, x in out._contents.items()])
-        else:
-            out._contents = OrderedDict([(n, self._util_deepcopy(x[index])) for n, x in out._contents.items()])
-            out._view = None
-            out._base = None
+        out._contents = OrderedDict([(n, self._util_deepcopy(x[out._index()])) for n, x in out._contents.items()])
+        out._view = None
+        out._base = None
         return out
 
     def empty_like(self, **overrides):
@@ -368,11 +339,19 @@ class Table(awkward.array.base.AwkwardArray):
 
     @contents.setter
     def contents(self, value):
-        if not isinstance(value, dict) or not all(isinstance(n, awkward.util.string) for n in value):
-            raise TypeError("contents must be a dict from strings to arrays")
+        if self.check_prop_valid:
+            if not isinstance(value, dict) or not all(isinstance(n, awkward.util.string) for n in value):
+                raise TypeError("contents must be a dict from strings to arrays")
         for n in list(value):
             value[n] = self._util_toarray(value[n], self.DEFAULTTYPE)
         self._contents = value
+
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return sum(x.nbytes if isinstance(x, self.numpy.ndarray) else x._getnbytes(seen) for x in self._contents.values())
 
     def __len__(self):
         return self._length()
@@ -399,7 +378,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     def _index(self):
         if self._view is None:
-            return None
+            return slice(self._length())
 
         elif isinstance(self._view, tuple):
             start, step, length = self._view
@@ -503,7 +482,8 @@ class Table(awkward.array.base.AwkwardArray):
                 raise TypeError("cannot interpret dtype {0} as a fancy index or mask".format(head.dtype))
 
     def _valid(self):
-        pass
+        if self.check_whole_valid:
+            pass
 
     def __iter__(self, checkiter=True):
         if checkiter:
@@ -529,12 +509,8 @@ class Table(awkward.array.base.AwkwardArray):
     def __getitem__(self, where):
         if self._util_isstringslice(where):
             if isinstance(where, awkward.util.string):
-                index = self._index()
                 try:
-                    if index is None:
-                        return self._contents[where][:self._length()]
-                    else:
-                        return self._contents[where][index]
+                    return self._contents[where][self._index()]
                 except KeyError:
                     raise ValueError("no column named {0}".format(repr(where)))
             else:
@@ -571,12 +547,20 @@ class Table(awkward.array.base.AwkwardArray):
             raise ValueError("new columns can only be attached to the original Table, not a view (try table.base['col'] = array)")
 
         if isinstance(where, awkward.util.string):
+            try:
+                len(what)
+            except TypeError:
+                what = self.numpy.full(len(self), what)
             self._contents[where] = self._util_toarray(what, self.DEFAULTTYPE)
 
         elif self._util_isstringslice(where):
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
+                try:
+                    len(y)
+                except TypeError:
+                    y = self.numpy.full(len(self), y)
                 self._contents[x] = self._util_toarray(y, self.DEFAULTTYPE)
 
         else:
@@ -616,12 +600,8 @@ class Table(awkward.array.base.AwkwardArray):
 
         for x in inputs:
             if isinstance(x, Table):
-                index = x._index()
                 for n, y in x._contents.items():
-                    if index is None:
-                        inputsdict[n].append(y)
-                    else:
-                        inputsdict[n].append(y[index])
+                    inputsdict[n].append(y[x._index()])
             else:
                 for n in inputsdict:
                     inputsdict[n].append(x)
@@ -721,11 +701,7 @@ class Table(awkward.array.base.AwkwardArray):
             }[ufunc])
         out._showdict = True
         for n in self._contents:
-            index = self._index()
-            if index is None:
-                x = self._contents[n][:self._length()]
-            else:
-                x = self._contents[n][index]
+            x = self._contents[n][self._index()]
             out[n] = self.numpy.array([self._util_reduce(x, ufunc, identity, dtype, regularaxis)])
         return out.Row(out, 0)
 
@@ -737,4 +713,30 @@ class Table(awkward.array.base.AwkwardArray):
         out = self.copy(contents={})
         for n, x in self._contents.items():
             out[n] = x.astype(dtype)
+        return out
+
+    def fillna(self, value):
+        out = self.copy(contents={})
+        for n, x in self._contents.items():
+            out[n] = self._util_fillna(x, value)
+        return out
+
+    @classmethod
+    def _concatenate_axis0(cls, tables):
+        for i in range(len(tables)-1):
+            if set(tables[i]._contents) != set(tables[i+1]._contents):
+                raise ValueError("cannot concatenate Tables with different fields")
+
+        out = tables[0].deepcopy(contents=OrderedDict())
+
+        for n in tables[0]._contents:
+            content_type = type(tables[0]._contents[n])
+            if content_type == cls.numpy.ndarray:
+                concatenate = cls.numpy.concatenate
+            else:
+                concatenate = content_type.concatenate
+
+            out._contents[n] = concatenate([t._contents[n] for t in tables], axis=0)
+
+        out._valid()
         return out

@@ -1,32 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019, IRIS-HEP
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# 
-# * Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-# 
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-# 
-# * Neither the name of the copyright holder nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
 import pickle
 import numbers
@@ -43,6 +17,8 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def invert(cls, permutation):
+        if permutation.size == 0:
+            return cls.numpy.zeros(0, dtype=cls.IndexedArray.fget(None).INDEXTYPE)
         permutation = permutation.reshape(-1)
         out = cls.numpy.zeros(permutation.max() + 1, dtype=cls.IndexedArray.fget(None).INDEXTYPE)
         identity = cls.numpy.arange(len(permutation))
@@ -106,10 +82,11 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     @index.setter
     def index(self, value):
         value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("index must have integer dtype")
-        if (value < 0).any():
-            raise ValueError("index must be a non-negative array")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("index must have integer dtype")
+            if (value < 0).any():
+                raise ValueError("index must be a non-negative array")
         self._index = value
         self._inverse = None
         self._isvalid = False
@@ -123,6 +100,13 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         self._content = self._util_toarray(value, self.DEFAULTTYPE)
         self._isvalid = False
 
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return self._index.nbytes + (self._content.nbytes if isinstance(self._content, self.numpy.ndarray) else self._content._getnbytes(seen))
+
     def __len__(self):
         return len(self._index)
 
@@ -133,11 +117,12 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         return out
 
     def _valid(self):
-        if not self._isvalid:
-            if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
-                raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
+        if self.check_whole_valid:
+            if not self._isvalid:
+                if len(self._index) != 0 and self._index.reshape(-1).max() > len(self._content):
+                    raise ValueError("maximum index ({0}) is beyond the length of the content ({1})".format(self._index.reshape(-1).max(), len(self._content)))
 
-            self._isvalid = True
+                self._isvalid = True
 
     def __iter__(self, checkiter=True):
         if checkiter:
@@ -314,10 +299,11 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     @length.setter
     def length(self, value):
-        if not self._util_isinteger(value):
-            raise TypeError("length must be an integer")
-        if value < 0:
-            raise ValueError("length must be a non-negative integer") 
+        if self.check_prop_valid:
+            if not self._util_isinteger(value):
+                raise TypeError("length must be an integer")
+            if value < 0:
+                raise ValueError("length must be a non-negative integer") 
         self._length = value
 
     @property
@@ -327,14 +313,15 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     @index.setter
     def index(self, value):
         value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("index must have integer dtype")
-        if len(value.shape) != 1:
-            raise ValueError("index must be one-dimensional")
-        if (value < 0).any():
-            raise ValueError("index must be a non-negative array")
-        if len(value) > 0 and not (value[1:] >= value[:-1]).all():
-            raise ValueError("index must be monatonically increasing")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("index must have integer dtype")
+            if len(value.shape) != 1:
+                raise ValueError("index must be one-dimensional")
+            if (value < 0).any():
+                raise ValueError("index must be a non-negative array")
+            if len(value) > 0 and not (value[1:] >= value[:-1]).all():
+                raise ValueError("index must be monatonically increasing")
         self._index = value
         self._inverse = None
         self._isvalid = False
@@ -372,15 +359,23 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     def _gettype(self, seen):
         return awkward.type._fromarray(self._content, seen)
 
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return self._index.nbytes + (self._content.nbytes if isinstance(self._content, self.numpy.ndarray) else self._content._getnbytes(seen))
+
     def __len__(self):
         return self._length
 
     def _valid(self):
-        if not self._isvalid:
-            if len(self._index) > len(self._content):
-                raise ValueError("length of index ({0}) must not be greater than the length of content ({1})".format(len(self._index), len(self._content)))
+        if self.check_whole_valid:
+            if not self._isvalid:
+                if len(self._index) > len(self._content):
+                    raise ValueError("length of index ({0}) must not be greater than the length of content ({1})".format(len(self._index), len(self._content)))
 
-            self._isvalid = True
+                self._isvalid = True
 
     def __iter__(self, checkiter=True):
         if checkiter:

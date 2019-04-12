@@ -1,32 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019, IRIS-HEP
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# 
-# * Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-# 
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-# 
-# * Neither the name of the copyright holder nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
 import collections
 import numbers
@@ -108,8 +82,9 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     @mask.setter
     def mask(self, value):
         value = self._util_toarray(value, self.MASKTYPE, self.numpy.ndarray)
-        if len(value.shape) != 1:
-            raise ValueError("mask must have 1-dimensional shape")
+        if self.check_prop_valid:
+            if len(value.shape) != 1:
+                raise ValueError("mask must have 1-dimensional shape")
         if not issubclass(value.dtype.type, (self.numpy.bool_, self.numpy.bool)):
             value = (value != 0)
         self._mask = value
@@ -148,6 +123,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def maskedwhen(self, value):
         self._maskedwhen = bool(value)
 
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            return self._mask.nbytes + (self._content.nbytes if isinstance(self._content, self.numpy.ndarray) else self._content._getnbytes(seen))
+
     def __len__(self):
         return len(self._mask)
 
@@ -155,11 +137,12 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         return awkward.type.OptionType(awkward.type._fromarray(self._content, seen))
 
     def _valid(self):
-        if not self._isvalid:
-            if len(self._mask) > len(self._content):
-                raise ValueError("mask length ({0}) must be the same as (or shorter than) the content length ({1})".format(len(self._mask), len(self._content)))
+        if self.check_whole_valid:
+            if not self._isvalid:
+                if len(self._mask) > len(self._content):
+                    raise ValueError("mask length ({0}) must be the same as (or shorter than) the content length ({1})".format(len(self._mask), len(self._content)))
 
-            self._isvalid = True
+                self._isvalid = True
 
     def __iter__(self, checkiter=True):
         if checkiter:
@@ -255,7 +238,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         index[tokeep] = self.numpy.arange(self.numpy.count_nonzero(tokeep))
 
         if isinstance(result, tuple):
-            return tuple(self.Methods.maybemixin(type(x), IndexedMaskedArray)(index, x, maskedwhen=-1) if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+            return tuple(self.Methods.maybemixin(type(x), IndexedMaskedArray)(index, x, maskedwhen=-1) if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardArray)) else x for x in result)
         elif method == "at":
             return None
         else:
@@ -295,6 +278,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
         content[self.ismasked] = identity
         return content
+
+    def fillna(self, value):
+        out = self._util_fillna(self._content, value)
+        if not isinstance(out, self.numpy.ndarray):
+            out = self.numpy.array(out)
+        out[self.boolmask(maskedwhen=True)] = value
+        return out
 
 class BitMaskedArray(MaskedArray):
     """
@@ -340,8 +330,9 @@ class BitMaskedArray(MaskedArray):
     @mask.setter
     def mask(self, value):
         value = self._util_toarray(value, self.BITMASKTYPE, self.numpy.ndarray)
-        if len(value.shape) != 1:
-            raise ValueError("mask must have 1-dimensional shape")
+        if self.check_prop_valid:
+            if len(value.shape) != 1:
+                raise ValueError("mask must have 1-dimensional shape")
         self._mask = value.view(self.BITMASKTYPE)
         self._isvalid = False
 
@@ -403,11 +394,12 @@ class BitMaskedArray(MaskedArray):
         self._lsborder = bool(value)
 
     def _valid(self):
-        if not self._isvalid:
-            if len(self._mask) != self._ceildiv8(len(self._content)):
-                raise ValueError("mask length ({0}) must be equal to ceil(content length / 8) ({1})".format(len(self._mask), self._ceildiv8(len(self._content))))
+        if self.check_whole_valid:
+            if not self._isvalid:
+                if len(self._mask) != self._ceildiv8(len(self._content)):
+                    raise ValueError("mask length ({0}) must be equal to ceil(content length / 8) ({1})".format(len(self._mask), self._ceildiv8(len(self._content))))
 
-            self._isvalid = True
+                self._isvalid = True
 
     def __iter__(self, checkiter=True):
         if checkiter:
@@ -568,10 +560,11 @@ class IndexedMaskedArray(MaskedArray):
     @mask.setter
     def mask(self, value):
         value = self._util_toarray(value, self.INDEXTYPE, self.numpy.ndarray)
-        if not self._util_isintegertype(value.dtype.type):
-            raise TypeError("starts must have integer dtype")
-        if len(value.shape) != 1:
-            raise ValueError("mask must have 1-dimensional shape")
+        if self.check_prop_valid:
+            if not self._util_isintegertype(value.dtype.type):
+                raise TypeError("starts must have integer dtype")
+            if len(value.shape) != 1:
+                raise ValueError("mask must have 1-dimensional shape")
         self._mask = value
         self._isvalid = False
 
@@ -590,8 +583,9 @@ class IndexedMaskedArray(MaskedArray):
 
     @maskedwhen.setter
     def maskedwhen(self, value):
-        if not self._util_isinteger(value):
-            raise TypeError("maskedwhen must be an integer for IndexedMaskedArray")
+        if self.check_prop_valid:
+            if not self._util_isinteger(value):
+                raise TypeError("maskedwhen must be an integer for IndexedMaskedArray")
         self._maskedwhen = value
 
     def boolmask(self, maskedwhen=True):
@@ -603,14 +597,15 @@ class IndexedMaskedArray(MaskedArray):
             return self._mask != self._maskedwhen
 
     def _valid(self):
-        if not self._isvalid:
-            if len(self._mask) != 0:
-                if self._mask.max() > len(self._content):
-                    raise ValueError("maximum mask-index ({0}) is beyond the length of the content ({1})".format(self._mask.max(), len(self._content)))
-                if (self._mask[self._mask != self._maskedwhen] < 0).any():
-                    raise ValueError("mask-index has negative values (other than maskedwhen)")
+        if self.check_whole_valid:
+            if not self._isvalid:
+                if len(self._mask) != 0:
+                    if self._mask.max() > len(self._content):
+                        raise ValueError("maximum mask-index ({0}) is beyond the length of the content ({1})".format(self._mask.max(), len(self._content)))
+                    if (self._mask[self._mask != self._maskedwhen] < 0).any():
+                        raise ValueError("mask-index has negative values (other than maskedwhen)")
 
-            self._isvalid = True
+                self._isvalid = True
 
     def __iter__(self, checkiter=True):
         if checkiter:
@@ -681,4 +676,11 @@ class IndexedMaskedArray(MaskedArray):
 
         out = self.numpy.full(self._mask.shape + content.shape[1:], identity, dtype=content.dtype)
         out[self.isunmasked] = content[self.mask[self.mask >= 0]]
+        return out
+
+    def fillna(self, value):
+        out = self._util_fillna(self._content, value)
+        if not isinstance(out, self.numpy.ndarray):
+            out = self.numpy.array(out)
+        out[self.mask < 0] = value
         return out

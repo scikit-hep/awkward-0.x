@@ -1,32 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019, IRIS-HEP
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# 
-# * Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-# 
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-# 
-# * Neither the name of the copyright holder nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
 import importlib
 from collections import OrderedDict
@@ -57,19 +31,20 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         def __getstate__(self):
             raise RuntimeError("VirtualArray.TransientKeys are not unique across processes, and hence should not be serialized")
 
-    def __init__(self, generator, args=(), kwargs={}, cache=None, persistentkey=None, type=None, persistvirtual=True):
+    def __init__(self, generator, args=(), kwargs={}, cache=None, persistentkey=None, type=None, nbytes=None, persistvirtual=True):
         self.generator = generator
         self.args = args
         self.kwargs = kwargs
         self.cache = cache
         self.persistentkey = persistentkey
         self.type = type
+        self.nbytes = nbytes
         self.persistvirtual = persistvirtual
         self._array = None
         self._setitem = None
         self._delitem = None
 
-    def copy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, persistvirtual=None):
+    def copy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, nbytes=None, persistvirtual=None):
         # FIXME: arguments through **kwargs because undef is different from None (None has meaning for some of them)
         out = self.__class__.__new__(self.__class__)
         out._generator = self._generator
@@ -78,6 +53,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         out._cache = self._cache
         out._persistentkey = self._persistentkey
         out._type = self._type
+        out._nbytes = self._nbytes
         out._persistvirtual = self._persistvirtual
         out._array = self._array
         if self._setitem is None:
@@ -100,12 +76,14 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             out.persistentkey = persistentkey
         if type is not None:
             out.type = type
+        if nbytes is not None:
+            out.nbytes = nbytes
         if persistvirtual is not None:
             out.persistvirtual = persistvirtual
         return out
 
-    def deepcopy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, persistvirtual=None):
-        out = self.copy(generator=generator, args=arge, kwargs=kwargs, cache=cache, persistentkey=persistentkey, type=type, persistvirtual=persistvirtual)
+    def deepcopy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, nbytes=None, persistvirtual=None):
+        out = self.copy(generator=generator, args=arge, kwargs=kwargs, cache=cache, persistentkey=persistentkey, type=type, nbytes=nbytes, persistvirtual=persistvirtual)
         out._array = self._util_deepcopy(out._array)
         if out._setitem is not None:
             for n in list(out._setitem):
@@ -162,8 +140,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @generator.setter
     def generator(self, value):
-        if not callable(value):
-            raise TypeError("generator must be a callable")
+        if self.check_prop_valid:
+            if not callable(value):
+                raise TypeError("generator must be a callable")
         self._generator = value
 
 
@@ -183,8 +162,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @kwargs.setter
     def kwargs(self, value):
-        if not isinstance(value, dict):
-            raise TypeError("kwargs must be a dict")
+        if self.check_prop_valid:
+            if not isinstance(value, dict):
+                raise TypeError("kwargs must be a dict")
         self._kwargs = dict(value)
 
     @property
@@ -193,8 +173,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @cache.setter
     def cache(self, value):
-        if not value is None and not (callable(getattr(value, "__getitem__", None)) and callable(getattr(value, "__setitem__", None)) and callable(getattr(value, "__delitem__", None))):
-            raise TypeError("cache must be None, a dict, or have __getitem__/__setitem__/__delitem__ methods")
+        if self.check_prop_valid:
+            if not value is None and not (callable(getattr(value, "__getitem__", None)) and callable(getattr(value, "__setitem__", None)) and callable(getattr(value, "__delitem__", None))):
+                raise TypeError("cache must be None, a dict, or have __getitem__/__setitem__/__delitem__ methods")
         self._cache = value
 
     @property
@@ -203,8 +184,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @persistentkey.setter
     def persistentkey(self, value):
-        if value is not None and not isinstance(value, awkward.util.string):
-            raise TypeError("persistentkey must be None or a string")
+        if self.check_prop_valid:
+            if value is not None and not isinstance(value, awkward.util.string):
+                raise TypeError("persistentkey must be None or a string")
         self._persistentkey = value
 
     @property
@@ -213,8 +195,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @persistvirtual.setter
     def persistvirtual(self, value):
-        if not isinstance(value, (bool, self.numpy.bool_, self.numpy.bool)):
-            raise TypeError("persistvirtual must be boolean")
+        if self.check_prop_valid:
+            if not isinstance(value, (bool, self.numpy.bool_, self.numpy.bool)):
+                raise TypeError("persistvirtual must be boolean")
         self._persistvirtual = bool(value)
 
     def _gettype(self, seen):
@@ -232,15 +215,42 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @type.setter
     def type(self, value):
-        if value is not None and not isinstance(value, awkward.type.ArrayType):
-            raise TypeError("type must be None or an awkward type (to set Numpy parameters, use awkward.util.fromnumpy(shape, dtype, masked=False))")
+        if self.check_prop_valid:
+            if value is not None and not isinstance(value, awkward.type.ArrayType):
+                raise TypeError("type must be None or an awkward type (to set Numpy parameters, use awkward.util.fromnumpy(shape, dtype, masked=False))")
         self._type = value
+
+    def _getnbytes(self, seen):
+        if id(self) in seen:
+            return 0
+        else:
+            seen.add(id(self))
+            if self._nbytes is None or self.ismaterialized:
+                array = self.array
+                return (array.nbytes if isinstance(array, self.numpy.ndarray) else array._getnbytes(seen))
+            else:
+                return self._nbytes
+
+    @property
+    def nbytes(self):
+        return self._getnbytes(set())
+
+    @nbytes.setter
+    def nbytes(self, value):
+        if self.check_prop_valid:
+            if value is not None:
+                if not self._util_isinteger(value):
+                    raise TypeError("nbytes must be an integer or None")
+                if value < 0:
+                    raise ValueError("nbytes must be a non-negative integer or None") 
+            self._nbytes = value
 
     def __len__(self):
         return self.shape[0]
 
     def _valid(self):
-        pass
+        if self.check_whole_valid:
+            pass
 
     @property
     def key(self):
@@ -398,3 +408,6 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def astype(self, dtype):
         return self.array.astype(dtype)
+
+    def fillna(self, value):
+        return self._util_fillna(self.array, value)
