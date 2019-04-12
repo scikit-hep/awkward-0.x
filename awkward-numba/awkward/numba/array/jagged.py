@@ -256,7 +256,7 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     # def __setitem__(self, where, what):
 
     @numba.generated_jit(nopython=True)
-    def _broadcast(self, data):
+    def tojagged(self, data):
         assert not isinstance(data, JaggedArrayType)
 
         if isinstance(data, AwkwardArrayType):
@@ -269,6 +269,7 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
                 for i in range(len(self.starts)):
                     index[self.starts[i]:self.stops[i]] = i
                 return _JaggedArray_new(self, self.starts, self.stops, data[index], self.iscompact)
+            return impl
 
         elif isinstance(data, numba.types.Array):
             def impl(self, data):
@@ -316,11 +317,11 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
             if isinstance(inputs[i], awkward.array.jagged.JaggedArray):
                 pass
             elif isinstance(inputs[i], awkward.array.base.AwkwardArray):
-                inputs[i] = first._broadcast(inputs[i])
+                inputs[i] = first.tojagged(inputs[i])
             elif isinstance(inputs[i], Iterable):
-                inputs[i] = first._broadcast(numpy.array(inputs[i], copy=False))
+                inputs[i] = first.tojagged(numpy.array(inputs[i], copy=False))
             else:
-                inputs[i] = first._broadcast(inputs[i])
+                inputs[i] = first.tojagged(inputs[i])
 
         for i in range(len(inputs)):
             inputs[i] = inputs[i]._content
@@ -405,8 +406,7 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     def _argminmax_general(self, ismin):
         raise RuntimeError("helper function not needed in JaggedArrayNumba")
 
-    # @awkward.util.bothmethod
-    # def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
+    # def _concatenate_axis0(isclassmethod, cls_or_self, arrays):
     #     if isinstance(arrays, (numpy.ndarray, awkward.array.base.AwkwardArray)):
     #         arrays = (arrays,)
     #     else:
@@ -430,8 +430,7 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     # def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
     ### FIXME: can't do this one until we have Tables
 
-    # def pandas(self):
-    ### base implementation is fine
+    # def pad(self, length, maskedwhen=True, clip=False):
 
 ######################################################################## register types in Numba
 
