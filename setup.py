@@ -17,7 +17,7 @@ def get_description():
     start = description.index(".. inclusion-marker-1-5-do-not-remove")
     stop = description.index(".. inclusion-marker-3-do-not-remove")
 
-    before = """.. image:: https://raw.githubusercontent.com/scikit-hep/awkward-array/master/docs/source/logo-500px.png
+    before = """.. image:: https://raw.githubusercontent.com/scikit-hep/awkward-array/master/docs/source/logo-600px.png
    :alt: awkward-array
    :target: https://github.com/scikit-hep/awkward-array
 
@@ -42,7 +42,7 @@ Reference documentation
 
 """
 
-    return description[start:stop].strip() # before + + after
+    return before + description[start:stop].strip() # + after
 
 setup(name = "awkward",
       version = get_version(),
