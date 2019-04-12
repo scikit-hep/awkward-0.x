@@ -269,6 +269,7 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
                 for i in range(len(self.starts)):
                     index[self.starts[i]:self.stops[i]] = i
                 return _JaggedArray_new(self, self.starts, self.stops, data[index], self.iscompact)
+            return impl
 
         elif isinstance(data, numba.types.Array):
             def impl(self, data):
