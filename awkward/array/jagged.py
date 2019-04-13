@@ -1290,33 +1290,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out.stops.shape = self._starts.shape  # intentional: self._stops can too long
             return out
 
-    @property
-    def iscompact(self):
-        if len(self._starts) == 0:
-            return True
-        else:
-            flatstarts = self._starts.reshape(-1)
-            flatstops = self.stops.reshape(-1)   # no underscore!
-            if not self.offsetsaliased(self._starts, self._stops) and not self.numpy.array_equal(flatstarts[1:], flatstops[:-1]):
-                return False
-            if not self._isvalid and not (flatstops >= flatstarts).all():
-                raise ValueError("offsets must be monatonically increasing")
-            return True
-
-    def compact(self):
-        if self.iscompact:
-            return self
-        else:
-            offsets = self.counts2offsets(self.counts.reshape(-1))
-            if len(self._starts.shape) == 1:
-                tmp = self
-            else:                                                # no underscore!
-                tmp = self.JaggedArray(self._starts.reshape(-1), self.stops.reshape(-1), self._content)
-            out = tmp._tojagged(offsets[:-1], offsets[1:], copy=False)
-            out.starts.shape = self._starts.shape
-            out.stops.shape = self._starts.shape  # intentional: self._stops can too long
-            return out
-
     def flatten(self, axis=0):
         if not self._util_isinteger(axis) or axis < 0:
             raise TypeError("axis must be a non-negative integer (can't count from the end)")
