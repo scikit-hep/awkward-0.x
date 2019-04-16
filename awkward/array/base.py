@@ -50,7 +50,8 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         if dtype == self.numpy.dtype(object):
             return self.numpy.array(list(self), dtype=dtype)
         else:
-            return self.numpy.fromiter(self, dtype=dtype, count=len(self))
+            #return self.numpy.fromiter(self, dtype=dtype, count=len(self))
+            return numpy.array(self.tolist(), dtype='object')
 
     def __getstate__(self):
         state = {}
@@ -100,6 +101,19 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     @property
     def shape(self):
         return self.type.shape
+
+    @property
+    def dtype(self):
+        #return self.type#.dtype
+        try:
+            from awkward.pandas.accessor import AwkwardType
+            return AwkwardType()
+        except ImportError:
+            return self.type.dtype
+
+    @property
+    def name(self):
+        return str('awkward')
 
     def _try_tolist(self, x):
         try:
@@ -287,7 +301,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     @classmethod
     def _util_toarray(cls, value, defaultdtype, passthrough=None):
-        import awkward.array.base
+        #import awkward.array.base
         if passthrough is None:
             passthrough = (cls.numpy.ndarray, AwkwardArray)
         if isinstance(value, passthrough):
