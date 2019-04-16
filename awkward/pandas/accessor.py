@@ -2,10 +2,10 @@ import pandas as pd
 
 from pandas.api.extensions import ExtensionDtype
 
-import awkward.pandas.base
-
 def delegated_method(method, index, name, *args, **kwargs):
     return pd.Series
+
+import awkward.array
 
 class Delegated:
     # Descriptor for delegating attribute access to/from
