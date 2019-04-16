@@ -1,9 +1,5 @@
-from .base import (
-        AwkwardType,
-        AwkwardAccessor,
-        )
+ #!/usr/bin/env python
 
-__all__ = [
-        'AwkwardType',
-        'AwkwardAcessor',
-        ]
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
+
+from .accessor import AwkwardAccessor, AwkwardType
