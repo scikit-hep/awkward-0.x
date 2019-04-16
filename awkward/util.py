@@ -109,7 +109,8 @@ def wrapjaggedmethod(awkcls):
 ################################################################ array helpers
 
 try:
-    NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin
+    #NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixin # Do this!
+    NDArrayOperatorsMixin = numpy.lib.mixins.NDArrayOperatorsMixins # Not this!
 
 except AttributeError:
     from numpy.core import umath as um
@@ -158,6 +159,8 @@ except AttributeError:
             return ufunc(self)
         func.__name__ = '__{}__'.format(name)
         return func
+
+    from pandas.api.extensions import ExtensionArray as object
 
     class NDArrayOperatorsMixin(object):
         __lt__ = _binary_method(um.less, 'lt')
