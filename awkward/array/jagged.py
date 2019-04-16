@@ -567,12 +567,15 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                     stack.insert(0, node.counts)
                     node = node.flatten()
 
-                counts = node.stops - node._starts
-                if head < 0:
-                    head = counts + head
-                if not self.numpy.bitwise_and(0 <= head, head < counts).all():
-                    raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
-                node = node._content[node._starts + head]
+                if isinstance(node, JaggedArray):
+                    counts = node.stops - node._starts
+                    if head < 0:
+                        head = counts + head
+                    if not self.numpy.bitwise_and(0 <= head, head < counts).all():
+                        raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
+                    node = node._content[node._starts + head]
+                else:
+                    node = node[:, head]
 
                 for oldcounts in stack:
                     node = type(self).fromcounts(oldcounts, node)
