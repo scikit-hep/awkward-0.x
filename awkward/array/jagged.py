@@ -841,6 +841,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             increase[good] -= increase[starts[parents[good]]]
             index = self._starts[parents]
             index += increase
+            index *= good
             out = self.copy(starts=starts, stops=stops, content=self._content[index])
             out._parents = parents
             return out
