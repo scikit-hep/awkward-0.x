@@ -51,6 +51,7 @@ install:
   - python -c 'import awkward; print(awkward.__version__)'
   - export AWKWARD_DEPLOYMENT=base
   - pip install --upgrade pyOpenSSL     # for deployment
+  - pip install pybind11
   - python setup.py install
   - cd awkward-cpp
   - python setup.py install
