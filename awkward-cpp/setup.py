@@ -34,7 +34,7 @@ setup(name = "awkward-cpp",
       setup_requires = ["pytest-runner"],
       tests_require = ["pytest"],
       ext_modules = [Extension("awkward.cpp.array._jagged",
-                               ["awkward/cpp/array/_jagged.cpp"],
+                               [os.path.join("awkward", "cpp", "array", "_jagged.cpp")],
                                include_dirs=[pybind11.get_include(False),
                                              pybind11.get_include(True)],
                                language="c++")
