@@ -13,4 +13,4 @@ from . import _jagged
 class JaggedArrayCpp(CppMethods, awkward.array.jagged.JaggedArray):
     @classmethod
     def offsets2parents(cls, offsets):
-        return _jagged.offsets2parents_int64(offsets)
+        return getattr(_jagged, "offsets2parents_" + str(offsets.dtype))(offsets)

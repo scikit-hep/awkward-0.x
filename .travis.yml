@@ -51,6 +51,10 @@ install:
   - python -c 'import awkward; print(awkward.__version__)'
   - export AWKWARD_DEPLOYMENT=base
   - pip install --upgrade pyOpenSSL     # for deployment
+  - python setup.py install
+  - cd awkward-cpp
+  - python setup.py install
+  - cd ..
 
 notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
