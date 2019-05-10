@@ -1,35 +1,11 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2019, IRIS-HEP
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-# 
-# * Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-# 
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-# 
-# * Neither the name of the copyright holder nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
+import functools
 import math
 import numbers
+import operator
 import os
 from collections import OrderedDict
 try:
@@ -92,7 +68,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         changes[-1] = len(parents)
         changes[1:-1] = tmp
 
-        length = parents.max() + 1
+        length = parents.max() + 1 if parents.size > 0 else 0
         starts = cls.numpy.zeros(length, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
         counts = cls.numpy.zeros(length, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
 
@@ -145,13 +121,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def fromiter(cls, iterable):
-        # FIXME for 1.0: detect deep jagged arrays and construct them
-        offsets = [0]
-        content = []
-        for x in iterable:
-            offsets.append(offsets[-1] + len(x))
-            content.extend(x)
-        return cls.fromoffsets(offsets, content)
+        import awkward.generate
+        if len(iterable) == 0:
+            return cls.JaggedArray.fget(None)([], [], [])
+        else:
+            return awkward.generate.fromiter(iterable, awkwardlib=cls.awkward.fget(None))
 
     @classmethod
     def fromoffsets(cls, offsets, content):
@@ -593,12 +567,15 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                     stack.insert(0, node.counts)
                     node = node.flatten()
 
-                counts = node.stops - node._starts
-                if head < 0:
-                    head = counts + head
-                if not self.numpy.bitwise_and(0 <= head, head < counts).all():
-                    raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
-                node = node._content[node._starts + head]
+                if isinstance(node, JaggedArray):
+                    counts = node.stops - node._starts
+                    if head < 0:
+                        head = counts + head
+                    if not self.numpy.bitwise_and(0 <= head, head < counts).all():
+                        raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
+                    node = node._content[node._starts + head]
+                else:
+                    node = node[:, head]
 
                 for oldcounts in stack:
                     node = type(self).fromcounts(oldcounts, node)
@@ -767,9 +744,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
-    def _broadcast(self, data):
-        return self.tojagged(data)
-
     def tojagged(self, data):
         if isinstance(data, JaggedArray):
             selfcounts = self.stops - self._starts
@@ -810,9 +784,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         elif isinstance(data, Iterable):
             return self.tojagged(self.numpy.array(data))
-
-        else:
-            return self.tojagged(self.numpy.array([data]))
 
     def _tojagged(self, starts=None, stops=None, copy=True):
         if starts is None and stops is None:
@@ -870,6 +841,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             increase[good] -= increase[starts[parents[good]]]
             index = self._starts[parents]
             index += increase
+            index *= good
             out = self.copy(starts=starts, stops=stops, content=self._content[index])
             out._parents = parents
             return out
@@ -977,7 +949,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         counts = stops - starts
         if isinstance(result, tuple):
-            return tuple(self.Methods.maybemixin(type(x), self.JaggedArray).fromcounts(counts, x) if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardBase)) else x for x in result)
+            return tuple(self.Methods.maybemixin(type(x), self.JaggedArray).fromcounts(counts, x) if isinstance(x, (self.numpy.ndarray, awkward.array.base.AwkwardArray)) else x for x in result)
         elif method == "at":
             return None
         else:
@@ -999,7 +971,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _argpairs(self):
         self._valid()
-        
+
         counts = self.counts * (self.counts + 1) >> 1    # N * (N + 1) // 2
 
         offsets = self.counts2offsets(counts)
@@ -1055,7 +1027,130 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out._parents = parents_comb
         return out
 
+    def _argchoose(self, n, absolute):
+        np = self.numpy
+
+        def root2(a):
+            return np.floor((1+np.sqrt(8*a+1))/2).astype(self.INDEXTYPE)
+
+        def root3(a):
+            out = 2*np.ones(a.shape, dtype=self.INDEXTYPE)
+            mask = a > 0
+            rad = np.power(np.sqrt(3)*np.sqrt(243*a[mask]**2 - 1) + 27*a[mask], 1./3)
+            # 1e-12 to correct rounding error (good to 1000 choose 3)
+            out[mask] = np.floor(np.power(3, -2./3)*rad + np.power(3, -1./3)/rad + 1 + 1e-12)
+            return out
+
+        def root4(a):
+            # good to (at least) 100 choose 4
+            return np.floor((np.sqrt(4*np.sqrt(24*a + 1) + 5) + 3)/2).astype(self.INDEXTYPE)
+
+        if n > 5:
+            # Need to solve general polynomial \prod_{i<=k} (n-i) / k! = a
+            # Not sure if possible, is the Galois group solvable for this class of polynomial?
+            # The first level is a freebie thanks to np.repeat()
+            # I think the next levels should be too, but could not quite make it work...
+            raise NotImplementedError
+        elif n == 5:
+            counts = self.counts*(self.counts - 1)*(self.counts - 2)*(self.counts - 3)*(self.counts - 4)//120
+        elif n == 4:
+            counts = self.counts*(self.counts - 1)*(self.counts - 2)*(self.counts - 3)//24
+        elif n == 3:
+            counts = self.counts*(self.counts - 1)*(self.counts - 2)//6
+        elif n == 2:
+            counts = self.counts*(self.counts - 1)//2
+        elif n <= 1:
+            raise ValueError("Choosing 0 or 1 items is trivial")
+
+        local = np.arange(self.offsets[-1]) - np.repeat(self.offsets[:-1], self.counts)
+        offsets = self.JaggedArray.counts2offsets(counts)
+        indices = np.arange(offsets[-1])
+        parents = self.JaggedArray.offsets2parents(offsets)
+
+        if n == 5:
+            k5 = indices - offsets[parents]
+            i5 = np.repeat(local, local*(local - 1)*(local - 2)*(local - 3)//24)
+            k4 = k5 - i5*(i5 - 1)*(i5 - 2)*(i5 - 3)*(i5 - 4)//120
+            i4 = root4(k4)
+            k3 = k4 - i4*(i4 - 1)*(i4 - 2)*(i4 - 3)//24
+            i3 = root3(k3)
+            k2 = k3 - i3*(i3 - 1)*(i3 - 2)//6
+            i2 = root2(k2)
+            k1 = k2 - i2*(i2 - 1)//2
+            i1 = k1
+            if absolute:
+                starts_parents = self.starts[parents]
+                for idx in [i1, i2, i3, i4, i5]:
+                    idx += starts_parents
+            out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3, i4, i5))
+        elif n == 4:
+            k4 = indices - offsets[parents]
+            i4 = np.repeat(local, local*(local - 1)*(local - 2)//6)
+            k3 = k4 - i4*(i4 - 1)*(i4 - 2)*(i4 - 3)//24
+            i3 = root3(k3)
+            k2 = k3 - i3*(i3 - 1)*(i3 - 2)//6
+            i2 = root2(k2)
+            k1 = k2 - i2*(i2 - 1)//2
+            i1 = k1
+            if absolute:
+                starts_parents = self.starts[parents]
+                for idx in [i1, i2, i3, i4]:
+                    idx += starts_parents
+            out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3, i4))
+        elif n == 3:
+            k3 = indices - offsets[parents]
+            i3 = np.repeat(local, local*(local - 1)//2)
+            k2 = k3 - i3*(i3 - 1)*(i3 - 2)//6
+            i2 = root2(k2)
+            k1 = k2 - i2*(i2 - 1)//2
+            i1 = k1
+            if absolute:
+                starts_parents = self.starts[parents]
+                for idx in [i1, i2, i3]:
+                    idx += starts_parents
+            out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3))
+        elif n == 2:
+            k2 = indices - offsets[parents]
+            i2 = np.repeat(local, local)
+            k1 = k2 - i2*(i2 - 1)//2
+            i1 = k1
+            if absolute:
+                starts_parents = self.starts[parents]
+                for idx in [i1, i2]:
+                    idx += starts_parents
+            out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2))
+
+        return out
+
+    def argchoose(self, n):
+        """
+        Return all unique combinations (up to permutation) of n elements,
+        taken without replacement from the indices of the jagged dimension.
+        Combinations are ordered such that those of the first elements precede later ones,
+        e.g. for n=2: (0,1), (0,2), (1,2), (0,3), (1,3), (2,3), (0,4), ...
+        """
+        return self._argchoose(n, absolute=False)
+
+    def choose(self, n):
+        """
+        Return all unique combinations (up to permutation) of n elements,
+        taken without replacement from the contents of the jagged dimension.
+        Combinations are ordered such that those of the first elements precede later ones,
+        e.g. for n=2: (0,1), (0,2), (1,2), (0,3), (1,3), (2,3), (0,4), ...
+        """
+        args = self._argchoose(n, absolute=True)
+        columns = (self.content[args.content[c]] for c in args.columns)
+        out = self.JaggedArray.fromoffsets(args.offsets, self.Table.named("tuple", *columns).flattentuple())
+        return out
+
     def argdistincts(self, nested=False):
+        """
+        Return all unique combinations (up to permutation) of two elements,
+        taken without replacement from the indices of the jagged dimension.
+        Combinations are ordered lexicographically.
+        nested: Return a doubly-jagged array where the first jagged dimension
+        matches the shape of this array
+        """
         out = self._argdistincts(absolute=False)
 
         if nested:
@@ -1064,6 +1159,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return out
 
     def distincts(self, nested=False):
+        """
+        Return all unique combinations (up to permutation) of two elements,
+        taken without replacement from the contents of the jagged dimension.
+        Combinations are ordered lexicographically.
+        nested: Return a doubly-jagged array where the first jagged dimension
+        matches the shape of this array
+        """
         argpairs = self._argdistincts(absolute=True)
         left = argpairs._content["0"]
         right = argpairs._content["1"]
@@ -1163,7 +1265,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _canuseoffset(self):
         self._valid()
-        return self.offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and self.numpy.array_equal(self._starts[1:], self._stops[:-1]))
+        return self.offsetsaliased(self._starts, self._stops) or (len(self._starts.shape) == 1 and self.numpy.array_equal(self._starts[1:], self.stops[:-1]))
 
     @property
     def iscompact(self):
@@ -1211,6 +1313,31 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             else:
                 out = self.JaggedArray(self._starts.reshape(-1), self._stops.reshape(-1), self._content)
             return out._tojagged(offsets[:-1], offsets[1:], copy=False)._content
+
+    def structure1d(self, levellimit=None):
+        if len(self._starts) > len(self._stops):
+            raise ValueError("starts must have the same (or shorter) length than stops")
+        if self._starts.shape[1:] != self._stops.shape[1:]:
+            raise ValueError("starts and stops must have the same dimensionality (shape[1:])")
+
+        if levellimit is None:
+            levellimit = -1
+
+        out = self
+        if levellimit != 0 and isinstance(self._content, awkward.array.base.AwkwardArray):
+            out = self.copy(content=self._content.structure1d(levellimit - 1))
+
+        while len(out._starts.shape) > 1:
+            last = out._starts.shape[-1]
+            length = functools.reduce(operator.mul, out._starts.shape[:-1], 1)
+            offsets = self.numpy.arange(0, (length + 1)*last, last)
+            outerstarts = offsets[:-1].reshape(out._starts.shape[:-2] + (-1,))
+            outerstops = offsets[1:].reshape(out._stops.shape[:-2] + (-1,))
+            innerstarts = out._starts.reshape(-1)
+            innerstops = out._stops.reshape(-1)
+            out = self.copy(starts=outerstarts, stops=outerstops, content=self.copy(starts=innerstarts, stops=innerstops, content=out._content))
+
+        return out
 
     def _hasjagged(self):
         return True
@@ -1397,28 +1524,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         newstops.reshape(-1)[flatstarts != flatstops] += 1
         return self.copy(starts=newstarts, stops=newstops, content=flatout)
 
-    @awkward.util.bothmethod
-    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
-        if isclassmethod: 
-            cls = cls_or_self
-            if not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
-        else:
-            self = cls_or_self
-            cls = self.__class__
-            if not isinstance(self, JaggedArray) or not all(isinstance(x, JaggedArray) for x in arrays):
-                raise TypeError("cannot concatenate non-JaggedArrays with JaggedArray.concatenate")
-            arrays = (self,) + tuple(arrays)
-
-        for x in arrays:
-            x._valid()
-
-        if axis == 1:
-            return cls._concatenate_axis1(arrays)
-
-        if axis > 1:
-            raise NotImplementedError
-
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
         starts = cls.numpy.concatenate([x._starts for x in arrays])
         stops = cls.numpy.concatenate([x._stops for x in arrays])
         content = cls._util_concatenate([x._content for x in arrays])
@@ -1437,7 +1544,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def _concatenate_axis1(cls, arrays):
-
         if len(arrays) == 0:
             raise ValueError("at least one array must be provided")   # this can only happen in the classmethod case
         if any(len(a) != len(arrays[0]) for a in arrays):
@@ -1448,10 +1554,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         np = cls.numpy
 
         flatarrays = [a.flatten() for a in arrays]
-        n = len(arrays)
-
-        if any(not isinstance(a, np.ndarray) for a in flatarrays):
-            raise NotImplementedError
+        n_arrays = len(arrays)
 
         # the first step is to get the starts and stops for the stacked structure
         counts = np.vstack([a.counts for a in arrays])
@@ -1459,27 +1562,58 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         offsets = cls.counts2offsets(flat_counts)
         starts, stops = offsets[:-1], offsets[1:]
 
-        # find most general type with a tentative sum which implements the right type-promotion,
-        # except for booleans which would get promoted to integers when summing
-        dtype = np.dtype(sum([x[0] for x in flatarrays if len(x) != 0]), False)
-        allbools = not np.any([a.dtype != np.dtype(bool) for a in flatarrays])
-        dtype = np.dtype(bool) if allbools else dtype
-
         n_content = sum([len(a) for a in flatarrays])
+        content_type = type(flatarrays[0])
 
-        # use masks for each of the arrays so we can fill the stacked content array at the right indices
-        content = np.zeros(n_content, dtype=dtype)
-        for i in range(n):
-            working_array = np.zeros(n_content+1, dtype=cls.INDEXTYPE)
-            starts_i = starts[i::n]
-            stops_i = stops[i::n]
+        # get masks for each of the arrays so we can fill the stacked content array at the right indices
+        def get_mask(array_index):
+            working_array = np.zeros(n_content + 1, dtype=cls.INDEXTYPE)
+            starts_i = starts[i::n_arrays]
+            stops_i = stops[i::n_arrays]
             not_empty = starts_i != stops_i
             working_array[starts_i[not_empty]] += 1
             working_array[stops_i[not_empty]] -= 1
             mask = np.array(np.cumsum(working_array)[:-1], dtype=cls.MASKTYPE)
-            content[mask] = flatarrays[i]
+            return mask
 
-        return cls(starts[::n], stops[n-1::n], content)
+        # find most general type with a tentative sum which implements the right type-promotion,
+        # except for booleans which would get promoted to integers when summing
+        def get_dtype(arrays):
+            dtype = np.dtype(sum([x[0] for x in arrays if len(x) != 0]), False)
+            allbools = not np.any([a.dtype != np.dtype(bool) for a in arrays])
+            dtype = np.dtype(bool) if allbools else dtype
+            return dtype
+
+        if content_type == np.ndarray:
+            content = np.zeros(n_content, dtype=get_dtype(flatarrays))
+            for i in range(n_arrays):
+                content[get_mask(i)] = flatarrays[i]
+
+        elif issubclass(type(flatarrays[0]), awkward.array.objects.ObjectArray) and isinstance(flatarrays[0]._content, awkward.array.table.Table):
+            tablecontent = OrderedDict()
+            tables = [a._content for a in flatarrays]
+
+            # make sure all tables have the same columns
+            for i in range(len(tables) - 1):
+                if set(tables[i]._contents) != set(tables[i+1]._contents):
+                    raise ValueError("cannot concatenate Tables with different fields")
+
+            # create empty arrays  for each column with the most general dtype
+            for n in tables[0]._contents:
+                dtype = get_dtype([t[n] for t in tables])
+                tablecontent[n] = np.zeros(n_content, dtype=dtype)
+
+            for i in range(n_arrays):
+                mask = get_mask(i)
+                for n in tables[0]._contents:
+                    tablecontent[n][mask] = tables[i][n]
+
+            content = flatarrays[0].copy(content=awkward.array.table.Table(**tablecontent))
+
+        else:
+            raise NotImplementedError("concatenate with axis=1 is not implemented for " + type(arrays[0]).__name__)
+
+        return arrays[0].__class__(starts[::n_arrays], stops[n_arrays-1::n_arrays], content)
 
     @awkward.util.bothmethod
     def zip(isclassmethod, cls_or_self, columns1={}, *columns2, **columns3):
@@ -1596,20 +1730,41 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 table = first.Table.named("tuple", columns1, *columns2)
             return first.JaggedArray(first._starts, first._stops, table)
 
-    def pandas(self):
-        import pandas
-        self._valid()
+    def pad(self, length, maskedwhen=True, clip=False):
+        flatstarts = self._starts.reshape(-1)
 
-        if isinstance(self._content, self.numpy.ndarray):
-            out = pandas.DataFrame(self._content)
+        if clip:
+            almostflat = self._starts.reshape(-1, 1)
+            index = self.numpy.arange(length, dtype=self.INDEXTYPE) + almostflat
+            localindex = index - almostflat
+            index = index.reshape(-1)
+            comparator = self.counts.reshape(-1, 1)
+            offsets = self.numpy.arange(0, length*len(flatstarts) + 1, length, dtype=self.INDEXTYPE)
+
         else:
-            out = self._content.pandas()
+            counts = self.numpy.maximum(self.counts.reshape(-1), length)
+            offsets = self.counts2offsets(counts)
+            parents = self.offsets2parents(offsets)
+            localindex = self.numpy.arange(len(parents), dtype=self.INDEXTYPE) - offsets[:-1][parents]
+            index = localindex + flatstarts[parents]
+            comparator = self.counts.reshape(-1)[parents]
 
-        if isinstance(self._content, JaggedArray):
-            parents = self._content.tojagged(self.parents)._content
-            index = self._content.tojagged(self.index._content)._content
-            out.index = pandas.MultiIndex.from_arrays([parents, index] + out.index.labels[1:])
+        if isinstance(maskedwhen, self.numpy.ma.core.MaskedConstant):
+            if not isinstance(self._content, self.numpy.ndarray):
+                raise TypeError("numpy.ma.masked can only be used if JaggedArray.content is a Numpy array")
+            mask = (localindex >= comparator).reshape(-1)
+        elif maskedwhen:
+            mask = (localindex >= comparator).reshape(-1)
         else:
-            out.index = pandas.MultiIndex.from_arrays([self.parents, self.index._content])
+            mask = (localindex < comparator).reshape(-1)
 
-        return out
+        index[index >= len(self._content)] = -1
+        content = self._content[index]
+
+        starts = offsets[:-1].reshape((-1,) + self._starts.shape[1:])
+        stops = offsets[1:].reshape((-1,) + self._starts.shape[1:])
+
+        if isinstance(maskedwhen, self.numpy.ma.core.MaskedConstant):
+            return self.copy(starts=starts, stops=stops, content=self.numpy.ma.MaskedArray(content, mask))
+        else:
+            return self.copy(starts=starts, stops=stops, content=self.MaskedArray(mask, content, maskedwhen=maskedwhen))
