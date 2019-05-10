@@ -1,5 +1,13 @@
+#!/usr/bin/env python
+
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
+
 import os.path
 
+import pybind11
+
+from setuptools import Extension
+from setuptools.command.build_ext import build_ext
 from setuptools import find_packages
 from setuptools import setup
 
@@ -8,7 +16,7 @@ def get_version():
     exec(open(os.path.join("..", "awkward", "version.py")).read(), g)
     return g["__version__"]
 
-setup(name = "awkward-pybind11",
+setup(name = "awkward-cpp",
       version = get_version(),
       packages = find_packages(exclude = ["tests"]),
       scripts = [],
@@ -25,6 +33,12 @@ setup(name = "awkward-pybind11",
       install_requires = ["awkward==" + get_version(), "pybind11"],
       setup_requires = ["pytest-runner"],
       tests_require = ["pytest"],
+      ext_modules = [Extension("awkward.cpp.array._jagged",
+                               ["awkward/cpp/array/_jagged.cpp"],
+                               include_dirs=[pybind11.get_include(False),
+                                             pybind11.get_include(True)],
+                               language="c++")
+                     ],
       classifiers = [
           "Development Status :: 1 - Planning",
           # "Development Status :: 2 - Pre-Alpha",
