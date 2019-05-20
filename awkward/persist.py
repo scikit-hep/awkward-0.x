@@ -42,6 +42,9 @@ whitelist = [
         ["awkward.persist", "*"],
         ["awkward.arrow", "_ParquetFile", "fromjson"],
         ["uproot_methods.classes.*"],
+        ["uproot.tree._LazyFiles"],
+        ["uproot.tree._LazyTree"],
+        ["uproot.tree._LazyBranch"],
     ]
 
 def frompython(obj):

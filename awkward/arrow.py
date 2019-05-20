@@ -231,7 +231,7 @@ def fromarrow(obj, awkwardlib=None):
             pairs = []
             for i in range(tpe.num_children - 1, -1, -1):
                 pairs.insert(0, (tpe[i].name, popbuffers(tpe[i].type, buffers)))
-            out = awkwardlib.Table.frompairs(pairs)
+            out = awkwardlib.Table.frompairs(pairs, 0)   # FIXME: better rowstart
             mask = buffers.pop()
             if mask is not None:
                 mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
@@ -446,9 +446,8 @@ def toparquet(where, obj, **options):
             writer.close()
 
 class _ParquetFile(object):
-    def __init__(self, file, cache=None, metadata=None, common_metadata=None):
+    def __init__(self, file, metadata=None, common_metadata=None):
         self.file = file
-        self.cache = cache
         self.metadata = metadata
         self.common_metadata = common_metadata
         self._init()
@@ -463,7 +462,6 @@ class _ParquetFile(object):
 
     def __setstate__(self, state):
         self.file = state["file"]
-        self.cache = None
         self.metadata = state["metadata"]
         self.common_metadata = state["common_metadata"]
         self._init()
@@ -477,11 +475,11 @@ class _ParquetFile(object):
 
     @classmethod
     def fromjson(cls, state):
-        return cls(state["file"], cache=None, metadata=state["metadata"], common_metadata=state["common_metadata"])
+        return cls(state["file"], metadata=state["metadata"], common_metadata=state["common_metadata"])
 
 def fromparquet(file, awkwardlib=None, cache=None, persistvirtual=False, metadata=None, common_metadata=None):
     awkwardlib = awkward.util.awkwardlib(awkwardlib)
-    parquetfile = _ParquetFile(file, cache=cache, metadata=metadata, common_metadata=common_metadata)
+    parquetfile = _ParquetFile(file, metadata=metadata, common_metadata=common_metadata)
     columns = parquetfile.type.columns
 
     chunks = []

@@ -414,9 +414,11 @@ def test_arrow_writeparquet2(tmpdir):
     assert len(c.chunks) == 1 and len(d.chunks) == 1
     assert isinstance(c.chunks[0], awkward.Table) and isinstance(d.chunks[0], awkward.Table)
     assert c.chunks[0].columns == d.chunks[0].columns
-    assert isinstance(c.chunks[0]["x"], awkward.BitMaskedArray) and isinstance(d.chunks[0]["x"], awkward.BitMaskedArray)
-    assert c.chunks[0]["x"].boolmask().tolist() == d.chunks[0]["x"].boolmask().tolist()
-    assert isinstance(c.chunks[0]["x"].content, awkward.JaggedArray) and isinstance(d.chunks[0]["x"].content, awkward.JaggedArray)
-    assert isinstance(c.chunks[0]["x"].content.content, awkward.BitMaskedArray) and isinstance(d.chunks[0]["x"].content.content, awkward.BitMaskedArray)
-    assert c.chunks[0]["x"].content.content.boolmask().tolist() == d.chunks[0]["x"].content.content.boolmask().tolist()
-    assert isinstance(c.chunks[0]["x"].content.content.content, numpy.ndarray) and isinstance(d.chunks[0]["x"].content.content.content, numpy.ndarray)
+    cstuff = c.chunks[0]["x"][:]
+    dstuff = d.chunks[0]["x"][:]
+    assert isinstance(cstuff, awkward.BitMaskedArray) and isinstance(dstuff, awkward.BitMaskedArray)
+    assert cstuff.boolmask().tolist() == dstuff.boolmask().tolist()
+    assert isinstance(cstuff.content, awkward.JaggedArray) and isinstance(dstuff.content, awkward.JaggedArray)
+    assert isinstance(cstuff.content.content, awkward.BitMaskedArray) and isinstance(dstuff.content.content, awkward.BitMaskedArray)
+    assert cstuff.content.content.boolmask().tolist() == dstuff.content.content.boolmask().tolist()
+    assert isinstance(cstuff.content.content.content, numpy.ndarray) and isinstance(dstuff.content.content.content, numpy.ndarray)
