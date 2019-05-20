@@ -536,10 +536,17 @@ class Table(awkward.array.base.AwkwardArray):
     def __getitem__(self, where):
         if self._util_isstringslice(where):
             if isinstance(where, awkward.util.string):
-                try:
-                    return self._contents[where][self._index()]
-                except KeyError:
-                    raise ValueError("no column named {0}".format(repr(where)))
+                if self._view is None:
+                    try:
+                        return self._contents[where]
+                    except KeyError:
+                        raise ValueError("no column named {0}".format(repr(where)))
+                else:
+                    index = self._index()
+                    try:
+                        return self._contents[where][index]
+                    except KeyError:
+                        raise ValueError("no column named {0}".format(repr(where)))
             else:
                 contents = OrderedDict()
                 for n in where:
