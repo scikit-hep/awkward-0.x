@@ -259,7 +259,7 @@ class Table(awkward.array.base.AwkwardArray):
         return out
 
     @classmethod
-    def frompairs(cls, pairs, rowstart):
+    def frompairs(cls, pairs, rowstart=0):
         out = cls()
         for n, x in pairs:
             out[n] = x
