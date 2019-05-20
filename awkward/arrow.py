@@ -231,7 +231,7 @@ def fromarrow(obj, awkwardlib=None):
             pairs = []
             for i in range(tpe.num_children - 1, -1, -1):
                 pairs.insert(0, (tpe[i].name, popbuffers(tpe[i].type, buffers)))
-            out = awkwardlib.Table.frompairs(pairs)
+            out = awkwardlib.Table.frompairs(pairs, 0)   # FIXME: better rowstart
             mask = buffers.pop()
             if mask is not None:
                 mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)

@@ -2,6 +2,7 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
+import numbers
 import re
 import types
 from collections import OrderedDict
@@ -9,6 +10,8 @@ try:
     from collections.abc import Iterable
 except ImportError:
     from collections import Iterable
+
+import numpy
 
 import awkward.array.base
 import awkward.type
@@ -180,8 +183,8 @@ class Table(awkward.array.base.AwkwardArray):
     def __init__(self, columns1={}, *columns2, **columns3):
         self._view = None
         self._base = None
-        self._rowstart = None
         self.rowname = "Row"
+        self.rowstart = None
         self._contents = OrderedDict()
 
         seen = set()
@@ -238,6 +241,13 @@ class Table(awkward.array.base.AwkwardArray):
             return self._base.rowstart
         else:
             return 0
+
+    @rowstart.setter
+    def rowstart(self, value):
+        if self.check_prop_valid:
+            if value is not None and not isinstance(value, (numbers.Integral, numpy.integer)):
+                raise TypeError("rowstart must be None or an integer")
+        self._rowstart = value
 
     @classmethod
     def fromrec(cls, recarray):
