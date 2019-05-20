@@ -409,6 +409,8 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def _util_isstringslice(cls, where):
         if isinstance(where, awkward.util.string):
             return True
+        elif isinstance(where, bytes):
+            raise TypeError("column selection must be str, not bytes, in Python 3")
         elif isinstance(where, tuple):
             return False
         elif isinstance(where, (cls.numpy.ndarray, AwkwardArray)) and issubclass(where.dtype.type, (numpy.str, numpy.str_)):
