@@ -241,9 +241,9 @@ def fromarrow(obj, awkwardlib=None):
 
         elif isinstance(tpe, pyarrow.lib.ListType):
             mask = buffers.pop(0)
-            offsets = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_INDEXTYPE)
-            content = popbuffers(tpe.value_type, buffers, length)
-            out = awkwardlib.JaggedArray.fromoffsets(offsets, content[:offsets[-1]])
+            offsets = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_INDEXTYPE)[:length + 1]
+            content = popbuffers(tpe.value_type, buffers, offsets[-1])
+            out = awkwardlib.JaggedArray.fromoffsets(offsets, content)
             if mask is not None:
                 mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
                 return awkwardlib.BitMaskedArray(mask, out, maskedwhen=False, lsborder=True)
@@ -252,12 +252,16 @@ def fromarrow(obj, awkwardlib=None):
 
         elif isinstance(tpe, pyarrow.lib.UnionType) and tpe.mode == "sparse":
             mask = buffers.pop(0)
-            tags = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_TAGTYPE)
+            tags = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_TAGTYPE)[:length]
             assert buffers.pop(0) is None
+            index = awkwardlib.numpy.arange(len(tags), dtype=ARROW_INDEXTYPE)
             contents = []
             for i in range(tpe.num_children):
-                contents.append(popbuffers(tpe[i].type, buffers, length))
-            index = awkwardlib.numpy.arange(len(tags), dtype=ARROW_INDEXTYPE)
+                try:
+                    sublength = index[tags == i][-1] + 1
+                except IndexError:
+                    sublength = 0
+                contents.append(popbuffers(tpe[i].type, buffers, sublength))
             for i in range(len(contents)):
                 these = index[tags == i]
                 if len(these) == 0:
@@ -273,11 +277,15 @@ def fromarrow(obj, awkwardlib=None):
 
         elif isinstance(tpe, pyarrow.lib.UnionType) and tpe.mode == "dense":
             mask = buffers.pop(0)
-            tags = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_TAGTYPE)
-            index = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_INDEXTYPE)
+            tags = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_TAGTYPE)[:length]
+            index = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_INDEXTYPE)[:length]
             contents = []
             for i in range(tpe.num_children):
-                contents.append(popbuffers(tpe[i].type, buffers, length))
+                try:
+                    sublength = index[tags == i].max() + 1
+                except ValueError:
+                    sublength = 0
+                contents.append(popbuffers(tpe[i].type, buffers, sublength))
             for i in range(len(contents)):
                 these = index[tags == i]
                 if len(these) == 0:
@@ -293,8 +301,8 @@ def fromarrow(obj, awkwardlib=None):
 
         elif tpe == pyarrow.string():
             mask = buffers.pop(0)
-            offsets = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_INDEXTYPE)
-            content = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_CHARTYPE)
+            offsets = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_INDEXTYPE)[:length + 1]
+            content = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_CHARTYPE)[:offsets[-1]]
             out = awkwardlib.StringArray.fromoffsets(offsets, content[:offsets[-1]], encoding="utf-8")
             if mask is not None:
                 mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
@@ -304,8 +312,8 @@ def fromarrow(obj, awkwardlib=None):
 
         elif tpe == pyarrow.binary():
             mask = buffers.pop(0)
-            offsets = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_INDEXTYPE)
-            content = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_CHARTYPE)
+            offsets = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_INDEXTYPE)[:length + 1]
+            content = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_CHARTYPE)[:offsets[-1]]
             out = awkwardlib.StringArray.fromoffsets(offsets, content[:offsets[-1]], encoding=None)
             if mask is not None:
                 mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
@@ -316,7 +324,7 @@ def fromarrow(obj, awkwardlib=None):
         elif tpe == pyarrow.bool_():
             mask = buffers.pop(0)
             out = awkwardlib.numpy.unpackbits(awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_CHARTYPE)).view(awkwardlib.MaskedArray.BOOLTYPE)
-            out = out.reshape(-1, 8)[:,::-1].reshape(-1)    # lsborder=True
+            out = out.reshape(-1, 8)[:,::-1].reshape(-1)[:length]    # lsborder=True
             if mask is not None:
                 mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
                 return awkwardlib.BitMaskedArray(mask, out, maskedwhen=False, lsborder=True)
@@ -325,7 +333,7 @@ def fromarrow(obj, awkwardlib=None):
 
         elif isinstance(tpe, pyarrow.lib.DataType):
             mask = buffers.pop(0)
-            out = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=tpe.to_pandas_dtype())
+            out = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=tpe.to_pandas_dtype())[:length]
             if mask is not None:
                 mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
                 return awkwardlib.BitMaskedArray(mask, out, maskedwhen=False, lsborder=True)
@@ -337,7 +345,7 @@ def fromarrow(obj, awkwardlib=None):
 
     if isinstance(obj, pyarrow.lib.Array):
         buffers = obj.buffers()
-        out = popbuffers(obj.type, buffers, len(obj))[:len(obj)]
+        out = popbuffers(obj.type, buffers, len(obj))
         assert len(buffers) == 0
         return out
 
