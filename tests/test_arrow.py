@@ -356,6 +356,22 @@ class Test(unittest.TestCase):
             table2 = table.add_column(1, pyarrow.column(pyarrow.field("y", y.type, False), numpy.array([1.1, 2.2, 3.3])))
             assert awkward.arrow.fromarrow(table2).tolist() == [{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}]
 
+    def test_arrow_trailing_zero(self):
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8], [], [9.9]])
+        pa_table = awkward.toarrow(awkward.Table(a=a))
+
+        batches = pa_table.to_batches()
+        sink = pyarrow.BufferOutputStream()
+        writer = pyarrow.RecordBatchStreamWriter(sink, batches[0].schema)
+        writer.write_batch(batches[0])
+        writer.close()
+
+        buf = sink.getvalue()
+        reader = pyarrow.ipc.open_stream(buf)
+        for batch in reader:
+            b = awkward.fromarrow(batch)
+            assert a.tolist() == b["a"].tolist()
+
     # def test_arrow_writeparquet(self):
     #     if pyarrow is None:
     #         pytest.skip("unable to import pyarrow")
