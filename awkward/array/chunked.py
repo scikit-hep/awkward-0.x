@@ -480,8 +480,9 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     def __setitem__(self, where, what):
         if isinstance(what, ChunkedArray) and self._aligned(what):
-            for mine, theirs in zip(self._chunks, what._chunks):
+            for i, (mine, theirs) in enumerate(zip(self._chunks, what._chunks)):
                 mine[where] = theirs
+                self._types[i] = mine.type
         else:
             raise ValueError("only ChunkedArrays with the same chunk sizes can be assigned to columns of a ChunkedArray")
 
