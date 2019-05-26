@@ -190,6 +190,17 @@ class Type(object):
         return not self.__eq__(other)
 
     @staticmethod
+    def _eq2(one, two, seen, ignoremask=False):
+        if isinstance(one, Type):
+            return one._eq(two, seen, ignoremask=ignoremask)
+        elif one == two:
+            return True
+        elif callable(one) and callable(two):
+            return True
+        else:
+            return False
+
+    @staticmethod
     def _finaltype(x):
         if isinstance(x, type) and issubclass(x, (numbers.Number, numpy.generic)):
             return numpy.dtype(x)
@@ -315,10 +326,7 @@ class ArrayType(Type):
         else:
             seen.add(id(self))
             if isinstance(other, ArrayType) and self._takes == other._takes:
-                if isinstance(self._to, Type):
-                    return self._to._eq(other._to, seen, ignoremask=ignoremask)
-                else:
-                    return self._to == other._to
+                return self._eq2(self._to, other._to, seen, ignoremask=ignoremask)
             else:
                 return False
 
@@ -410,12 +418,8 @@ class TableType(Type):
             seen.add(id(self))
             if isinstance(other, TableType) and sorted(self._fields) == sorted(other._fields):
                 for n in self._fields:
-                    if isinstance(self._fields[n], Type):
-                        if not self._fields[n]._eq(other._fields[n], seen, ignoremask=ignoremask):
-                            return False
-                    else:
-                        if not self._fields[n] == other._fields[n]:
-                            return False
+                    if not self._eq2(self._fields[n], other._fields[n], seen, ignoremask=ignoremask):
+                        return False
                 else:
                     return True    # nothing failed in the loop over fields
             else:
@@ -491,12 +495,8 @@ class UnionType(Type):
             seen.add(id(self))
             if isinstance(other, UnionType) and len(self._possibilities) == len(other._possibilities):
                 for x, y in zip(sorted(self._possibilities), sorted(self._possibilities)):
-                    if isinstance(x, Type):
-                        if not x._eq(y, seen, ignoremask=ignoremask):
-                            return False
-                    else:
-                        if not x == y:
-                            return False
+                    if not self._eq2(x, y, seen, ignoremask=ignoremask):
+                        return False
                 else:
                     return True    # nothing failed in the loop over possibilities
             else:
@@ -571,16 +571,10 @@ class OptionType(Type):
         else:
             seen.add(id(self))
             if isinstance(other, OptionType):
-                if isinstance(self._type, Type) and self._type._eq(other._type, seen, ignoremask=ignoremask):
+                if self._eq2(self._type, other._type, seen, ignoremask=ignoremask):
                     return True
-                elif not isinstance(self._type, Type) and self._type == other._type:
-                    return True
-
             if ignoremask:    # applied asymmetrically; only the left can ignore mask
-                if isinstance(self._type, Type):
-                    return self._type._eq(other, seen, ignoremask=ignoremask)
-                else:
-                    return self._type == other
+                return self._eq2(self._type, other, seen, ignoremask=ignoremask)
             else:
                 return False
 
