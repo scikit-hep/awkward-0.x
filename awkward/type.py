@@ -298,8 +298,10 @@ class ArrayType(Type):
             return False
         elif isinstance(self._to, numpy.dtype):
             return name in self._to.names
-        else:
+        elif isinstance(self._to, Type):
             return self._to._hascolumn(name, seen)
+        else:
+            return False
 
     def _subrepr(self, labeled, seen):
         if isinstance(self._to, Type):
@@ -449,7 +451,13 @@ class UnionType(Type):
         if id(self) in seen:
             return False
         seen.add(id(self))
-        return any(x._to._hascolumn(name, seen) for x in self._possibilities)
+        for x in self._possibilities:
+            if isinstance(x, numpy.dtype) and x.names is not None and name in x.names:
+                return True
+            elif isinstance(x, Type) and x._hascolumn(name, seen):
+                return True
+        else:
+            return False
 
     def __len__(self):
         return len(self._possibilities)
