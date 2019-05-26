@@ -291,13 +291,6 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         self._valid()
 
         if self._util_isstringslice(where):
-            if isinstance(where, awkward.util.string):
-                if not self.type.hascolumn(where):
-                    raise ValueError("no column named {0}".format(repr(where)))
-            else:
-                for x in where:
-                    if not self.type.hascolumn(x):
-                        raise ValueError("no column named {0}".format(repr(x)))
             chunks = []
             counts = []
             for chunk in self._chunks:
@@ -482,7 +475,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         if isinstance(what, ChunkedArray) and self._aligned(what):
             for i, (mine, theirs) in enumerate(zip(self._chunks, what._chunks)):
                 mine[where] = theirs
-                self._types[i] = mine.type
+                self._types[i] = mine.type.to
         else:
             raise ValueError("only ChunkedArrays with the same chunk sizes can be assigned to columns of a ChunkedArray")
 
