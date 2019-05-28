@@ -42,7 +42,63 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
-    def test_cpp_offsets2parents(self):
+    def test_cpp_offsets2parents_int64_pos(self):
         offsets = numpy.array([0, 2, 4, 4, 7], dtype=numpy.int64)
         parents = awkward_cpp.JaggedArray.offsets2parents(offsets)
         assert parents.tolist() == [0, 0, 1, 1, 3, 3, 3]
+
+    def test_cpp_offsets2parents_int32_pos(self):
+        offsets = numpy.array([0, 2, 4, 4, 7], dtype=numpy.int32)
+        parents = awkward_cpp.JaggedArray.offsets2parents(offsets)
+        assert parents.tolist() == [0, 0, 1, 1, 3, 3, 3]
+
+    def test_cpp_offsets2parents_int64_neg(self):
+        offsets = numpy.array([], dtype=numpy.int64)
+        thrown = False
+        try:
+            parents = awkward_cpp.JaggedArray.offsets2parents(offsets)
+        except ValueError:
+            thrown = True
+        assert thrown
+
+    def test_cpp_offsets2parents_int32_neg(self):
+        offsets = numpy.array([], dtype=numpy.int32)
+        thrown = False
+        try:
+            parents = awkward_cpp.JaggedArray.offsets2parents(offsets)
+        except ValueError:
+            thrown = True
+        assert thrown
+
+    def test_cpp_counts2offsets_int64_pos(self):
+        counts = numpy.array([4, 0, 3, 4, 1], dtype=numpy.int64)
+        offsets = awkward_cpp.JaggedArray.counts2offsets(counts)
+        assert offsets.tolist() == [0, 4, 4, 7, 11, 12]
+
+    def test_cpp_counts2offsets_int32_pos(self):
+        counts = numpy.array([4, 0, 3, 4, 1], dtype=numpy.int32)
+        offsets = awkward_cpp.JaggedArray.counts2offsets(counts)
+        assert offsets.tolist() == [0, 4, 4, 7, 11, 12]
+
+    def test_cpp_startsstops2parents_int64_pos(self):
+        starts = numpy.array([0, 4, 5, 11], dtype=numpy.int64)
+        stops = numpy.array([1, 6, 7, 12], dtype=numpy.int64)
+        parents = awkward_cpp.JaggedArray.startsstops2parents(starts, stops)
+        assert parents.tolist() == [0, -1, -1, -1, 1, 2, 2, -1, -1, -1, 3, -1]
+
+    def test_cpp_startsstops2parents_int32_pos(self):
+        starts = numpy.array([0, 4, 5, 11], dtype=numpy.int32)
+        stops = numpy.array([1, 6, 7, 12], dtype=numpy.int32)
+        parents = awkward_cpp.JaggedArray.startsstops2parents(starts, stops)
+        assert parents.tolist() == [0, -1, -1, -1, 1, 2, 2, -1, -1, -1, 3, -1]
+
+    def test_cpp_startsstops2parents_neg(self):
+        starts = numpy.array([0, 4, 5, 11], dtype=numpy.int64)
+        stops = numpy.array([1, 6, 7, 12], dtype=numpy.int32)
+        thrown = False
+        try:
+            parents = awkward_cpp.JaggedArray.startsstops2parents(starts, stops)
+        except ValueError:
+            thrown = True
+        assert thrown
+    
