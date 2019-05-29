@@ -5,7 +5,7 @@
 import os.path
 import pybind11
 import sys
-
+import setuptools
 from setuptools import Extension
 from setuptools.command.build_ext import build_ext
 from setuptools import find_packages
@@ -16,19 +16,35 @@ def get_version():
     exec(open(os.path.join("..", "awkward", "version.py")).read(), g)
     return g["__version__"]
 
+#################################################################################
 # The following code is copy-pasted from pybind/python_example/setup.py on github:
 
 class get_pybind_include(object):
     """Helper class to determine the pybind11 include path
+
     The purpose of this class is to postpone importing pybind11
     until it is actually installed, so that the ``get_include()``
     method can be invoked. """
+    
     def __init__(self, user=False):
         self.user = user
 
     def __str__(self):
         import pybind11
         return pybind11.get_include(self.user)
+
+ext_modules = [
+    Extension(
+        'awkward.cpp.array._jagged',
+        [os.path.join("awkward", "cpp", "array", "_jagged.cpp")],
+        include_dirs=[
+            # Path to pybind11 headers
+            get_pybind_include(),
+            get_pybind_include(user=True)
+        ],
+        language='c++'
+    ),
+]
 
 def has_flag(compiler, flagname):
     """Return a boolean indicating whether a flag name is supported on
@@ -80,8 +96,8 @@ class BuildExt(build_ext):
             ext.extra_compile_args = opts
         build_ext.build_extensions(self)
 
-# end copy-pasted code
-
+############################# end copy-pasted code ##############################
+        
 setup(name = "awkward-cpp",
       version = get_version(),
       packages = find_packages(exclude = ["tests"]),
@@ -96,15 +112,11 @@ setup(name = "awkward-cpp",
       download_url = "https://github.com/scikit-hep/awkward-array/releases",
       license = "BSD 3-clause",
       test_suite = "tests",
-      install_requires = ["awkward==" + get_version(), "pybind11"],
+      install_requires = ["awkward==" + get_version(), "pybind11>=2.2"],
       setup_requires = ["pytest-runner"],
       tests_require = ["pytest"],
-      ext_modules = [Extension("awkward.cpp.array._jagged",
-                               [os.path.join("awkward", "cpp", "array", "_jagged.cpp")],
-                               include_dirs=[pybind11.get_include(False),
-                                             pybind11.get_include(True)],
-                               language="c++")
-                     ],
+      ext_modules = ext_modules,
+      cmdclass = {"build_ext": BuildExt},
       classifiers = [
           "Development Status :: 1 - Planning",
           # "Development Status :: 2 - Pre-Alpha",
