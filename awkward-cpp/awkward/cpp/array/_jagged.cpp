@@ -1,8 +1,8 @@
-#include <cinttypes>
+
 #include <stdexcept>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-
+#include <cinttypes>
 namespace py = pybind11;
 
 py::array_t<std::int64_t> offsets2parents_int64(py::array_t<std::int64_t> offsets) {
@@ -12,7 +12,7 @@ py::array_t<std::int64_t> offsets2parents_int64(py::array_t<std::int64_t> offset
 	}
 	auto offsets_ptr = (std::int64_t*)offsets_info.ptr;
 
-	size_t parents_length = offsets_ptr[offsets_info.size - 1];
+	size_t parents_length = (size_t)offsets_ptr[offsets_info.size - 1];
 	auto parents = py::array_t<std::int64_t>(parents_length);
 	py::buffer_info parents_info = parents.request();
 
@@ -67,7 +67,7 @@ py::array_t<std::int64_t> counts2offsets_int64(py::array_t<std::int64_t> counts)
 	auto offsets_ptr = (std::int64_t*)offsets_info.ptr;
 
 	offsets_ptr[0] = 0;
-	for (size_t i = 0; i < (size_t)count_info.size; i++) {
+	for (size_t i = 0; i < (size_t)counts_info.size; i++) {
 		offsets_ptr[i + 1] = offsets_ptr[i] + counts_ptr[i];
 	}
 	return offsets;
@@ -83,7 +83,7 @@ py::array_t<std::int32_t> counts2offsets_int32(py::array_t<std::int32_t> counts)
 	auto offsets_ptr = (std::int32_t*)offsets_info.ptr;
 
 	offsets_ptr[0] = 0;
-	for (size_t i = 0; i < (size_t)count_info.size; i++) {
+	for (size_t i = 0; i < (size_t)counts_info.size; i++) {
 		offsets_ptr[i + 1] = offsets_ptr[i] + counts_ptr[i];
 	}
 	return offsets;
@@ -103,7 +103,7 @@ py::array_t<std::int64_t> startsstops2parents_int64(py::array_t<std::int64_t> st
 	else {
 		for (size_t i = 0; i < (size_t)stops_info.size; i++) {
 			if ((size_t)stops_ptr[i] > max) {
-				max = stops_ptr[i];
+				max = (size_t)stops_ptr[i];
 			}
 		}
 	}
@@ -114,7 +114,7 @@ py::array_t<std::int64_t> startsstops2parents_int64(py::array_t<std::int64_t> st
 		parents_ptr[i] = -1;
 	}
 
-	for (size_t i = 0; i < start_info.size; i++) {
+	for (size_t i = 0; i < starts_info.size; i++) {
 		for (size_t j = (size_t)starts_ptr[i]; i < (size_t)stops_ptr[i]; i++) {
 			parents_ptr[j] = i;
 		}
@@ -148,7 +148,7 @@ py::array_t<std::int32_t> startsstops2parents_int32(py::array_t<std::int32_t> st
 		parents_ptr[i] = -1;
 	}
 
-	for (size_t i = 0; i < start_info.size; i++) {
+	for (size_t i = 0; i < starts_info.size; i++) {
 		for (size_t j = (size_t)starts_ptr[i]; i < (size_t)stops_ptr[i]; i++) {
 			parents_ptr[j] = i;
 		}
@@ -157,7 +157,7 @@ py::array_t<std::int32_t> startsstops2parents_int32(py::array_t<std::int32_t> st
 	return parents;
 }
 
-// this one probably has a lot of errors so I won't make the *_int32 version until this works
+/*/ this one probably has a lot of errors so I won't make the *_int32 version until this works
 py::tuple() parents2startsstops_int64(py::array_t<std::int64_t> parents, size_t length) {
 	py::buffer_info parents_info = parents.request();
 	auto parents_ptr = (std::int64_t*)parents_info(ptr);
@@ -193,7 +193,7 @@ py::tuple() parents2startsstops_int64(py::array_t<std::int64_t> parents, size_t 
 	temp.append(stops);
 	py::tuple out(temp);
 	return out;
-}
+}*/
 
 PYBIND11_MODULE(_jagged, m) {
 	m.def("offsets2parents_int64", &offsets2parents_int64, "");
@@ -202,5 +202,5 @@ PYBIND11_MODULE(_jagged, m) {
 	m.def("counts2offsets_int32", &counts2offsets_int32, "");
 	m.def("startsstops2parents_int64", &startsstops2parents_int64, "");
 	m.def("startsstops2parents_int32", &startsstops2parents_int32, "");
-	m.def("parents2startsstops_int64", &parents2startsstops_int64, "");
+	//m.def("parents2startsstops_int64", &parents2startsstops_int64, "");
 }
