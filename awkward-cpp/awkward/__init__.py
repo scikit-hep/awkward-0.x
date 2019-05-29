@@ -1,1 +1,1 @@
-#../../awkward/__init__.py
+../../awkward/__init__.py
