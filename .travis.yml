@@ -34,6 +34,7 @@ addons:
   apt:
     packages:
       - python-setuptools
+      - build-essential
 
 script:
   pytest -v tests
