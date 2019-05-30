@@ -100,7 +100,8 @@ py::array_t<std::int64_t> startsstops2parents_int64(py::array_t<std::int64_t> st
         max = 0;
     }
     else {
-        for (size_t i = 0; i < (size_t)stops_info.size; i++) {
+        max = (size_t)stops_ptr[0];
+        for (size_t i = 1; i < (size_t)stops_info.size; i++) {
             if ((size_t)stops_ptr[i] > max) {
                 max = (size_t)stops_ptr[i];
             }
@@ -114,7 +115,7 @@ py::array_t<std::int64_t> startsstops2parents_int64(py::array_t<std::int64_t> st
     }
     
     for (size_t i = 0; i < starts_info.size; i++) {
-        for (size_t j = (size_t)starts_ptr[i]; i < (size_t)stops_ptr[i]; i++) {
+        for (size_t j = (size_t)starts_ptr[i]; j < (size_t)stops_ptr[i]; j++) {
             parents_ptr[j] = i;
         }
     }
@@ -134,9 +135,10 @@ py::array_t<std::int32_t> startsstops2parents_int32(py::array_t<std::int32_t> st
         max = 0;
     }
     else {
-        for (size_t i = 0; i < (size_t)stops_info.size; i++) {
+        max = (size_t)stops_ptr[0];
+        for (size_t i = 1; i < (size_t)stops_info.size; i++) {
             if ((size_t)stops_ptr[i] > max) {
-                max = stops_ptr[i];
+                max = (size_t)stops_ptr[i];
             }
         }
     }
@@ -148,7 +150,7 @@ py::array_t<std::int32_t> startsstops2parents_int32(py::array_t<std::int32_t> st
     }
     
     for (size_t i = 0; i < starts_info.size; i++) {
-        for (size_t j = (size_t)starts_ptr[i]; i < (size_t)stops_ptr[i]; i++) {
+        for (size_t j = (size_t)starts_ptr[i]; j < (size_t)stops_ptr[i]; j++) {
             parents_ptr[j] = i;
         }
     }

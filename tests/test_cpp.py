@@ -81,16 +81,16 @@ class Test(unittest.TestCase):
         assert offsets.tolist() == [0, 4, 4, 7, 11, 12]
 
     def test_cpp_startsstops2parents_int64_pos(self):
-        starts = numpy.array([0, 4, 5, 11], dtype=numpy.int64)
-        stops = numpy.array([1, 6, 7, 12], dtype=numpy.int64)
+        starts = numpy.array([0, 4, 5, 9], dtype=numpy.int64)
+        stops = numpy.array([1, 6, 7, 10], dtype=numpy.int64)
         parents = awkward_cpp.JaggedArray.startsstops2parents(starts, stops)
-        assert parents.tolist() == [0, -1, -1, -1, 1, 2, 2, -1, -1, -1, 3, -1]
+        assert parents.tolist() == [0, -1, -1, -1, 1, 2, 2, -1, -1, 3]
 
     def test_cpp_startsstops2parents_int32_pos(self):
-        starts = numpy.array([0, 4, 5, 11], dtype=numpy.int32)
-        stops = numpy.array([1, 6, 7, 12], dtype=numpy.int32)
+        starts = numpy.array([0, 4, 5, 9], dtype=numpy.int32)
+        stops = numpy.array([1, 6, 7, 10], dtype=numpy.int32)
         parents = awkward_cpp.JaggedArray.startsstops2parents(starts, stops)
-        assert parents.tolist() == [0, -1, -1, -1, 1, 2, 2, -1, -1, -1, 3, -1]
+        assert parents.tolist() == [0, -1, -1, -1, 1, 2, 2, -1, -1, 3]
 
     def test_cpp_startsstops2parents_neg(self):
         starts = numpy.array([0, 4, 5, 11], dtype=numpy.int64)
