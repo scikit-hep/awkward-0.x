@@ -56,7 +56,7 @@ install:
   - ln -s ../awkward-cpp/awkward/cpp awkward/cpp
   - python setup.py install
   - cd awkward-cpp
-  - python setup.py install
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then python setup.py install ; fi
   - cd ..
 
 notifications:
