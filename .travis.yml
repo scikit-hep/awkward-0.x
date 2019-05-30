@@ -52,10 +52,11 @@ install:
   - python -c 'import awkward; print(awkward.__version__)'
   - export AWKWARD_DEPLOYMENT=base
   - pip install --upgrade pyOpenSSL     # for deployment
-  - pip install pybind11
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pybind11 ; fi
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then ln -s ../awkward-cpp/awkward/cpp awkward/cpp ; fi
   - python setup.py install
   - cd awkward-cpp
-  - python setup.py install
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then python setup.py install ; fi
   - cd ..
 
 notifications:
