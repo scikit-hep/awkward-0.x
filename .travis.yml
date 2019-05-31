@@ -35,6 +35,7 @@ addons:
     packages:
       - python-setuptools
       - g++
+      - tree
 
 script:
   pytest -rfesxX -v tests
@@ -50,7 +51,7 @@ install:
   - python -c 'import awkward; print(awkward.__version__)'
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install h5py pyarrow ; fi
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install numba ; ln -s ../awkward-numba/awkward/numba awkward/numba ; fi
-  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pybind11 ; cd awkward-cpp ; python setup.py build ; cd .. ; ls -l awkward-cpp/build/ ; ln -s ../awkward-cpp/build/lib.*/awkward/cpp awkward/cpp ; ls -l awkward/cpp ; python -c 'print("TESTING awkward-cpp"); import awkward.cpp; print(awkward.cpp.JaggedArray)' ; fi
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pybind11 ; cd awkward-cpp ; python setup.py build ; cd .. ; tree awkward-cpp/build/ ; ln -s ../awkward-cpp/build/lib.*/awkward/cpp awkward/cpp ; ls -l awkward/cpp ; python -c 'print("TESTING awkward-cpp"); import awkward.cpp; print(awkward.cpp.JaggedArray)' ; fi
   - export AWKWARD_DEPLOYMENT=base
   - pip install --upgrade pyOpenSSL     # for deployment
 
