@@ -114,7 +114,7 @@ py::array_t<std::int64_t> startsstops2parents_int64(py::array_t<std::int64_t> st
         parents_ptr[i] = -1;
     }
     
-    for (size_t i = 0; i < starts_info.size; i++) {
+    for (size_t i = 0; i < (size_t)starts_info.size; i++) {
         for (size_t j = (size_t)starts_ptr[i]; j < (size_t)stops_ptr[i]; j++) {
             parents_ptr[j] = i;
         }
@@ -149,7 +149,7 @@ py::array_t<std::int32_t> startsstops2parents_int32(py::array_t<std::int32_t> st
         parents_ptr[i] = -1;
     }
     
-    for (size_t i = 0; i < starts_info.size; i++) {
+    for (size_t i = 0; i < (size_t)starts_info.size; i++) {
         for (size_t j = (size_t)starts_ptr[i]; j < (size_t)stops_ptr[i]; j++) {
             parents_ptr[j] = i;
         }
@@ -242,6 +242,134 @@ py::tuple parents2startsstops_int32(py::array_t<std::int32_t> parents, size_t le
     return out;
 }
 
+py::tuple uniques2offsetsparents_int64(py::array_t<std::int64_t> uniques) {
+    py::buffer_info uniques_info = uniques.request();
+    auto uniques_ptr = (std::int64_t*)uniques_info.ptr;
+
+    size_t tempLength;
+    if (uniques_info.size < 1) {
+        tempLength = 0;
+    }
+    else {
+        tempLength = uniques_info.size - 1;
+    }
+    auto tempArray = py::array_t<bool>(tempLength);
+    py::buffer_info tempArray_info = tempArray.request();
+    auto tempArray_ptr = (bool*)tempArray_info.ptr;
+
+    size_t countLength = 0;
+    for (size_t i = 0; i < (size_t)uniques_info.size - 1; i++) {
+        if (uniques_ptr[i] != uniques_ptr[i + 1]) {
+            tempArray_ptr[i] = true;
+            countLength++;
+        }
+        else {
+            tempArray_ptr[i] = false;
+        }
+    }
+    auto changes = py::array_t<int64_t>(countLength);
+    py::buffer_info changes_info = changes.request();
+    auto changes_ptr = (std::int64_t*)changes_info.ptr;
+    size_t index = 0;
+    for (size_t i = 0; i < (size_t)tempArray_info.size; i++) {
+        if (tempArray_ptr[i]) {
+            changes_ptr[index++] = (std::int64_t)(i + 1);
+        }
+    }
+
+    auto offsets = py::array_t<int64_t>(changes_info.size + 2);
+    py::buffer_info offsets_info = offsets.request();
+    auto offsets_ptr = (std::int64_t*)offsets_info.ptr;
+    offsets_ptr[0] = 0;
+    offsets_ptr[offsets_info.size - 1] = (std::int64_t)uniques_info.size;
+    for (size_t i = 1; i < (size_t)offsets_info.size - 1; i++) {
+        offsets_ptr[i] = changes_ptr[i - 1];
+    }
+
+    auto parents = py::array_t<int64_t>(uniques_info.size);
+    py::buffer_info parents_info = parents.request();
+    auto parents_ptr = (std::int64_t*)parents_info.ptr;
+    for (size_t i = 0; i < (size_t)parents_info.size; i++) {
+        parents_ptr[i] = 0;
+    }
+    for (size_t i = 0; i < (size_t)changes_info.size; i++) {
+        parents_ptr[(size_t)changes_ptr[i]] = 1;
+    }
+    for (size_t i = 1; i < (size_t)parents_info.size; i++) {
+        parents_ptr[i] += parents_ptr[i - 1];
+    }
+
+    py::list temp;
+    temp.append(offsets);
+    temp.append(parents);
+    py::tuple out(temp);
+    return out;
+}
+
+py::tuple uniques2offsetsparents_int32(py::array_t<std::int32_t> uniques) {
+    py::buffer_info uniques_info = uniques.request();
+    auto uniques_ptr = (std::int32_t*)uniques_info.ptr;
+
+    size_t tempLength;
+    if (uniques_info.size < 1) {
+        tempLength = 0;
+    }
+    else {
+        tempLength = uniques_info.size - 1;
+    }
+    auto tempArray = py::array_t<bool>(tempLength);
+    py::buffer_info tempArray_info = tempArray.request();
+    auto tempArray_ptr = (bool*)tempArray_info.ptr;
+
+    size_t countLength = 0;
+    for (size_t i = 0; i < (size_t)uniques_info.size - 1; i++) {
+        if (uniques_ptr[i] != uniques_ptr[i + 1]) {
+            tempArray_ptr[i] = true;
+            countLength++;
+        }
+        else {
+            tempArray_ptr[i] = false;
+        }
+    }
+    auto changes = py::array_t<int32_t>(countLength);
+    py::buffer_info changes_info = changes.request();
+    auto changes_ptr = (std::int32_t*)changes_info.ptr;
+    size_t index = 0;
+    for (size_t i = 0; i < (size_t)tempArray_info.size; i++) {
+        if (tempArray_ptr[i]) {
+            changes_ptr[index++] = (std::int32_t)(i + 1);
+        }
+    }
+
+    auto offsets = py::array_t<int32_t>(changes_info.size + 2);
+    py::buffer_info offsets_info = offsets.request();
+    auto offsets_ptr = (std::int32_t*)offsets_info.ptr;
+    offsets_ptr[0] = 0;
+    offsets_ptr[offsets_info.size - 1] = (std::int32_t)uniques_info.size;
+    for (size_t i = 1; i < (size_t)offsets_info.size - 1; i++) {
+        offsets_ptr[i] = changes_ptr[i - 1];
+    }
+
+    auto parents = py::array_t<int32_t>(uniques_info.size);
+    py::buffer_info parents_info = parents.request();
+    auto parents_ptr = (std::int32_t*)parents_info.ptr;
+    for (size_t i = 0; i < (size_t)parents_info.size; i++) {
+        parents_ptr[i] = 0;
+    }
+    for (size_t i = 0; i < (size_t)changes_info.size; i++) {
+        parents_ptr[(size_t)changes_ptr[i]] = 1;
+    }
+    for (size_t i = 1; i < (size_t)parents_info.size; i++) {
+        parents_ptr[i] += parents_ptr[i - 1];
+    }
+
+    py::list temp;
+    temp.append(offsets);
+    temp.append(parents);
+    py::tuple out(temp);
+    return out;
+}
+
 PYBIND11_MODULE(_jagged, m) {
     m.def("offsets2parents_int64", &offsets2parents_int64, "");
     m.def("offsets2parents_int32", &offsets2parents_int64, "");
@@ -251,4 +379,6 @@ PYBIND11_MODULE(_jagged, m) {
     m.def("startsstops2parents_int32", &startsstops2parents_int32, "");
     m.def("parents2startsstops_int64", &parents2startsstops_int64, "");
     m.def("parents2startsstops_int32", &parents2startsstops_int32, "");
+    m.def("uniques2offsetsparents_int64", &uniques2offsetsparents_int64, "");
+    m.def("uniques2offsetsparents_int32", &uniques2offsetsparents_int32, "");
 }

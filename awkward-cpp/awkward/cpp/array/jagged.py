@@ -30,3 +30,8 @@ class JaggedArrayCpp(CppMethods, awkward.array.jagged.JaggedArray):
         if length is None:
             length = parents.max() + 1
         return getattr(awkward.cpp.array._jagged, "parents2startsstops_" + str(parents.dtype))(parents, length)
+
+    @classmethod
+    def uniques2offsetsparents(cls, uniques):
+        return getattr(awkward.cpp.array._jagged, "uniques2offsetsparents_" + str(uniques.dtype))(uniques)
+

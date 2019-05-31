@@ -116,3 +116,19 @@ class Test(unittest.TestCase):
         stops = startsstops[1]
         assert starts.tolist() == [1, 0, 4, 7] and stops.tolist() == [3, 0, 7, 8]
 
+    def test_cpp_uniques2offsetsparents_int64_pos(self):
+        uniques = numpy.array([0, 3, 4, 6, 8, 8, 9], dtype=numpy.int64)
+        offsetsparents = awkward_cpp.JaggedArray.uniques2offsetsparents(uniques)
+        offsets = offsetsparents[0]
+        parents = offsetsparents[1]
+        assert offsets.tolist() == [0, 1, 2, 3, 4, 6, 7] and parents.tolist() == [0, 1, 2, 3, 4, 4, 5]
+
+    def test_cpp_uniques2offsetsparents_int32_pos(self):
+        uniques = numpy.array([0, 3, 4, 6, 8, 8, 9], dtype=numpy.int32)
+        offsetsparents = awkward_cpp.JaggedArray.uniques2offsetsparents(uniques)
+        offsets = offsetsparents[0]
+        parents = offsetsparents[1]
+        assert offsets.tolist() == [0, 1, 2, 3, 4, 6, 7] and parents.tolist() == [0, 1, 2, 3, 4, 4, 5]
+
+
+        
