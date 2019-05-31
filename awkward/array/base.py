@@ -4,6 +4,10 @@
 
 import types
 import numbers
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 import numpy
 
@@ -303,20 +307,20 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     @classmethod
     def _util_arraystr_draw(cls, x):
-        if isinstance(x, list):
+        if isinstance(x, tuple):
+            return "(" + ", ".join(cls._util_arraystr_draw(y) for y in x) + ")"
+        elif isinstance(x, Iterable):
             if len(x) > 6:
                 return "[" + " ".join(cls._util_arraystr_draw(y) for y in x[:3]) + " ... " + " ".join(cls._util_arraystr_draw(y) for y in x[-3:]) + "]"
             else:
                 return "[" + " ".join(cls._util_arraystr_draw(y) for y in x) + "]"
-        elif isinstance(x, tuple):
-            return "(" + ", ".join(cls._util_arraystr_draw(y) for y in x) + ")"
         else:
             return repr(x)
 
     @classmethod
     def _util_arraystr(cls, array):
         if isinstance(array, cls.numpy.ndarray):
-            return cls._util_arraystr_draw(array.tolist())
+            return cls._util_arraystr_draw(array)
         elif isinstance(array, AwkwardArray):
             return str(array).replace("\n", "")
         else:
@@ -405,6 +409,8 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def _util_isstringslice(cls, where):
         if isinstance(where, awkward.util.string):
             return True
+        elif isinstance(where, bytes):
+            raise TypeError("column selection must be str, not bytes, in Python 3")
         elif isinstance(where, tuple):
             return False
         elif isinstance(where, (cls.numpy.ndarray, AwkwardArray)) and issubclass(where.dtype.type, (numpy.str, numpy.str_)):

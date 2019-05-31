@@ -227,7 +227,7 @@ class TableFillable(Fillable):
             return UnionFillable(self, self.awkwardlib).append(obj, tpe)
 
     def finalize(self, **options):
-        return self.awkwardlib.Table.frompairs((n, self.contents[n].finalize(**options)) for n in sorted(self.fields))
+        return self.awkwardlib.Table.frompairs([(n, self.contents[n].finalize(**options)) for n in sorted(self.fields)], 0)
 
 class ObjectFillable(Fillable):
     __slots__ = ["content", "cls", "awkwardlib"]

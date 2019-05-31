@@ -396,9 +396,6 @@ class BitMaskedArray(MaskedArray):
     def _valid(self):
         if self.check_whole_valid:
             if not self._isvalid:
-                if len(self._mask) != self._ceildiv8(len(self._content)):
-                    raise ValueError("mask length ({0}) must be equal to ceil(content length / 8) ({1})".format(len(self._mask), self._ceildiv8(len(self._content))))
-
                 self._isvalid = True
 
     def __iter__(self, checkiter=True):
