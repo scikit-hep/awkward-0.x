@@ -1,4 +1,5 @@
 # Byte-compiled / optimized / DLL files
+# Allowing .pyd extension modules
 __pycache__/
 *.py[cod]
 *$py.class
