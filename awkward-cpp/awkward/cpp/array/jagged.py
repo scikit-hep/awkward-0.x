@@ -29,4 +29,4 @@ class JaggedArrayCpp(CppMethods, awkward.array.jagged.JaggedArray):
     def parents2startsstops(cls, parents, length=None):
         if length is None:
             length = parents.max() + 1
-        return getattr(awkward.cpp.array._jagged, "parents2startsstops_" + str(stops.dtype))(parents, length)
+        return getattr(awkward.cpp.array._jagged, "parents2startsstops_" + str(parents.dtype))(parents, length)

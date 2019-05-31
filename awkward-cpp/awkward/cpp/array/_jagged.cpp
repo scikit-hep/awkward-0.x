@@ -158,10 +158,9 @@ py::array_t<std::int32_t> startsstops2parents_int32(py::array_t<std::int32_t> st
     return parents;
 }
 
-/*/ this one probably has a lot of errors so I won't make the *_int32 version until this works
-py::tuple() parents2startsstops_int64(py::array_t<std::int64_t> parents, size_t length) {
+py::tuple parents2startsstops_int64(py::array_t<std::int64_t> parents, size_t length) {
     py::buffer_info parents_info = parents.request();
-    auto parents_ptr = (std::int64_t*)parents_info(ptr);
+    auto parents_ptr = (std::int64_t*)parents_info.ptr;
     
     auto starts = py::array_t<std::int64_t>(length);
     py::buffer_info starts_info = starts.request();
@@ -170,6 +169,11 @@ py::tuple() parents2startsstops_int64(py::array_t<std::int64_t> parents, size_t 
     auto stops = py::array_t<std::int64_t>(length);
     py::buffer_info stops_info = stops.request();
     auto stops_ptr = (std::int64_t*)stops_info.ptr;
+
+    for (size_t i = 0; i < length; i++) {
+        starts_ptr[i] = 0;
+        stops_ptr[i] = 0;
+    }
     
     std::int64_t last = -1;
     for (size_t k = 0; k < (size_t)parents_info.size; k++) {
@@ -194,7 +198,49 @@ py::tuple() parents2startsstops_int64(py::array_t<std::int64_t> parents, size_t 
     temp.append(stops);
     py::tuple out(temp);
     return out;
-}*/
+}
+
+py::tuple parents2startsstops_int32(py::array_t<std::int32_t> parents, size_t length) {
+    py::buffer_info parents_info = parents.request();
+    auto parents_ptr = (std::int32_t*)parents_info.ptr;
+
+    auto starts = py::array_t<std::int32_t>(length);
+    py::buffer_info starts_info = starts.request();
+    auto starts_ptr = (std::int32_t*)starts_info.ptr;
+
+    auto stops = py::array_t<std::int32_t>(length);
+    py::buffer_info stops_info = stops.request();
+    auto stops_ptr = (std::int32_t*)stops_info.ptr;
+
+    for (size_t i = 0; i < length; i++) {
+        starts_ptr[i] = 0;
+        stops_ptr[i] = 0;
+    }
+
+    std::int32_t last = -1;
+    for (size_t k = 0; k < (size_t)parents_info.size; k++) {
+        std::int32_t thisOne = (std::int32_t)parents_ptr[k];
+        if (last != thisOne) {
+            if (last >= 0 && last < (std::int32_t)length) {
+                stops_ptr[last] = (std::int32_t)k;
+            }
+            if (thisOne >= 0 && thisOne < (std::int32_t)length) {
+                starts_ptr[thisOne] = (std::int32_t)k;
+            }
+        }
+        last = thisOne;
+    }
+
+    if (last != -1) {
+        stops_ptr[last] = (std::int32_t)parents_info.size;
+    }
+
+    py::list temp;
+    temp.append(starts);
+    temp.append(stops);
+    py::tuple out(temp);
+    return out;
+}
 
 PYBIND11_MODULE(_jagged, m) {
     m.def("offsets2parents_int64", &offsets2parents_int64, "");
@@ -203,5 +249,6 @@ PYBIND11_MODULE(_jagged, m) {
     m.def("counts2offsets_int32", &counts2offsets_int32, "");
     m.def("startsstops2parents_int64", &startsstops2parents_int64, "");
     m.def("startsstops2parents_int32", &startsstops2parents_int32, "");
-    //m.def("parents2startsstops_int64", &parents2startsstops_int64, "");
+    m.def("parents2startsstops_int64", &parents2startsstops_int64, "");
+    m.def("parents2startsstops_int32", &parents2startsstops_int32, "");
 }

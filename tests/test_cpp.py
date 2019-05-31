@@ -101,4 +101,18 @@ class Test(unittest.TestCase):
         except ValueError:
             thrown = True
         assert thrown
-    
+
+    def test_cpp_parents2startsstops_int64_pos(self):
+        parents = numpy.array([-1, 0, 0, -1, 2, 2, 2, 3], dtype=numpy.int64)
+        startsstops = awkward_cpp.JaggedArray.parents2startsstops(parents)
+        starts = startsstops[0]
+        stops = startsstops[1]
+        assert starts.tolist() == [1, 0, 4, 7] and stops.tolist() == [3, 0, 7, 8]
+
+    def test_cpp_parents2startsstops_int32_pos(self):
+        parents = numpy.array([-1, 0, 0, -1, 2, 2, 2, 3], dtype=numpy.int32)
+        startsstops = awkward_cpp.JaggedArray.parents2startsstops(parents)
+        starts = startsstops[0]
+        stops = startsstops[1]
+        assert starts.tolist() == [1, 0, 4, 7] and stops.tolist() == [3, 0, 7, 8]
+
