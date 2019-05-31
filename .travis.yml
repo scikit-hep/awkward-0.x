@@ -47,17 +47,12 @@ install:
   - pip install pytest pytest-runner
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install h5py pyarrow ; fi
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install numba ; ln -s ../awkward-numba/awkward/numba awkward/numba ; fi
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pybind11 ; cd awkward-cpp ; python setup.py build ; cd .. ; ln -s ../awkward-cpp/build/lib.*/awkward/cpp awkward/cpp ; fi
   - pip install uproot-methods
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
   - python -c 'import awkward; print(awkward.__version__)'
   - export AWKWARD_DEPLOYMENT=base
   - pip install --upgrade pyOpenSSL     # for deployment
-  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pybind11 ; fi
-  - ln -s ../awkward-cpp/awkward/cpp awkward/cpp
-  - python setup.py install
-  - cd awkward-cpp
-  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then python setup.py install ; fi
-  - cd ..
 
 notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
