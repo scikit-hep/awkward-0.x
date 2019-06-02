@@ -164,22 +164,3 @@ class Test(unittest.TestCase):
                 with self.assertRaises(TypeError, msg='Scalar row element should not be iterable'):
                     iter(element)
         assert b == rows
-
-    def test_table_tuple_unzip(self):
-        left = [1, 2, 3, 4, 5]
-        right = [6, 7, 8, 9, 10]
-        table = Table.named("tuple", left, right)
-        unzip = table.unzip()
-        assert type(unzip) is tuple
-        assert len(unzip) == 2
-        assert all(unzip[0] == left)
-        assert all(unzip[1] == right)
-
-    def test_table_dict_unzip(self):
-        columns = [[1, 2], [3, 4], [5, 6], [7, 8]]
-        table = Table(*columns)
-        unzip = table.unzip()
-        assert type(unzip) is dict
-        assert len(unzip) == len(columns)
-        for column_i in range(len(columns)):
-            assert unzip[str(column_i)].tolist() == columns[column_i]
