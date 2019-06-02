@@ -151,3 +151,16 @@ class Test(unittest.TestCase):
 
         assert c.tolist() == [{"0": 0, "1": 0.0}, {"0": 1, "1": 1.1}, {"0": 2, "1": 2.2},
                               {"0": 4, "1": 4.4}, {"0": 5, "1": 5.5}, ]
+
+    def test_table_iteration(self):
+        rows = [[1, 2], [3, 4]]
+        columns = zip(*rows)
+        a = Table(*columns)
+        b = [[element for element in row] for row in a]
+        for row in b:
+            for element in row:
+                with self.assertRaises(TypeError, msg='Scalar row element should not have a length'):
+                    len(element)
+                with self.assertRaises(TypeError, msg='Scalar row element should not be iterable'):
+                    iter(element)
+        assert b == rows
