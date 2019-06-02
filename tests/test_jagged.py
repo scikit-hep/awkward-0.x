@@ -550,3 +550,41 @@ class Test(unittest.TestCase):
         a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         assert a.pad(4).fillna(999).tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]
         assert a.pad(4, numpy.ma.masked).fillna(999).regular().tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]
+
+    def test_jagged_unzip(self):
+        a = fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        b = JaggedArray([1, 5, 5], [4, 5, 7], [999, 10, 20, 30, 999, 40, 50, 999])
+        c = numpy.array([100, 200, 300])
+        d = 1000
+
+        def check_2_dict_contents(two_dict, one, two):
+            assert type(two_dict) is dict
+            assert len(two_dict) == 2
+            assert all((two_dict["one"] == one).flatten())
+            assert all((two_dict["two"] == two).flatten())
+
+        unzip_ab_1 = JaggedArray.zip(one=a, two=b).unzip()
+        unzip_ba_1 = JaggedArray.zip(one=b, two=a).unzip()
+        unzip_bc_1 = JaggedArray.zip(one=b, two=c).unzip()
+        unzip_bd_1 = JaggedArray.zip(one=b, two=d).unzip()
+
+        check_2_dict_contents(unzip_ab_1, a, b)
+        check_2_dict_contents(unzip_ba_1, b, a)
+        check_2_dict_contents(unzip_bc_1, b, c)
+        check_2_dict_contents(unzip_bd_1, b, d)
+
+        def check_2_tuple_contents(two_tuple, one, two):
+            assert type(two_tuple) is tuple
+            assert len(two_tuple) == 2
+            assert all((two_tuple[0] == one).flatten())
+            assert all((two_tuple[1] == two).flatten())
+
+        unzip_ab_2 = a.zip(b).unzip()
+        unzip_ba_2 = b.zip(a).unzip()
+        unzip_bc_2 = b.zip(c).unzip()
+        unzip_bd_2 = b.zip(d).unzip()
+
+        check_2_tuple_contents(unzip_ab_2, a, b)
+        check_2_tuple_contents(unzip_ba_2, b, a)
+        check_2_tuple_contents(unzip_bc_2, b, c)
+        check_2_tuple_contents(unzip_bd_2, b, d)
