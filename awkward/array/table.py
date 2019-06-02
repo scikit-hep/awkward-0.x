@@ -63,7 +63,7 @@ class Table(awkward.array.base.AwkwardArray):
                 self._table._checkiter()
             i = 0
             while str(i) in self._table._contents:
-                yield self._table._contents[str(i)]
+                yield self._table._contents[str(i)][self._index]
                 i += 1
 
         def __getitem__(self, where):
