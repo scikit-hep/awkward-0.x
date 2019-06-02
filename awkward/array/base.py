@@ -447,40 +447,6 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return array.fillna(value)
 
-    def should_use_column_dict(self):
-        if (hasattr(self, "rowname") and self.rowname != "tuple")\
-        or (hasattr(self, "content") and hasattr(self.content, "rowname") and self.content.rowname != "tuple")\
-        or (hasattr(self, "contents") and hasattr(self.contents, "rowname") and self.contents.rowname != "tuple"):
-            return True
-        else:
-            return False
-
-    def column_basic_iterator(self):
-        for column_name in self.columns:
-            yield self[column_name]
-
-    def column_dict_iterator(self):
-        for column_name in self.columns:
-            yield column_name, self[column_name]
-
-    def column_iterator(self):
-        if self.should_use_column_dict():
-            return self.column_dict_iterator()
-        else:
-            return self.column_basic_iterator()
-
-    def tuple_unzip(self):
-        return tuple(column for column in self.column_basic_iterator())
-
-    def dict_unzip(self):
-        return {column_name: column for column_name, column in self.column_dict_iterator()}
-
-    def unzip(self):
-        if self.should_use_column_dict():
-            return self.dict_unzip()
-        else:
-            return self.tuple_unzip()
-
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class
