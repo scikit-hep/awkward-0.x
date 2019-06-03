@@ -7,31 +7,31 @@
 import awkward.array.base
 import awkward.array.jagged
 from .base import CppMethods
+from ._jagged import JaggedArraySrc
 
-import awkward.cpp.array._jagged
-
-class JaggedArrayCpp(CppMethods, awkward.array.jagged.JaggedArray):
+class JaggedArrayCpp(CppMethods, JaggedArraySrc, awkward.array.jagged.JaggedArray):
     @classmethod
     def offsets2parents(cls, offsets):
-        return getattr(awkward.cpp.array._jagged, "offsets2parents_" + str(offsets.dtype))(offsets)
+        return getattr(JaggedArraySrc, "offsets2parents_" + str(offsets.dtype))(offsets)
 
     @classmethod
     def counts2offsets(cls, counts):
-        return getattr(awkward.cpp.array._jagged, "counts2offsets_" + str(counts.dtype))(counts)
+        return getattr(JaggedArraySrc, "counts2offsets_" + str(counts.dtype))(counts)
 
     @classmethod
     def startsstops2parents(cls, starts, stops):
         if starts.dtype is not stops.dtype:
             raise ValueError("starts and stops must be the same type")
-        return getattr(awkward.cpp.array._jagged, "startsstops2parents_" + str(stops.dtype))(starts, stops)
+        return getattr(JaggedArraySrc, "startsstops2parents_" + str(stops.dtype))(starts, stops)
 
     @classmethod
     def parents2startsstops(cls, parents, length=None):
         if length is None:
             length = parents.max() + 1
-        return getattr(awkward.cpp.array._jagged, "parents2startsstops_" + str(parents.dtype))(parents, length)
+        return getattr(JaggedArraySrc, "parents2startsstops_" + str(parents.dtype))(parents, length)
 
     @classmethod
     def uniques2offsetsparents(cls, uniques):
-        return getattr(awkward.cpp.array._jagged, "uniques2offsetsparents_" + str(uniques.dtype))(uniques)
+        return getattr(JaggedArraySrc, "uniques2offsetsparents_" + str(uniques.dtype))(uniques)
 
+    
