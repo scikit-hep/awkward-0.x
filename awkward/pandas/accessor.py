@@ -36,6 +36,7 @@ class DelegatedMethod(Delegated):
 class AwkwardType(ExtensionDtype):
     name = 'awkward'
     type = awkward.array.base.AwkwardArray
+
     kind = 'O'
 
     @classmethod
@@ -57,6 +58,7 @@ class AwkwardAccessor:
 
     def __init__(self, pandas_obj):
         self._validate(pandas_obj)
+
         self._data = pandas_obj.values
         self._index = pandas_obj.index
         self._name = pandas_obj.name

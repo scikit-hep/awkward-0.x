@@ -161,6 +161,7 @@ except AttributeError:
         return func
 
     from pandas.api.extensions import ExtensionArray as object
+    #from pandas.api.extensions import ExtensionScalarOpsMixin as object
 
     class NDArrayOperatorsMixin(object):
         __lt__ = _binary_method(um.less, 'lt')
