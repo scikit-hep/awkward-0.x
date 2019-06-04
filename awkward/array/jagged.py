@@ -567,12 +567,15 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                     stack.insert(0, node.counts)
                     node = node.flatten()
 
-                counts = node.stops - node._starts
-                if head < 0:
-                    head = counts + head
-                if not self.numpy.bitwise_and(0 <= head, head < counts).all():
-                    raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
-                node = node._content[node._starts + head]
+                if isinstance(node, JaggedArray):
+                    counts = node.stops - node._starts
+                    if head < 0:
+                        head = counts + head
+                    if not self.numpy.bitwise_and(0 <= head, head < counts).all():
+                        raise IndexError("index {0} is out of bounds for jagged min size {1}".format(original_head, counts.min()))
+                    node = node._content[node._starts + head]
+                else:
+                    node = node[:, head]
 
                 for oldcounts in stack:
                     node = type(self).fromcounts(oldcounts, node)
@@ -838,6 +841,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             increase[good] -= increase[starts[parents[good]]]
             index = self._starts[parents]
             index += increase
+            index *= good
             out = self.copy(starts=starts, stops=stops, content=self._content[index])
             out._parents = parents
             return out
@@ -1290,33 +1294,6 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out.stops.shape = self._starts.shape  # intentional: self._stops can too long
             return out
 
-    @property
-    def iscompact(self):
-        if len(self._starts) == 0:
-            return True
-        else:
-            flatstarts = self._starts.reshape(-1)
-            flatstops = self.stops.reshape(-1)   # no underscore!
-            if not self.offsetsaliased(self._starts, self._stops) and not self.numpy.array_equal(flatstarts[1:], flatstops[:-1]):
-                return False
-            if not self._isvalid and not (flatstops >= flatstarts).all():
-                raise ValueError("offsets must be monatonically increasing")
-            return True
-
-    def compact(self):
-        if self.iscompact:
-            return self
-        else:
-            offsets = self.counts2offsets(self.counts.reshape(-1))
-            if len(self._starts.shape) == 1:
-                tmp = self
-            else:                                                # no underscore!
-                tmp = self.JaggedArray(self._starts.reshape(-1), self.stops.reshape(-1), self._content)
-            out = tmp._tojagged(offsets[:-1], offsets[1:], copy=False)
-            out.starts.shape = self._starts.shape
-            out.stops.shape = self._starts.shape  # intentional: self._stops can too long
-            return out
-
     def flatten(self, axis=0):
         if not self._util_isinteger(axis) or axis < 0:
             raise TypeError("axis must be a non-negative integer (can't count from the end)")
@@ -1455,7 +1432,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out = self.numpy.empty(thyself._starts.shape[:1] + content.shape[1:], dtype=dtype)
 
         if len(out) != 0:
-            nonterminal = thyself.offsets[thyself.offsets != thyself.offsets[-1]]
+            nonterminal = thyself.offsets[thyself.offsets < len(content)]
             if os.name == "nt":    # Windows Numpy reduceat requires 32-bit indexes
                 nonterminal = nonterminal.astype(self.numpy.int32)
 
@@ -1463,7 +1440,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 for axis in range(1, len(content.shape)):
                     content = ufunc.reduce(content, axis=axis)
 
-            out[:len(nonterminal)] = ufunc.reduceat(content, nonterminal)
+            out = ufunc.reduceat(content, nonterminal)[:len(out)]
             out[thyself.starts == thyself.stops] = identity
 
         if regularaxis is None:

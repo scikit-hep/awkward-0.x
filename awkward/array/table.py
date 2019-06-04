@@ -2,6 +2,7 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
+import numbers
 import re
 import types
 from collections import OrderedDict
@@ -9,6 +10,8 @@ try:
     from collections.abc import Iterable
 except ImportError:
     from collections import Iterable
+
+import numpy
 
 import awkward.array.base
 import awkward.type
@@ -38,7 +41,7 @@ class Table(awkward.array.base.AwkwardArray):
             elif getattr(self._table, "_showdict", False):
                 return "<{0} {{{1}}}>".format(self._table._rowname, ", ".join("{0}: {1}".format(repr(n), str(self[n])) for n in self._table._contents))
             else:
-                return "<{0} {1}>".format(self._table._rowname, self._index)
+                return "<{0} {1}>".format(self._table._rowname, self._index + self._table.rowstart)
 
         def __contains__(self, name):
             return name in self._table._contents
@@ -181,6 +184,7 @@ class Table(awkward.array.base.AwkwardArray):
         self._view = None
         self._base = None
         self.rowname = "Row"
+        self.rowstart = None
         self._contents = OrderedDict()
 
         seen = set()
@@ -229,6 +233,22 @@ class Table(awkward.array.base.AwkwardArray):
                 raise TypeError("rowname must be a string")
         self._rowname = value
 
+    @property
+    def rowstart(self):
+        if self._rowstart is not None:
+            return self._rowstart
+        elif self._base is not None:
+            return self._base.rowstart
+        else:
+            return 0
+
+    @rowstart.setter
+    def rowstart(self, value):
+        if self.check_prop_valid:
+            if value is not None and not isinstance(value, (numbers.Integral, numpy.integer)):
+                raise TypeError("rowstart must be None or an integer")
+        self._rowstart = value
+
     @classmethod
     def fromrec(cls, recarray):
         if not isinstance(recarray, cls.numpy.ndarray) or recarray.dtype.names is None:
@@ -239,10 +259,11 @@ class Table(awkward.array.base.AwkwardArray):
         return out
 
     @classmethod
-    def frompairs(cls, pairs):
+    def frompairs(cls, pairs, rowstart=0):
         out = cls()
         for n, x in pairs:
             out[n] = x
+        out._rowstart = rowstart
         return out
 
     @classmethod
@@ -255,12 +276,14 @@ class Table(awkward.array.base.AwkwardArray):
             out = base.copy()
             out._view = int(start), int(step), int(length)
             out._base = base
+            out._rowstart = None
             return out
 
         elif isinstance(view, cls.numpy.ndarray) and cls._util_isintegertype(view.dtype.type):
             out = base.copy()
             out._view = view
             out._base = base
+            out._rowstart = None
             return out
             
         else:
@@ -270,6 +293,7 @@ class Table(awkward.array.base.AwkwardArray):
         out = self.__class__.__new__(self.__class__)
         out._view = self._view
         out._base = self._base
+        out._rowstart = self._rowstart
         out._rowname = self._rowname
         out._contents = self._contents
         if contents is not None and isinstance(contents, dict):
@@ -285,12 +309,14 @@ class Table(awkward.array.base.AwkwardArray):
         out._contents = OrderedDict([(n, self._util_deepcopy(x[out._index()])) for n, x in out._contents.items()])
         out._view = None
         out._base = None
+        out._rowstart = None
         return out
 
     def empty_like(self, **overrides):
         out = self.__class__.__new__(self.__class__)
         out._view = None
         out._base = None
+        out._rowstart = None
         out._rowname = self._rowname
         out._contents = OrderedDict()
         return out
@@ -316,7 +342,8 @@ class Table(awkward.array.base.AwkwardArray):
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
         out = {"call": ["awkward", "Table", "frompairs"],
-               "args": [{"pairs": [[n, fill(x, "Table.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs)] for n, x in self._contents.items()]}]}
+               "args": [{"pairs": [[n, fill(x, "Table.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs)] for n, x in self._contents.items()]},
+                        {"json": self.rowstart}]}
         if isinstance(self._view, tuple):
             start, step, length = self._view
             out = {"call": ["awkward", "Table", "fromview"],
@@ -509,10 +536,17 @@ class Table(awkward.array.base.AwkwardArray):
     def __getitem__(self, where):
         if self._util_isstringslice(where):
             if isinstance(where, awkward.util.string):
-                try:
-                    return self._contents[where][self._index()]
-                except KeyError:
-                    raise ValueError("no column named {0}".format(repr(where)))
+                if self._view is None:
+                    try:
+                        return self._contents[where]
+                    except KeyError:
+                        raise ValueError("no column named {0}".format(repr(where)))
+                else:
+                    index = self._index()
+                    try:
+                        return self._contents[where][index]
+                    except KeyError:
+                        raise ValueError("no column named {0}".format(repr(where)))
             else:
                 contents = OrderedDict()
                 for n in where:
@@ -540,6 +574,7 @@ class Table(awkward.array.base.AwkwardArray):
             out = self.copy(contents=self._contents)
             out._view = newslice
             out._base = self
+            out._rowstart = None
             return out
 
     def __setitem__(self, where, what):

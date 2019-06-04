@@ -356,6 +356,22 @@ class Test(unittest.TestCase):
             table2 = table.add_column(1, pyarrow.column(pyarrow.field("y", y.type, False), numpy.array([1.1, 2.2, 3.3])))
             assert awkward.arrow.fromarrow(table2).tolist() == [{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}]
 
+    def test_arrow_trailing_zero(self):
+        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8], [], [9.9]])
+        pa_table = awkward.toarrow(awkward.Table(a=a))
+
+        batches = pa_table.to_batches()
+        sink = pyarrow.BufferOutputStream()
+        writer = pyarrow.RecordBatchStreamWriter(sink, batches[0].schema)
+        writer.write_batch(batches[0])
+        writer.close()
+
+        buf = sink.getvalue()
+        reader = pyarrow.ipc.open_stream(buf)
+        for batch in reader:
+            b = awkward.fromarrow(batch)
+            assert a.tolist() == b["a"].tolist()
+
     # def test_arrow_writeparquet(self):
     #     if pyarrow is None:
     #         pytest.skip("unable to import pyarrow")
@@ -414,9 +430,11 @@ def test_arrow_writeparquet2(tmpdir):
     assert len(c.chunks) == 1 and len(d.chunks) == 1
     assert isinstance(c.chunks[0], awkward.Table) and isinstance(d.chunks[0], awkward.Table)
     assert c.chunks[0].columns == d.chunks[0].columns
-    assert isinstance(c.chunks[0]["x"], awkward.BitMaskedArray) and isinstance(d.chunks[0]["x"], awkward.BitMaskedArray)
-    assert c.chunks[0]["x"].boolmask().tolist() == d.chunks[0]["x"].boolmask().tolist()
-    assert isinstance(c.chunks[0]["x"].content, awkward.JaggedArray) and isinstance(d.chunks[0]["x"].content, awkward.JaggedArray)
-    assert isinstance(c.chunks[0]["x"].content.content, awkward.BitMaskedArray) and isinstance(d.chunks[0]["x"].content.content, awkward.BitMaskedArray)
-    assert c.chunks[0]["x"].content.content.boolmask().tolist() == d.chunks[0]["x"].content.content.boolmask().tolist()
-    assert isinstance(c.chunks[0]["x"].content.content.content, numpy.ndarray) and isinstance(d.chunks[0]["x"].content.content.content, numpy.ndarray)
+    cstuff = c.chunks[0]["x"][:]
+    dstuff = d.chunks[0]["x"][:]
+    assert isinstance(cstuff, awkward.BitMaskedArray) and isinstance(dstuff, awkward.BitMaskedArray)
+    assert cstuff.boolmask().tolist() == dstuff.boolmask().tolist()
+    assert isinstance(cstuff.content, awkward.JaggedArray) and isinstance(dstuff.content, awkward.JaggedArray)
+    assert isinstance(cstuff.content.content, awkward.BitMaskedArray) and isinstance(dstuff.content.content, awkward.BitMaskedArray)
+    assert cstuff.content.content.boolmask().tolist() == dstuff.content.content.boolmask().tolist()
+    assert isinstance(cstuff.content.content.content, numpy.ndarray) and isinstance(dstuff.content.content.content, numpy.ndarray)

@@ -9,6 +9,7 @@ import json
 import numbers
 import os
 import pickle
+import types
 import zipfile
 import zlib
 try:
@@ -39,9 +40,13 @@ whitelist = [
         ["awkward", "Table"],
         ["awkward", "numpy", "frombuffer"],
         ["awkward.util", "frombuffer"],
-        ["awkward.persist", "*"],
+        ["awkward.persist"],
         ["awkward.arrow", "_ParquetFile", "fromjson"],
         ["uproot_methods.classes.*"],
+        ["uproot_methods.profiles.*"],
+        ["uproot.tree", "_LazyFiles"],
+        ["uproot.tree", "_LazyTree"],
+        ["uproot.tree", "_LazyBranch"],
     ]
 
 def frompython(obj):
@@ -59,11 +64,17 @@ def spec2function(obj, awkwardlib="awkward", whitelist=whitelist):
             if obj[0] == "awkward":
                 obj = [awkwardlib] + obj[1:]
             gen, genname = importlib.import_module(obj[0]), obj[1:]
+            if not isinstance(gen, types.ModuleType):
+                raise TypeError("first item of a function description must be a module")
+            if genname[:1] == ["numpy"]:
+                gen, genname = getattr(gen, genname[0]), genname[1:]
             while len(genname) > 0:
                 gen, genname = getattr(gen, genname[0]), genname[1:]
+                if isinstance(gen, types.ModuleType):
+                    raise TypeError("non-first items of a function description must not be a module")
             break
     else:
-        raise RuntimeError("callable not in whitelist; add it by passing a whitelist argument:\n\n    whitelist = awkward.persist.whitelist + [{0}]".format(obj))
+        raise RuntimeError("callable not in whitelist; add it by passing a whitelist argument:\n\n    whitelist = awkward.persist.whitelist + [{0}]".format(repr(obj)))
     return gen
 
 def dtype2json(obj):
