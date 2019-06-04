@@ -1432,7 +1432,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out = self.numpy.empty(thyself._starts.shape[:1] + content.shape[1:], dtype=dtype)
 
         if len(out) != 0:
-            nonterminal = thyself.offsets[thyself.offsets != thyself.offsets[-1]]
+            nonterminal = thyself.offsets[thyself.offsets < len(content)]
             if os.name == "nt":    # Windows Numpy reduceat requires 32-bit indexes
                 nonterminal = nonterminal.astype(self.numpy.int32)
 
@@ -1440,7 +1440,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 for axis in range(1, len(content.shape)):
                     content = ufunc.reduce(content, axis=axis)
 
-            out[:len(nonterminal)] = ufunc.reduceat(content, nonterminal)
+            out = ufunc.reduceat(content, nonterminal)[:len(out)]
             out[thyself.starts == thyself.stops] = identity
 
         if regularaxis is None:
