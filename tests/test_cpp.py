@@ -42,17 +42,12 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
-    def test_cpp_offsets2parents_int64_pos(self):
+    def test_cpp_offsets2parents_pos(self):
         offsets = numpy.array([0, 2, 4, 4, 7], dtype=numpy.int64)
         parents = awkward_cpp.JaggedArray.offsets2parents(offsets)
         assert parents.tolist() == [0, 0, 1, 1, 3, 3, 3]
 
-    def test_cpp_offsets2parents_int32_pos(self):
-        offsets = numpy.array([0, 2, 4, 4, 7], dtype=numpy.int32)
-        parents = awkward_cpp.JaggedArray.offsets2parents(offsets)
-        assert parents.tolist() == [0, 0, 1, 1, 3, 3, 3]
-
-    def test_cpp_offsets2parents_int64_neg(self):
+    def test_cpp_offsets2parents_neg(self):
         offsets = numpy.array([], dtype=numpy.int64)
         thrown = False
         try:
@@ -61,34 +56,14 @@ class Test(unittest.TestCase):
             thrown = True
         assert thrown
 
-    def test_cpp_offsets2parents_int32_neg(self):
-        offsets = numpy.array([], dtype=numpy.int32)
-        thrown = False
-        try:
-            parents = awkward_cpp.JaggedArray.offsets2parents(offsets)
-        except ValueError:
-            thrown = True
-        assert thrown
-
-    def test_cpp_counts2offsets_int64_pos(self):
+    def test_cpp_counts2offsets_pos(self):
         counts = numpy.array([4, 0, 3, 4, 1], dtype=numpy.int64)
         offsets = awkward_cpp.JaggedArray.counts2offsets(counts)
         assert offsets.tolist() == [0, 4, 4, 7, 11, 12]
 
-    def test_cpp_counts2offsets_int32_pos(self):
-        counts = numpy.array([4, 0, 3, 4, 1], dtype=numpy.int32)
-        offsets = awkward_cpp.JaggedArray.counts2offsets(counts)
-        assert offsets.tolist() == [0, 4, 4, 7, 11, 12]
-
-    def test_cpp_startsstops2parents_int64_pos(self):
+    def test_cpp_startsstops2parents_pos(self):
         starts = numpy.array([0, 4, 5, 9], dtype=numpy.int64)
         stops = numpy.array([1, 6, 7, 10], dtype=numpy.int64)
-        parents = awkward_cpp.JaggedArray.startsstops2parents(starts, stops)
-        assert parents.tolist() == [0, -1, -1, -1, 1, 2, 2, -1, -1, 3]
-
-    def test_cpp_startsstops2parents_int32_pos(self):
-        starts = numpy.array([0, 4, 5, 9], dtype=numpy.int32)
-        stops = numpy.array([1, 6, 7, 10], dtype=numpy.int32)
         parents = awkward_cpp.JaggedArray.startsstops2parents(starts, stops)
         assert parents.tolist() == [0, -1, -1, -1, 1, 2, 2, -1, -1, 3]
 
@@ -102,33 +77,17 @@ class Test(unittest.TestCase):
             thrown = True
         assert thrown
 
-    def test_cpp_parents2startsstops_int64_pos(self):
+    def test_cpp_parents2startsstops_pos(self):
         parents = numpy.array([-1, 0, 0, -1, 2, 2, 2, 3], dtype=numpy.int64)
         startsstops = awkward_cpp.JaggedArray.parents2startsstops(parents)
         starts = startsstops[0]
         stops = startsstops[1]
         assert starts.tolist() == [1, 0, 4, 7] and stops.tolist() == [3, 0, 7, 8]
 
-    def test_cpp_parents2startsstops_int32_pos(self):
-        parents = numpy.array([-1, 0, 0, -1, 2, 2, 2, 3], dtype=numpy.int32)
-        startsstops = awkward_cpp.JaggedArray.parents2startsstops(parents)
-        starts = startsstops[0]
-        stops = startsstops[1]
-        assert starts.tolist() == [1, 0, 4, 7] and stops.tolist() == [3, 0, 7, 8]
-
-    def test_cpp_uniques2offsetsparents_int64_pos(self):
+    def test_cpp_uniques2offsetsparents_pos(self):
         uniques = numpy.array([0, 3, 4, 6, 8, 8, 9], dtype=numpy.int64)
         offsetsparents = awkward_cpp.JaggedArray.uniques2offsetsparents(uniques)
         offsets = offsetsparents[0]
         parents = offsetsparents[1]
         assert offsets.tolist() == [0, 1, 2, 3, 4, 6, 7] and parents.tolist() == [0, 1, 2, 3, 4, 4, 5]
 
-    def test_cpp_uniques2offsetsparents_int32_pos(self):
-        uniques = numpy.array([0, 3, 4, 6, 8, 8, 9], dtype=numpy.int32)
-        offsetsparents = awkward_cpp.JaggedArray.uniques2offsetsparents(uniques)
-        offsets = offsetsparents[0]
-        parents = offsetsparents[1]
-        assert offsets.tolist() == [0, 1, 2, 3, 4, 6, 7] and parents.tolist() == [0, 1, 2, 3, 4, 4, 5]
-
-
-        
