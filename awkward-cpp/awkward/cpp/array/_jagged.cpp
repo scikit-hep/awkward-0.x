@@ -4,8 +4,35 @@
 #include <stdexcept>
 namespace py = pybind11;
 
-struct JaggedArraySrc {
+class CppNumPy {
+private:
+    CppNumPy(py::tuple shape_, char dtype_, py::buffer data_, py::tuple strides_, bool isFortran_) {
+        shape = shape_;
+        dtype = dtype_;
+        data = data_;
+        strides = strides_;
+        isFortran = isFortran_;
+    }
 public:
+    py::tuple shape, strides;
+    py::buffer data;
+    char dtype;
+    bool isFortran;
+
+    static CppNumPy create(py::tuple shape, char dtype, py::buffer data, py::tuple strides, bool isFortran) {
+        return CppNumPy(shape, dtype, data, strides, isFortran);
+    }
+
+    static py::tuple get_shape(CppNumPy* array) {
+        return array->shape;
+    }
+};
+
+class JaggedArraySrc {
+public:
+    static CppNumPy* practicemethod(CppNumPy* array) {
+        return array;
+    }
 
     template <typename T>
     static py::array_t<T> offsets2parents(py::array_t<T> offsets) {
@@ -204,10 +231,13 @@ public:
         py::tuple out(temp);
         return out;
     }
-
 };
 
 PYBIND11_MODULE(_jagged, m) {
+    py::class_<CppNumPy>(m, "CppNumPy")
+        .def(py::init(&CppNumPy::create))
+        .def_static("get_shape", &CppNumPy::get_shape);
+
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
         .def(py::init<>())
         .def_static("offsets2parents", &JaggedArraySrc::offsets2parents<std::int64_t>)
@@ -219,5 +249,6 @@ PYBIND11_MODULE(_jagged, m) {
         .def_static("parents2startsstops", &JaggedArraySrc::parents2startsstops<std::int64_t>)
         .def_static("parents2startsstops", &JaggedArraySrc::parents2startsstops<std::int32_t>)
         .def_static("uniques2offsetsparents", &JaggedArraySrc::uniques2offsetsparents<std::int64_t>)
-        .def_static("uniques2offsetsparents", &JaggedArraySrc::uniques2offsetsparents<std::int32_t>);
+        .def_static("uniques2offsetsparents", &JaggedArraySrc::uniques2offsetsparents<std::int32_t>)
+        .def_static("practicemethod", &JaggedArraySrc::practicemethod);
 }

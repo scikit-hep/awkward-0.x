@@ -6,10 +6,16 @@
 
 import awkward.array.base
 import awkward.array.jagged
+import numpy
 from .base import CppMethods
 from ._jagged import JaggedArraySrc
+from ._jagged import CppNumPy
 
 class JaggedArrayCpp(CppMethods, JaggedArraySrc, awkward.array.jagged.JaggedArray):
+    @classmethod
+    def practicemethod(cls, array):
+        return NumPyCpp.fromCpp(getattr(JaggedArraySrc, "practicemethod"))(NumPyCpp.toCpp(array))
+    
     @classmethod
     def startsstops2parents(cls, starts, stops):
         if starts.dtype is not stops.dtype:
@@ -21,5 +27,14 @@ class JaggedArrayCpp(CppMethods, JaggedArraySrc, awkward.array.jagged.JaggedArra
         if length is None:
             length = -1
         return getattr(JaggedArraySrc, "parents2startsstops")(parents, length)
+                                
 
-    
+class NumPyCpp:
+    @classmethod
+    def toCpp(cls, array):
+        return getattr(CppNumPy, "create")(array.shape, array.dtype.char, array.data, array.strides, numpy.isfortran(array))
+
+    @classmethod
+    def fromCpp(cls, output):
+        order = 'C'
+        return numpy.ndarray(CppNumPy.get_shape(output), numpy.dtype(output.dtype), output.data, output.strides, order)
