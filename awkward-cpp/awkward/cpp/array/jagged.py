@@ -14,7 +14,11 @@ from ._jagged import CppNumPy
 class JaggedArrayCpp(CppMethods, JaggedArraySrc, awkward.array.jagged.JaggedArray):
     @classmethod
     def practicemethod(cls, array):
-        return NumPyCpp.fromCpp(getattr(JaggedArraySrc, "practicemethod"))(NumPyCpp.toCpp(array))
+        return (getattr(JaggedArraySrc, "practicemethod")(NumPyCpp.toCpp(array))).dtype
+
+    @classmethod
+    def practicemethod2(cls, array):
+        return NumPyCpp.fromCpp(getattr(JaggedArraySrc, "practicemethod")(NumPyCpp.toCpp(array)))
     
     @classmethod
     def startsstops2parents(cls, starts, stops):
@@ -32,9 +36,8 @@ class JaggedArrayCpp(CppMethods, JaggedArraySrc, awkward.array.jagged.JaggedArra
 class NumPyCpp:
     @classmethod
     def toCpp(cls, array):
-        return getattr(CppNumPy, "create")(array.shape, array.dtype.char, array.data, array.strides, numpy.isfortran(array))
+        return CppNumPy(array.shape, array.dtype, array.data, array.strides, numpy.isfortran(array))
 
     @classmethod
     def fromCpp(cls, output):
-        order = 'C'
-        return numpy.ndarray(CppNumPy.get_shape(output), numpy.dtype(output.dtype), output.data, output.strides, order)
+        return numpy.ndarray(output.shape, output.dtype, output.data, 0, output.strides, output.order)
