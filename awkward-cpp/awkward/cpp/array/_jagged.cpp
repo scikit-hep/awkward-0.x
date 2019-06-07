@@ -6,43 +6,73 @@ namespace py = pybind11;
 
 class CppNumPy {
 private:
-    void*                   ptr_;
-    ssize_t                 itemsize_;
-    std::string             format_;
-    ssize_t                 ndim_;
-    std::vector<ssize_t>    shape_;
-    std::vector<ssize_t>    strides_;
+    CppNumPy(py::tuple shape_, py::dtype dtype_, py::buffer data_, py::tuple strides_, bool isFortran_) {
+        shape = shape_;
+        dtype = dtype_;
+        data = data_;
+        strides = strides_;
+        isFortran = isFortran_;
+    }
 
+    /*template <typename T>
+    static T fromDtype(py::dtype dtype) {
+        char kind = dtype.kind;
+        int itemsize = dtype.itemsize;
+        if (kind == 'b')
+            return bool out;
+        else if (kind == 'i') {
+            if (itemsize == 8)
+                return int64_t out;
+            else if (itemsize == 2)
+                return int16_t out;
+            else if (itemsize == 1)
+                return int8_t out;
+            else
+                return int32_t out;
+        }
+        else if (kind == 'u') {
+            if (itemsize == 8)
+                return uint64_t out;
+            else if (itemsize == 2)
+                return uint16_t out;
+            else if (itemsize == 1)
+                return uint8_t out;
+            else
+                return uint32_t out;
+        }
+        else if (kind == 'f') {
+            if (itemsize == 4)
+                return float out;
+            else
+                return double out;
+        }
+        else
+            throw std::invalid_argument("Type must be integer or float.");
+    }*/
 public:
-    CppNumPy(py::array a) {
-        info = a.request();
-        ptr_        = info.ptr;
-        itemsize_   = info.itemsize;
-        format_     = info.format;
-        ndim_       = info.ndim;
-        shape_      = info.shape;
-        strides_    = info.strides;
-    }
-    CppNumPy(void* ptr, ssize_t itemsize, std::string format, ssize_t ndim, std::vector<ssize_t> shape, std::vector<ssize_t> strides) {
-        ptr_        = ptr;
-        itemsize_   = itemsize;
-        format_     = format;
-        ndim_       = ndim;
-        shape_      = shape;
-        strides_    = strides;
+    py::tuple shape, strides;
+    py::buffer data;
+    py::dtype dtype;
+    bool isFortran;
+
+    static CppNumPy create(py::tuple shape, py::dtype dtype, py::buffer data, py::tuple strides, bool isFortran) {
+        return CppNumPy(shape, dtype, data, strides, isFortran);
     }
 
-    void*                   get_ptr()       { return ptr_; }
+    py::tuple get_shape() { return shape; }
 
-    ssize_t                 get_itemsize()  { return itemsize_; }
+    py::dtype get_dtype() { return dtype; }
 
-    std::string             get_format()    { return format_; }
+    py::buffer get_data() { return data; }
 
-    ssize_t                 get_ndim()      { return ndim_; }
+    py::tuple get_strides() { return strides; }
 
-    std::vector<ssize_t>    get_shape()     { return shape_; }
-
-    std::vector<ssize_t>    get_strides()   { return strides_; }
+    char get_order() {
+        if (isFortran) {
+            return 'F';
+        }
+        return 'C';
+    }
 };
 
 class JaggedArraySrc {
@@ -82,18 +112,18 @@ public:
         return array;
     }
 
-    /*static CppNumPy* offsets2parents(CppNumPy* offsets) {
+    static py::array offsets2parents(py::array offsets) {
         py::buffer_info offsets_info = offsets.request();
         if (offsets_info.size <= 0) {
             throw std::invalid_argument("offsets must have at least one element");
         }
-        //auto offsets_ptr = (int*)offsets_info.ptr;
+        auto offsets_ptr = (int*)offsets_info.ptr;
 
-        size_t parents_length = (size_t)offsets[offsets_info.size - 1];
-        auto parents = py::array;
+        size_t parents_length = (size_t)offsets_ptr[offsets_info.size - 1];
+        auto parents = py::array(parents_length);
         py::buffer_info parents_info = parents.request();
 
-        //auto parents_ptr = (int*)parents_info.ptr;
+        auto parents_ptr = (int*)parents_info.ptr;
 
         size_t j = 0;
         size_t k = -1;
@@ -106,7 +136,7 @@ public:
         }
 
         return parents;
-    }*/
+    }
 
     template <typename T>
     static py::array_t<T> counts2offsets(py::array_t<T> counts) {
@@ -281,28 +311,17 @@ public:
 };
 
 PYBIND11_MODULE(_jagged, m) {
-    py::class_<CppNumPy>(m, "CppNumPy", py::buffer_protocol())
-        .def(py::init<py::array>())
-        .def(py::init<void*, ssize_t, std::string, ssize_t, std::vector<ssize_t>, std::vector<ssize_t>())
-        .def_property_readonly("ptr", &CppNumPy::get_ptr)
-        .def_property_readonly("itemsize", &CppNumPy::get_itemsize)
-        .def_property_readonly("format", &CppNumPy::get_format)
-        .def_property_readonly("ndim", &CppNumPy::get_ndim)
+    py::class_<CppNumPy>(m, "CppNumPy")
+        .def(py::init(&CppNumPy::create))
         .def_property_readonly("shape", &CppNumPy::get_shape)
+        .def_property_readonly("dtype", &CppNumPy::get_dtype)
+        .def_property_readonly("data", &CppNumPy::get_data)
         .def_property_readonly("strides", &CppNumPy::get_strides)
-        .def_buffer([](CppNumPy &m) -> py::buffer_info {
-        return py::buffer_info(
-            m.get_ptr(),
-            m.get_itemsize(),
-            m.get_format(),
-            m.get_ndim(),
-            m.get_shape(),
-            m.get_strides()
-        );
-    });
+        .def_property_readonly("order", &CppNumPy::get_order);
 
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
         .def(py::init<>())
+        .def_static("offsets2parents", &JaggedArraySrc::offsets2parents)
         .def_static("counts2offsets", &JaggedArraySrc::counts2offsets<std::int64_t>)
         .def_static("counts2offsets", &JaggedArraySrc::counts2offsets<std::int32_t>)
         .def_static("startsstops2parents", &JaggedArraySrc::startsstops2parents<std::int64_t>)
