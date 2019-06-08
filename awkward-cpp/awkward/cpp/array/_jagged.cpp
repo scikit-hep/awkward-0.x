@@ -2,6 +2,16 @@
 #include <pybind11/numpy.h>
 #include <cinttypes>
 #include <stdexcept>
+
+#define DEF(METHOD) .def_static(#METHOD, &JaggedArraySrc::METHOD<std::int64_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint64_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int32_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint32_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int16_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint16_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int8_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint8_t>)
+
 namespace py = pybind11;
 
 struct JaggedArraySrc {
@@ -210,14 +220,9 @@ public:
 PYBIND11_MODULE(_jagged, m) {
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
         .def(py::init<>())
-        .def_static("offsets2parents", &JaggedArraySrc::offsets2parents<std::int64_t>)
-        .def_static("offsets2parents", &JaggedArraySrc::offsets2parents<std::int32_t>)
-        .def_static("counts2offsets", &JaggedArraySrc::counts2offsets<std::int64_t>)
-        .def_static("counts2offsets", &JaggedArraySrc::counts2offsets<std::int32_t>)
-        .def_static("startsstops2parents", &JaggedArraySrc::startsstops2parents<std::int64_t>)
-        .def_static("startsstops2parents", &JaggedArraySrc::startsstops2parents<std::int32_t>)
-        .def_static("parents2startsstops", &JaggedArraySrc::parents2startsstops<std::int64_t>)
-        .def_static("parents2startsstops", &JaggedArraySrc::parents2startsstops<std::int32_t>)
-        .def_static("uniques2offsetsparents", &JaggedArraySrc::uniques2offsetsparents<std::int64_t>)
-        .def_static("uniques2offsetsparents", &JaggedArraySrc::uniques2offsetsparents<std::int32_t>);
+        DEF(offsets2parents)
+        DEF(counts2offsets)
+        DEF(startsstops2parents)
+        DEF(parents2startsstops)
+        DEF(uniques2offsetsparents);
 }
