@@ -3,7 +3,7 @@
 #include <cinttypes>
 #include <stdexcept>
 
-#define DEF(METHOD) .def_static(#METHOD, &JaggedArraySrc::METHOD<std::int64_t>)\
+#define DEF(METHOD) def_static(#METHOD, &JaggedArraySrc::METHOD<std::int64_t>)\
 .def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint64_t>)\
 .def_static(#METHOD, &JaggedArraySrc::METHOD<std::int32_t>)\
 .def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint32_t>)\
@@ -15,7 +15,21 @@
 namespace py = pybind11;
 
 struct JaggedArraySrc {
+private:
+
+    /*template <typename T>
+    static void set_native_endian(py::array_t<T> input) {
+        if (!input.dtype().isnative()) {
+            input = input.byteswap().newbyteorder();
+        }
+    }*/
+
 public:
+
+    template <typename T>
+    static auto testEndian(py::array_t<T> input) {
+        return py::array::ensure(input).dtype();
+    }
 
     template <typename T>
     static py::array_t<T> offsets2parents(py::array_t<T> offsets) {
@@ -35,7 +49,7 @@ public:
         size_t k = -1;
         for (size_t i = 0; i < (size_t)offsets_info.size; i++) {
             while (j < (size_t)offsets_ptr[i]) {
-                parents_ptr[j] = k;
+                parents_ptr[j] = (T)k;
                 j += 1;
             }
             k += 1;
@@ -90,7 +104,7 @@ public:
 
         for (size_t i = 0; i < (size_t)starts_info.size; i++) {
             for (size_t j = (size_t)starts_ptr[i]; j < (size_t)stops_ptr[i]; j++) {
-                parents_ptr[j] = i;
+                parents_ptr[j] = (T)i;
             }
         }
 
@@ -220,9 +234,10 @@ public:
 PYBIND11_MODULE(_jagged, m) {
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
         .def(py::init<>())
-        DEF(offsets2parents)
-        DEF(counts2offsets)
-        DEF(startsstops2parents)
-        DEF(parents2startsstops)
-        DEF(uniques2offsetsparents);
+        .DEF(testEndian)
+        .DEF(offsets2parents)
+        .DEF(counts2offsets)
+        .DEF(startsstops2parents)
+        .DEF(parents2startsstops)
+        .DEF(uniques2offsetsparents);
 }
