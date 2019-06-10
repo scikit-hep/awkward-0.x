@@ -3,7 +3,7 @@
 #include <cinttypes>
 #include <stdexcept>
 
-#define DEF(METHOD) def_static(#METHOD, &JaggedArraySrc::METHOD<std::int64_t>)\
+#define DEF(METHOD) .def_static(#METHOD, &JaggedArraySrc::METHOD<std::int64_t>)\
 .def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint64_t>)\
 .def_static(#METHOD, &JaggedArraySrc::METHOD<std::int32_t>)\
 .def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint32_t>)\
@@ -234,10 +234,10 @@ public:
 PYBIND11_MODULE(_jagged, m) {
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
         .def(py::init<>())
-        .DEF(testEndian)
-        .DEF(offsets2parents)
-        .DEF(counts2offsets)
-        .DEF(startsstops2parents)
-        .DEF(parents2startsstops)
-        .DEF(uniques2offsetsparents);
+        DEF(testEndian)
+        DEF(offsets2parents)
+        DEF(counts2offsets)
+        DEF(startsstops2parents)
+        DEF(parents2startsstops)
+        DEF(uniques2offsetsparents);
 }
