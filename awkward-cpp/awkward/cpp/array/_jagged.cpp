@@ -15,15 +15,6 @@
 namespace py = pybind11;
 
 struct JaggedArraySrc {
-private:
-
-    /*template <typename T>
-    static void set_native_endian(py::array_t<T> input) {
-        if (!input.dtype().isnative()) {
-            input = input.byteswap().newbyteorder();
-        }
-    }*/
-
 public:
 
     template <typename T>
@@ -240,7 +231,6 @@ public:
 PYBIND11_MODULE(_jagged, m) {
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
         .def(py::init<>())
-        DEF(test)
         DEF(offsets2parents)
         DEF(counts2offsets)
         DEF(startsstops2parents)
