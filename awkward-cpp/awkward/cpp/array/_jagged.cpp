@@ -19,11 +19,11 @@ public:
 
     template <typename T>
     static auto test(py::array_t<T> input) {
-        return input.request().itemsize;
+        return py::array::ensure(input).dtype().kind();
     }
 
     template <typename T>
-    static py::array_t<T> offsets2parents(py::array_t<T> offsets) {
+    static py::array_t<std::int64_t> offsets2parents(py::array_t<T> offsets) {
         py::buffer_info offsets_info = offsets.request();
         if (offsets_info.size <= 0) {
             throw std::invalid_argument("offsets must have at least one element");
@@ -32,16 +32,16 @@ public:
         int N = offsets_info.strides[0] / offsets_info.itemsize;
 
         size_t parents_length = (size_t)offsets_ptr[offsets_info.size - 1];
-        auto parents = py::array_t<T>(parents_length);
+        auto parents = py::array_t<std::int64_t>(parents_length);
         py::buffer_info parents_info = parents.request();
 
-        auto parents_ptr = (T*)parents_info.ptr;
+        auto parents_ptr = (std::int64_t*)parents_info.ptr;
 
         size_t j = 0;
         size_t k = -1;
         for (size_t i = 0; i < (size_t)offsets_info.size; i++) {
             while (j < (size_t)offsets_ptr[i * N]) {
-                parents_ptr[j] = (T)k;
+                parents_ptr[j] = (std::int64_t)k;
                 j += 1;
             }
             k += 1;
@@ -51,25 +51,25 @@ public:
     }
 
     template <typename T>
-    static py::array_t<T> counts2offsets(py::array_t<T> counts) {
+    static py::array_t<std::int64_t> counts2offsets(py::array_t<T> counts) {
         py::buffer_info counts_info = counts.request();
         auto counts_ptr = (T*)counts_info.ptr;
         int N = counts_info.strides[0] / counts_info.itemsize;
 
         size_t offsets_length = counts_info.size + 1;
-        auto offsets = py::array_t<T>(offsets_length);
+        auto offsets = py::array_t<std::int64_t>(offsets_length);
         py::buffer_info offsets_info = offsets.request();
-        auto offsets_ptr = (T*)offsets_info.ptr;
+        auto offsets_ptr = (std::int64_t*)offsets_info.ptr;
 
         offsets_ptr[0] = 0;
         for (size_t i = 0; i < (size_t)counts_info.size; i++) {
-            offsets_ptr[i + 1] = offsets_ptr[i] + counts_ptr[i * N];
+            offsets_ptr[i + 1] = offsets_ptr[i] + (std::int64_t)counts_ptr[i * N];
         }
         return offsets;
     }
 
     template <typename T>
-    static py::array_t<T> startsstops2parents(py::array_t<T> starts, py::array_t<T> stops) {
+    static py::array_t<std::int64_t> startsstops2parents(py::array_t<T> starts, py::array_t<T> stops) {
         py::buffer_info starts_info = starts.request();
         auto starts_ptr = (T*)starts_info.ptr;
         int N_starts = starts_info.strides[0] / starts_info.itemsize;
@@ -90,16 +90,16 @@ public:
                 }
             }
         }
-        auto parents = py::array_t<T>(max);
+        auto parents = py::array_t<std::int64_t>(max);
         py::buffer_info parents_info = parents.request();
-        auto parents_ptr = (T*)parents_info.ptr;
+        auto parents_ptr = (std::int64_t*)parents_info.ptr;
         for (size_t i = 0; i < max; i++) {
             parents_ptr[i] = -1;
         }
 
         for (size_t i = 0; i < (size_t)starts_info.size; i++) {
             for (size_t j = (size_t)starts_ptr[i * N_starts]; j < (size_t)stops_ptr[i * N_stops]; j++) {
-                parents_ptr[j] = (T)i;
+                parents_ptr[j] = (std::int64_t)i;
             }
         }
 
@@ -122,13 +122,13 @@ public:
             length++;
         }
 
-        auto starts = py::array_t<T>((size_t)length);
+        auto starts = py::array_t<std::int64_t>((size_t)length);
         py::buffer_info starts_info = starts.request();
-        auto starts_ptr = (T*)starts_info.ptr;
+        auto starts_ptr = (std::int64_t*)starts_info.ptr;
 
-        auto stops = py::array_t<T>((size_t)length);
+        auto stops = py::array_t<std::int64_t>((size_t)length);
         py::buffer_info stops_info = stops.request();
-        auto stops_ptr = (T*)stops_info.ptr;
+        auto stops_ptr = (std::int64_t*)stops_info.ptr;
 
         for (size_t i = 0; i < (size_t)length; i++) {
             starts_ptr[i] = 0;
@@ -140,17 +140,17 @@ public:
             auto thisOne = parents_ptr[k * N];
             if (last != thisOne) {
                 if (last >= 0 && last < length) {
-                    stops_ptr[last] = (T)k;
+                    stops_ptr[last] = (std::int64_t)k;
                 }
                 if (thisOne >= 0 && thisOne < length) {
-                    starts_ptr[thisOne] = (T)k;
+                    starts_ptr[thisOne] = (std::int64_t)k;
                 }
             }
             last = thisOne;
         }
 
         if (last != -1) {
-            stops_ptr[last] = (T)parents_info.size;
+            stops_ptr[last] = (std::int64_t)parents_info.size;
         }
 
         py::list temp;
@@ -187,28 +187,28 @@ public:
                 tempArray_ptr[i] = false;
             }
         }
-        auto changes = py::array_t<T>(countLength);
+        auto changes = py::array_t<std::int64_t>(countLength);
         py::buffer_info changes_info = changes.request();
-        auto changes_ptr = (T*)changes_info.ptr;
+        auto changes_ptr = (std::int64_t*)changes_info.ptr;
         size_t index = 0;
         for (size_t i = 0; i < (size_t)tempArray_info.size; i++) {
             if (tempArray_ptr[i]) {
-                changes_ptr[index++] = (T)(i + 1);
+                changes_ptr[index++] = (std::int64_t)(i + 1);
             }
         }
 
-        auto offsets = py::array_t<T>(changes_info.size + 2);
+        auto offsets = py::array_t<std::int64_t>(changes_info.size + 2);
         py::buffer_info offsets_info = offsets.request();
-        auto offsets_ptr = (T*)offsets_info.ptr;
+        auto offsets_ptr = (std::int64_t*)offsets_info.ptr;
         offsets_ptr[0] = 0;
-        offsets_ptr[offsets_info.size - 1] = (T)uniques_info.size;
+        offsets_ptr[offsets_info.size - 1] = (std::int64_t)uniques_info.size;
         for (size_t i = 1; i < (size_t)offsets_info.size - 1; i++) {
             offsets_ptr[i] = changes_ptr[i - 1];
         }
 
-        auto parents = py::array_t<T>(uniques_info.size);
+        auto parents = py::array_t<std::int64_t>(uniques_info.size);
         py::buffer_info parents_info = parents.request();
-        auto parents_ptr = (T*)parents_info.ptr;
+        auto parents_ptr = (std::int64_t*)parents_info.ptr;
         for (size_t i = 0; i < (size_t)parents_info.size; i++) {
             parents_ptr[i] = 0;
         }
@@ -231,6 +231,7 @@ public:
 PYBIND11_MODULE(_jagged, m) {
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
         .def(py::init<>())
+        DEF(test)
         DEF(offsets2parents)
         DEF(counts2offsets)
         DEF(startsstops2parents)
