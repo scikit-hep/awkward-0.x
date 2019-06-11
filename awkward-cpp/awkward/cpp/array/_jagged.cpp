@@ -76,7 +76,7 @@ public:
 
         py::buffer_info stops_info = stops.request();
         auto stops_ptr = (T*)stops_info.ptr;
-        int N_stops = stops_info.strides[0] / stops.info.itemsize;
+        int N_stops = stops_info.strides[0] / stops_info.itemsize;
 
         size_t max;
         if (stops_info.size < 1) {
@@ -179,7 +179,7 @@ public:
 
         size_t countLength = 0;
         for (size_t i = 0; i < (size_t)uniques_info.size - 1; i++) {
-            if (uniques_ptr[i * N] != uniques_ptr[(i + 1]) * N) {
+            if (uniques_ptr[i * N] != uniques_ptr[(i + 1) * N]) {
                 tempArray_ptr[i] = true;
                 countLength++;
             }
