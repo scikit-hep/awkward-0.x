@@ -152,7 +152,7 @@ class Test(unittest.TestCase):
         assert c.tolist() == [{"0": 0, "1": 0.0}, {"0": 1, "1": 1.1}, {"0": 2, "1": 2.2},
                               {"0": 4, "1": 4.4}, {"0": 5, "1": 5.5}, ]
 
-    def test_table_tuple_unzip(self):
+    def test_table_unzip(self):
         left = [1, 2, 3, 4, 5]
         right = [6, 7, 8, 9, 10]
         table = Table.named("tuple", left, right)
@@ -161,12 +161,3 @@ class Test(unittest.TestCase):
         assert len(unzip) == 2
         assert all(unzip[0] == left)
         assert all(unzip[1] == right)
-
-    def test_table_dict_unzip(self):
-        columns = [[1, 2], [3, 4], [5, 6], [7, 8]]
-        table = Table(*columns)
-        unzip = table.unzip()
-        assert type(unzip) is dict
-        assert len(unzip) == len(columns)
-        for column_i in range(len(columns)):
-            assert unzip[str(column_i)].tolist() == columns[column_i]
