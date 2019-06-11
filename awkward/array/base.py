@@ -447,12 +447,8 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return array.fillna(value)
 
-    def column_iterator(self):
-        for column_name in self.columns:
-            yield self[column_name]
-
     def unzip(self):
-        return tuple(column for column in self.column_iterator())
+        return tuple(self[column_name] for column_name in self.columns)
 
 class AwkwardArrayWithContent(AwkwardArray):
     """
