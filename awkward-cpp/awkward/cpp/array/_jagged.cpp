@@ -27,8 +27,8 @@ private:
 public:
 
     template <typename T>
-    static auto testEndian(py::array_t<T> input) {
-        return py::array::ensure(input).dtype();
+    static auto test(py::array_t<T> input) {
+        return input.request().itemsize;
     }
 
     template <typename T>
@@ -38,6 +38,7 @@ public:
             throw std::invalid_argument("offsets must have at least one element");
         }
         auto offsets_ptr = (T*)offsets_info.ptr;
+        int N = offsets_info.strides[0] / offsets_info.itemsize;
 
         size_t parents_length = (size_t)offsets_ptr[offsets_info.size - 1];
         auto parents = py::array_t<T>(parents_length);
@@ -48,7 +49,7 @@ public:
         size_t j = 0;
         size_t k = -1;
         for (size_t i = 0; i < (size_t)offsets_info.size; i++) {
-            while (j < (size_t)offsets_ptr[i]) {
+            while (j < (size_t)offsets_ptr[i * N]) {
                 parents_ptr[j] = (T)k;
                 j += 1;
             }
@@ -62,6 +63,7 @@ public:
     static py::array_t<T> counts2offsets(py::array_t<T> counts) {
         py::buffer_info counts_info = counts.request();
         auto counts_ptr = (T*)counts_info.ptr;
+        int N = counts_info.strides[0] / counts_info.itemsize;
 
         size_t offsets_length = counts_info.size + 1;
         auto offsets = py::array_t<T>(offsets_length);
@@ -70,7 +72,7 @@ public:
 
         offsets_ptr[0] = 0;
         for (size_t i = 0; i < (size_t)counts_info.size; i++) {
-            offsets_ptr[i + 1] = offsets_ptr[i] + counts_ptr[i];
+            offsets_ptr[i + 1] = offsets_ptr[i] + counts_ptr[i * N];
         }
         return offsets;
     }
@@ -79,9 +81,11 @@ public:
     static py::array_t<T> startsstops2parents(py::array_t<T> starts, py::array_t<T> stops) {
         py::buffer_info starts_info = starts.request();
         auto starts_ptr = (T*)starts_info.ptr;
+        int N_starts = starts_info.strides[0] / starts_info.itemsize;
 
         py::buffer_info stops_info = stops.request();
         auto stops_ptr = (T*)stops_info.ptr;
+        int N_stops = stops_info.strides[0] / stops.info.itemsize;
 
         size_t max;
         if (stops_info.size < 1) {
@@ -90,8 +94,8 @@ public:
         else {
             max = (size_t)stops_ptr[0];
             for (size_t i = 1; i < (size_t)stops_info.size; i++) {
-                if ((size_t)stops_ptr[i] > max) {
-                    max = (size_t)stops_ptr[i];
+                if ((size_t)stops_ptr[i * N_stops] > max) {
+                    max = (size_t)stops_ptr[i * N_stops];
                 }
             }
         }
@@ -103,7 +107,7 @@ public:
         }
 
         for (size_t i = 0; i < (size_t)starts_info.size; i++) {
-            for (size_t j = (size_t)starts_ptr[i]; j < (size_t)stops_ptr[i]; j++) {
+            for (size_t j = (size_t)starts_ptr[i * N_starts]; j < (size_t)stops_ptr[i * N_stops]; j++) {
                 parents_ptr[j] = (T)i;
             }
         }
@@ -115,12 +119,13 @@ public:
     static py::tuple parents2startsstops(py::array_t<T> parents, T length = -1) {
         py::buffer_info parents_info = parents.request();
         auto parents_ptr = (T*)parents_info.ptr;
+        int N = parents_info.strides[0] / parents_info.itemsize;
 
         if (length < 0) {
             length = 0;
             for (size_t i = 0; i < (size_t)parents_info.size; i++) {
                 if (parents_ptr[i] > length) {
-                    length = parents_ptr[i];
+                    length = parents_ptr[i * N];
                 }
             }
             length++;
@@ -141,7 +146,7 @@ public:
 
         T last = -1;
         for (size_t k = 0; k < (size_t)parents_info.size; k++) {
-            auto thisOne = parents_ptr[k];
+            auto thisOne = parents_ptr[k * N];
             if (last != thisOne) {
                 if (last >= 0 && last < length) {
                     stops_ptr[last] = (T)k;
@@ -168,6 +173,7 @@ public:
     static py::tuple uniques2offsetsparents(py::array_t<T> uniques) {
         py::buffer_info uniques_info = uniques.request();
         auto uniques_ptr = (T*)uniques_info.ptr;
+        int N = uniques_info.strides[0] / uniques_info.itemsize;
 
         size_t tempLength;
         if (uniques_info.size < 1) {
@@ -182,7 +188,7 @@ public:
 
         size_t countLength = 0;
         for (size_t i = 0; i < (size_t)uniques_info.size - 1; i++) {
-            if (uniques_ptr[i] != uniques_ptr[i + 1]) {
+            if (uniques_ptr[i * N] != uniques_ptr[(i + 1]) * N) {
                 tempArray_ptr[i] = true;
                 countLength++;
             }
@@ -234,7 +240,7 @@ public:
 PYBIND11_MODULE(_jagged, m) {
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
         .def(py::init<>())
-        DEF(testEndian)
+        DEF(test)
         DEF(offsets2parents)
         DEF(counts2offsets)
         DEF(startsstops2parents)
