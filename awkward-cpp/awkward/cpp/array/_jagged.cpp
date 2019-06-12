@@ -14,7 +14,9 @@
 
 namespace py = pybind11;
 
-struct JaggedArraySrc {
+class Content { };
+
+class JaggedArraySrc {
 public:
 
     py::array_t<std::int64_t> starts;
@@ -233,24 +235,23 @@ public:
     }
 };
 
-class Content {
+class NumpyContent : public Content, public py::buffer { };
 
-};
-
-class NumpyContent : public Content, public py::buffer {
-
-};
-
-class JaggedContent : public Content, public JaggedArraySrc {
-
-};
+class JaggedContent : public Content, public JaggedArraySrc { };
 
 PYBIND11_MODULE(_jagged, m) {
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
-        .def(py::init<>())
         DEF(offsets2parents)
         DEF(counts2offsets)
         DEF(startsstops2parents)
         DEF(parents2startsstops)
-        DEF(uniques2offsetsparents);
+        DEF(uniques2offsetsparents)
+        .def(py::init<py::array_t<std::int8_t>, py::array_t<std::int8_t>, Content>())
+        .def(py::init<py::array_t<std::uint8_t>, py::array_t<std::uint8_t>, Content>())
+        .def(py::init<py::array_t<std::int16_t>, py::array_t<std::int16_t>, Content>())
+        .def(py::init<py::array_t<std::uint16_t>, py::array_t<std::uint16_t>, Content>())
+        .def(py::init<py::array_t<std::int32_t>, py::array_t<std::int32_t>, Content>())
+        .def(py::init<py::array_t<std::uint32_t>, py::array_t<std::uint32_t>, Content>())
+        .def(py::init<py::array_t<std::int64_t>, py::array_t<std::int64_t>, Content>())
+        .def(py::init<py::array_t<std::uint64_t>, py::array_t<std::uint64_t>, Content>());
 }
