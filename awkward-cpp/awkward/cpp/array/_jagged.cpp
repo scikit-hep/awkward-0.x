@@ -12,22 +12,40 @@
 .def_static(#METHOD, &JaggedArraySrc::METHOD<std::int8_t>)\
 .def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint8_t>)
 
-namespace py = pybind11;
+#define INIT(TYPE) .def(py::init<py::array_t<std::int8_t>, py::array_t<std::int8_t>, TYPE>())\
+.def(py::init<py::array_t<std::uint8_t>, py::array_t<std::uint8_t>, TYPE>())\
+.def(py::init<py::array_t<std::int16_t>, py::array_t<std::int16_t>, TYPE>())\
+.def(py::init<py::array_t<std::uint16_t>, py::array_t<std::uint16_t>, TYPE>())\
+.def(py::init<py::array_t<std::int32_t>, py::array_t<std::int32_t>, TYPE>())\
+.def(py::init<py::array_t<std::uint32_t>, py::array_t<std::uint32_t>, TYPE>())\
+.def(py::init<py::array_t<std::int64_t>, py::array_t<std::int64_t>, TYPE>())\
+.def(py::init<py::array_t<std::uint64_t>, py::array_t<std::uint64_t>, TYPE>())
 
-class Content { };
+namespace py = pybind11;
 
 class JaggedArraySrc {
 public:
 
-    py::array_t<std::int64_t> starts;
-    py::array_t<std::int64_t> stops;
-    Content content;
+    py::array_t<std::int64_t> starts,
+                              stops, 
+                              content_array;
+    JaggedArraySrc*           content_jagged;
+    bool                      isJagged;
 
-    template <typename T>
-    JaggedArraySrc(py::array_t<T> starts_, py::array_t<T> stops_, Content content_) {
-        starts  = starts_;
-        stops   = stops_;
-        content = content_;
+    template <typename S, typename C>
+    JaggedArraySrc(py::array_t<S> starts_, py::array_t<S> stops_, py::array_t<C> content_) {
+        starts        = (py::array_t<std::int64_t>)starts_;
+        stops         = (py::array_t<std::int64_t>)stops_;
+        content_array = (py::array_t<std::int64_t>)content_;
+        isJagged      = false;
+    }
+
+    template <typename S>
+    JaggedArraySrc(py::array_t<S> starts_, py::array_t<S> stops_, JaggedArraySrc* content_) {
+        starts         = (py::array_t<std::int64_t>)starts_;
+        stops          = (py::array_t<std::int64_t>)stops_;
+        content_jagged = content_;
+        isJagged       = true;
     }
 
     template <typename T>
@@ -235,10 +253,6 @@ public:
     }
 };
 
-class NumpyContent : public Content, public py::buffer { };
-
-class JaggedContent : public Content, public JaggedArraySrc { };
-
 PYBIND11_MODULE(_jagged, m) {
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
         DEF(offsets2parents)
@@ -246,12 +260,13 @@ PYBIND11_MODULE(_jagged, m) {
         DEF(startsstops2parents)
         DEF(parents2startsstops)
         DEF(uniques2offsetsparents)
-        .def(py::init<py::array_t<std::int8_t>, py::array_t<std::int8_t>, Content>())
-        .def(py::init<py::array_t<std::uint8_t>, py::array_t<std::uint8_t>, Content>())
-        .def(py::init<py::array_t<std::int16_t>, py::array_t<std::int16_t>, Content>())
-        .def(py::init<py::array_t<std::uint16_t>, py::array_t<std::uint16_t>, Content>())
-        .def(py::init<py::array_t<std::int32_t>, py::array_t<std::int32_t>, Content>())
-        .def(py::init<py::array_t<std::uint32_t>, py::array_t<std::uint32_t>, Content>())
-        .def(py::init<py::array_t<std::int64_t>, py::array_t<std::int64_t>, Content>())
-        .def(py::init<py::array_t<std::uint64_t>, py::array_t<std::uint64_t>, Content>());
+        INIT(py::array_t<std::int8_t>)
+        INIT(py::array_t<std::uint8_t>)
+        INIT(py::array_t<std::int16_t>)
+        INIT(py::array_t<std::uint16_t>)
+        INIT(py::array_t<std::int32_t>)
+        INIT(py::array_t<std::uint32_t>)
+        INIT(py::array_t<std::int64_t>)
+        INIT(py::array_t<std::uint64_t>)
+        INIT(JaggedArraySrc*);
 }
