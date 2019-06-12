@@ -17,6 +17,17 @@ namespace py = pybind11;
 struct JaggedArraySrc {
 public:
 
+    py::array_t<std::int64_t> starts;
+    py::array_t<std::int64_t> stops;
+    Content content;
+
+    template <typename T>
+    JaggedArraySrc(py::array_t<T> starts_, py::array_t<T> stops_, Content content_) {
+        starts  = starts_;
+        stops   = stops_;
+        content = content_;
+    }
+
     template <typename T>
     static py::array_t<std::int64_t> offsets2parents(py::array_t<T> offsets) {
         py::buffer_info offsets_info = offsets.request();
@@ -220,6 +231,17 @@ public:
         py::tuple out(temp);
         return out;
     }
+};
+
+class Content {
+
+};
+
+class NumpyContent : public Content, public py::buffer {
+
+};
+
+class JaggedContent : public Content, public JaggedArraySrc {
 
 };
 
