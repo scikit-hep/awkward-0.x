@@ -20,6 +20,7 @@ from awkward.array.union import UnionArray
 from awkward.array.virtual import VirtualArray
 
 import awkward.generate
+
 def fromiter(iterable, awkwardlib=None, **options):
     if awkwardlib is None:
         awkwardlib = "awkward.pandas"
