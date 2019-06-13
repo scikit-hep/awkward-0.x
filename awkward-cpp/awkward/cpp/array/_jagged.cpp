@@ -3,24 +3,6 @@
 #include <cinttypes>
 #include <stdexcept>
 
-#define DEF(METHOD) .def_static(#METHOD, &JaggedArraySrc::METHOD<std::int64_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint64_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int32_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint32_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int16_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint16_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int8_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint8_t>)
-
-#define INIT(TYPE) .def(py::init<py::array_t<std::int8_t>, py::array_t<std::int8_t>, TYPE>())\
-.def(py::init<py::array_t<std::uint8_t>, py::array_t<std::uint8_t>, TYPE>())\
-.def(py::init<py::array_t<std::int16_t>, py::array_t<std::int16_t>, TYPE>())\
-.def(py::init<py::array_t<std::uint16_t>, py::array_t<std::uint16_t>, TYPE>())\
-.def(py::init<py::array_t<std::int32_t>, py::array_t<std::int32_t>, TYPE>())\
-.def(py::init<py::array_t<std::uint32_t>, py::array_t<std::uint32_t>, TYPE>())\
-.def(py::init<py::array_t<std::int64_t>, py::array_t<std::int64_t>, TYPE>())\
-.def(py::init<py::array_t<std::uint64_t>, py::array_t<std::uint64_t>, TYPE>())
-
 namespace py = pybind11;
 
 class JaggedArraySrc {
@@ -30,14 +12,20 @@ public:
                               stops, 
                               content_array;
     JaggedArraySrc*           content_jagged;
-    bool                      isJagged;
+    char                      content_type;
+    /**************************************************************************
+    These are the content_type character codes:
+    'a' = array
+    'j' = JaggedArray
+    't' = table
+    **************************************************************************/
 
     template <typename S, typename C>
     JaggedArraySrc(py::array_t<S> starts_, py::array_t<S> stops_, py::array_t<C> content_) {
         starts        = (py::array_t<std::int64_t>)starts_;
         stops         = (py::array_t<std::int64_t>)stops_;
         content_array = (py::array_t<std::int64_t>)content_;
-        isJagged      = false;
+        content_type  = 'a';
     }
 
     template <typename S>
@@ -45,7 +33,7 @@ public:
         starts         = (py::array_t<std::int64_t>)starts_;
         stops          = (py::array_t<std::int64_t>)stops_;
         content_jagged = content_;
-        isJagged       = true;
+        content_type   = 'j';
     }
 
     template <typename T>
@@ -251,7 +239,51 @@ public:
         py::tuple out(temp);
         return out;
     }
+
+    auto __getitem__(py::tuple locale) {
+        if (locale.size == 0)
+            return this;
+        py::list newlocale();
+        for (ssize_t i = 0; i < locale.length, i++) {
+            if (typeid(locale[i]) == "Iterable" && !(typeid(locale[i]) == "numpy.ndarray" || typeid(locale[i]) == "awkward.array.base.AwkwardArray")) {
+                newlocale.append(py::array_t<std::int64_t>(locale[i]));
+            }
+            else {
+                newlocale.append(locale[i]);
+            }
+        }
+        if (newlocale.length == 1) {
+            newlocale = newlocale[0];
+        }
+        return this[newlocale]; // if this works I'm gonna be mad. this makes no sense as is
+    }
+
+    auto __getitem__(std::int64_t locale) { // I think "where" is a keyword, hence "locale"
+        py::list temp;
+        temp.append(locale);
+        py::tuple out(temp);
+        return __getitem__(out);
+    }
+
 };
+
+#define DEF(METHOD) .def_static(#METHOD, &JaggedArraySrc::METHOD<std::int64_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint64_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int32_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint32_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int16_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint16_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int8_t>)\
+.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint8_t>)
+
+#define INIT(TYPE) .def(py::init<py::array_t<std::int8_t>, py::array_t<std::int8_t>, TYPE>())\
+.def(py::init<py::array_t<std::uint8_t>, py::array_t<std::uint8_t>, TYPE>())\
+.def(py::init<py::array_t<std::int16_t>, py::array_t<std::int16_t>, TYPE>())\
+.def(py::init<py::array_t<std::uint16_t>, py::array_t<std::uint16_t>, TYPE>())\
+.def(py::init<py::array_t<std::int32_t>, py::array_t<std::int32_t>, TYPE>())\
+.def(py::init<py::array_t<std::uint32_t>, py::array_t<std::uint32_t>, TYPE>())\
+.def(py::init<py::array_t<std::int64_t>, py::array_t<std::int64_t>, TYPE>())\
+.def(py::init<py::array_t<std::uint64_t>, py::array_t<std::uint64_t>, TYPE>())
 
 PYBIND11_MODULE(_jagged, m) {
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")

@@ -11,12 +11,6 @@ from ._jagged import JaggedArraySrc
 
 class JaggedArrayCpp(CppMethods, JaggedArraySrc, awkward.array.jagged.JaggedArray):
     @classmethod
-    def startsstops2parents(cls, starts, stops):
-        if starts.dtype is not stops.dtype:
-            raise ValueError("starts and stops must be the same type")
-        return getattr(JaggedArraySrc, "startsstops2parents")(starts, stops)
-
-    @classmethod
     def parents2startsstops(cls, parents, length = None):
         if length is None:
             length = -1
