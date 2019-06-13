@@ -11,10 +11,6 @@ from awkward.pandas.accessor import AwkwardType
 class JaggedArrayPandas(awkward.array.jagged.JaggedArray, ExtensionArray):
 
     @property
-    def name(self):
-        return str('awkward')
-
-    @property
     def dtype(self):
         return AwkwardType()
 
