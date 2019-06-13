@@ -562,6 +562,10 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     out[i] = self.Methods.maybemixin(types[i], ChunkedArray)(chunks[i])
             return tuple(out)
 
+    def regular(self):
+        self._valid()
+        return self.numpy.concatenate([x.regular() for x in self.chunks])
+
     def _hasjagged(self):
         for chunkid in range(len(self._chunks)):
             self.knowcounts(chunkid + 1)

@@ -685,6 +685,14 @@ class Table(awkward.array.base.AwkwardArray):
                     out[i][n] = newcolumns[n]
             return tuple(out)
 
+    def regular(self):
+        self._valid()
+        pairs = [(n, x.regular()) for n, x in self.items()]
+        out = self.numpy.empty(len(self), [(n, x.dtype, x.shape[1:]) for n, x in pairs])
+        for n, x in pairs:
+            out[n] = x
+        return out
+
     @property
     def istuple(self):
         return self._rowname == "tuple" and list(self._contents) == [str(x) for x in range(len(self._contents))]

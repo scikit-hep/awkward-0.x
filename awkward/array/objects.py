@@ -212,6 +212,9 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def _hasjagged(self):
         return False
 
+    def regular(self):
+        return self.numpy.array(self)
+
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         raise TypeError("cannot call reducer on object array")
 
@@ -555,6 +558,10 @@ class StringArray(StringMethods, ObjectArray):
         else:
             out = self._content[where]
             return self.__class__(out.starts, out.stops, out.content, self.encoding)
+
+    def regular(self):
+        self._valid()
+        return self.numpy.array(self)
 
     @property
     def iscompact(self):

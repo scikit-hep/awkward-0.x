@@ -956,6 +956,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.Methods.maybemixin(type(result), self.JaggedArray).fromcounts(counts, result)
 
     def regular(self):
+        self._valid()
+
         if len(self) > 0 and not (self.counts.reshape(-1)[0] == self.counts).all():
             raise ValueError("jagged array is not regular: different elements have different counts")
         count = self.counts.reshape(-1)[0]
