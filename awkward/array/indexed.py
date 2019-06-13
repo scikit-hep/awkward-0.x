@@ -192,7 +192,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def regular(self):
         self._valid()
-        return self._content.regular()[self._index]
+        return self._util_regular(self._content)[self._index]
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         if self._util_hasjagged(self._content):
@@ -599,7 +599,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     def regular(self):
         self._valid()
-        content = self._content.regular()
+        content = self._util_regular(self._content)
         out = self.numpy.full(self.shape, self.default, dtype=content.dtype)
         if len(self._index) != 0:
             mask = self.boolmask(maskedwhen=True)

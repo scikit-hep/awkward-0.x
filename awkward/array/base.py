@@ -359,6 +359,13 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         return isinstance(array, AwkwardArray) and array._hasjagged()
 
     @classmethod
+    def _util_regular(cls, array):
+        if isinstance(array, AwkwardArray):
+            return array.regular()
+        else:
+            return array
+
+    @classmethod
     def _util_reduce(cls, array, ufunc, identity, dtype, regularaxis):
         if isinstance(array, AwkwardArray):
             return array._reduce(ufunc, identity, dtype, regularaxis)

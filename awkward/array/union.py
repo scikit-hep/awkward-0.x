@@ -401,7 +401,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
     def regular(self):
         self._valid()
-        arrays = [x.regular() for x in self._contents]
+        arrays = [self._util_regular(x) for x in self._contents]
         out = self.numpy.empty(len(self), self.uniondtype(arrays))
         for tag, array in enumerate(arrays):
             mask = (self._tags == tag)

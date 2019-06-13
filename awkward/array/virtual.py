@@ -385,7 +385,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         return getattr(ufunc, method)(*inputs, **kwargs)
 
     def regular(self):
-        return self.array.regular()
+        return self._util_regular(self.array)
 
     def _hasjagged(self):
         return self._util_hasjagged(self.array)

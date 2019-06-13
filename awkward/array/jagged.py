@@ -961,15 +961,16 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if len(self) > 0 and not (self.counts.reshape(-1)[0] == self.counts).all():
             raise ValueError("jagged array is not regular: different elements have different counts")
         count = self.counts.reshape(-1)[0]
-        
+
+        content = self._util_regular(self._content)
         if self._canuseoffset():
-            out = self._content[self._starts[0]:self._stops[-1]]
-            return out.reshape(self._starts.shape + (count,) + self._content.shape[1:])
+            out = content[self._starts[0]:self._stops[-1]]
+            return out.reshape(self._starts.shape + (count,) + content.shape[1:])
 
         else:
             indexes = self.numpy.repeat(self._starts, count).reshape(self._starts.shape + (count,))
             indexes += self.numpy.arange(count)
-            return self._content[indexes]
+            return content[indexes]
 
     def _argpairs(self):
         self._valid()

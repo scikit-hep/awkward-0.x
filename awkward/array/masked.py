@@ -246,7 +246,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def regular(self):
         self._valid()
-        out = self._content.regular().astype(self.numpy.float64)
+        out = self._util_regular(self._content).astype(self.numpy.float64)
         out[self.boolmask(maskedwhen=True)] = float("nan")
         return out
 
@@ -665,7 +665,7 @@ class IndexedMaskedArray(MaskedArray):
 
     def regular(self):
         self._valid()
-        out = self._content.regular().astype(self.numpy.float64)[self._index]
+        out = self._util_regular(self._content).astype(self.numpy.float64)[self._index]
         out[self.boolmask(maskedwhen=True)] = float("nan")
         return out
 
