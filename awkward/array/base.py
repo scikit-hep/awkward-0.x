@@ -178,7 +178,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             except Exception as err:
                 raise AttributeError("while trying to get column {0}, an exception occurred:\n{1}: {2}".format(repr(where), type(err), str(err)))
         else:
-            raise AttributeError("no attribute named {0}".format(repr(where)))
+            raise AttributeError("no column named {0}".format(repr(where)))
 
     def __dir__(self):
         return sorted(set(super(AwkwardArray, self).__dir__() + self.columns))
