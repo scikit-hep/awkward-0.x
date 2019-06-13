@@ -240,41 +240,96 @@ public:
         return out;
     }
 
-    auto __getitem__(py::tuple locale) {
-        if (locale.size == 0)
-            return this;
-        py::list newlocale();
-        for (ssize_t i = 0; i < locale.length, i++) {
-            if (typeid(locale[i]) == "Iterable" && !(typeid(locale[i]) == "numpy.ndarray" || typeid(locale[i]) == "awkward.array.base.AwkwardArray")) {
-                newlocale.append(py::array_t<std::int64_t>(locale[i]));
-            }
-            else {
-                newlocale.append(locale[i]);
+    py::array_t<std::int64_t> get_starts() { return starts; }
+
+    template <typename T>
+    void set_starts(py::array_t<T> starts_) {
+        py::buffer_info starts_info = starts_.request();
+        if (starts_info.ndim < 1) {
+            throw std::domain_error("starts must have at least 1 dimension");
+        }
+        int N = starts_info.strides[0] / starts_info.itemsize;
+        auto starts_ptr = (T*)starts_info.ptr;
+        for (ssize_t i = 0; i < starts_info.size; i++) {
+            if (starts_ptr[i * N] < 0) {
+                throw std::invalid_argument("starts must have all non-negative values: see index [" + std::to_string(i * N) + "]");
             }
         }
-        if (newlocale.length == 1) {
-            newlocale = newlocale[0];
+        starts = (py::array_t<std::int64_t>)starts_;
+    }
+
+    py::array_t<std::int64_t> get_stops() { return stops; }
+
+    template <typename T>
+    void set_stops(py::array_t<T> stops_) {
+        py::buffer_info stops_info = stops_.request();
+        if (stops_info.ndim < 1) {
+            throw std::domain_error("stops must have at least 1 dimension");
         }
-        return this[newlocale]; // if this works I'm gonna be mad. this makes no sense as is
+        int N = stops_info.strides[0] / stops_info.itemsize;
+        auto stops_ptr = (T*)stops_info.ptr;
+        for (ssize_t i = 0; i < stops_info.size; i++) {
+            if (stops_ptr[i * N] < 0) {
+                throw std::invalid_argument("stops must have all non-negative values: see index [" + std::to_string(i * N) + "]");
+            }
+        }
+        stops = (py::array_t<std::int64_t>)stops_;
     }
 
-    auto __getitem__(std::int64_t locale) { // I think "where" is a keyword, hence "locale"
-        py::list temp;
-        temp.append(locale);
-        py::tuple out(temp);
-        return __getitem__(out);
-    }
+    template <typename T>
+    py::array_t<std::int64_t> __getitem__(T index) { // TODO: handle validity checks in-line
+        py::buffer_info starts_info = starts.request();
+        py::buffer_info stops_info = stops.request();
+        if (index < 0) {
+            index = starts_info.size + index;
+        }
+        if ((ssize_t)index > starts_info.size || (ssize_t)index > stops_info.size || index < 0) {
+            throw std::out_of_range("index must specify a location within the JaggedArray");
+        }
+        ssize_t start = (ssize_t)((std::int64_t*)starts_info.ptr)[index];
+        ssize_t stop = (ssize_t)((std::int64_t*)stops_info.ptr)[index];
+        if (content_type == 'a') {
+            py::buffer_info content_info = content_array.request();
+            auto content_ptr = (std::int64_t*)content_info.ptr;
+            if (content_info.ndim == 1 && content_info.strides[0] == 8) {
+                if (start > content_info.size || start < 0 || stop > content_info.size || stop < 0) {
+                    throw std::out_of_range("starts and stops are not within the bounds of content");
+                }
+                if (stop >= start) {
+                    auto out = py::array_t<std::int64_t>(stop - start);
+                    py::buffer_info out_info = out.request();
+                    auto out_ptr = (std::int64_t*)out_info.ptr;
 
+                    ssize_t here = 0;
+                    for (ssize_t i = start; i < stop; i++) {
+                        out_ptr[here++] = content_ptr[i];
+                    }
+                    return out;
+                }
+                auto out = py::array_t<std::int64_t>(start - stop);
+                py::buffer_info out_info = out.request();
+                auto out_ptr = (std::int64_t*)out_info.ptr;
+
+                ssize_t here = 0;
+                for (ssize_t i = stop - 1; i >= start; i--) {
+                    out_ptr[here++] = content_ptr[i];
+                }
+                return out;
+            }
+        }
+        auto out = py::array_t<std::int64_t>(0);
+        return out;
+    }
 };
 
-#define DEF(METHOD) .def_static(#METHOD, &JaggedArraySrc::METHOD<std::int64_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint64_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int32_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint32_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int16_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint16_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::int8_t>)\
-.def_static(#METHOD, &JaggedArraySrc::METHOD<std::uint8_t>)
+#define DEF(deftype, METHOD) .deftype(#METHOD, &JaggedArraySrc::METHOD<std::int64_t>)\
+.deftype(#METHOD, &JaggedArraySrc::METHOD<std::uint64_t>)\
+.deftype(#METHOD, &JaggedArraySrc::METHOD<std::int32_t>)\
+.deftype(#METHOD, &JaggedArraySrc::METHOD<std::uint32_t>)\
+.deftype(#METHOD, &JaggedArraySrc::METHOD<std::int16_t>)\
+.deftype(#METHOD, &JaggedArraySrc::METHOD<std::uint16_t>)\
+.deftype(#METHOD, &JaggedArraySrc::METHOD<std::int8_t>)\
+.deftype(#METHOD, &JaggedArraySrc::METHOD<std::uint8_t>)
 
 #define INIT(TYPE) .def(py::init<py::array_t<std::int8_t>, py::array_t<std::int8_t>, TYPE>())\
 .def(py::init<py::array_t<std::uint8_t>, py::array_t<std::uint8_t>, TYPE>())\
@@ -285,13 +340,22 @@ public:
 .def(py::init<py::array_t<std::int64_t>, py::array_t<std::int64_t>, TYPE>())\
 .def(py::init<py::array_t<std::uint64_t>, py::array_t<std::uint64_t>, TYPE>())
 
+#define PROPERTY(NAME, GET, SET) .def_property(#NAME, &JaggedArraySrc::GET, &JaggedArraySrc::SET<std::int8_t>)\
+.def_property(#NAME, &JaggedArraySrc::GET, &JaggedArraySrc::SET<std::uint8_t>)\
+.def_property(#NAME, &JaggedArraySrc::GET, &JaggedArraySrc::SET<std::int16_t>)\
+.def_property(#NAME, &JaggedArraySrc::GET, &JaggedArraySrc::SET<std::uint16_t>)\
+.def_property(#NAME, &JaggedArraySrc::GET, &JaggedArraySrc::SET<std::int32_t>)\
+.def_property(#NAME, &JaggedArraySrc::GET, &JaggedArraySrc::SET<std::uint32_t>)\
+.def_property(#NAME, &JaggedArraySrc::GET, &JaggedArraySrc::SET<std::int64_t>)\
+.def_property(#NAME, &JaggedArraySrc::GET, &JaggedArraySrc::SET<std::uint64_t>)
+
 PYBIND11_MODULE(_jagged, m) {
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
-        DEF(offsets2parents)
-        DEF(counts2offsets)
-        DEF(startsstops2parents)
-        DEF(parents2startsstops)
-        DEF(uniques2offsetsparents)
+        DEF(def_static, offsets2parents)
+        DEF(def_static, counts2offsets)
+        DEF(def_static, startsstops2parents)
+        DEF(def_static, parents2startsstops)
+        DEF(def_static, uniques2offsetsparents)
         INIT(py::array_t<std::int8_t>)
         INIT(py::array_t<std::uint8_t>)
         INIT(py::array_t<std::int16_t>)
@@ -300,5 +364,8 @@ PYBIND11_MODULE(_jagged, m) {
         INIT(py::array_t<std::uint32_t>)
         INIT(py::array_t<std::int64_t>)
         INIT(py::array_t<std::uint64_t>)
-        INIT(JaggedArraySrc*);
+        INIT(JaggedArraySrc*)
+        PROPERTY(starts, get_starts, set_starts)
+        PROPERTY(stops, get_stops, set_stops)
+        DEF(def, __getitem__);
 }
