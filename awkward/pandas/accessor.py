@@ -7,7 +7,7 @@ def delegated_method(method, index, name, *args, **kwargs):
 
 import awkward.array
 
-class Delegated:
+class Delegated(object):
     # Descriptor for delegating attribute access to/from
     # Series to underlying array
 
@@ -36,7 +36,6 @@ class DelegatedMethod(Delegated):
 class AwkwardType(ExtensionDtype):
     name = 'awkward'
     type = awkward.array.base.AwkwardArray
-
     kind = 'O'
 
     @classmethod
