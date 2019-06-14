@@ -479,6 +479,9 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return array.fillna(value)
 
+    def unzip(self):
+        return tuple(self[column_name] for column_name in self.columns)
+
     @property
     def pandas(self):
         return self._util_pandas({})
