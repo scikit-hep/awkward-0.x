@@ -550,3 +550,25 @@ class Test(unittest.TestCase):
         a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         assert a.pad(4).fillna(999).tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]
         assert a.pad(4, numpy.ma.masked).fillna(999).regular().tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]
+
+    def test_jagged_unzip(self):
+        a = fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        b = JaggedArray([1, 5, 5], [4, 5, 7], [999, 10, 20, 30, 999, 40, 50, 999])
+        c = numpy.array([100, 200, 300])
+        d = 1000
+
+        def check_2_tuple_contents(two_tuple, one, two):
+            assert type(two_tuple) is tuple
+            assert len(two_tuple) == 2
+            assert all((two_tuple[0] == one).flatten())
+            assert all((two_tuple[1] == two).flatten())
+
+        unzip_ab = a.zip(b).unzip()
+        unzip_ba = b.zip(a).unzip()
+        unzip_bc = b.zip(c).unzip()
+        unzip_bd = b.zip(d).unzip()
+
+        check_2_tuple_contents(unzip_ab, a, b)
+        check_2_tuple_contents(unzip_ba, b, a)
+        check_2_tuple_contents(unzip_bc, b, c)
+        check_2_tuple_contents(unzip_bd, b, d)
