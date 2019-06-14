@@ -1,4 +1,4 @@
- #!/usr/bin/env python
+#!/usr/bin/env python
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
@@ -1768,3 +1768,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(starts=starts, stops=stops, content=self.numpy.ma.MaskedArray(content, mask))
         else:
             return self.copy(starts=starts, stops=stops, content=self.MaskedArray(mask, content, maskedwhen=maskedwhen))
+
+    def _util_pandas(self, seen):
+        import awkward.pandas
+        if id(self) in seen:
+            return seen[id(self)]
+        else:
+            out = seen[id(self)] = self.copy()
+            out.__class__ = awkward.pandas.mixin("JaggedSeries", self)
+            if isinstance(self._content, awkward.array.base.AwkwardArray):
+                out._content = out._content._util_pandas(seen)
+            return out
