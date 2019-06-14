@@ -4,6 +4,8 @@
 
 import types
 import numbers
+import re
+import keyword
 try:
     from collections.abc import Iterable
 except ImportError:
@@ -179,9 +181,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                 raise AttributeError("while trying to get column {0}, an exception occurred:\n{1}: {2}".format(repr(where), type(err), str(err)))
         else:
             raise AttributeError("no column named {0}".format(repr(where)))
-
+    
     def __dir__(self):
-        return sorted(set(super(AwkwardArray, self).__dir__() + self.columns))
+        return sorted(set(super(AwkwardArray, self).__dir__() + [x for x in self.columns if self._dir_pattern.match(x) and not keyword.iskeyword(x)]))
+    _dir_pattern = re.compile(r"^[a-zA-Z_]\w*$")
 
     @property
     def i0(self):
