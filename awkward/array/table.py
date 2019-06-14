@@ -63,7 +63,7 @@ class Table(awkward.array.base.AwkwardArray):
                 self._table._checkiter()
             i = 0
             while str(i) in self._table._contents:
-                yield self._table._contents[str(i)]
+                yield self._table._contents[str(i)][self._index]
                 i += 1
 
         def __getitem__(self, where):
@@ -775,3 +775,13 @@ class Table(awkward.array.base.AwkwardArray):
 
         out._valid()
         return out
+
+    def _util_pandas(self, seen):
+        import awkward.pandas
+        if id(self) in seen:
+            return seen[id(self)]
+        else:
+            out = seen[id(self)] = self.copy()
+            out.__class__ = awkward.pandas.mixin("TableSeries", self)
+            out._contents = OrderedDict((n, x._util_pandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x) for n, x in out._contents.items())
+            return out

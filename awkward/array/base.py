@@ -450,6 +450,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def unzip(self):
         return tuple(self[column_name] for column_name in self.columns)
 
+    @property
+    def pandas(self):
+        return self._util_pandas({})
+
 class AwkwardArrayWithContent(AwkwardArray):
     """
     AwkwardArrayWithContent: abstract base class
