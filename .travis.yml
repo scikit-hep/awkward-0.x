@@ -73,7 +73,7 @@ before_deploy:
     elif [[ $AWKWARD_DEPLOYMENT == awkward-cpp ]]
     then
         echo "DEPLOYING cpp"
-        cd ..
+        cd
         cd awkward-cpp
         export AWKWARD_DEPLOYMENT=none
     fi
