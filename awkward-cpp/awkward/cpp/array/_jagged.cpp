@@ -9,7 +9,7 @@ class JaggedArraySrc {
 public:
 
     py::array_t<std::int64_t> starts,
-                              stops, 
+                              stops,
                               content_array;
     JaggedArraySrc*           content_jagged;
     char                      content_type;
@@ -240,6 +240,37 @@ public:
         return out;
     }
 
+    char get_content_type() { return content_type; }
+
+    py::array_t<std::int64_t> get_content_array() {
+        if (content_type != 'a') {
+            throw std::invalid_argument("JaggedArray must be of 'array' content type");
+        }
+        return content_array;
+    }
+
+    template <typename T>
+    void set_content_array(py::array_t<T> content_array_) {
+        if (content_type != 'a') {
+            throw std::invalid_argument("JaggedArray must be of 'array' content type");
+        }
+        content_array = (py::array_t<std::int64_t>)content_array_;
+    }
+
+    JaggedArraySrc* get_content_jagged() {
+        if (content_type != 'j') {
+            throw std::invalid_argument("JaggedArray must be of 'jagged' content type");
+        }
+        return content_jagged;
+    }
+
+    void set_content_jagged(JaggedArraySrc* content_jagged_) {
+        if (content_type != 'j') {
+            throw std::invalid_argument("JaggedArray must be of 'jagged' content type");
+        }
+        content_jagged = content_jagged_;
+    }
+
     py::array_t<std::int64_t> get_starts() { return starts; }
 
     template <typename T>
@@ -277,7 +308,7 @@ public:
     }
 
     template <typename T>
-    py::array_t<std::int64_t> __getitem__(T index) { 
+    py::array_t<std::int64_t> __getitem__(T index) { // limited to single-int arguments, with 1d non-stride content array
         py::buffer_info starts_info = starts.request();
         py::buffer_info stops_info = stops.request();
         if (index < 0) {
@@ -317,6 +348,50 @@ public:
         }
         auto out = py::array_t<std::int64_t>(0);
         return out;
+    }
+
+    std::string __repr__() { // limited functionality
+        std::string out = "";
+
+        py::buffer_info starts_info = starts.request();
+        auto starts_ptr = (std::int64_t*)starts_info.ptr;
+
+        py::buffer_info stops_info = stops.request();
+        auto stops_ptr = (std::int64_t*)stops_info.ptr;
+
+        if (content_type == 'a') {
+            py::buffer_info array_info = content_array.request();
+            auto array_ptr = (std::int64_t*)array_info.ptr;
+
+            if (array_info.ndim == 1 && array_info.strides[0] / array_info.itemsize == 1) {
+                if (starts_info.size > stops_info.size) {
+                    throw std::out_of_range("starts must be the same or shorter length than stops");
+                }
+
+                ssize_t limit = starts_info.size;
+                for (ssize_t i = 0; i < limit; i++) {
+                    if (i != 0) {
+                        out = out + " ";
+                    }
+                    out = out + "[";
+
+                    ssize_t end = (ssize_t)stops_ptr[i];
+                    if ((ssize_t)starts_ptr[i] > end) {
+                        throw std::out_of_range("stops must be greater than or equal to starts");
+                    }
+
+                    for (ssize_t j = (ssize_t)starts_ptr[i]; j < end; j++) {
+                        if (j != (ssize_t)starts_ptr[i]) {
+                            out = out + " ";
+                        }
+                        out = out + std::to_string(array_ptr[j]);
+                    }
+                    out = out + "]";
+                }
+                return "<JaggedArray [" + out + "]>";
+            }
+        }
+        return "<This JaggedArray type is not yet printable>";
     }
 };
 
@@ -363,7 +438,13 @@ PYBIND11_MODULE(_jagged, m) {
         INIT(py::array_t<std::int64_t>)
         INIT(py::array_t<std::uint64_t>)
         INIT(JaggedArraySrc*)
+        .def_property_readonly("content_type", &JaggedArraySrc::get_content_type)
         PROPERTY(starts, get_starts, set_starts)
         PROPERTY(stops, get_stops, set_stops)
-        DEF(def, __getitem__);
+        PROPERTY(content_array, get_content_array, set_content_array)
+        .def_property("content_array", &JaggedArraySrc::get_content_array, &JaggedArraySrc::set_content_array<float>)
+        .def_property("content_array", &JaggedArraySrc::get_content_array, &JaggedArraySrc::set_content_array<double>)
+        .def_property("content_jagged", &JaggedArraySrc::get_content_jagged, &JaggedArraySrc::set_content_jagged)
+        DEF(def, __getitem__)
+        .def("__repr__", &JaggedArraySrc::__repr__);
 }
