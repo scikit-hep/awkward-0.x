@@ -52,7 +52,7 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install h5py pyarrow ; fi
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install numba ; ln -s ../awkward-numba/awkward/numba awkward/numba ; fi
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pybind11 ; cd awkward-cpp ; python setup.py build ; cd .. ; tree awkward-cpp/build/ ; cd awkward ; ln -s ../awkward-cpp/build/lib.*/awkward/cpp cpp ; cd .. ; ls -l awkward/cpp ; ls -l awkward/cpp/ ; python -c 'print("TESTING awkward-cpp"); import awkward.cpp; print(awkward.cpp.JaggedArray)' ; fi
-  - export AWKWARD_DEPLOYMENT=base
+  - export AWKWARD_DEPLOYMENT=awkward
   - pip install --upgrade pyOpenSSL     # for deployment
 
 notifications:
@@ -60,17 +60,16 @@ notifications:
 
 before_deploy:
   - |
-    if [[ $AWKWARD_DEPLOYMENT == base ]]
+    if [[ $AWKWARD_DEPLOYMENT == awkward ]]
     then
-        echo "DEPLOYING base"
-        export AWKWARD_DEPLOYMENT=numba
-    elif [[ $AWKWARD_DEPLOYMENT == numba ]]
+        echo "DEPLOYING awkward-array"
+        export AWKWARD_DEPLOYMENT=awkward-numba
+    elif [[ $AWKWARD_DEPLOYMENT == awkward-numba ]]
     then
         echo "DEPLOYING numba"
         cd awkward-numba
-        export AWKWARD_DEPLOYMENT=cpp
-    fi
-    elif [[ $AWKWARD_DEPLOYMENT == cpp ]]
+        export AWKWARD_DEPLOYMENT=awkward-cpp
+    elif [[ $AWKWARD_DEPLOYMENT == awkward-cpp ]]
     then
         echo "DEPLOYING cpp"
         cd ..
