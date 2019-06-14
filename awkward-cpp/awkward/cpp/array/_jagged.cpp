@@ -277,14 +277,20 @@ public:
     }
 
     template <typename T>
-    py::array_t<std::int64_t> __getitem__(T index) { // TODO: handle validity checks in-line
+    py::array_t<std::int64_t> __getitem__(T index) { 
         py::buffer_info starts_info = starts.request();
         py::buffer_info stops_info = stops.request();
         if (index < 0) {
             index = starts_info.size + index;
         }
-        if ((ssize_t)index > starts_info.size || (ssize_t)index > stops_info.size || index < 0) {
+        if (starts_info.size > stops_info.size) {
+            throw std::out_of_range("starts must have the same or shorter length than stops");
+        }
+        if ((ssize_t)index > starts_info.size || index < 0) {
             throw std::out_of_range("index must specify a location within the JaggedArray");
+        }
+        if (starts_info.ndim != stops_info.ndim) {
+            throw std::domain_error("starts and stops must have the same dimensionality");
         }
         ssize_t start = (ssize_t)((std::int64_t*)starts_info.ptr)[index];
         ssize_t stop = (ssize_t)((std::int64_t*)stops_info.ptr)[index];
@@ -292,7 +298,7 @@ public:
             py::buffer_info content_info = content_array.request();
             auto content_ptr = (std::int64_t*)content_info.ptr;
             if (content_info.ndim == 1 && content_info.strides[0] == 8) {
-                if (start > content_info.size || start < 0 || stop > content_info.size || stop < 0) {
+                if (start >= content_info.size || start < 0 || stop > content_info.size || stop < 0) {
                     throw std::out_of_range("starts and stops are not within the bounds of content");
                 }
                 if (stop >= start) {
@@ -306,15 +312,7 @@ public:
                     }
                     return out;
                 }
-                auto out = py::array_t<std::int64_t>(start - stop);
-                py::buffer_info out_info = out.request();
-                auto out_ptr = (std::int64_t*)out_info.ptr;
-
-                ssize_t here = 0;
-                for (ssize_t i = stop - 1; i >= start; i--) {
-                    out_ptr[here++] = content_ptr[i];
-                }
-                return out;
+                throw std::out_of_range("stops must be greater than or equal to starts");
             }
         }
         auto out = py::array_t<std::int64_t>(0);

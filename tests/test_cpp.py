@@ -67,16 +67,6 @@ class Test(unittest.TestCase):
         parents = awkward_cpp.JaggedArray.startsstops2parents(starts, stops)
         assert parents.tolist() == [0, -1, -1, -1, 1, 2, 2, -1, -1, 3]
 
-    def test_cpp_startsstops2parents_neg(self):
-        starts = numpy.array([0, 4, 5, 11], dtype=numpy.int64)
-        stops = numpy.array([1, 6, 7, 12], dtype=numpy.int32)
-        thrown = False
-        try:
-            parents = awkward_cpp.JaggedArray.startsstops2parents(starts, stops)
-        except ValueError:
-            thrown = True
-        assert thrown
-
     def test_cpp_parents2startsstops_pos(self):
         parents = numpy.array([-1, 0, 0, -1, 2, 2, 2, 3], dtype=numpy.int64)
         startsstops = awkward_cpp.JaggedArray.parents2startsstops(parents)
