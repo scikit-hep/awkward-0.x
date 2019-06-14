@@ -165,7 +165,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if len(uniques.shape) != 1 or len(uniques) != len(content):
             raise ValueError("uniques array must be one-dimensional with the same length as content")
         offsets, parents = cls.uniques2offsetsparents(uniques)
-        out = cls.fromoffsets(offsets, content)        
+        out = cls.fromoffsets(offsets, content)
         out._parents = parents
         return out
 
@@ -541,7 +541,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 headcontent[head.parents < 0] = False
 
                 return self.copy(starts=offsets[:-1].reshape(intheadsum.shape), stops=offsets[1:].reshape(intheadsum.shape), content=thyself._content[headcontent])
-            
+
             else:
                 raise TypeError("jagged index must be boolean (mask) or integer (fancy indexing)")
 
@@ -625,7 +625,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                         starts = self.numpy.minimum(counts - 1, head.start)
                     else:
                         starts = self.numpy.maximum(-1, self.numpy.minimum(counts - 1, counts + head.start))
-                    
+
                     if head.stop is None:
                         stops = self.numpy.full(counts.shape, -1, dtype=self.INDEXTYPE)
                     elif head.stop >= 0:
@@ -740,7 +740,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
                 self._content[x] = self.tojagged(y)._content
-                
+
         else:
             raise TypeError("invalid index for assigning column to Table: {0}".format(where))
 
@@ -961,8 +961,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if len(self) > 0 and not (self.counts.reshape(-1)[0] == self.counts).all():
             raise ValueError("jagged array is not regular: different elements have different counts")
         count = self.counts.reshape(-1)[0]
-
         content = self._util_regular(self._content)
+
         if self._canuseoffset():
             out = content[self._starts[0]:self._stops[-1]]
             return out.reshape(self._starts.shape + (count,) + content.shape[1:])
@@ -1209,10 +1209,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if not isinstance(other, JaggedArray):
             raise TypeError("both arrays must be JaggedArrays")
-        
+
         if len(self) != len(other):
             raise ValueError("both JaggedArrays must have the same length")
-        
+
         offsets = self.counts2offsets(self.counts * other.counts)
         indexes = self.numpy.arange(offsets[-1], dtype=self.INDEXTYPE)
         parents = self.offsets2parents(offsets)
@@ -1643,7 +1643,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if isinstance(columns1, JaggedArray):
             columns1 = first = ready(columns1)
-            
+
         if isinstance(columns1, dict):
             for n in columns1:
                 x = columns1[n]
@@ -1771,3 +1771,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(starts=starts, stops=stops, content=self.numpy.ma.MaskedArray(content, mask))
         else:
             return self.copy(starts=starts, stops=stops, content=self.MaskedArray(mask, content, maskedwhen=maskedwhen))
+
+    def _util_pandas(self, seen):
+        import awkward.pandas
+        if id(self) in seen:
+            return seen[id(self)]
+        else:
+            out = seen[id(self)] = self.copy()
+            out.__class__ = awkward.pandas.mixin("JaggedSeries", self)
+            if isinstance(self._content, awkward.array.base.AwkwardArray):
+                out._content = out._content._util_pandas(seen)
+            return out

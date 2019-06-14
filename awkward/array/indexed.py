@@ -218,6 +218,17 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self._content._prepare(identity, dtype)[self._index]
 
+    def _util_pandas(self, seen):
+        import awkward.pandas
+        if id(self) in seen:
+            return seen[id(self)]
+        else:
+            out = seen[id(self)] = self.copy()
+            out.__class__ = awkward.pandas.mixin("IndexedSeries", self)
+            if isinstance(self._content, awkward.array.base.AwkwardArray):
+                out._content = out._content._util_pandas(seen)
+            return out
+
 class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     """
     SparseArray
@@ -639,3 +650,14 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             return self.dense
         else:
             return self.copy(content=self._content._prepare(identity, dtype)).dense
+
+    def _util_pandas(self, seen):
+        import awkward.pandas
+        if id(self) in seen:
+            return seen[id(self)]
+        else:
+            out = seen[id(self)] = self.copy()
+            out.__class__ = awkward.pandas.mixin("SparseSeries", self)
+            if isinstance(self._content, awkward.array.base.AwkwardArray):
+                out._content = out._content._util_pandas(seen)
+            return out

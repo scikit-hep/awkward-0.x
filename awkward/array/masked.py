@@ -301,6 +301,17 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         out[self.boolmask(maskedwhen=True)] = value
         return out
 
+    def _util_pandas(self, seen):
+        import awkward.pandas
+        if id(self) in seen:
+            return seen[id(self)]
+        else:
+            out = seen[id(self)] = self.copy()
+            out.__class__ = awkward.pandas.mixin("MaskedSeries", self)
+            if isinstance(self._content, awkward.array.base.AwkwardArray):
+                out._content = out._content._util_pandas(seen)
+            return out
+
 class BitMaskedArray(MaskedArray):
     """
     BitMaskedArray
