@@ -562,9 +562,13 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     out[i] = self.Methods.maybemixin(types[i], ChunkedArray)(chunks[i])
             return tuple(out)
 
+    @property
+    def counts(self):
+        return self.numpy.concatenate([self._util_counts(x) for x in self._chunks])
+
     def regular(self):
         self._valid()
-        return self.numpy.concatenate([self._util_regular(x) for x in self.chunks])
+        return self.numpy.concatenate([self._util_regular(x) for x in self._chunks])
 
     def _hasjagged(self):
         for chunkid in range(len(self._chunks)):

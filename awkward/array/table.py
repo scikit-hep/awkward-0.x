@@ -685,6 +685,10 @@ class Table(awkward.array.base.AwkwardArray):
                     out[i][n] = newcolumns[n]
             return tuple(out)
 
+    @property
+    def counts(self):
+        raise TypeError("{0} has no 'counts' array".format(type(self).__name__))
+
     def regular(self):
         self._valid()
         pairs = [(n, self._util_regular(x)) for n, x in self.items()]

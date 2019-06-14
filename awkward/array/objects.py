@@ -212,6 +212,10 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def _hasjagged(self):
         return False
 
+    @property
+    def counts(self):
+        raise TypeError("{0} has no 'counts' array".format(type(self).__name__))
+
     def regular(self):
         return self.numpy.array(self)
 

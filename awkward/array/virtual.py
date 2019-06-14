@@ -384,6 +384,10 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
         return getattr(ufunc, method)(*inputs, **kwargs)
 
+    @property
+    def counts(self):
+        return self._util_counts(self.array)
+
     def regular(self):
         return self._util_regular(self.array)
 

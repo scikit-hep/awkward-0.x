@@ -365,6 +365,13 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         return isinstance(array, AwkwardArray) and array._hasjagged()
 
     @classmethod
+    def _util_counts(cls, array):
+        if isinstance(array, AwkwardArray):
+            return array.counts
+        else:
+            raise TypeError("{0} has no 'counts' array".format(cls.__name__))
+
+    @classmethod
     def _util_regular(cls, array):
         if isinstance(array, AwkwardArray):
             return array.regular()

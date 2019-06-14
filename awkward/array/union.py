@@ -399,6 +399,16 @@ class UnionArray(awkward.array.base.AwkwardArray):
                     out[i] = self.Methods.maybemixin(types[i], UnionArray)(outtags, outindex, contents[i])
             return tuple(out)
 
+    @property
+    def counts(self):
+        self._valid()
+        arrays = [self._util_counts(x) for x in self._contents]
+        out = self.numpy.empty(len(self), self.uniondtype(arrays))
+        for tag, array in enumerate(arrays):
+            mask = (self._tags == tag)
+            out[mask] = array[self._index[mask]]
+        return out
+
     def regular(self):
         self._valid()
         arrays = [self._util_regular(x) for x in self._contents]
