@@ -69,23 +69,29 @@ class AwkwardSeries(object):
     def dtype(self):
         return AwkwardSeriesDtype()
 
+    @staticmethod
+    def _findclass(cls):
+        for base in cls.__bases__:
+            if issubclass(base, awkward.array.base.AwkwardArray):
+                if not issubclass(base, AwkwardSeries):
+                    return base
+                else:
+                    out = AwkwardSeries._findclass(base)
+                    if out is not None:
+                        return out
+        return None
+
     def __array__(self, dtype=None):
-        def search(cls):
-            for base in cls.__bases__:
-                if issubclass(base, awkward.array.base.AwkwardArray):
-                    if not issubclass(base, AwkwardSeries):
-                        return base
-                    else:
-                        out = search(base)
-                        if out is not None:
-                            return out
-            return None
-        cls = search(type(self))
+        cls = self._findclass(type(self))
 
         if dtype is None:
             dtype = cls.dtype.fget(self)
 
         return cls.__array__(self, dtype=dtype)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        out = self._findclass(type(self)).__array_ufunc__(self, ufunc, method, *inputs, **kwargs)
+        return out.pandas
 
     def isna(self):
         return self.numpy.zeros(self.shape, dtype=self.BOOLTYPE)
