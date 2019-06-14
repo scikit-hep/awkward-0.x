@@ -407,7 +407,11 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @property
     def columns(self):
-        return self.array.columns
+        array = self.array
+        if isinstance(array, self.numpy.ndarray):
+            return []
+        else:
+            return array.columns
 
     def astype(self, dtype):
         return self.array.astype(dtype)
