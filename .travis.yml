@@ -106,7 +106,7 @@ deploy:
     user: pivarski
     password:
       secure: "OdHbicOsXRrArnGHiwzoh/IFQJGpbYlyE3U+yVpkAr/TIo86Zw7/Lu1GoOO0uqdjQxLcNO0iND7oNWFtSQx7POAItSmuZmYAJYXvHoSEfcO4p0A6k3fFh1q/mY0btKFWWfJJ4249JUtUt7IYEiKs74qfHigms8Qz0sL0B6/T97Wqf4IsCujzyZ4fygPAlNJMGmBtf98eTbJyuqpCyHrHN27xxRWJR21dir1nV6Yt777E3gkyXBgnerEaoHNWjMcpUTKbmdygmU/BM4awX6RULCGTXdPvDBmJuG73/PWt3Ru0hUQqDF9Aq3MuYVHDr0qzoGe3Z0KY5SNFV499xpCD3KZbcKN1iuQcsjp7B++fcXvc5fKhNl+cFXUP8b9CfgZo7jDNpI4WWydzGtdzvncVsG2jpXOo4DWItKjuOZzrZlB+gHrzCRG8O0+Y0DiQM0zU5lRrORZYiHTUFamK9EsGKO2iIo/26FVN81XWp9Yf8sk6cF1tsLG5AMpYKd+y0Ol78TmYpJYaGA+taO2bduGmMI24LGqDjg9vczv4mzjgqHlU+7OCNjB+kum+H6X2TmmnIhjPB6PeqhgTFDino9SwCsAfeL5gzlsXD+t1fFj9o5fY8v5pU/raXv5TAqZuza8hnrDmblJTbDxb4EgE9++H3GXSPsEmBPuB3B/6ZjKkBTU="
-    distributions: "sdist bdist_dumb bdist_msi"
+    distributions: "sdist bdist_dumb"
     on:
       tags: true
       branch: master
