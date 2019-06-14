@@ -686,6 +686,18 @@ class Table(awkward.array.base.AwkwardArray):
             return tuple(out)
 
     @property
+    def counts(self):
+        raise TypeError("{0} has no 'counts' array".format(type(self).__name__))
+
+    def regular(self):
+        self._valid()
+        pairs = [(n, self._util_regular(x)) for n, x in self.items()]
+        out = self.numpy.empty(len(self), [(n, x.dtype, x.shape[1:]) for n, x in pairs])
+        for n, x in pairs:
+            out[n] = x
+        return out
+
+    @property
     def istuple(self):
         return self._rowname == "tuple" and list(self._contents) == [str(x) for x in range(len(self._contents))]
 

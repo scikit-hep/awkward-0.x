@@ -190,6 +190,15 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
         return getattr(ufunc, method)(*inputs, **kwargs)
 
+    @property
+    def counts(self):
+        self._valid()
+        return self._util_counts(self._content)[self._index]
+
+    def regular(self):
+        self._valid()
+        return self._util_regular(self._content)[self._index]
+
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         if self._util_hasjagged(self._content):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
@@ -603,6 +612,25 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
                 inputs[i] = inputs[i].dense   # FIXME: can do better (optimization)
 
         return getattr(ufunc, method)(*inputs, **kwargs)
+
+    @property
+    def counts(self):
+        self._valid()
+        content = self._util_counts(self._content)
+        out = self.numpy.zeros(self.shape, dtype=content.dtype)
+        if len(self._index) != 0:
+            mask = self.boolmask(maskedwhen=True)
+            out[mask] = content[self._inverse[mask]]
+        return out
+
+    def regular(self):
+        self._valid()
+        content = self._util_regular(self._content)
+        out = self.numpy.full(self.shape, self.default, dtype=content.dtype)
+        if len(self._index) != 0:
+            mask = self.boolmask(maskedwhen=True)
+            out[mask] = content[self._inverse[mask]]
+        return out
 
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         if self._util_hasjagged(self._content):

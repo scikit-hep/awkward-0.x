@@ -194,7 +194,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
                 raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
             else:
                 return self.copy(mask=mask, content=self._content[:len(self._mask)][(head,) + tail])
-        
+
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         if "out" in kwargs:
             raise NotImplementedError("in-place operations not supported")
@@ -243,6 +243,21 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             return None
         else:
             return self.Methods.maybemixin(type(result), IndexedMaskedArray)(index, result, maskedwhen=-1)
+
+    @property
+    def counts(self):
+        self._valid()
+        content = self._util_counts(self._content)
+        out = self.numpy.zeros(self.shape, dtype=content.dtype)
+        mask = self.boolmask(maskedwhen=False)
+        out[mask] = content[mask]
+        return out
+
+    def regular(self):
+        self._valid()
+        out = self._util_regular(self._content).astype(self.numpy.float64)
+        out[self.boolmask(maskedwhen=True)] = float("nan")
+        return out
 
     def indexed(self):
         maskindex = self.numpy.arange(len(self), dtype=self.INDEXTYPE)
@@ -667,6 +682,19 @@ class IndexedMaskedArray(MaskedArray):
                 raise ValueError("masked element ({0}) is not subscriptable".format(self.masked))
             else:
                 return self.copy(mask=maskindex)
+
+    @property
+    def counts(self):
+        self._valid()
+        out = self._util_counts(self._content)[self._index]
+        out[self.boolmask(maskedwhen=True)] = 0
+        return out
+
+    def regular(self):
+        self._valid()
+        out = self._util_regular(self._content).astype(self.numpy.float64)[self._index]
+        out[self.boolmask(maskedwhen=True)] = float("nan")
+        return out
 
     def indexed(self):
         return self

@@ -153,66 +153,69 @@ class UnionArray(awkward.array.base.AwkwardArray):
         self._dtype = None
         self._isvalid = False
 
+    @classmethod
+    def uniondtype(cls, arrays):
+        if all(issubclass(x.dtype.type, (cls.numpy.bool_, cls.numpy.bool)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.bool_)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.int8)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.int8)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.uint8)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.uint8)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.int8, cls.numpy.uint8, cls.numpy.int16)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.int16)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.uint8, cls.numpy.uint16)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.uint16)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.int8, cls.numpy.uint8, cls.numpy.int16, cls.numpy.uint16, cls.numpy.int32)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.int32)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.uint8, cls.numpy.uint16, cls.numpy.uint32)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.uint32)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.int8, cls.numpy.uint8, cls.numpy.int16, cls.numpy.uint16, cls.numpy.int32, cls.numpy.uint32, cls.numpy.int64)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.int64)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.uint8, cls.numpy.uint16, cls.numpy.uint32, cls.numpy.uint64)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.uint64)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.float16)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.float16)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.float16, cls.numpy.float32)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.float32)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.float16, cls.numpy.float32, cls.numpy.float64)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.float64)
+
+        elif hasattr(cls.numpy, "float128") and all(issubclass(x.dtype.type, (cls.numpy.float16, cls.numpy.float32, cls.numpy.float64, cls.numpy.float128)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.float128)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.integer, cls.numpy.floating)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.float64)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.complex64)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.complex64)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.complex64, cls.numpy.complex128)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.complex128)
+
+        elif hasattr(cls.numpy, "complex256") and all(issubclass(x.dtype.type, (cls.numpy.complex64, cls.numpy.complex128, cls.numpy.complex256)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.complex256)
+
+        elif all(issubclass(x.dtype.type, (cls.numpy.integer, cls.numpy.floating, cls.numpy.complexfloating)) for x in arrays):
+            return cls.numpy.dtype(cls.numpy.complex128)
+
+        else:
+            return cls.numpy.dtype(cls.numpy.object_)
+
     @property
     def dtype(self):
         if self._dtype is None:
-            if all(issubclass(x.dtype.type, (self.numpy.bool_, self.numpy.bool)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.bool_)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.int8)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.int8)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.uint8)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.uint8)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.int8, self.numpy.uint8, self.numpy.int16)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.int16)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.uint8, self.numpy.uint16)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.uint16)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.int8, self.numpy.uint8, self.numpy.int16, self.numpy.uint16, self.numpy.int32)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.int32)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.uint8, self.numpy.uint16, self.numpy.uint32)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.uint32)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.int8, self.numpy.uint8, self.numpy.int16, self.numpy.uint16, self.numpy.int32, self.numpy.uint32, self.numpy.int64)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.int64)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.uint8, self.numpy.uint16, self.numpy.uint32, self.numpy.uint64)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.uint64)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.float16)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.float16)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.float16, self.numpy.float32)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.float32)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.float16, self.numpy.float32, self.numpy.float64)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.float64)
-
-            elif hasattr(self.numpy, "float128") and all(issubclass(x.dtype.type, (self.numpy.float16, self.numpy.float32, self.numpy.float64, self.numpy.float128)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.float128)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.integer, self.numpy.floating)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.float64)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.complex64)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.complex64)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.complex64, self.numpy.complex128)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.complex128)
-
-            elif hasattr(self.numpy, "complex256") and all(issubclass(x.dtype.type, (self.numpy.complex64, self.numpy.complex128, self.numpy.complex256)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.complex256)
-
-            elif all(issubclass(x.dtype.type, (self.numpy.integer, self.numpy.floating, self.numpy.complexfloating)) for x in self._contents):
-                self._dtype = self.numpy.dtype(self.numpy.complex128)
-
-            else:
-                self._dtype = self.numpy.dtype(self.numpy.object_)
-
+            self._dtype = self.uniondtype(self._contents)
         return self._dtype
 
     def _getnbytes(self, seen):
@@ -395,6 +398,25 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 if i in contents:
                     out[i] = self.Methods.maybemixin(types[i], UnionArray)(outtags, outindex, contents[i])
             return tuple(out)
+
+    @property
+    def counts(self):
+        self._valid()
+        arrays = [self._util_counts(x) for x in self._contents]
+        out = self.numpy.empty(len(self), self.uniondtype(arrays))
+        for tag, array in enumerate(arrays):
+            mask = (self._tags == tag)
+            out[mask] = array[self._index[mask]]
+        return out
+
+    def regular(self):
+        self._valid()
+        arrays = [self._util_regular(x) for x in self._contents]
+        out = self.numpy.empty(len(self), self.uniondtype(arrays))
+        for tag, array in enumerate(arrays):
+            mask = (self._tags == tag)
+            out[mask] = array[self._index[mask]]
+        return out
 
     def _hasjagged(self):
         return all(self._util_hasjagged(x) for x in self._contents)
