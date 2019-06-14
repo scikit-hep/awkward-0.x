@@ -64,16 +64,21 @@ before_deploy:
     if [[ $AWKWARD_DEPLOYMENT == awkward ]]
     then
         echo "DEPLOYING awkward-array"
+        pwd
+        ls
         export AWKWARD_DEPLOYMENT=awkward-numba
     elif [[ $AWKWARD_DEPLOYMENT == awkward-numba ]]
     then
         echo "DEPLOYING numba"
+        pwd
+        ls
         cd awkward-numba
         export AWKWARD_DEPLOYMENT=awkward-cpp
     elif [[ $AWKWARD_DEPLOYMENT == awkward-cpp ]]
     then
         echo "DEPLOYING cpp"
-        cd
+        pwd
+        ls
         cd awkward-cpp
         export AWKWARD_DEPLOYMENT=none
     fi
