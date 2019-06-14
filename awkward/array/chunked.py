@@ -651,6 +651,16 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             counts.append(self._counts[i])
         return self.copy(chunks=chunks, counts=counts)
 
+    def _util_pandas(self, seen):
+        import awkward.pandas
+        if id(self) in seen:
+            return seen[id(self)]
+        else:
+            out = seen[id(self)] = self.copy()
+            out.__class__ = awkward.pandas.mixin("ChunkedSeries", self)
+            out._chunks = [x._util_pandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x for x in out._chunks]
+            return out
+
 class AppendableArray(ChunkedArray):
     """
     AppendableArray

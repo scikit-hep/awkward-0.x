@@ -411,3 +411,16 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def fillna(self, value):
         return self._util_fillna(self.array, value)
+
+    @staticmethod
+    def _util_pandas_doit(virtualarray):
+        return virtualarray.array.pandas
+
+    def _util_pandas(self, seen):
+        import awkward.pandas
+        if id(self) in seen:
+            return seen[id(self)]
+        else:
+            out = seen[id(self)] = self.VirtualArray(self._util_pandas_doit, (self,), cache=self.cache, persistentkey=self.persistentkey, type=self.type, nbytes=self.nbytes, persistvirtual=self.persistvirtual)
+            out.__class__ = awkward.pandas.mixin("VirtualSeries", self)
+            return out
