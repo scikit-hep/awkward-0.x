@@ -484,6 +484,6 @@ class UnionArray(awkward.array.base.AwkwardArray):
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("TableSeries", self)
+            out.__class__ = awkward.pandas.mixin("UnionSeries", self)
             out._contents = [x._util_pandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x for x in out._contents]
             return out
