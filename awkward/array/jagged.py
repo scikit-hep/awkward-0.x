@@ -1444,6 +1444,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                     content = ufunc.reduce(content, axis=axis)
 
             out = ufunc.reduceat(content, nonterminal)[:len(out)]
+            if len(out) < len(thyself):
+                tmp = self.numpy.empty((len(thyself),) + out.shape[1:], dtype=out.dtype)
+                tmp[:len(out)] = out
+                out = tmp
+
             out[thyself.starts == thyself.stops] = identity
 
         if regularaxis is None:
