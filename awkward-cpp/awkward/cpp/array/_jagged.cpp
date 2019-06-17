@@ -13,6 +13,7 @@ public:
                               content_array;
     JaggedArraySrc*           content_jagged;
     char                      content_type;
+    ssize_t                   iter_index;
     /**************************************************************************
     These are the content_type character codes:
     'a' = array
@@ -393,6 +394,22 @@ public:
         }
         return "<This JaggedArray type is not yet printable>";
     }
+
+    ssize_t __len__() {
+        return starts.request().size;
+    }
+
+    JaggedArraySrc* __iter__() {
+        iter_index = 0;
+        return this;
+    }
+
+    py::array_t<int64_t> __next__() { // very limited, like getitem and repr
+        if (iter_index >= starts.request().size) {
+            throw py::stop_iteration();
+        }
+        return __getitem__(iter_index++);
+    }
 };
 
 #define DEF(deftype, METHOD) .deftype(#METHOD, &JaggedArraySrc::METHOD<std::int64_t>)\
@@ -448,5 +465,8 @@ PYBIND11_MODULE(_jagged, m) {
         .def_property("content_array", &JaggedArraySrc::get_content_array, &JaggedArraySrc::set_content_array<double>)
         .def_property("content_jagged", &JaggedArraySrc::get_content_jagged, &JaggedArraySrc::set_content_jagged)
         DEF(def, __getitem__)
-        .def("__repr__", &JaggedArraySrc::__repr__);
+        .def("__repr__", &JaggedArraySrc::__repr__)
+        .def("__len__", &JaggedArraySrc::__len__)
+        .def("__iter__", &JaggedArraySrc::__iter__)
+        .def("__next__", &JaggedArraySrc::__next__);
 }
