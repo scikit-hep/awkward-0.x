@@ -440,6 +440,8 @@ PYBIND11_MODULE(_jagged, m) {
         INIT(JaggedArraySrc*)
         .def_property_readonly("content_type", &JaggedArraySrc::get_content_type)
         PROPERTY(starts, get_starts, set_starts)
+        DEF(def, set_starts)
+        DEF(def, set_stops)
         PROPERTY(stops, get_stops, set_stops)
         PROPERTY(content_array, get_content_array, set_content_array)
         .def_property("content_array", &JaggedArraySrc::get_content_array, &JaggedArraySrc::set_content_array<float>)
