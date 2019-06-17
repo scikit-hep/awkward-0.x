@@ -351,7 +351,7 @@ public:
         return out;
     }
 
-    std::string __repr__() { // limited functionality
+    std::string __str__() {
         std::string out = "";
 
         py::buffer_info starts_info = starts.request();
@@ -389,10 +389,14 @@ public:
                     }
                     out = out + "]";
                 }
-                return "<JaggedArray [" + out + "]>";
+                return "[" + out + "]";
             }
         }
-        return "<This JaggedArray type is not yet printable>";
+        return "-Error: print function is not yet implemented for this type-";
+    }
+
+    std::string __repr__() { // limited functionality
+        return "<JaggedArray " + __str__() + ">";
     }
 
     ssize_t __len__() {
@@ -465,6 +469,7 @@ PYBIND11_MODULE(_jagged, m) {
         .def_property("content_array", &JaggedArraySrc::get_content_array, &JaggedArraySrc::set_content_array<double>)
         .def_property("content_jagged", &JaggedArraySrc::get_content_jagged, &JaggedArraySrc::set_content_jagged)
         DEF(def, __getitem__)
+        .def("__str__", &JaggedArraySrc::__str__)
         .def("__repr__", &JaggedArraySrc::__repr__)
         .def("__len__", &JaggedArraySrc::__len__)
         .def("__iter__", &JaggedArraySrc::__iter__)
