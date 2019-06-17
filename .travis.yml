@@ -74,6 +74,7 @@ before_deploy:
         export AWKWARD_DEPLOYMENT=awkward-cpp
     elif [[ $AWKWARD_DEPLOYMENT == awkward-cpp ]]
     then
+        cd ..
         cd awkward-cpp
         pwd
         ls
