@@ -88,7 +88,8 @@ private:
     }
 
     void set_content(py::array content_, identity<py::array>) {
-        content = &NumpyArray(content_);
+        NumpyArray temp = NumpyArray(content_);
+        content = &temp;
     }
 
     void set_content(JaggedArraySrc* content_, identity<JaggedArraySrc*>) {
