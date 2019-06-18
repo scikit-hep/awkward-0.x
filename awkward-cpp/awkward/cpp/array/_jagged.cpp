@@ -5,7 +5,26 @@
 
 namespace py = pybind11;
 
-class JaggedArraySrc {
+class ContentType {
+public:
+
+};
+
+class NumpyArray : public ContentType {
+private:
+    py::array thisArray;
+public:
+    NumpyArray(py::array input) { thisArray = input; }
+    py::buffer_info request() { return thisArray.request(); }
+    py::array get_array() { return thisArray; }
+};
+
+class AwkwardArray : public ContentType {
+public:
+
+};
+
+class JaggedArraySrc : public AwkwardArray {
 private:
     static std::uint16_t swap_uint16(std::uint16_t val) {
         return (val << 8) | (val >> 8);
@@ -58,45 +77,20 @@ private:
 public:
     py::array_t<std::int64_t> starts,
                               stops;
-    py::array                 content_array;
-    JaggedArraySrc*           content_jagged;
-    char                      content_type;
+    ContentType*              content;
     ssize_t                   iter_index;
-    /**************************************************************************
-    These are the content_type character codes:
-    'a' = array
-    'j' = JaggedArray
-    't' = table
-    **************************************************************************/
 
-    char get_content_type() { return content_type; }
+    ContentType* get_content() { return content; }
 
-    py::array get_content_array() {
-        if (content_type != 'a') {
-            throw std::invalid_argument("JaggedArray must be of 'array' content type");
-        }
-        return content_array;
+    template <typename T>
+    void set_content(T content_) {
+        ContentType temp = NumpyArray(content_);
+        content = &temp;
     }
 
-    void set_content_array(py::array content_array_) {
-        if (content_type != 'a') {
-            throw std::invalid_argument("JaggedArray must be of 'array' content type");
-        }
-        content_array = content_array_;
-    }
-
-    JaggedArraySrc* get_content_jagged() {
-        if (content_type != 'j') {
-            throw std::invalid_argument("JaggedArray must be of 'jagged' content type");
-        }
-        return content_jagged;
-    }
-
-    void set_content_jagged(JaggedArraySrc* content_jagged_) {
-        if (content_type != 'j') {
-            throw std::invalid_argument("JaggedArray must be of 'jagged' content type");
-        }
-        content_jagged = content_jagged_;
+    template <>
+    void set_content<JaggedArraySrc*>(JaggedArraySrc* content_) {
+        content = content_;
     }
 
     py::array_t<std::int64_t> get_starts() { return starts; }
@@ -141,16 +135,14 @@ public:
     JaggedArraySrc(py::array_t<S> starts_, py::array_t<S> stops_, py::array content_) {
         set_starts(starts_);
         set_stops(stops_);
-        content_array = content_;
-        content_type  = 'a';
+        set_content(content_);
     }
 
     template <typename S>
     JaggedArraySrc(py::array_t<S> starts_, py::array_t<S> stops_, JaggedArraySrc* content_) {
         set_starts(starts_);
         set_stops(stops_);
-        content_jagged = content_;
-        content_type   = 'j';
+        set_content(content_);
     }
 
     template <typename T>
@@ -364,8 +356,8 @@ public:
     }
 
     template <typename T>
-    py::array_t<std::int64_t> __getitem__(T index) { // limited to single-int arguments, with 1d non-stride content array
-        py::buffer_info starts_info = starts.request();
+    py::array __getitem__(T index) { // limited to single-int arguments, with 1d non-stride content array
+        /*py::buffer_info starts_info = starts.request();
         py::buffer_info stops_info = stops.request();
         if (index < 0) {
             index = starts_info.size + index;
@@ -401,13 +393,13 @@ public:
                 }
                 throw std::out_of_range("stops must be greater than or equal to starts");
             }
-        }
+        }*/
         auto out = py::array_t<std::int64_t>(0);
         return out;
     }
 
     std::string __str__() {
-        std::string out = "";
+        /*std::string out = "";
 
         py::buffer_info starts_info = starts.request();
         auto starts_ptr = (std::int64_t*)starts_info.ptr;
@@ -415,7 +407,7 @@ public:
         py::buffer_info stops_info = stops.request();
         auto stops_ptr = (std::int64_t*)stops_info.ptr;
 
-        if (content_type == 'a') {
+
             py::buffer_info array_info = content_array.request();
             auto array_ptr = (std::int64_t*)array_info.ptr;
 
@@ -446,7 +438,7 @@ public:
                 }
                 return "[" + out + "]";
             }
-        }
+            */
         return "-Error: print function is not yet implemented for this type-";
     }
 
@@ -499,6 +491,10 @@ public:
 .def_property(#NAME, &JaggedArraySrc::GET, &JaggedArraySrc::SET<std::uint64_t>)
 
 PYBIND11_MODULE(_jagged, m) {
+    py::class_<ContentType>(m, "ContentType");
+    py::class_<NumpyArray>(m, "NumpyArray")
+        .def(py::init<py::array>());
+    py::class_<AwkwardArray>(m, "AwkwardArray");
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
         DEF(def_static, offsets2parents)
         DEF(def_static, counts2offsets)
@@ -507,11 +503,10 @@ PYBIND11_MODULE(_jagged, m) {
         DEF(def_static, uniques2offsetsparents)
         INIT(py::array)
         INIT(JaggedArraySrc*)
-        .def_property_readonly("content_type", &JaggedArraySrc::get_content_type)
         PROPERTY(starts, get_starts, set_starts)
         PROPERTY(stops, get_stops, set_stops)
-        .def_property("content_array", &JaggedArraySrc::get_content_array, &JaggedArraySrc::set_content_array)
-        .def_property("content_jagged", &JaggedArraySrc::get_content_jagged, &JaggedArraySrc::set_content_jagged)
+        .def_property("content", &JaggedArraySrc::get_content, &JaggedArraySrc::set_content<py::array>)
+        .def_property("content", &JaggedArraySrc::get_content, &JaggedArraySrc::set_content<JaggedArraySrc*>)
         DEF(def, __getitem__)
         .def("__str__", &JaggedArraySrc::__str__)
         .def("__repr__", &JaggedArraySrc::__repr__)
