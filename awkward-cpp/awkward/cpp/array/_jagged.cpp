@@ -2,15 +2,51 @@
 #include <pybind11/numpy.h>
 #include <cinttypes>
 #include <stdexcept>
+#include <intrin.h>
 
 namespace py = pybind11;
 
 class JaggedArraySrc {
+private:
+
+    template <typename T>
+    static void makeNative(py::array_t<T> input) {
+        py::buffer_info array_info = input.request();
+        std::string format = array_info.format;
+        if (format.at(0) != '>' && format.at(0) != '<') {
+            return;
+        }
+
+        auto array_ptr = (T*)array_info.ptr;
+        int N = array_info.shape[0] / array_info.itemsize;
+
+        if (format.at(1) == 'H' || format.at(1) == 'h') {
+            for (ssize_t i = 0; i < array_info.size; i++) {
+                array_ptr[i * N] = (T)_byteswap_ushort(array_ptr[i * N]);
+            }
+            return;
+        }
+        if (format.at(1) == 'L' || format.at(1) == 'l') {
+            for (ssize_t i = 0; i < array_info.size; i++) {
+                array_ptr[i * N] = (T)_byteswap_ulong(array_ptr[i * N]);
+            }
+            return;
+        }
+        if (format.at(1) == 'Q' || format.at(1) == 'q') {
+            for (ssize_t i = 0; i < array_info.size; i++) {
+                array_ptr[i * N] = (T)_byteswap_uint64(array_ptr[i * N]);
+            }
+            return;
+        }
+        throw std::invalid_argument("Byteswap is not supported for this type");
+        return;
+    }
+
 public:
 
     py::array_t<std::int64_t> starts,
-                              stops,
-                              content_array;
+                              stops;
+    py::array                 content_array;
     JaggedArraySrc*           content_jagged;
     char                      content_type;
     ssize_t                   iter_index;
@@ -21,24 +57,93 @@ public:
     't' = table
     **************************************************************************/
 
-    template <typename S, typename C>
-    JaggedArraySrc(py::array_t<S> starts_, py::array_t<S> stops_, py::array_t<C> content_) {
-        starts        = (py::array_t<std::int64_t>)starts_;
-        stops         = (py::array_t<std::int64_t>)stops_;
-        content_array = (py::array_t<std::int64_t>)content_;
+    char get_content_type() { return content_type; }
+
+    py::array get_content_array() {
+        if (content_type != 'a') {
+            throw std::invalid_argument("JaggedArray must be of 'array' content type");
+        }
+        return content_array;
+    }
+
+    void set_content_array(py::array content_array_) {
+        if (content_type != 'a') {
+            throw std::invalid_argument("JaggedArray must be of 'array' content type");
+        }
+        content_array = content_array_;
+    }
+
+    JaggedArraySrc* get_content_jagged() {
+        if (content_type != 'j') {
+            throw std::invalid_argument("JaggedArray must be of 'jagged' content type");
+        }
+        return content_jagged;
+    }
+
+    void set_content_jagged(JaggedArraySrc* content_jagged_) {
+        if (content_type != 'j') {
+            throw std::invalid_argument("JaggedArray must be of 'jagged' content type");
+        }
+        content_jagged = content_jagged_;
+    }
+
+    py::array_t<std::int64_t> get_starts() { return starts; }
+
+    template <typename T>
+    void set_starts(py::array_t<T> starts_) {
+        makeNative(starts_);
+        py::buffer_info starts_info = starts_.request();
+        if (starts_info.ndim < 1) {
+            throw std::domain_error("starts must have at least 1 dimension");
+        }
+        int N = starts_info.strides[0] / starts_info.itemsize;
+        auto starts_ptr = (T*)starts_info.ptr;
+        for (ssize_t i = 0; i < starts_info.size; i++) {
+            if (starts_ptr[i * N] < 0) {
+                throw std::invalid_argument("starts must have all non-negative values: see index [" + std::to_string(i * N) + "]");
+            }
+        }
+        starts = (py::array_t<std::int64_t>)starts_;
+    }
+
+    py::array_t<std::int64_t> get_stops() { return stops; }
+
+    template <typename T>
+    void set_stops(py::array_t<T> stops_) {
+        makeNative(stops_);
+        py::buffer_info stops_info = stops_.request();
+        if (stops_info.ndim < 1) {
+            throw std::domain_error("stops must have at least 1 dimension");
+        }
+        int N = stops_info.strides[0] / stops_info.itemsize;
+        auto stops_ptr = (T*)stops_info.ptr;
+        for (ssize_t i = 0; i < stops_info.size; i++) {
+            if (stops_ptr[i * N] < 0) {
+                throw std::invalid_argument("stops must have all non-negative values: see index [" + std::to_string(i * N) + "]");
+            }
+        }
+        stops = (py::array_t<std::int64_t>)stops_;
+    }
+    
+    template <typename S>
+    JaggedArraySrc(py::array_t<S> starts_, py::array_t<S> stops_, py::array content_) {
+        set_starts(starts_);
+        set_stops(stops_);
+        content_array = content_;
         content_type  = 'a';
     }
 
     template <typename S>
     JaggedArraySrc(py::array_t<S> starts_, py::array_t<S> stops_, JaggedArraySrc* content_) {
-        starts         = (py::array_t<std::int64_t>)starts_;
-        stops          = (py::array_t<std::int64_t>)stops_;
+        set_starts(starts_);
+        set_stops(stops_);
         content_jagged = content_;
         content_type   = 'j';
     }
 
     template <typename T>
     static py::array_t<std::int64_t> offsets2parents(py::array_t<T> offsets) {
+        makeNative(offsets);
         py::buffer_info offsets_info = offsets.request();
         if (offsets_info.size <= 0) {
             throw std::invalid_argument("offsets must have at least one element");
@@ -67,6 +172,7 @@ public:
 
     template <typename T>
     static py::array_t<std::int64_t> counts2offsets(py::array_t<T> counts) {
+        makeNative(counts);
         py::buffer_info counts_info = counts.request();
         auto counts_ptr = (T*)counts_info.ptr;
         int N = counts_info.strides[0] / counts_info.itemsize;
@@ -85,6 +191,8 @@ public:
 
     template <typename T>
     static py::array_t<std::int64_t> startsstops2parents(py::array_t<T> starts, py::array_t<T> stops) {
+        makeNative(starts);
+        makeNative(stops);
         py::buffer_info starts_info = starts.request();
         auto starts_ptr = (T*)starts_info.ptr;
         int N_starts = starts_info.strides[0] / starts_info.itemsize;
@@ -123,6 +231,7 @@ public:
 
     template <typename T>
     static py::tuple parents2startsstops(py::array_t<T> parents, T length = -1) {
+        makeNative(parents);
         py::buffer_info parents_info = parents.request();
         auto parents_ptr = (T*)parents_info.ptr;
         int N = parents_info.strides[0] / parents_info.itemsize;
@@ -177,6 +286,7 @@ public:
 
     template <typename T>
     static py::tuple uniques2offsetsparents(py::array_t<T> uniques) {
+        makeNative(uniques);
         py::buffer_info uniques_info = uniques.request();
         auto uniques_ptr = (T*)uniques_info.ptr;
         int N = uniques_info.strides[0] / uniques_info.itemsize;
@@ -239,73 +349,6 @@ public:
         temp.append(parents);
         py::tuple out(temp);
         return out;
-    }
-
-    char get_content_type() { return content_type; }
-
-    py::array_t<std::int64_t> get_content_array() {
-        if (content_type != 'a') {
-            throw std::invalid_argument("JaggedArray must be of 'array' content type");
-        }
-        return content_array;
-    }
-
-    template <typename T>
-    void set_content_array(py::array_t<T> content_array_) {
-        if (content_type != 'a') {
-            throw std::invalid_argument("JaggedArray must be of 'array' content type");
-        }
-        content_array = (py::array_t<std::int64_t>)content_array_;
-    }
-
-    JaggedArraySrc* get_content_jagged() {
-        if (content_type != 'j') {
-            throw std::invalid_argument("JaggedArray must be of 'jagged' content type");
-        }
-        return content_jagged;
-    }
-
-    void set_content_jagged(JaggedArraySrc* content_jagged_) {
-        if (content_type != 'j') {
-            throw std::invalid_argument("JaggedArray must be of 'jagged' content type");
-        }
-        content_jagged = content_jagged_;
-    }
-
-    py::array_t<std::int64_t> get_starts() { return starts; }
-
-    template <typename T>
-    void set_starts(py::array_t<T> starts_) {
-        py::buffer_info starts_info = starts_.request();
-        if (starts_info.ndim < 1) {
-            throw std::domain_error("starts must have at least 1 dimension");
-        }
-        int N = starts_info.strides[0] / starts_info.itemsize;
-        auto starts_ptr = (T*)starts_info.ptr;
-        for (ssize_t i = 0; i < starts_info.size; i++) {
-            if (starts_ptr[i * N] < 0) {
-                throw std::invalid_argument("starts must have all non-negative values: see index [" + std::to_string(i * N) + "]");
-            }
-        }
-        starts = (py::array_t<std::int64_t>)starts_;
-    }
-
-    py::array_t<std::int64_t> get_stops() { return stops; }
-
-    template <typename T>
-    void set_stops(py::array_t<T> stops_) {
-        py::buffer_info stops_info = stops_.request();
-        if (stops_info.ndim < 1) {
-            throw std::domain_error("stops must have at least 1 dimension");
-        }
-        int N = stops_info.strides[0] / stops_info.itemsize;
-        auto stops_ptr = (T*)stops_info.ptr;
-        for (ssize_t i = 0; i < stops_info.size; i++) {
-            if (stops_ptr[i * N] < 0) {
-                throw std::invalid_argument("stops must have all non-negative values: see index [" + std::to_string(i * N) + "]");
-            }
-        }
-        stops = (py::array_t<std::int64_t>)stops_;
     }
 
     template <typename T>
@@ -450,23 +493,14 @@ PYBIND11_MODULE(_jagged, m) {
         DEF(def_static, startsstops2parents)
         DEF(def_static, parents2startsstops)
         DEF(def_static, uniques2offsetsparents)
-        INIT(py::array_t<std::int8_t>)
-        INIT(py::array_t<std::uint8_t>)
-        INIT(py::array_t<std::int16_t>)
-        INIT(py::array_t<std::uint16_t>)
-        INIT(py::array_t<std::int32_t>)
-        INIT(py::array_t<std::uint32_t>)
-        INIT(py::array_t<std::int64_t>)
-        INIT(py::array_t<std::uint64_t>)
+        INIT(py::array)
         INIT(JaggedArraySrc*)
         .def_property_readonly("content_type", &JaggedArraySrc::get_content_type)
         PROPERTY(starts, get_starts, set_starts)
         DEF(def, set_starts)
         DEF(def, set_stops)
         PROPERTY(stops, get_stops, set_stops)
-        PROPERTY(content_array, get_content_array, set_content_array)
-        .def_property("content_array", &JaggedArraySrc::get_content_array, &JaggedArraySrc::set_content_array<float>)
-        .def_property("content_array", &JaggedArraySrc::get_content_array, &JaggedArraySrc::set_content_array<double>)
+        .def_property("content_array", &JaggedArraySrc::get_content_array, &JaggedArraySrc::set_content_array)
         .def_property("content_jagged", &JaggedArraySrc::get_content_jagged, &JaggedArraySrc::set_content_jagged)
         DEF(def, __getitem__)
         .def("__str__", &JaggedArraySrc::__str__)
