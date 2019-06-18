@@ -2,12 +2,40 @@
 #include <pybind11/numpy.h>
 #include <cinttypes>
 #include <stdexcept>
-#include <intrin.h>
 
 namespace py = pybind11;
 
 class JaggedArraySrc {
 private:
+    static std::uint16_t swap_uint16(std::uint16_t val) {
+        return (val << 8) | (val >> 8);
+    }
+
+    static std::int16_t swap_int16(std::int16_t val) {
+        return (val << 8) | ((val >> 8) & 0xFF);
+    }
+
+    static std::uint32_t swap_uint32(std::uint32_t val) {
+        val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF);
+        return (val << 16) | (val >> 16);
+    }
+
+    static std::int32_t swap_int32(std::int32_t val) {
+        val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF);
+        return (val << 16) | ((val >> 16) & 0xFFFF);
+    }
+
+    static std::int64_t swap_int64(std::int64_t val) {
+        val = ((val << 8) & 0xFF00FF00FF00FF00ULL) | ((val >> 8) & 0x00FF00FF00FF00FFULL);
+        val = ((val << 16) & 0xFFFF0000FFFF0000ULL) | ((val >> 16) & 0x0000FFFF0000FFFFULL);
+        return (val << 32) | ((val >> 32) & 0xFFFFFFFFULL);
+    }
+
+    static std::uint64_t swap_uint64(std::uint64_t val) {
+        val = ((val << 8) & 0xFF00FF00FF00FF00ULL) | ((val >> 8) & 0x00FF00FF00FF00FFULL);
+        val = ((val << 16) & 0xFFFF0000FFFF0000ULL) | ((val >> 16) & 0x0000FFFF0000FFFFULL);
+        return (val << 32) | (val >> 32);
+    }
 
     template <typename T>
     static void makeNative(py::array_t<T> input) {
@@ -20,21 +48,39 @@ private:
         auto array_ptr = (T*)array_info.ptr;
         int N = array_info.shape[0] / array_info.itemsize;
 
-        if (format.at(1) == 'H' || format.at(1) == 'h') {
+        if (format.at(1) == 'H') {
             for (ssize_t i = 0; i < array_info.size; i++) {
-                array_ptr[i * N] = (T)_byteswap_ushort(array_ptr[i * N]);
+                array_ptr[i * N] = (T)swap_uint16((std::uint16_t)array_ptr[i * N]);
             }
             return;
         }
-        if (format.at(1) == 'L' || format.at(1) == 'l') {
+        if (format.at(1) == 'h') {
             for (ssize_t i = 0; i < array_info.size; i++) {
-                array_ptr[i * N] = (T)_byteswap_ulong(array_ptr[i * N]);
+                array_ptr[i * N] = (T)swap_int16((std::int16_t)array_ptr[i * N]);
             }
             return;
         }
-        if (format.at(1) == 'Q' || format.at(1) == 'q') {
+        if (format.at(1) == 'L') {
             for (ssize_t i = 0; i < array_info.size; i++) {
-                array_ptr[i * N] = (T)_byteswap_uint64(array_ptr[i * N]);
+                array_ptr[i * N] = (T)swap_uint32((std::uint32_t)array_ptr[i * N]);
+            }
+            return;
+        }
+        if (format.at(1) == 'l') {
+            for (ssize_t i = 0; i < array_info.size; i++) {
+                array_ptr[i * N] = (T)swap_int32((std::int32_t)array_ptr[i * N]);
+            }
+            return;
+        }
+        if (format.at(1) == 'Q') {
+            for (ssize_t i = 0; i < array_info.size; i++) {
+                array_ptr[i * N] = (T)swap_uint64((std::uint64_t)array_ptr[i * N]);
+            }
+            return;
+        }
+        if (format.at(1) == 'q') {
+            for (ssize_t i = 0; i < array_info.size; i++) {
+                array_ptr[i * N] = (T)swap_int64((std::int64_t)array_ptr[i * N]);
             }
             return;
         }
@@ -43,7 +89,6 @@ private:
     }
 
 public:
-
     py::array_t<std::int64_t> starts,
                               stops;
     py::array                 content_array;
@@ -497,8 +542,6 @@ PYBIND11_MODULE(_jagged, m) {
         INIT(JaggedArraySrc*)
         .def_property_readonly("content_type", &JaggedArraySrc::get_content_type)
         PROPERTY(starts, get_starts, set_starts)
-        DEF(def, set_starts)
-        DEF(def, set_stops)
         PROPERTY(stops, get_stops, set_stops)
         .def_property("content_array", &JaggedArraySrc::get_content_array, &JaggedArraySrc::set_content_array)
         .def_property("content_jagged", &JaggedArraySrc::get_content_jagged, &JaggedArraySrc::set_content_jagged)
