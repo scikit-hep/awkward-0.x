@@ -11,24 +11,9 @@ private:
         return (val << 8) | (val >> 8);
     }
 
-    static std::int16_t swap_int16(std::int16_t val) {
-        return (val << 8) | ((val >> 8) & 0xFF);
-    }
-
     static std::uint32_t swap_uint32(std::uint32_t val) {
         val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF);
         return (val << 16) | (val >> 16);
-    }
-
-    static std::int32_t swap_int32(std::int32_t val) {
-        val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF);
-        return (val << 16) | ((val >> 16) & 0xFFFF);
-    }
-
-    static std::int64_t swap_int64(std::int64_t val) {
-        val = ((val << 8) & 0xFF00FF00FF00FF00ULL) | ((val >> 8) & 0x00FF00FF00FF00FFULL);
-        val = ((val << 16) & 0xFFFF0000FFFF0000ULL) | ((val >> 16) & 0x0000FFFF0000FFFFULL);
-        return (val << 32) | ((val >> 32) & 0xFFFFFFFFULL);
     }
 
     static std::uint64_t swap_uint64(std::uint64_t val) {
@@ -48,39 +33,21 @@ private:
         auto array_ptr = (T*)array_info.ptr;
         int N = array_info.shape[0] / array_info.itemsize;
 
-        if (format.at(1) == 'H') {
+        if (format.at(1) == 'H' || format.at(1) == 'h') {
             for (ssize_t i = 0; i < array_info.size; i++) {
                 array_ptr[i * N] = (T)swap_uint16((std::uint16_t)array_ptr[i * N]);
             }
             return;
         }
-        if (format.at(1) == 'h') {
-            for (ssize_t i = 0; i < array_info.size; i++) {
-                array_ptr[i * N] = (T)swap_int16((std::int16_t)array_ptr[i * N]);
-            }
-            return;
-        }
-        if (format.at(1) == 'L') {
+        if (format.at(1) == 'L' || format.at(1) == 'l') {
             for (ssize_t i = 0; i < array_info.size; i++) {
                 array_ptr[i * N] = (T)swap_uint32((std::uint32_t)array_ptr[i * N]);
             }
             return;
         }
-        if (format.at(1) == 'l') {
-            for (ssize_t i = 0; i < array_info.size; i++) {
-                array_ptr[i * N] = (T)swap_int32((std::int32_t)array_ptr[i * N]);
-            }
-            return;
-        }
-        if (format.at(1) == 'Q') {
+        if (format.at(1) == 'Q' || format.at(1) == 'q') {
             for (ssize_t i = 0; i < array_info.size; i++) {
                 array_ptr[i * N] = (T)swap_uint64((std::uint64_t)array_ptr[i * N]);
-            }
-            return;
-        }
-        if (format.at(1) == 'q') {
-            for (ssize_t i = 0; i < array_info.size; i++) {
-                array_ptr[i * N] = (T)swap_int64((std::int64_t)array_ptr[i * N]);
             }
             return;
         }
