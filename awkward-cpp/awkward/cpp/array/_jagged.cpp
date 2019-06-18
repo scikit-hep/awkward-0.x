@@ -5,9 +5,13 @@
 
 namespace py = pybind11;
 
+template<typename T>
+struct identity { typedef T type; };
+
 class ContentType {
 public:
-
+    //virtual std::string __str__() { return ""; }
+    //virtual std::string __repr__() { return ""; }
 };
 
 class NumpyArray : public ContentType {
@@ -45,7 +49,16 @@ private:
     static void makeNative(py::array_t<T> input) {
         py::buffer_info array_info = input.request();
         std::string format = array_info.format;
+
         if (format.at(0) != '>' && format.at(0) != '<') {
+            return;
+        }
+
+        union {
+            uint32_t i;
+            char c[4];
+        } bint = { 0x01020304 };
+        if ((bint.c[0] == 1 && format.at(0) == '>') || (bint.c[0] != 1 && format.at(0) == '<')) {
             return;
         }
 
@@ -74,6 +87,14 @@ private:
         return;
     }
 
+    void set_content(py::array content_, identity<py::array>) {
+        content = &NumpyArray(content_);
+    }
+
+    void set_content(JaggedArraySrc* content_, identity<JaggedArraySrc*>) {
+        content = content_;
+    }
+
 public:
     py::array_t<std::int64_t> starts,
                               stops;
@@ -84,13 +105,7 @@ public:
 
     template <typename T>
     void set_content(T content_) {
-        ContentType temp = NumpyArray(content_);
-        content = &temp;
-    }
-
-    template <>
-    void set_content<JaggedArraySrc*>(JaggedArraySrc* content_) {
-        content = content_;
+        set_content(content_, identity<T>());
     }
 
     py::array_t<std::int64_t> get_starts() { return starts; }
