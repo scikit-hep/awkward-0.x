@@ -754,9 +754,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 return self.copy(content=data._content)
 
             tmp = self.compact()
-            assert self.offsetsaliased(tmp._starts, tmp._stops)   # because that's what compact means
-            tmpparents = self.offsets2parents(tmp._starts.base)
-
+            tmpparents = self.offsets2parents(tmp.offsets)
+            
             index = self.JaggedArray(tmp._starts, tmp._stops, (self.numpy.arange(tmp._stops[-1], dtype=self.INDEXTYPE) - tmp._starts[tmpparents]))
 
             data = data.compact()
