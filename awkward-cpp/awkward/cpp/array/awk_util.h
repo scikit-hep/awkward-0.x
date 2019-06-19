@@ -47,6 +47,14 @@ bool isNative(py::array input) {
     return ((bint.c[0] == 1 && ch != '<') || (bint.c[0] != 1 && ch != '>'));
 }
 
+bool isNativeInt(py::array input) {
+    std::string intList = "qQlLhHbB";
+    if (intList.find(input.request().format.at(0)) < 0) {
+        throw std::invalid_argument("argument must be of type int");
+    }
+    return isNative(input);
+}
+
 void makeNative(py::array_t<std::uint8_t> input) { return; }
 
 
@@ -145,6 +153,38 @@ void makeNative(py::array_t<std::int64_t> input) {
         array_ptr[i * N] = swap_int64(array_ptr[i * N]);
     }
     return;
+}
+
+void makeIntNative(py::array input) {
+    if (isNativeInt(input)) {
+        return;
+    }
+    char code = input.request().format.at(1);
+    if (code == 'q') {
+        makeNative(input.cast<py::array_t<std::int64_t>>());
+        return;
+    }
+    if (code == 'Q') {
+        makeNative(input.cast<py::array_t<std::uint64_t>>());
+        return;
+    }
+    if (code == 'l') {
+        makeNative(input.cast<py::array_t<std::int32_t>>());
+        return;
+    }
+    if (code == 'L') {
+        makeNative(input.cast<py::array_t<std::uint32_t>>());
+        return;
+    }
+    if (code == 'h') {
+        makeNative(input.cast<py::array_t<std::int16_t>>());
+        return;
+    }
+    if (code == 'H') {
+        makeNative(input.cast<py::array_t<std::uint16_t>>());
+        return;
+    }
+    throw std::invalid_argument("argument must be of type int");
 }
 
 #endif
