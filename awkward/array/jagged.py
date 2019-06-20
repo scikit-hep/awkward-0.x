@@ -538,7 +538,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 offsets = self.counts2offsets(intheadsum)
 
                 headcontent = self.numpy.array(head._content, dtype=self.BOOLTYPE)
-                headcontent[head.parents < 0] = False
+
+                headcontent_indices_to_ignore = self.numpy.resize(head.parents < 0, headcontent.shape)
+                headcontent_indices_to_ignore[len(head.parents):] = True
+                headcontent[headcontent_indices_to_ignore] = False
+
+                original_headcontent_length = len(headcontent)
+                headcontent.resize(thyself._content.shape)
+                headcontent[original_headcontent_length:] = False
 
                 return self.copy(starts=offsets[:-1].reshape(intheadsum.shape), stops=offsets[1:].reshape(intheadsum.shape), content=thyself._content[headcontent])
 
