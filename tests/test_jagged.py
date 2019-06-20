@@ -572,3 +572,12 @@ class Test(unittest.TestCase):
         check_2_tuple_contents(unzip_ba, b, a)
         check_2_tuple_contents(unzip_bc, b, c)
         check_2_tuple_contents(unzip_bd, b, d)
+
+    def test_jagged_boolean_indexing(self):
+        array1 = JaggedArray.fromcounts([1], [0])
+        array2 = JaggedArray.fromcounts([1], [0, 1])
+        indices1 = JaggedArray.fromcounts([1], [True])
+        indices2 = JaggedArray.fromcounts([1], [True, False])
+        assert all(array1[indices1] == array1[indices2])
+        assert all(array1[indices1] == array2[indices1])
+        assert all(array2[indices1] == array2[indices2])
