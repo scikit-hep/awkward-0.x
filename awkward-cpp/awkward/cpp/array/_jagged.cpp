@@ -1,21 +1,117 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/complex.h>
 #include <cinttypes>
 #include <stdexcept>
+#include <complex>
 #include "awk_util.h"
 
 namespace py = pybind11;
 
 class ContentType {
 public:
-    //virtual std::string __str__() { return ""; }
-    //virtual std::string __repr__() { return ""; }
+    virtual std::string __str__() { return ""; }
+    virtual std::string __repr__() { return ""; }
 };
 
 class NumpyArray : public ContentType {
 private:
     py::array thisArray;
+
+    template <typename T>
+    std::string toString(bool comma = false) {
+        py::buffer_info array_info = thisArray.request();
+        auto array_ptr = (T*)array_info.ptr;
+        int N = array_info.strides[0] / array_info.itemsize;
+
+        std::string out;
+        out.reserve(array_info.size * 10);
+        ssize_t len = array_info.size;
+        out.append("[");
+        for (ssize_t i = 0; i < len; i++) {
+            if (i != 0) {
+                if (comma) {
+                    out.append(",");
+                }
+                out.append(" ");
+            }
+            out.append(convert_to_string(array_ptr[i * N]));
+        }
+        out.append("]");
+        out.shrink_to_fit();
+        return out;
+    }
+
 public:
+    std::string __str__() {
+        std::string format = thisArray.request().format;
+        if (format.find("q") != std::string::npos)
+            return toString<std::int64_t>();
+        if (format.find("Q") != std::string::npos)
+            return toString<std::uint64_t>();
+        if (format.find("l") != std::string::npos)
+            return toString<std::int32_t>();
+        if (format.find("L") != std::string::npos)
+            return toString<std::uint32_t>();
+        if (format.find("h") != std::string::npos)
+            return toString<std::int16_t>();
+        if (format.find("H") != std::string::npos)
+            return toString<std::uint16_t>();
+        if (format.find("b") != std::string::npos)
+            return toString<std::int8_t>();
+        if (format.find("B") != std::string::npos)
+            return toString<std::uint8_t>();
+        if (format.find("w") != std::string::npos) {
+            return toString<std::string>();
+        }
+        /*if (format.find("?") != std::string::npos)
+            return toString<bool>();
+        if (format.find("Zf") != std::string::npos)
+            return toString<std::complex<float>>();
+        if (format.find("Zd") != std::string::npos)
+            return toString<std::complex<double>>();
+        if (format.find("f") != std::string::npos)
+            return toString<float>();
+        if (format.find("d") != std::string::npos)
+            return toString<double>();*/
+        
+        throw std::invalid_argument("[__str__ is not supported for this type]");
+    }
+
+    std::string __repr__() {
+        std::string format = thisArray.request().format;
+        if (format.find("q") != std::string::npos)
+            return "array(" + toString<std::int64_t>(true) + ")";
+        if (format.find("Q") != std::string::npos)
+            return "array(" + toString<std::uint64_t>(true) + ")";
+        if (format.find("l") != std::string::npos)
+            return "array(" + toString<std::int32_t>(true) + ")";
+        if (format.find("L") != std::string::npos)
+            return "array(" + toString<std::uint32_t>(true) + ")";
+        if (format.find("h") != std::string::npos)
+            return "array(" + toString<std::int16_t>(true) + ")";
+        if (format.find("H") != std::string::npos)
+            return "array(" + toString<std::uint16_t>(true) + ")";
+        if (format.find("b") != std::string::npos)
+            return "array(" + toString<std::int8_t>(true) + ")";
+        if (format.find("B") != std::string::npos)
+            return "array(" + toString<std::uint8_t>(true) + ")";
+        if (format.find("w") != std::string::npos) {
+            return "array(" + toString<std::string>(true) + ")";
+        }
+        /*if (format.find("?") != std::string::npos)
+            return "array(" + toString<bool>(true) + ")";
+        if (format.find("Zf") != std::string::npos)
+            return "array(" + toString<std::complex<float>>(true) + ")";
+        if (format.find("Zd") != std::string::npos)
+            return "array(" + toString<std::complex<double>>(true) + ")";
+        if (format.find("f") != std::string::npos)
+            return "array(" + toString<float>(true) + ")";
+        if (format.find("d") != std::string::npos)
+            return "array(" + toString<double>(true) + ")";*/
+        return "<NumpyArray of unsupported array type>";
+    }
+
     NumpyArray(py::array input) { thisArray = input; }
     py::buffer_info request() { return thisArray.request(); }
     py::array get_array() { return thisArray; }
@@ -42,8 +138,7 @@ public:
         }
         catch (py::cast_error e) { }
         try {
-            NumpyArray temp = NumpyArray(content_.cast<py::array>());
-            content = &temp;
+            content = new NumpyArray(content_.cast<py::array>());
             return;
         }
         catch (py::cast_error e) {
@@ -417,7 +512,9 @@ public:
 PYBIND11_MODULE(_jagged, m) {
     py::class_<ContentType>(m, "ContentType");
     py::class_<NumpyArray>(m, "NumpyArray")
-        .def(py::init<py::array>());
+        .def(py::init<py::array>())
+        .def("__str__", &NumpyArray::__str__)
+        .def("__repr__", &NumpyArray::__repr__);
     py::class_<AwkwardArray>(m, "AwkwardArray");
     py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
         .def(py::init<py::array, py::array, py::object>())

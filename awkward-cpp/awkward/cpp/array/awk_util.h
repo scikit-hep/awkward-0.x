@@ -3,8 +3,10 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/complex.h>
 #include <cinttypes>
 #include <stdexcept>
+#include <complex>
 
 namespace py = pybind11;
 
@@ -49,7 +51,7 @@ bool isNative(py::array input) {
 
 bool isNativeInt(py::array input) {
     std::string intList = "qQlLhHbB";
-    if (intList.find(input.request().format.at(0)) < 0) {
+    if (intList.find(input.request().format.at(0)) == std::string::npos) {
         throw std::invalid_argument("argument must be of type int");
     }
     return isNative(input);
@@ -186,5 +188,42 @@ void makeIntNative(py::array input) {
     }
     throw std::invalid_argument("argument must be of type int");
 }
+
+std::string convert_to_string(std::int64_t val) {
+    return std::to_string(val);
+}
+
+std::string convert_to_string(std::uint64_t val) {
+    return std::to_string(val);
+}
+
+std::string convert_to_string(std::int32_t val) {
+    return std::to_string(val);
+}
+
+std::string convert_to_string(std::uint32_t val) {
+    return std::to_string(val);
+}
+
+std::string convert_to_string(std::int16_t val) {
+    return std::to_string(val);
+}
+
+std::string convert_to_string(std::uint16_t val) {
+    return std::to_string(val);
+}
+
+std::string convert_to_string(std::int8_t val) {
+    return std::to_string((std::int16_t)val);
+}
+
+std::string convert_to_string(std::uint8_t val) {
+    return std::to_string((std::uint16_t)val);
+}
+
+std::string convert_to_string(std::string val) {
+    return val;
+}
+
 
 #endif
