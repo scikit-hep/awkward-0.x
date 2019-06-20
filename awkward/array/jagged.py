@@ -544,7 +544,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 headcontent[headcontent_indices_to_ignore] = False
 
                 original_headcontent_length = len(headcontent)
-                headcontent.resize(thyself._content.shape)
+                headcontent = self.numpy.resize(headcontent, thyself._content.shape)
                 headcontent[original_headcontent_length:] = False
 
                 return self.copy(starts=offsets[:-1].reshape(intheadsum.shape), stops=offsets[1:].reshape(intheadsum.shape), content=thyself._content[headcontent])
