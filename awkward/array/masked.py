@@ -67,13 +67,14 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-        return {"id": ident,
-                "call": ["awkward", "MaskedArray"],
-                "args": [fill(self._mask, "MaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, "MaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         {"json": bool(self._maskedwhen)}]}
+        return serializer.encode_call(
+            ["awkward", "MaskedArray"],
+            serializer(self._mask, "MaskedArray.mask"),
+            serializer(self._content, "MaskedArray.content"),
+            {"json": bool(self._maskedwhen)},
+        )
 
     @property
     def mask(self):
@@ -326,7 +327,7 @@ class BitMaskedArray(MaskedArray):
     @classmethod
     def fromboolmask(cls, mask, content, maskedwhen=True, lsborder=False):
         return cls(cls.bool2bit(mask, lsborder=lsborder), content, maskedwhen=maskedwhen, lsborder=lsborder)
-        
+
     def copy(self, mask=None, content=None, maskedwhen=None, lsborder=None):
         out = super(BitMaskedArray, self).copy(mask=mask, content=content, maskedwhen=maskedwhen)
         out._lsborder = self._lsborder
@@ -340,14 +341,15 @@ class BitMaskedArray(MaskedArray):
         mine["lsborder"] = overrides.pop("lsborder", self._lsborder)
         return mine
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-        return {"id": ident,
-                "call": ["awkward", "BitMaskedArray"],
-                "args": [fill(self._mask, "BitMaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, "BitMaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         {"json": bool(self._maskedwhen)},
-                         {"json": bool(self._lsborder)}]}
+        return serializer.encode_call(
+            ["awkward", "BitMaskedArray"],
+            serializer(self._mask, "BitMaskedArray.mask"),
+            serializer(self._content, "BitMaskedArray.content"),
+            {"json": bool(self._maskedwhen)},
+            {"json": bool(self._lsborder)},
+        )
 
     @property
     def mask(self):
@@ -375,7 +377,7 @@ class BitMaskedArray(MaskedArray):
         if lsborder:
             out = out.reshape(-1, 8)[:,::-1].reshape(-1)
         return out.view(cls.MASKTYPE)
-        
+
     @classmethod
     def bool2bit(cls, boolmask, lsborder=False):
         boolmask = cls._util_toarray(boolmask, cls.MaskedArray.fget(None).MASKTYPE, cls.numpy.ndarray)
@@ -496,7 +498,7 @@ class BitMaskedArray(MaskedArray):
                 byteposes, bitmasks = self._maskat(where)
                 self.numpy.bitwise_and(bitmasks, self._mask[byteposes], bitmasks)
                 return bitmasks.astype(self.numpy.bool_)
-        
+
             elif len(where.shape) == 1 and issubclass(where.dtype.type, (self.numpy.bool, self.numpy.bool_)):
                 # scales with the size of the mask anyway, so go ahead and unpack the whole mask
                 unpacked = self.numpy.unpackbits(self._mask).view(self.MASKTYPE)
@@ -568,13 +570,14 @@ class IndexedMaskedArray(MaskedArray):
             out._maskedwhen = maskedwhen
         return out
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-        return {"id": ident,
-                "call": ["awkward", "IndexedMaskedArray"],
-                "args": [fill(self._mask, "IndexedMaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, "IndexedMaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         {"json": int(self._maskedwhen)}]}
+        return serializer.encode_call(
+            ["awkward", "IndexedMaskedArray"],
+            serializer(self._mask, "IndexedMaskedArray.mask"),
+            serializer(self._content, "IndexedMaskedArray.content"),
+            {"json": int(self._maskedwhen)},
+        )
 
     @property
     def mask(self):

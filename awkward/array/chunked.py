@@ -15,7 +15,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def __init__(self, chunks, chunksizes=[]):
         self.chunks = chunks
         self.chunksizes = chunksizes
-        
+
     def copy(self, chunks=None, chunksizes=None):
         out = self.__class__.__new__(self.__class__)
         out._chunks = list(self._chunks)
@@ -55,13 +55,18 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         mine = self._mine(overrides)
         return self.copy([self.numpy.ones_like(x) if isinstance(x, self.numpy.ndarray) else x.ones_like(**overrides) for x in self._chunks], chunksizes=list(self._chunksizes), **mine)
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self.knowchunksizes()
         self._valid()
-        return {"id": ident,
-                "call": ["awkward", "ChunkedArray"],
-                "args": [{"list": [fill(x, "ChunkedArray.chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for c, x in zip(self._chunksizes, self._chunks) if c > 0]},
-                         {"json": [int(c) for c in self._chunksizes if c > 0]}]}
+        return serializer.encode_call(
+            ["awkward", "ChunkedArray"],
+            dict(list=[
+                serializer(x, "ChunkedArray.chunk")
+                for c, x in zip(self._chunksizes, self._chunks)
+                if c > 0
+            ]),
+            serializer.encode_json([int(c) for c in self._chunksizes if c > 0]),
+        )
 
     @property
     def chunks(self):
@@ -524,7 +529,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 else:
                     batch.append(x)
             batches.append(batch)
-        
+
         out = None
         chunks = {}
         types = {}
@@ -703,9 +708,9 @@ class AppendableArray(ChunkedArray):
         mine["dtype"] = overrides.pop("dtype", self._dtype)
         return mine
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-        
+
         chunks = []
         for c, x in zip(self._chunksizes, self._chunks):
             if 0 < c < len(x):
@@ -713,11 +718,15 @@ class AppendableArray(ChunkedArray):
             elif 0 < c:
                 chunks.append(x)
 
-        return {"id": ident,
-                "call": ["awkward", "AppendableArray"],
-                "args": [{"tuple": [{"json": int(x)} for x in self._chunkshape]},
-                         {"dtype": awkward.persist.dtype2json(self._dtype)},
-                         {"list": [fill(x, "AppendableArray.chunk", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in chunks]}]}
+        return serializer.encode_call(
+            ["awkward", "AppendableArray"],
+            dict(tuple=[dict(json=int(x)) for x in self._chunkshape]),
+            serializer(self._dtype),
+            dict(list=[
+                serializer(x, "AppendableArray.chunk")
+                for x in chunks
+            ]),
+        )
 
     @property
     def chunkshape(self):
