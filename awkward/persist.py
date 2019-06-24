@@ -515,9 +515,11 @@ class BlobSerializer(Serializer):
             self(obj.shape[0]),
         )
 
-def serialize(obj, storage, name="", **kwargs):
+def serialize(obj, storage, name="", delimiter="-", **kwargs):
+    if delimiter is None:
+        delimiter = ""
     if name:
-        kwargs.setdefault("prefix", name + kwargs.get("delimiter", ""))
+        kwargs.setdefault("prefix", name + delimiter)
     return BlobSerializer(storage, **kwargs).store(name, obj)
 
 def deserialize(storage, name="", awkwardlib="awkward", whitelist=whitelist, cache=None, seen=None):
