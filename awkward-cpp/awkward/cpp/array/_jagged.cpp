@@ -174,7 +174,7 @@ public:
             temp_info.ptr = (void*)((std::int32_t*)(thisArray.request().ptr) + start);
         temp_info.itemsize = thisArray.request().itemsize;
         temp_info.size = end - start;
-        temp_info.format = format;
+        temp_info.format = thisArray.request().format;
         temp_info.ndim = thisArray.request().ndim;
         temp_info.strides = thisArray.request().strides;
         temp_info.shape = thisArray.request().shape;
