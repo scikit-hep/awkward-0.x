@@ -1,3 +1,17 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+TODO:
+= Implement NumpyScalar Class
+    - Handle typing and printing of every type
+    - Would be really useful to have a system of determining array 
+        type from a method
+    - Once this is done, can do getitem + iter in NumpyArray
+= Deal with more array characteristics
+    - Multidimensional arrays
+    - Offset arrays
+= Handle endianness in converting scalar types to strings
+= Figure out how to separate a pybind11 project into multiple
+    *.cpp files
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/complex.h>
@@ -10,17 +24,17 @@ namespace py = pybind11;
 
 class ContentType {
 public:
-    virtual std::string __str__() = 0;
-    virtual std::string __repr__() = 0;
-    virtual ssize_t __len__() = 0;
-    virtual ContentType* __getitem__(ssize_t) = 0;
+    virtual std::string  __str__()                     = 0;
+    virtual std::string  __repr__()                    = 0;
+    virtual ssize_t      __len__()                     = 0;
+    virtual ContentType* __getitem__(ssize_t)          = 0;
     virtual ContentType* __getitem__(ssize_t, ssize_t) = 0;
 };
 
 class NumpyArray : public ContentType {
 private:
     py::array thisArray;
-    ssize_t   iter_index;
+    // ssize_t iter_index;
 
     template <typename T>
     std::string toString(bool comma = false) {
@@ -111,14 +125,14 @@ public:
             return "array(" + toString<float>(true) + ")";
         if (format.find("d") != std::string::npos)
             return "array(" + toString<double>(true) + ")";
-        return "<NumpyArray of unsupported array type>";
+        return "<NumpyArray [of unsupported array type]>";
     }
 
     ssize_t __len__() {
         return thisArray.request().size;
     }
 
-    ContentType* __getitem__(ssize_t start, ssize_t end) { // let's assume int64 for now?
+    ContentType* __getitem__(ssize_t start, ssize_t end) {
         if (start < 0) {
             start += thisArray.request().size;
         }
@@ -129,10 +143,38 @@ public:
             throw std::out_of_range("getitem must be in the bounds of the array");
         }
         py::buffer_info temp_info = py::buffer_info();
-        temp_info.ptr = (void*)((std::int64_t*)(thisArray.request().ptr) + start);
+        std::string format = thisArray.request().format;
+        if (format.find("q") != std::string::npos)
+            temp_info.ptr = (void*)((std::int64_t*)(thisArray.request().ptr) + start);
+        else if (format.find("Q") != std::string::npos)
+            temp_info.ptr = (void*)((std::uint64_t*)(thisArray.request().ptr) + start);
+        else if (format.find("L") != std::string::npos)
+            temp_info.ptr = (void*)((std::uint32_t*)(thisArray.request().ptr) + start);
+        else if (format.find("h") != std::string::npos)
+            temp_info.ptr = (void*)((std::int16_t*)(thisArray.request().ptr) + start);
+        else if (format.find("H") != std::string::npos)
+            temp_info.ptr = (void*)((std::uint16_t*)(thisArray.request().ptr) + start);
+        else if (format.find("b") != std::string::npos)
+            temp_info.ptr = (void*)((std::int8_t*)(thisArray.request().ptr) + start);
+        else if (format.find("B") != std::string::npos)
+            temp_info.ptr = (void*)((std::uint8_t*)(thisArray.request().ptr) + start);
+        /*if (format.find("w") != std::string::npos)
+            temp_info.ptr = (void*)((std::string*)(thisArray.request().ptr) + start);*/
+        else if (format.find("?") != std::string::npos)
+            temp_info.ptr = (void*)((bool*)(thisArray.request().ptr) + start);
+        else if (format.find("Zf") != std::string::npos)
+            temp_info.ptr = (void*)((std::complex<float>*)(thisArray.request().ptr) + start);
+        else if (format.find("Zd") != std::string::npos)
+            temp_info.ptr = (void*)((std::complex<double>*)(thisArray.request().ptr) + start);
+        else if (format.find("f") != std::string::npos)
+            temp_info.ptr = (void*)((float*)(thisArray.request().ptr) + start);
+        else if (format.find("d") != std::string::npos)
+            temp_info.ptr = (void*)((double*)(thisArray.request().ptr) + start);
+        else
+            temp_info.ptr = (void*)((std::int32_t*)(thisArray.request().ptr) + start);
         temp_info.itemsize = thisArray.request().itemsize;
         temp_info.size = end - start;
-        temp_info.format = thisArray.request().format;
+        temp_info.format = format;
         temp_info.ndim = thisArray.request().ndim;
         temp_info.strides = thisArray.request().strides;
         temp_info.shape = thisArray.request().shape;
@@ -446,12 +488,12 @@ public:
         return out;
     }
 
-    ContentType* __getitem__(ssize_t start, ssize_t stop) {
+    ContentType* __getitem__(ssize_t start, ssize_t stop) { // TODO
         throw std::invalid_argument("to be implemented later");
         return this;
     }
 
-    ContentType* __getitem__(ssize_t index) { // very limited
+    ContentType* __getitem__(ssize_t index) {
         py::buffer_info starts_info = starts.request();
         py::buffer_info stops_info = stops.request();
         if (index < 0) {
@@ -461,7 +503,7 @@ public:
             throw std::out_of_range("starts must have the same or shorter length than stops");
         }
         if (index > starts_info.size || index < 0) {
-            throw std::out_of_range("index must specify a location within the JaggedArray");
+            throw std::out_of_range("getitem must be in the bounds of the array");
         }
         if (starts_info.ndim != stops_info.ndim) {
             throw std::domain_error("starts and stops must have the same dimensionality");
@@ -485,7 +527,7 @@ public:
 
         ssize_t limit = starts_info.size;
         if (limit > stops_info.size) {
-            throw std::out_of_range("starts must be the same or shorter length than stops");
+            throw std::out_of_range("starts must have the same or shorter length than stops");
         }
         out.append("[");
         for (ssize_t i = 0; i < limit; i++) {
@@ -499,7 +541,7 @@ public:
         return out;
     }
 
-    std::string __repr__() { // limited functionality
+    std::string __repr__() {
         return "<JaggedArray " + __str__() + ">";
     }
 
@@ -512,7 +554,7 @@ public:
         return this;
     }
 
-    ContentType* __next__() { // very limited, like getitem and repr
+    ContentType* __next__() {
         if (iter_index >= starts.request().size) {
             throw py::stop_iteration();
         }
