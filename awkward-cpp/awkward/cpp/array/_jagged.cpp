@@ -210,7 +210,7 @@ public:
 
 };
 
-class JaggedArraySrc : public AwkwardArray {
+class JaggedArray : public AwkwardArray {
 public:
     py::array_t<std::int64_t> starts,
                               stops;
@@ -221,7 +221,7 @@ public:
 
     void set_content(py::object content_) {
         try {
-            content = content_.cast<JaggedArraySrc*>();
+            content = content_.cast<JaggedArray*>();
             return;
         }
         catch (py::cast_error e) { }
@@ -272,7 +272,7 @@ public:
         stops = stops_;
     }
 
-    JaggedArraySrc(py::array starts_, py::array stops_, py::object content_) {
+    JaggedArray(py::array starts_, py::array stops_, py::object content_) {
         set_starts(starts_);
         set_stops(stops_);
         set_content(content_);
@@ -573,21 +573,21 @@ PYBIND11_MODULE(_jagged, m) {
         .def("__getitem__", (ContentType* (NumpyArray::*)(ssize_t)) &NumpyArray::__getitem__)
         .def("__getitem__", (ContentType* (NumpyArray::*)(ssize_t, ssize_t)) &NumpyArray::__getitem__);
     py::class_<AwkwardArray>(m, "AwkwardArray");
-    py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
+    py::class_<JaggedArray>(m, "JaggedArray")
         .def(py::init<py::array, py::array, py::object>())
-        .def_property("starts", &JaggedArraySrc::get_starts, &JaggedArraySrc::set_starts)
-        .def_property("stops", &JaggedArraySrc::get_stops, &JaggedArraySrc::set_stops)
-        .def_property("content", &JaggedArraySrc::get_content, &JaggedArraySrc::set_content)
-        .def_static("offsets2parents", &JaggedArraySrc::offsets2parents)
-        .def_static("counts2offsets", &JaggedArraySrc::counts2offsets)
-        .def_static("startsstops2parents", &JaggedArraySrc::startsstops2parents)
-        .def_static("parents2startsstops", &JaggedArraySrc::parents2startsstops)
-        .def_static("uniques2offsetsparents", &JaggedArraySrc::uniques2offsetsparents)
-        .def("__getitem__", (ContentType* (JaggedArraySrc::*)(ssize_t)) &JaggedArraySrc::__getitem__)
-        .def("__getitem__", (ContentType* (JaggedArraySrc::*)(ssize_t, ssize_t)) &JaggedArraySrc::__getitem__)
-        .def("__str__", &JaggedArraySrc::__str__)
-        .def("__repr__", &JaggedArraySrc::__repr__)
-        .def("__len__", &JaggedArraySrc::__len__)
-        .def("__iter__", &JaggedArraySrc::__iter__)
-        .def("__next__", &JaggedArraySrc::__next__);
+        .def_property("starts", &JaggedArray::get_starts, &JaggedArray::set_starts)
+        .def_property("stops", &JaggedArray::get_stops, &JaggedArray::set_stops)
+        .def_property("content", &JaggedArray::get_content, &JaggedArray::set_content)
+        .def_static("offsets2parents", &JaggedArray::offsets2parents)
+        .def_static("counts2offsets", &JaggedArray::counts2offsets)
+        .def_static("startsstops2parents", &JaggedArray::startsstops2parents)
+        .def_static("parents2startsstops", &JaggedArray::parents2startsstops)
+        .def_static("uniques2offsetsparents", &JaggedArray::uniques2offsetsparents)
+        .def("__getitem__", (ContentType* (JaggedArray::*)(ssize_t)) &JaggedArray::__getitem__)
+        .def("__getitem__", (ContentType* (JaggedArray::*)(ssize_t, ssize_t)) &JaggedArray::__getitem__)
+        .def("__str__", &JaggedArray::__str__)
+        .def("__repr__", &JaggedArray::__repr__)
+        .def("__len__", &JaggedArray::__len__)
+        .def("__iter__", &JaggedArray::__iter__)
+        .def("__next__", &JaggedArray::__next__);
 }
