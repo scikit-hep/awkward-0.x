@@ -1071,7 +1071,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         elif n <= 1:
             raise ValueError("Choosing 0 or 1 items is trivial")
 
-        local = np.arange(self.offsets[-1]) - np.repeat(self.offsets[:-1], self.counts)
+        local = self.index.content
         offsets = self.JaggedArray.counts2offsets(counts)
         indices = np.arange(offsets[-1])
         parents = self.JaggedArray.offsets2parents(offsets)
