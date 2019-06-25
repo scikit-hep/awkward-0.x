@@ -41,12 +41,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def offsets2parents(cls, offsets):
-        out = cls.numpy.zeros(offsets[-1], dtype=cls.JaggedArray.fget(None).INDEXTYPE)
-        cls.numpy.add.at(out, offsets[offsets != offsets[-1]][1:], 1)
-        cls.numpy.cumsum(out, out=out)
-        if offsets[0] > 0:
-            out[:offsets[0]] = -1
-        return out
+        dtype = cls.JaggedArray.fget(None).INDEXTYPE
+        counts = cls.numpy.diff(offsets, prepend=dtype.type(0))
+        indices = cls.numpy.arange(-1, len(offsets) - 1, dtype=dtype)
+        return cls.numpy.repeat(indices, counts)
 
     @classmethod
     def startsstops2parents(cls, starts, stops):
@@ -68,7 +66,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         changes[-1] = len(parents)
         changes[1:-1] = tmp
 
-        length = parents.max() + 1 if parents.size > 0 else 0
+        length = parents.max() + 1 if len(parents) > 0 else 0
         starts = cls.numpy.zeros(length, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
         counts = cls.numpy.zeros(length, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
 
