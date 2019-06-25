@@ -23,6 +23,10 @@ import numpy
 import awkward.type
 import awkward.version
 
+compression = [
+        {"minsize": 8192, "types": [numpy.bool_, numpy.bool, numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
+    ]
+
 whitelist = [
         ["numpy", "frombuffer"],
         ["zlib", "decompress"],
@@ -435,14 +439,18 @@ class BlobSerializer(Serializer):
             else:
                 raise TypeError("can't parse policy %r" % x)
 
-        def __init__(self, enc, dec=None, minsize=0, types=(object,), contexts=("*",)):
+        def __init__(self, pair=None, enc=None, dec=None, minsize=0, types=object, contexts="*"):
+            if pair:
+                enc, dec = pair
             if dec is None:
                 dec = self.enc2dec[enc]
+            if not isinstance(types, (tuple, list)):
+                types = (types,)
+            if not isinstance(contexts, (tuple, list)):
+                contexts = (contexts,)
             assert callable(enc)
             assert isinstance(dec, tuple)
             assert 0 <= minsize
-            assert isinstance(types, tuple)
-            assert isinstance(contexts, tuple)
             self.enc = enc
             self.dec = dec
             self.minsize = 0
@@ -469,15 +477,15 @@ class BlobSerializer(Serializer):
     ]
 
     @classmethod
-    def _parse_compression(cls, compression):
-        if compression is True:
-            compression = cls.compression_default
-        if not compression:
-            compression = []
-        elif not isinstance(compression, (list, tuple)):
-            compression = [compression]
+    def _parse_compression(cls, comp):
+        if comp is True:
+            comp = compression
+        if not comp:
+            comp = []
+        elif not isinstance(comp, (list, tuple)):
+            comp = [comp]
 
-        return list(map(cls.CompressPolicy.parse, compression))
+        return list(map(cls.CompressPolicy.parse, comp))
 
     def __init__(self, *args, **kwargs):
         self.compression = kwargs.pop("compression", True)
