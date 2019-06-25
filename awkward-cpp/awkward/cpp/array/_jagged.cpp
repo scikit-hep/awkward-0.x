@@ -144,15 +144,10 @@ public:
         }
         py::buffer_info temp_info = py::buffer_info();
         std::string format = thisArray.request().format;
-        temp_info.format = format;
-        /*if (format.find("w") != std::string::npos)
-            temp_info.ptr = (void*)((std::string*)(thisArray.request().ptr) + start);*/
         if (format.find("q") != std::string::npos)
             temp_info.ptr = (void*)((std::int64_t*)(thisArray.request().ptr) + start);
         else if (format.find("Q") != std::string::npos)
             temp_info.ptr = (void*)((std::uint64_t*)(thisArray.request().ptr) + start);
-        else if (format.find("l") != std::string::npos)
-            temp_info.ptr = (void*)((std::int32_t*)(thisArray.request().ptr) + start);
         else if (format.find("L") != std::string::npos)
             temp_info.ptr = (void*)((std::uint32_t*)(thisArray.request().ptr) + start);
         else if (format.find("h") != std::string::npos)
@@ -163,6 +158,8 @@ public:
             temp_info.ptr = (void*)((std::int8_t*)(thisArray.request().ptr) + start);
         else if (format.find("B") != std::string::npos)
             temp_info.ptr = (void*)((std::uint8_t*)(thisArray.request().ptr) + start);
+        /*if (format.find("w") != std::string::npos)
+            temp_info.ptr = (void*)((std::string*)(thisArray.request().ptr) + start);*/
         else if (format.find("?") != std::string::npos)
             temp_info.ptr = (void*)((bool*)(thisArray.request().ptr) + start);
         else if (format.find("Zf") != std::string::npos)
@@ -174,9 +171,10 @@ public:
         else if (format.find("d") != std::string::npos)
             temp_info.ptr = (void*)((double*)(thisArray.request().ptr) + start);
         else
-            throw std::invalid_argument("array type not supported");
+            temp_info.ptr = (void*)((std::int32_t*)(thisArray.request().ptr) + start);
         temp_info.itemsize = thisArray.request().itemsize;
         temp_info.size = end - start;
+        temp_info.format = thisArray.request().format;
         temp_info.ndim = thisArray.request().ndim;
         temp_info.strides = thisArray.request().strides;
         temp_info.shape = thisArray.request().shape;
