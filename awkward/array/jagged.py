@@ -48,12 +48,16 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def startsstops2parents(cls, starts, stops):
-        out = cls.numpy.full(stops.max(), -1, dtype=cls.JaggedArray.fget(None).INDEXTYPE)
-        lenstarts = len(starts)
-        i = 0
-        while i < lenstarts:
-            out[starts[i]:stops[i]] = i
-            i += 1
+        dtype = cls.JaggedArray.fget(None).INDEXTYPE
+        out = cls.numpy.full(stops.max(), -1, dtype=dtype)
+        indices = cls.numpy.arange(len(starts), dtype=dtype)
+        counts = stops - starts
+        parents = cls.numpy.repeat(indices, counts)
+        contiguous_offsets = cls.JaggedArray.fget(None).counts2offsets(counts)
+        content_indices = cls.numpy.arange(contiguous_offsets[-1])
+        content_indices -= cls.numpy.repeat(contiguous_offsets[:-1], counts)
+        content_indices += starts[parents]
+        cls.numpy.put(out, content_indices, parents)
         return out
 
     @classmethod
@@ -406,9 +410,17 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @property
     def index(self):
-        tmp = self.compact()
-        out = self.numpy.arange(len(tmp._content), dtype=self.INDEXTYPE)
-        return self.JaggedArray(tmp._starts, tmp._stops, (out - tmp._starts[tmp.parents]))
+        if len(self) == 0:
+            return self.JaggedArray([], [], [])
+        elif self._canuseoffset():
+            out = self.numpy.arange(self.offsets[0], self.offsets[-1], dtype=self.INDEXTYPE)
+            out -= self.offsets[self.parents[self.parents >= 0]]
+            return self.JaggedArray.fromoffsets(self.offsets - self.offsets[0], out)
+        else:
+            offsets = self.counts2offsets(self.counts)
+            out = self.numpy.arange(offsets[-1], dtype=self.INDEXTYPE)
+            out -= self.numpy.repeat(offsets[:-1], self.counts)
+            return self.JaggedArray.fromoffsets(offsets, out)
 
     def _getnbytes(self, seen):
         if id(self) in seen:
