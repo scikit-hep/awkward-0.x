@@ -2,7 +2,7 @@
 TODO:
 = Implement NumpyScalar Class
     - Handle typing and printing of every type
-    - Would be really useful to have a system of determining array 
+    - Would be really useful to have a system of determining array
         type from a method
     - Once this is done, can do getitem + iter in NumpyArray
 = Deal with more array characteristics
@@ -12,6 +12,7 @@ TODO:
 = Figure out how to separate a pybind11 project into multiple
     *.cpp files
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/complex.h>
@@ -91,7 +92,7 @@ public:
             return toString<float>();
         if (format.find("d") != std::string::npos)
             return toString<double>();
-        
+
         throw std::invalid_argument("[__str__ is not supported for this type]");
     }
 
@@ -270,7 +271,7 @@ public:
         }
         stops = stops_;
     }
-    
+
     JaggedArraySrc(py::array starts_, py::array stops_, py::object content_) {
         set_starts(starts_);
         set_stops(stops_);
@@ -516,7 +517,7 @@ public:
 
     std::string __str__() {
         std::string out;
-        
+
         py::buffer_info starts_info = starts.request();
         auto starts_ptr = (std::int64_t*)starts_info.ptr;
 
