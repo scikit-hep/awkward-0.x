@@ -35,8 +35,8 @@ class get_pybind_include(object):
 
 ext_modules = [
     Extension(
-        'awkward.cpp.array._jagged',
-        [os.path.join("awkward", "cpp", "array", "_jagged.cpp")],
+        'awkward.cpp.array.array_impl',
+        [os.path.join("awkward", "cpp", "array", "array_impl.cpp")],
         include_dirs=[
             # Path to pybind11 headers
             get_pybind_include(),

@@ -1,6 +1,4 @@
-#ifndef AWK_UTIL_H
-#define AWK_UTIL_H
-
+#pragma once
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/complex.h>
@@ -172,5 +170,3 @@ std::string convert_to_string(std::complex<float> val) {
 std::string convert_to_string(std::complex<double> val) {
     return "(" + trim_trail(std::to_string(real(val))) + " + " + trim_trail(std::to_string(imag(val))) + "i)";
 }
-
-#endif

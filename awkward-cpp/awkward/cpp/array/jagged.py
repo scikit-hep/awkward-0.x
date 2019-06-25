@@ -6,9 +6,8 @@
 
 import awkward.array.base
 import awkward.array.jagged
-import sys
 from .base import CppMethods
-from ._jagged import JaggedArray
+from .array_impl import JaggedArray
 
 class JaggedArrayCpp(CppMethods, JaggedArray, awkward.array.jagged.JaggedArray):
     @classmethod

@@ -12,178 +12,27 @@ TODO:
 = Figure out how to separate a pybind11 project into multiple
     *.cpp files
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#pragma once
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/complex.h>
 #include <cinttypes>
 #include <stdexcept>
 #include <complex>
-#include "awk_util.h"
+#include "util.h"
+#include "any.h"
+#include "numpytypes.h"
 
 namespace py = pybind11;
-
-class ContentType {
-public:
-    virtual std::string  str()                     = 0;
-    virtual ssize_t      len()                     = 0;
-    virtual ContentType* getitem(ssize_t)          = 0;
-    virtual ContentType* getitem(ssize_t, ssize_t) = 0;
-};
-
-class NumpyArray : public ContentType {
-private:
-    py::array thisArray;
-    // ssize_t iter_index;
-
-    template <typename T>
-    std::string toString(bool comma = false) {
-        py::buffer_info array_info = thisArray.request();
-        auto array_ptr = (T*)array_info.ptr;
-        int N = array_info.strides[0] / array_info.itemsize;
-
-        std::string out;
-        out.reserve(array_info.size * 10);
-        ssize_t len = array_info.size;
-        out.append("[");
-        for (ssize_t i = 0; i < len; i++) {
-            if (i != 0) {
-                if (comma) {
-                    out.append(",");
-                }
-                out.append(" ");
-            }
-            out.append(convert_to_string(array_ptr[i * N]));
-        }
-        out.append("]");
-        out.shrink_to_fit();
-        return out;
-    }
-
-public:
-    std::string str() {
-        std::string format = thisArray.request().format;
-        if (format.find("q") != std::string::npos)
-            return toString<std::int64_t>();
-        if (format.find("Q") != std::string::npos)
-            return toString<std::uint64_t>();
-        if (format.find("l") != std::string::npos)
-            return toString<std::int32_t>();
-        if (format.find("L") != std::string::npos)
-            return toString<std::uint32_t>();
-        if (format.find("h") != std::string::npos)
-            return toString<std::int16_t>();
-        if (format.find("H") != std::string::npos)
-            return toString<std::uint16_t>();
-        if (format.find("b") != std::string::npos)
-            return toString<std::int8_t>();
-        if (format.find("B") != std::string::npos)
-            return toString<std::uint8_t>();
-        /*if (format.find("w") != std::string::npos)
-            return toString<std::string>();
-        if (format.find("?") != std::string::npos)
-            return toString<bool>();*/
-        if (format.find("Zf") != std::string::npos)
-            return toString<std::complex<float>>();
-        if (format.find("Zd") != std::string::npos)
-            return toString<std::complex<double>>();
-        if (format.find("f") != std::string::npos)
-            return toString<float>();
-        if (format.find("d") != std::string::npos)
-            return toString<double>();
-
-        throw std::invalid_argument("[__str__ is not supported for this type]");
-    }
-
-    ssize_t len() {
-        return thisArray.request().size;
-    }
-
-    ContentType* getitem(ssize_t start, ssize_t end) {
-        if (start < 0) {
-            start += thisArray.request().size;
-        }
-        if (end < 0) {
-            end += thisArray.request().size;
-        }
-        if (start < 0 || start > end || end > thisArray.request().size) {
-            throw std::out_of_range("__getitem__ must be in the bounds of the array");
-        }
-        py::buffer_info temp_info = py::buffer_info();
-        std::string format = thisArray.request().format;
-        if (format.find("q") != std::string::npos)
-            temp_info.ptr = (void*)((std::int64_t*)(thisArray.request().ptr) + start);
-        else if (format.find("Q") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint64_t*)(thisArray.request().ptr) + start);
-        else if (format.find("L") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint32_t*)(thisArray.request().ptr) + start);
-        else if (format.find("h") != std::string::npos)
-            temp_info.ptr = (void*)((std::int16_t*)(thisArray.request().ptr) + start);
-        else if (format.find("H") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint16_t*)(thisArray.request().ptr) + start);
-        else if (format.find("b") != std::string::npos)
-            temp_info.ptr = (void*)((std::int8_t*)(thisArray.request().ptr) + start);
-        else if (format.find("B") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint8_t*)(thisArray.request().ptr) + start);
-        /*if (format.find("w") != std::string::npos)
-            temp_info.ptr = (void*)((std::string*)(thisArray.request().ptr) + start);*/
-        else if (format.find("?") != std::string::npos)
-            temp_info.ptr = (void*)((bool*)(thisArray.request().ptr) + start);
-        else if (format.find("Zf") != std::string::npos)
-            temp_info.ptr = (void*)((std::complex<float>*)(thisArray.request().ptr) + start);
-        else if (format.find("Zd") != std::string::npos)
-            temp_info.ptr = (void*)((std::complex<double>*)(thisArray.request().ptr) + start);
-        else if (format.find("f") != std::string::npos)
-            temp_info.ptr = (void*)((float*)(thisArray.request().ptr) + start);
-        else if (format.find("d") != std::string::npos)
-            temp_info.ptr = (void*)((double*)(thisArray.request().ptr) + start);
-        else
-            temp_info.ptr = (void*)((std::int32_t*)(thisArray.request().ptr) + start);
-        temp_info.itemsize = thisArray.request().itemsize;
-        temp_info.size = end - start;
-        temp_info.format = thisArray.request().format;
-        temp_info.ndim = thisArray.request().ndim;
-        temp_info.strides = thisArray.request().strides;
-        temp_info.shape = thisArray.request().shape;
-        temp_info.shape[0] = temp_info.size;
-        return new NumpyArray(py::array(temp_info));
-    }
-
-    ContentType* getitem(ssize_t e) {
-        throw std::invalid_argument("__getitem__(ssize_t) is not yet implemented in NumpyArray");
-        return this;
-    }
-
-    /*ContentType* iter() {
-        iter_index = 0;
-        return this;
-    }
-
-    std::int64_t next() {
-        if (iter_index >= len()) {
-            throw py::stop_iteration();
-        }
-        return getitem(iter_index++);
-    }*/
-
-    NumpyArray(py::array input) { thisArray = input; }
-    py::buffer_info request() { return thisArray.request(); }
-    py::array get_array() { return thisArray; }
-};
-
-class AwkwardArray : public ContentType {
-public:
-
-};
 
 class JaggedArray : public AwkwardArray {
 public:
     py::array_t<std::int64_t> starts,
                               stops;
-    ContentType*              content;
+    AnyArray*              content;
     ssize_t                   iter_index;
 
-    ContentType* get_content() { return content; }
+    AnyArray* get_content() { return content; }
 
     void set_content(py::object content_) {
         try {
@@ -455,12 +304,12 @@ public:
         return out;
     }
 
-    ContentType* getitem(ssize_t start, ssize_t stop) { // TODO
+    AnyArray* getitem(ssize_t start, ssize_t stop) { // TODO
         throw std::invalid_argument("to be implemented later");
         return this;
     }
 
-    ContentType* getitem(ssize_t index) {
+    AnyArray* getitem(ssize_t index) {
         py::buffer_info starts_info = starts.request();
         py::buffer_info stops_info = stops.request();
         if (index < 0) {
@@ -512,32 +361,15 @@ public:
         return starts.request().size;
     }
 
-    /*ContentType* iter() {
+    /*AnyArray* iter() {
         iter_index = 0;
         return this;
     }
 
-    ContentType* next() {
+    AnyArray* next() {
         if (iter_index >= starts.request().size) {
             throw py::stop_iteration();
         }
         return getitem(iter_index++);
     }*/
 };
-
-PYBIND11_MODULE(_jagged, m) {
-    py::class_<JaggedArray>(m, "JaggedArray")
-        .def(py::init<py::array, py::array, py::object>())
-        .def_property("starts", &JaggedArray::get_starts, &JaggedArray::set_starts)
-        .def_property("stops", &JaggedArray::get_stops, &JaggedArray::set_stops)
-        .def_property("content", &JaggedArray::get_content, &JaggedArray::set_content)
-        .def_static("offsets2parents", &JaggedArray::offsets2parents)
-        .def_static("counts2offsets", &JaggedArray::counts2offsets)
-        .def_static("startsstops2parents", &JaggedArray::startsstops2parents)
-        .def_static("parents2startsstops", &JaggedArray::parents2startsstops)
-        .def_static("uniques2offsetsparents", &JaggedArray::uniques2offsetsparents)
-        .def("__getitem__", (ContentType* (JaggedArray::*)(ssize_t)) &JaggedArray::getitem)
-        .def("__getitem__", (ContentType* (JaggedArray::*)(ssize_t, ssize_t)) &JaggedArray::getitem)
-        .def("__str__", &JaggedArray::str)
-        .def("__len__", &JaggedArray::len);
-}
