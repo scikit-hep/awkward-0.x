@@ -419,7 +419,7 @@ class StringArray(StringMethods, ObjectArray):
 
     @classmethod
     def fromjagged(cls, jagged, encoding="utf-8"):
-        if jagged.content.type.to != cls.CHARTYPE:
+        if awkward.type.fromarray(jagged.content).to != cls.CHARTYPE:
             raise TypeError("jagged array must have CHARTYPE ({0})".format(str(cls.CHARTYPE)))
         out = cls.__new__(cls)
         out._content = jagged
