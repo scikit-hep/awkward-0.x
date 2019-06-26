@@ -5,6 +5,7 @@
 import itertools
 import importlib
 import sys
+import os
 from collections import OrderedDict
 try:
     from collections.abc import Iterable
@@ -199,3 +200,11 @@ except AttributeError:
             __pos__ = _unary_method(um.positive, 'pos')
             __abs__ = _unary_method(um.absolute, 'abs')
             __invert__ = _unary_method(um.invert, 'invert')
+
+
+# numpy on windows has some strange behavior with dtypes of certain functions
+# requiring us to cast down to int32 for (at least): ufunc.reduceat, repeat
+def windows_safe(array):
+    if os.name == "nt":
+        return array.astype(numpy.int32)
+    return array
