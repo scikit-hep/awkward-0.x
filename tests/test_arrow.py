@@ -50,6 +50,10 @@ class Test(unittest.TestCase):
             assert awkward.fromarrow(awkward.toarrow(a)).tolist() == a.tolist()
             a = awkward.fromiter([["one", "two", "three"], [], ["four", "five"]])
             assert awkward.fromarrow(awkward.toarrow(a)).tolist() == a.tolist()
+            a = awkward.fromiter([b"one", b"two", b"three"])
+            assert awkward.fromarrow(awkward.toarrow(a)).tolist() == ["one", "two", "three"]
+            a = awkward.fromiter([[b"one", b"two", b"three"], [], [b"four", b"five"]])
+            assert awkward.fromarrow(awkward.toarrow(a)).tolist() == [["one", "two", "three"], [], ["four", "five"]]
 
     def test_arrow_array(self):
         if pyarrow is None:
