@@ -147,19 +147,21 @@ def toarrow(obj):
             return recurse(obj.content, thismask)
 
         elif isinstance(obj, awkward.array.objects.StringArray):
-            if obj.encoding is None:
-                cls = pyarrow.BinaryArray
-            elif codecs.lookup(obj.encoding) is codecs.lookup("utf-8"):
-                cls = pyarrow.StringArray
-            else:
-                raise ValueError("only encoding=None or encoding='utf-8' can be converted to Arrow")
+            # # FIXME: BinaryArray.from_buffers is not implemented in pyarrow yet.
+            # if obj.encoding is None:
+            #     convert = lambda length, offsets, content: pyarrow.BinaryArray.from_buffers(pyarrow.binary(), length, [None, offsets, content])
+            # elif codecs.lookup(obj.encoding) is codecs.lookup("utf-8"):
+            #     convert = lambda length, offsets, content: pyarrow.StringArray.from_buffers(length, offsets, content)
+            # else:
+            #     raise ValueError("only encoding=None or encoding='utf-8' can be converted to Arrow")
+            convert = lambda length, offsets, content: pyarrow.StringArray.from_buffers(length, offsets, content)
 
             obj = obj.compact()
             offsets = obj.offsets
             if offsets.dtype != numpy.dtype(numpy.int32):
                 offsets = offsets.astype(numpy.int32)
 
-            return cls.from_buffers(len(offsets) - 1, pyarrow.py_buffer(offsets), pyarrow.py_buffer(obj.content))
+            return convert(len(offsets) - 1, pyarrow.py_buffer(offsets), pyarrow.py_buffer(obj.content))
 
         elif isinstance(obj, awkward.array.objects.ObjectArray):
             # throw away Python object interpretation, which Arrow can't handle while being multilingual
