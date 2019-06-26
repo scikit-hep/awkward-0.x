@@ -2,6 +2,7 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
+import codecs
 import json
 
 import numpy
@@ -145,20 +146,24 @@ def toarrow(obj):
                 thismask = mask & thismask
             return recurse(obj.content, thismask)
 
+        elif isinstance(obj, awkward.array.objects.StringArray):
+            if obj.encoding is None:
+                cls = pyarrow.BinaryArray
+            elif codecs.lookup(obj.encoding) is codecs.lookup("utf-8"):
+                cls = pyarrow.StringArray
+            else:
+                raise ValueError("only encoding=None or encoding='utf-8' can be converted to Arrow")
+
+            obj = obj.compact()
+            offsets = obj.offsets
+            if offsets.dtype != numpy.dtype(numpy.int32):
+                offsets = offsets.astype(numpy.int32)
+
+            return cls.from_buffers(len(offsets) - 1, pyarrow.py_buffer(offsets), pyarrow.py_buffer(obj.content))
+
         elif isinstance(obj, awkward.array.objects.ObjectArray):
             # throw away Python object interpretation, which Arrow can't handle while being multilingual
             return recurse(obj.content, mask)
-
-        elif isinstance(obj, awkward.array.objects.StringArray):
-            # obj = obj.compact()
-            raise NotImplementedError("I don't know how to make an Arrow StringArray")
-
-            # I don't understand this
-            # pyarrow.StringArray.from_buffers(2, pyarrow.py_buffer(numpy.array([0, 5, 10])), pyarrow.py_buffer(b"helloHELLO"), offset=0)
-            # returns ["", "hello"]
-            # ???
-
-            # Also, be sure to check for the difference between strings and bytes!
 
         elif isinstance(obj, awkward.array.table.Table):
             return pyarrow.StructArray.from_arrays([recurse(x, mask) for x in obj.contents.values()], list(obj.contents))

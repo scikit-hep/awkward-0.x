@@ -42,6 +42,15 @@ class Test(unittest.TestCase):
                 maskedjets = awkward.MaskedArray([False, False, True], jets, maskedwhen=True)
                 assert list(awkward.arrow.toarrow(maskedjets)) == [[{"fPt": 10.0, "fEta": -3.0, "fPhi": -1.5, "fMass": 60.0}, {"fPt": 20.0, "fEta": -2.0, "fPhi": 0.0, "fMass": 70.0}, {"fPt": 30.0, "fEta": 2.0, "fPhi": 1.5, "fMass": 80.0}], [], [{"fPt": None, "fEta": None, "fPhi": None, "fMass": None}, {"fPt": None, "fEta": None, "fPhi": None, "fMass": None}]]
 
+    def test_arrow_toarrow_string(self):
+        if pyarrow is None:
+            pytest.skip("unable to import pyarrow")
+        else:
+            a = awkward.fromiter(["one", "two", "three"])
+            assert awkward.fromarrow(awkward.toarrow(a)).tolist() == a.tolist()
+            a = awkward.fromiter([["one", "two", "three"], [], ["four", "five"]])
+            assert awkward.fromarrow(awkward.toarrow(a)).tolist() == a.tolist()
+
     def test_arrow_array(self):
         if pyarrow is None:
             pytest.skip("unable to import pyarrow")
