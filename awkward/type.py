@@ -17,6 +17,8 @@ def _str(tpe, indent=""):
         return indent + str(tpe)
 
 class Type(object):
+    check = True
+
     def hascolumn(self, name):
         return self._hascolumn(name, set())
 
@@ -321,6 +323,8 @@ class ArrayType(Type):
         return takes + to
 
     def _eq(self, other, seen, ignoremask=False):
+        if not self.check:
+            return True
         if self is other:
             return True
         elif id(self) in seen:
@@ -412,6 +416,8 @@ class TableType(Type):
         return "\n".join(out).lstrip(" ")
 
     def _eq(self, other, seen, ignoremask=False):
+        if not self.check:
+            return True
         if self is other:
             return True
         elif id(self) in seen:
@@ -495,6 +501,8 @@ class UnionType(Type):
         return "(" + (" |\n" + indent + " ").join(out) + " )"
 
     def _eq(self, other, seen, ignoremask=False):
+        if not self.check:
+            return True
         if self is other:
             return True
         elif id(self) in seen:
@@ -572,6 +580,8 @@ class OptionType(Type):
         return "?({0})".format(type)
 
     def _eq(self, other, seen, ignoremask=False):
+        if not self.check:
+            return True
         if self is other:
             return True
         elif id(self) in seen:

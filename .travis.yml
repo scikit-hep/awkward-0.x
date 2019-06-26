@@ -34,9 +34,11 @@ addons:
   apt:
     packages:
       - python-setuptools
+      - g++
+      - tree
 
 script:
-  pytest -v tests
+  pytest -rfesxX -v tests
 
 install:
   - pip install --upgrade setuptools_scm
@@ -44,27 +46,38 @@ install:
   - if [[ $TRAVIS_PYTHON_VERSION = pypy* ]] ; then pip install "numpy<1.16.0" ; fi       # FIXME: pypy bug in numpy
   - python -c 'import numpy; print(numpy.__version__)'
   - pip install pytest pytest-runner
-  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install h5py pyarrow ; fi
-  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install numba ; ln -s ../awkward-numba/awkward/numba awkward/numba ; fi
   - pip install uproot-methods
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
   - python -c 'import awkward; print(awkward.__version__)'
-  - export AWKWARD_DEPLOYMENT=base
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install h5py pyarrow ; fi
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install numba ; ln -s ../awkward-numba/awkward/numba awkward/numba ; fi
+  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pybind11 ; cd awkward-cpp ; python setup.py build ; cd .. ; tree awkward-cpp/build/ ; cd awkward ; ln -s ../awkward-cpp/build/lib.*/awkward/cpp cpp ; cd .. ; ls -l awkward/cpp ; ls -l awkward/cpp/ ; python -c 'print("TESTING awkward-cpp"); import awkward.cpp; print(awkward.cpp.JaggedArray)' ; fi
+  - export AWKWARD_DEPLOYMENT=awkward
   - pip install --upgrade pyOpenSSL     # for deployment
 
 notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
 
 before_deploy:
+  - echo "DEPLOYING" $AWKWARD_DEPLOYMENT
   - |
-    if [[ $AWKWARD_DEPLOYMENT == base ]]
+    if [[ $AWKWARD_DEPLOYMENT == awkward ]]
     then
-        echo "DEPLOYING base"
-        export AWKWARD_DEPLOYMENT=numba
-    elif [[ $AWKWARD_DEPLOYMENT == numba ]]
+        pwd
+        ls
+        export AWKWARD_DEPLOYMENT=awkward-numba
+    elif [[ $AWKWARD_DEPLOYMENT == awkward-numba ]]
     then
-        echo "DEPLOYING numba"
         cd awkward-numba
+        pwd
+        ls
+        export AWKWARD_DEPLOYMENT=awkward-cpp
+    elif [[ $AWKWARD_DEPLOYMENT == awkward-cpp ]]
+    then
+        cd ..
+        cd awkward-cpp
+        pwd
+        ls
         export AWKWARD_DEPLOYMENT=none
     fi
 
@@ -77,7 +90,7 @@ deploy:
     on:
       tags: true
       branch: master
-      condition: '$TRAVIS_PYTHON_VERSION = "3.7" && $NUMPY = "numpy>=1.15"'
+      condition: '$AWKWARD_DEPLOYMENT = awkward && $TRAVIS_PYTHON_VERSION = "3.7" && $NUMPY = "numpy>=1.15"'
   - provider: pypi
     user: pivarski
     password:
@@ -86,4 +99,13 @@ deploy:
     on:
       tags: true
       branch: master
-      condition: '$TRAVIS_PYTHON_VERSION = "3.7" && $NUMPY = "numpy>=1.15"'
+      condition: '$AWKWARD_DEPLOYMENT = awkward-numba && $TRAVIS_PYTHON_VERSION = "3.7" && $NUMPY = "numpy>=1.15"'
+  - provider: pypi
+    user: pivarski
+    password:
+      secure: "OdHbicOsXRrArnGHiwzoh/IFQJGpbYlyE3U+yVpkAr/TIo86Zw7/Lu1GoOO0uqdjQxLcNO0iND7oNWFtSQx7POAItSmuZmYAJYXvHoSEfcO4p0A6k3fFh1q/mY0btKFWWfJJ4249JUtUt7IYEiKs74qfHigms8Qz0sL0B6/T97Wqf4IsCujzyZ4fygPAlNJMGmBtf98eTbJyuqpCyHrHN27xxRWJR21dir1nV6Yt777E3gkyXBgnerEaoHNWjMcpUTKbmdygmU/BM4awX6RULCGTXdPvDBmJuG73/PWt3Ru0hUQqDF9Aq3MuYVHDr0qzoGe3Z0KY5SNFV499xpCD3KZbcKN1iuQcsjp7B++fcXvc5fKhNl+cFXUP8b9CfgZo7jDNpI4WWydzGtdzvncVsG2jpXOo4DWItKjuOZzrZlB+gHrzCRG8O0+Y0DiQM0zU5lRrORZYiHTUFamK9EsGKO2iIo/26FVN81XWp9Yf8sk6cF1tsLG5AMpYKd+y0Ol78TmYpJYaGA+taO2bduGmMI24LGqDjg9vczv4mzjgqHlU+7OCNjB+kum+H6X2TmmnIhjPB6PeqhgTFDino9SwCsAfeL5gzlsXD+t1fFj9o5fY8v5pU/raXv5TAqZuza8hnrDmblJTbDxb4EgE9++H3GXSPsEmBPuB3B/6ZjKkBTU="
+    distributions: "sdist"
+    on:
+      tags: true
+      branch: master
+      condition: '$AWKWARD_DEPLOYMENT = awkward-cpp && $TRAVIS_PYTHON_VERSION = "3.7" && $NUMPY = "numpy>=1.15"'

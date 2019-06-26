@@ -151,3 +151,26 @@ class Test(unittest.TestCase):
 
         assert c.tolist() == [{"0": 0, "1": 0.0}, {"0": 1, "1": 1.1}, {"0": 2, "1": 2.2},
                               {"0": 4, "1": 4.4}, {"0": 5, "1": 5.5}, ]
+
+    def test_table_unzip(self):
+        left = [1, 2, 3, 4, 5]
+        right = [6, 7, 8, 9, 10]
+        table = Table.named("tuple", left, right)
+        unzip = table.unzip()
+        assert type(unzip) is tuple
+        assert len(unzip) == 2
+        assert all(unzip[0] == left)
+        assert all(unzip[1] == right)
+
+    def test_table_iteration(self):
+        rows = [[1, 2], [3, 4]]
+        columns = zip(*rows)
+        a = Table(*columns)
+        b = [[element for element in row] for row in a]
+        for row in b:
+            for element in row:
+                with self.assertRaises(TypeError, msg='Scalar row element should not have a length'):
+                    len(element)
+                with self.assertRaises(TypeError, msg='Scalar row element should not be iterable'):
+                    iter(element)
+        assert b == rows

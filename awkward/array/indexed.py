@@ -190,6 +190,15 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
 
         return getattr(ufunc, method)(*inputs, **kwargs)
 
+    @property
+    def counts(self):
+        self._valid()
+        return self._util_counts(self._content)[self._index]
+
+    def regular(self):
+        self._valid()
+        return self._util_regular(self._content)[self._index]
+
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         if self._util_hasjagged(self._content):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
@@ -208,6 +217,17 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             return self._content[self._index]
         else:
             return self._content._prepare(identity, dtype)[self._index]
+
+    def _util_pandas(self, seen):
+        import awkward.pandas
+        if id(self) in seen:
+            return seen[id(self)]
+        else:
+            out = seen[id(self)] = self.copy()
+            out.__class__ = awkward.pandas.mixin("IndexedSeries", self)
+            if isinstance(self._content, awkward.array.base.AwkwardArray):
+                out._content = out._content._util_pandas(seen)
+            return out
 
 class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     """
@@ -593,6 +613,25 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
         return getattr(ufunc, method)(*inputs, **kwargs)
 
+    @property
+    def counts(self):
+        self._valid()
+        content = self._util_counts(self._content)
+        out = self.numpy.zeros(self.shape, dtype=content.dtype)
+        if len(self._index) != 0:
+            mask = self.boolmask(maskedwhen=True)
+            out[mask] = content[self._inverse[mask]]
+        return out
+
+    def regular(self):
+        self._valid()
+        content = self._util_regular(self._content)
+        out = self.numpy.full(self.shape, self.default, dtype=content.dtype)
+        if len(self._index) != 0:
+            mask = self.boolmask(maskedwhen=True)
+            out[mask] = content[self._inverse[mask]]
+        return out
+
     def _reduce(self, ufunc, identity, dtype, regularaxis):
         if self._util_hasjagged(self._content):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
@@ -611,3 +650,14 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             return self.dense
         else:
             return self.copy(content=self._content._prepare(identity, dtype)).dense
+
+    def _util_pandas(self, seen):
+        import awkward.pandas
+        if id(self) in seen:
+            return seen[id(self)]
+        else:
+            out = seen[id(self)] = self.copy()
+            out.__class__ = awkward.pandas.mixin("SparseSeries", self)
+            if isinstance(self._content, awkward.array.base.AwkwardArray):
+                out._content = out._content._util_pandas(seen)
+            return out

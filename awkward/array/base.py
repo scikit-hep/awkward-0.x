@@ -4,6 +4,8 @@
 
 import types
 import numbers
+import re
+import keyword
 try:
     from collections.abc import Iterable
 except ImportError:
@@ -170,6 +172,22 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     def max(self, regularaxis=None):
         return self._reduce(self.numpy.maximum, -self.numpy.inf, None, regularaxis)
+
+    def __getattr__(self, where):
+        if where in super(AwkwardArray, self).__dir__():
+            return super(AwkwardArray, self).__getattribute__(where)
+        else:
+            if where in self.columns:
+                try:
+                    return self[where]
+                except Exception as err:
+                    raise AttributeError("while trying to get column {0}, an exception occurred:\n{1}: {2}".format(repr(where), type(err), str(err)))
+            else:
+                raise AttributeError("no column named {0}".format(repr(where)))
+    
+    def __dir__(self):
+        return sorted(set(super(AwkwardArray, self).__dir__() + [x for x in self.columns if self._dir_pattern.match(x) and not keyword.iskeyword(x)]))
+    _dir_pattern = re.compile(r"^[a-zA-Z_]\w*$")
 
     @property
     def i0(self):
@@ -347,6 +365,20 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         return isinstance(array, AwkwardArray) and array._hasjagged()
 
     @classmethod
+    def _util_counts(cls, array):
+        if isinstance(array, AwkwardArray):
+            return array.counts
+        else:
+            raise TypeError("{0} has no 'counts' array".format(cls.__name__))
+
+    @classmethod
+    def _util_regular(cls, array):
+        if isinstance(array, AwkwardArray):
+            return array.regular()
+        else:
+            return array
+
+    @classmethod
     def _util_reduce(cls, array, ufunc, identity, dtype, regularaxis):
         if isinstance(array, AwkwardArray):
             return array._reduce(ufunc, identity, dtype, regularaxis)
@@ -446,6 +478,13 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return data
         else:
             return array.fillna(value)
+
+    def unzip(self):
+        return tuple(self[column_name] for column_name in self.columns)
+
+    @property
+    def pandas(self):
+        return self._util_pandas({})
 
 class AwkwardArrayWithContent(AwkwardArray):
     """
