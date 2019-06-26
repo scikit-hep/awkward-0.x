@@ -384,6 +384,13 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
         return getattr(ufunc, method)(*inputs, **kwargs)
 
+    @property
+    def counts(self):
+        return self._util_counts(self.array)
+
+    def regular(self):
+        return self._util_regular(self.array)
+
     def _hasjagged(self):
         return self._util_hasjagged(self.array)
 
@@ -404,10 +411,27 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     @property
     def columns(self):
-        return self.array.columns
+        array = self.array
+        if isinstance(array, self.numpy.ndarray):
+            return []
+        else:
+            return array.columns
 
     def astype(self, dtype):
         return self.array.astype(dtype)
 
     def fillna(self, value):
         return self._util_fillna(self.array, value)
+
+    @staticmethod
+    def _util_pandas_doit(virtualarray):
+        return virtualarray.array.pandas
+
+    def _util_pandas(self, seen):
+        import awkward.pandas
+        if id(self) in seen:
+            return seen[id(self)]
+        else:
+            out = seen[id(self)] = self.VirtualArray(self._util_pandas_doit, (self,), cache=self.cache, persistentkey=self.persistentkey, type=self.type, nbytes=self.nbytes, persistvirtual=self.persistvirtual)
+            out.__class__ = awkward.pandas.mixin("VirtualSeries", self)
+            return out

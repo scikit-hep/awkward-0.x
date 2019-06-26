@@ -2,10 +2,8 @@
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
 
-import re
+import numpy
 
-__version__ = "0.11.1"
-version = __version__
-version_info = tuple(re.split(r"[-\.]", __version__))
+from awkward.cpp.array.jagged import JaggedArrayCpp as JaggedArray
 
-del re
+__all__ = ["JaggedArray"]

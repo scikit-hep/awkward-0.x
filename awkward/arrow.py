@@ -354,7 +354,7 @@ def fromarrow(obj, awkwardlib=None):
         if len(chunks) == 1:
             return chunks[0]
         else:
-            return awkwardlib.ChunkedArray([fromarrow(x) for x in chunks], counts=[len(x) for x in chunks])
+            return awkwardlib.ChunkedArray([fromarrow(x) for x in chunks], chunksizes=[len(x) for x in chunks])
 
     elif isinstance(obj, pyarrow.lib.RecordBatch):
         out = awkwardlib.Table()
@@ -364,16 +364,16 @@ def fromarrow(obj, awkwardlib=None):
 
     elif isinstance(obj, pyarrow.lib.Table):
         chunks = []
-        counts = []
+        chunksizes = []
         for batch in obj.to_batches():
             chunk = fromarrow(batch)
             if len(chunk) > 0:
                 chunks.append(chunk)
-                counts.append(len(chunk))
+                chunksizes.append(len(chunk))
         if len(chunks) == 1:
             return chunks[0]
         else:
-            return awkwardlib.ChunkedArray(chunks, counts=counts)
+            return awkwardlib.ChunkedArray(chunks, chunksizes=chunksizes)
 
     else:
         raise NotImplementedError(type(obj))
@@ -491,7 +491,7 @@ def fromparquet(file, awkwardlib=None, cache=None, persistvirtual=False, metadat
     columns = parquetfile.type.columns
 
     chunks = []
-    counts = []
+    chunksizes = []
     for i in range(parquetfile.parquetfile.num_row_groups):
         numrows = parquetfile.parquetfile.metadata.row_group(i).num_rows
         if numrows > 0:
@@ -504,6 +504,6 @@ def fromparquet(file, awkwardlib=None, cache=None, persistvirtual=False, metadat
                     chunk.contents[n] = q
 
             chunks.append(chunk)
-            counts.append(numrows)
+            chunksizes.append(numrows)
 
-    return awkwardlib.ChunkedArray(chunks, counts)
+    return awkwardlib.ChunkedArray(chunks, chunksizes)
