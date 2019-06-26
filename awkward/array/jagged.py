@@ -42,7 +42,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @classmethod
     def offsets2parents(cls, offsets):
         dtype = cls.JaggedArray.fget(None).INDEXTYPE
-        counts = cls.numpy.diff(offsets, prepend=dtype.type(0))
+        counts = cls.numpy.diff(cls.numpy.r_[dtype.type(0), offsets])  # numpy >= 1.16: diff prepend
         indices = cls.numpy.arange(-1, len(offsets) - 1, dtype=dtype)
         return cls.numpy.repeat(indices, counts)
 
