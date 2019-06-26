@@ -444,16 +444,20 @@ class BlobSerializer(Serializer):
                 enc, dec = pair
             if dec is None:
                 dec = self.enc2dec[enc]
-            if not isinstance(types, (tuple, list)):
-                types = (types,)
-            if not isinstance(contexts, (tuple, list)):
-                contexts = (contexts,)
+            if isinstance(types, list):
+                types = tuple(types)
+            elif not isinstance(types, tuple):
+                types = types,
+            if isinstance(contexts, list):
+                contexts = tuple(contexts)
+            elif not isinstance(contexts, tuple):
+                contexts = contexts,
             assert callable(enc)
             assert isinstance(dec, tuple)
             assert 0 <= minsize
             self.enc = enc
             self.dec = dec
-            self.minsize = 0
+            self.minsize = minsize
             self.types = types
             self.contexts = contexts
 
@@ -478,8 +482,9 @@ class BlobSerializer(Serializer):
         return list(map(cls.CompressPolicy.parse, comp))
 
     def __init__(self, *args, **kwargs):
-        self.compression = kwargs.pop("compression", compression)
-        self._parse_compression(self.compression)
+        self.compression = self._parse_compression(
+            kwargs.pop("compression", compression)
+        )
         super(BlobSerializer, self).__init__(*args, **kwargs)
 
     def _put_raw(self, data, ref=None):
