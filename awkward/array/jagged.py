@@ -6,7 +6,6 @@ import functools
 import math
 import numbers
 import operator
-import os
 from collections import OrderedDict
 try:
     from collections.abc import Iterable
@@ -44,7 +43,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         dtype = cls.JaggedArray.fget(None).INDEXTYPE
         counts = cls.numpy.diff(cls.numpy.r_[dtype.type(0), offsets])  # numpy >= 1.16: diff prepend
         indices = cls.numpy.arange(-1, len(offsets) - 1, dtype=dtype)
-        return cls.numpy.repeat(indices, counts)
+        return cls.numpy.repeat(indices, awkward.util.windows_safe(counts))
 
     @classmethod
     def startsstops2parents(cls, starts, stops):
@@ -52,10 +51,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out = cls.numpy.full(stops.max(), -1, dtype=dtype)
         indices = cls.numpy.arange(len(starts), dtype=dtype)
         counts = stops - starts
-        parents = cls.numpy.repeat(indices, counts)
+        parents = cls.numpy.repeat(indices, awkward.util.windows_safe(counts))
         contiguous_offsets = cls.JaggedArray.fget(None).counts2offsets(counts)
         content_indices = cls.numpy.arange(contiguous_offsets[-1])
-        content_indices -= cls.numpy.repeat(contiguous_offsets[:-1], counts)
+        content_indices -= cls.numpy.repeat(contiguous_offsets[:-1], awkward.util.windows_safe(counts))
         content_indices += starts[parents]
         cls.numpy.put(out, content_indices, parents)
         return out
@@ -419,7 +418,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             offsets = self.counts2offsets(self.counts)
             out = self.numpy.arange(offsets[-1], dtype=self.INDEXTYPE)
-            out -= self.numpy.repeat(offsets[:-1], self.counts)
+            out -= self.numpy.repeat(offsets[:-1], awkward.util.windows_safe(self.counts))
             return self.JaggedArray.fromoffsets(offsets, out)
 
     def _getnbytes(self, seen):
@@ -984,7 +983,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return out.reshape(self._starts.shape + (count,) + content.shape[1:])
 
         else:
-            indexes = self.numpy.repeat(self._starts, count).reshape(self._starts.shape + (count,))
+            indexes = self.numpy.repeat(self._starts, awkward.util.windows_safe(count)).reshape(self._starts.shape + (count,))
             indexes += self.numpy.arange(count)
             return content[indexes]
 
@@ -1088,7 +1087,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if n == 5:
             k5 = indices - offsets[parents]
-            i5 = np.repeat(local, local*(local - 1)*(local - 2)*(local - 3)//24)
+            i5 = np.repeat(local, awkward.util.windows_safe(local*(local - 1)*(local - 2)*(local - 3)//24))
             k4 = k5 - i5*(i5 - 1)*(i5 - 2)*(i5 - 3)*(i5 - 4)//120
             i4 = root4(k4)
             k3 = k4 - i4*(i4 - 1)*(i4 - 2)*(i4 - 3)//24
@@ -1104,7 +1103,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3, i4, i5))
         elif n == 4:
             k4 = indices - offsets[parents]
-            i4 = np.repeat(local, local*(local - 1)*(local - 2)//6)
+            i4 = np.repeat(local, awkward.util.windows_safe(local*(local - 1)*(local - 2)//6))
             k3 = k4 - i4*(i4 - 1)*(i4 - 2)*(i4 - 3)//24
             i3 = root3(k3)
             k2 = k3 - i3*(i3 - 1)*(i3 - 2)//6
@@ -1118,7 +1117,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3, i4))
         elif n == 3:
             k3 = indices - offsets[parents]
-            i3 = np.repeat(local, local*(local - 1)//2)
+            i3 = np.repeat(local, awkward.util.windows_safe(local*(local - 1)//2))
             k2 = k3 - i3*(i3 - 1)*(i3 - 2)//6
             i2 = root2(k2)
             k1 = k2 - i2*(i2 - 1)//2
@@ -1130,7 +1129,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", i1, i2, i3))
         elif n == 2:
             k2 = indices - offsets[parents]
-            i2 = np.repeat(local, local)
+            i2 = np.repeat(local, awkward.util.windows_safe(local))
             k1 = k2 - i2*(i2 - 1)//2
             i1 = k1
             if absolute:
@@ -1452,14 +1451,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if len(out) != 0:
             nonterminal = thyself.offsets[thyself.offsets < len(content)]
-            if os.name == "nt":    # Windows Numpy reduceat requires 32-bit indexes
-                nonterminal = nonterminal.astype(self.numpy.int32)
 
             if regularaxis is None:
                 for axis in range(1, len(content.shape)):
                     content = ufunc.reduce(content, axis=axis)
 
-            out = ufunc.reduceat(content, nonterminal)[:len(out)]
+            out = ufunc.reduceat(content, awkward.util.windows_safe(nonterminal))[:len(out)]
             if len(out) < len(thyself):
                 tmp = self.numpy.empty((len(thyself),) + out.shape[1:], dtype=out.dtype)
                 tmp[:len(out)] = out
