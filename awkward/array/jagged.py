@@ -56,7 +56,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         content_indices = cls.numpy.arange(contiguous_offsets[-1])
         content_indices -= cls.numpy.repeat(contiguous_offsets[:-1], awkward.util.windows_safe(counts))
         content_indices += starts[parents]
-        cls.numpy.put(out, content_indices, parents)
+        cls.numpy.put(out, awkward.util.windows_safe(content_indices), parents)
         return out
 
     @classmethod
