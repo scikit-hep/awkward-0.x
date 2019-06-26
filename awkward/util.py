@@ -206,5 +206,5 @@ except AttributeError:
 # requiring us to cast down to int32 for (at least): ufunc.reduceat, repeat
 def windows_safe(array):
     if os.name == "nt":
-        return array.astype(self.numpy.int32)
+        return array.astype(numpy.int32)
     return array
