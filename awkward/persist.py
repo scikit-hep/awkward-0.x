@@ -468,19 +468,9 @@ class BlobSerializer(Serializer):
                 any(fnmatch.fnmatchcase(context, p) for p in self.contexts)
             )
 
-    compression_default = [
-        CompressPolicy(
-            minsize=8192,
-            types=(numpy.bool_, numpy.bool, numpy.integer),
-            enc=zlib.compress
-        ),
-    ]
-
     @classmethod
     def _parse_compression(cls, comp):
-        if comp is True:
-            comp = compression
-        if not comp:
+        if comp is None:
             comp = []
         elif not isinstance(comp, (list, tuple)):
             comp = [comp]
@@ -488,7 +478,7 @@ class BlobSerializer(Serializer):
         return list(map(cls.CompressPolicy.parse, comp))
 
     def __init__(self, *args, **kwargs):
-        self.compression = kwargs.pop("compression", True)
+        self.compression = kwargs.pop("compression", compression)
         self._parse_compression(self.compression)
         super(BlobSerializer, self).__init__(*args, **kwargs)
 
@@ -714,7 +704,7 @@ def save(file, array, name=None, mode="a", **options):
     if isinstance(file, str) and not file.endswith(".awkd"):
         file = file + ".awkd"
 
-    alloptions = {"delimiter": "-", "suffix": ".raw", "schemasuffix": ".json", "compression": True}
+    alloptions = {"delimiter": "-", "suffix": ".raw", "schemasuffix": ".json", "compression": compression}
     alloptions.update(options)
     options = alloptions
 
@@ -790,7 +780,7 @@ class Load(Mapping):
 
 class hdf5(MutableMapping):
     def __init__(self, group, **options):
-        alloptions = {"compression": True, "awkwardlib": "awkward", "whitelist": whitelist, "cache": None}
+        alloptions = {"compression": compression, "awkwardlib": "awkward", "whitelist": whitelist, "cache": None}
         alloptions.update(options)
         self.options = alloptions
         self.options["delimiter"] = "/"
