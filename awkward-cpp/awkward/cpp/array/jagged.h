@@ -385,11 +385,11 @@ public:
             return this;
         }
 
-        AnyArray* next() {
+        py::object next() {
             if (iter_index >= thisArray->len()) {
                 throw py::stop_iteration();
             }
-            return thisArray->getitem(iter_index++);
+            return thisArray->getitem(iter_index++)->unwrap();
         }
     };
 
