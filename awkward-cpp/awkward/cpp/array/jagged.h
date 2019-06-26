@@ -15,10 +15,8 @@ TODO:
 #pragma once
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-#include <pybind11/complex.h>
 #include <cinttypes>
 #include <stdexcept>
-#include <complex>
 #include "util.h"
 #include "any.h"
 #include "numpytypes.h"
@@ -29,19 +27,30 @@ class JaggedArray : public AwkwardArray {
 public:
     py::array_t<std::int64_t> starts,
                               stops;
-    AnyArray*              content;
-    ssize_t                   iter_index;
+    AnyArray*                 content;
+
+    py::object unwrap() {
+        return py::cast(this);
+    }
 
     AnyArray* get_content() { return content; }
 
-    void set_content(py::object content_) {
+    py::object python_get_content() {
+        return content->unwrap();
+    }
+
+    void set_content(AnyArray* content_) {
+        content = content_;
+    }
+
+    void python_set_content(py::object content_) {
         try {
-            content = content_.cast<JaggedArray*>();
+            set_content(content_.cast<JaggedArray*>());
             return;
         }
         catch (py::cast_error e) { }
         try {
-            content = new NumpyArray(content_.cast<py::array>());
+            set_content(new NumpyArray(content_.cast<py::array>()));
             return;
         }
         catch (py::cast_error e) {
@@ -90,7 +99,7 @@ public:
     JaggedArray(py::array starts_, py::array stops_, py::object content_) {
         set_starts(starts_);
         set_stops(stops_);
-        set_content(content_);
+        python_set_content(content_);
     }
 
     static py::array_t<std::int64_t> offsets2parents(py::array offsets) {
@@ -361,15 +370,30 @@ public:
         return starts.request().size;
     }
 
-    /*AnyArray* iter() {
-        iter_index = 0;
-        return this;
-    }
+    class JaggedArrayIterator {
+    private:
+        JaggedArray* thisArray;
+        ssize_t      iter_index;
 
-    AnyArray* next() {
-        if (iter_index >= starts.request().size) {
-            throw py::stop_iteration();
+    public:
+        JaggedArrayIterator(JaggedArray* thisArray_) {
+            iter_index = 0;
+            thisArray = thisArray_;
         }
-        return getitem(iter_index++);
-    }*/
+
+        JaggedArrayIterator* iter() {
+            return this;
+        }
+
+        AnyArray* next() {
+            if (iter_index >= thisArray->len()) {
+                throw py::stop_iteration();
+            }
+            return thisArray->getitem(iter_index++);
+        }
+    };
+
+    JaggedArrayIterator* iter() {
+        return new JaggedArrayIterator(this);
+    }
 };

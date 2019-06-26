@@ -16,6 +16,7 @@ public:
     virtual ssize_t     len()                     = 0;
     virtual AnyArray*   getitem(ssize_t)          = 0;
     virtual AnyArray*   getitem(ssize_t, ssize_t) = 0;
+    virtual py::object  unwrap()                  = 0;
 };
 
 class AwkwardArray : public AnyArray {

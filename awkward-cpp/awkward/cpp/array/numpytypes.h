@@ -18,7 +18,6 @@ public:
 class NumpyArray : public AnyArray {
 private:
     py::array thisArray;
-    // ssize_t iter_index;
 
     template <typename T>
     std::string toString(bool comma = false) {
@@ -45,6 +44,8 @@ private:
     }
 
 public:
+    py::object unwrap() { return thisArray; }
+
     std::string str() {
         std::string format = thisArray.request().format;
         if (format.find("q") != std::string::npos)
@@ -138,19 +139,7 @@ public:
         return this;
     }
 
-    /*AnyArray* iter() {
-        iter_index = 0;
-        return this;
-    }
-
-    std::int64_t next() {
-        if (iter_index >= len()) {
-            throw py::stop_iteration();
-        }
-        return getitem(iter_index++);
-    }*/
-
     NumpyArray(py::array input) { thisArray = input; }
+
     py::buffer_info request() { return thisArray.request(); }
-    py::array get_array() { return thisArray; }
 };
