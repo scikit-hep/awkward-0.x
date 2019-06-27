@@ -1,231 +1,48 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 TODO:
-= Implement NumpyScalar Class
-    - Handle typing and printing of every type
-    - Would be really useful to have a system of determining array 
-        type from a method
-    - Once this is done, can do getitem + iter in NumpyArray
 = Deal with more array characteristics
     - Multidimensional arrays
-    - Offset arrays
-= Handle endianness in converting scalar types to strings
-= Figure out how to separate a pybind11 project into multiple
-    *.cpp files
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma once
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-#include <pybind11/complex.h>
 #include <cinttypes>
 #include <stdexcept>
-#include <complex>
-#include "awk_util.h"
+#include <sstream>
+#include "util.h"
+#include "any.h"
+#include "numpytypes.h"
 
 namespace py = pybind11;
 
-class ContentType {
-public:
-    virtual std::string  __str__()                     = 0;
-    virtual std::string  __repr__()                    = 0;
-    virtual ssize_t      __len__()                     = 0;
-    virtual ContentType* __getitem__(ssize_t)          = 0;
-    virtual ContentType* __getitem__(ssize_t, ssize_t) = 0;
-};
-
-class NumpyArray : public ContentType {
-private:
-    py::array thisArray;
-    // ssize_t iter_index;
-
-    template <typename T>
-    std::string toString(bool comma = false) {
-        py::buffer_info array_info = thisArray.request();
-        auto array_ptr = (T*)array_info.ptr;
-        int N = array_info.strides[0] / array_info.itemsize;
-
-        std::string out;
-        out.reserve(array_info.size * 10);
-        ssize_t len = array_info.size;
-        out.append("[");
-        for (ssize_t i = 0; i < len; i++) {
-            if (i != 0) {
-                if (comma) {
-                    out.append(",");
-                }
-                out.append(" ");
-            }
-            out.append(convert_to_string(array_ptr[i * N]));
-        }
-        out.append("]");
-        out.shrink_to_fit();
-        return out;
-    }
-
-public:
-    std::string __str__() {
-        std::string format = thisArray.request().format;
-        if (format.find("q") != std::string::npos)
-            return toString<std::int64_t>();
-        if (format.find("Q") != std::string::npos)
-            return toString<std::uint64_t>();
-        if (format.find("l") != std::string::npos)
-            return toString<std::int32_t>();
-        if (format.find("L") != std::string::npos)
-            return toString<std::uint32_t>();
-        if (format.find("h") != std::string::npos)
-            return toString<std::int16_t>();
-        if (format.find("H") != std::string::npos)
-            return toString<std::uint16_t>();
-        if (format.find("b") != std::string::npos)
-            return toString<std::int8_t>();
-        if (format.find("B") != std::string::npos)
-            return toString<std::uint8_t>();
-        /*if (format.find("w") != std::string::npos)
-            return toString<std::string>();
-        if (format.find("?") != std::string::npos)
-            return toString<bool>();*/
-        if (format.find("Zf") != std::string::npos)
-            return toString<std::complex<float>>();
-        if (format.find("Zd") != std::string::npos)
-            return toString<std::complex<double>>();
-        if (format.find("f") != std::string::npos)
-            return toString<float>();
-        if (format.find("d") != std::string::npos)
-            return toString<double>();
-        
-        throw std::invalid_argument("[__str__ is not supported for this type]");
-    }
-
-    std::string __repr__() {
-        std::string format = thisArray.request().format;
-        if (format.find("q") != std::string::npos)
-            return "array(" + toString<std::int64_t>(true) + ")";
-        if (format.find("Q") != std::string::npos)
-            return "array(" + toString<std::uint64_t>(true) + ")";
-        if (format.find("l") != std::string::npos)
-            return "array(" + toString<std::int32_t>(true) + ")";
-        if (format.find("L") != std::string::npos)
-            return "array(" + toString<std::uint32_t>(true) + ")";
-        if (format.find("h") != std::string::npos)
-            return "array(" + toString<std::int16_t>(true) + ")";
-        if (format.find("H") != std::string::npos)
-            return "array(" + toString<std::uint16_t>(true) + ")";
-        if (format.find("b") != std::string::npos)
-            return "array(" + toString<std::int8_t>(true) + ")";
-        if (format.find("B") != std::string::npos)
-            return "array(" + toString<std::uint8_t>(true) + ")";
-        /*if (format.find("w") != std::string::npos)
-            return "array(" + toString<std::string>(true) + ")";
-        if (format.find("?") != std::string::npos)
-            return "array(" + toString<bool>(true) + ")";*/
-        if (format.find("Zf") != std::string::npos)
-            return "array(" + toString<std::complex<float>>(true) + ")";
-        if (format.find("Zd") != std::string::npos)
-            return "array(" + toString<std::complex<double>>(true) + ")";
-        if (format.find("f") != std::string::npos)
-            return "array(" + toString<float>(true) + ")";
-        if (format.find("d") != std::string::npos)
-            return "array(" + toString<double>(true) + ")";
-        return "<NumpyArray [of unsupported array type]>";
-    }
-
-    ssize_t __len__() {
-        return thisArray.request().size;
-    }
-
-    ContentType* __getitem__(ssize_t start, ssize_t end) {
-        if (start < 0) {
-            start += thisArray.request().size;
-        }
-        if (end < 0) {
-            end += thisArray.request().size;
-        }
-        if (start < 0 || start > end || end > thisArray.request().size) {
-            throw std::out_of_range("getitem must be in the bounds of the array");
-        }
-        py::buffer_info temp_info = py::buffer_info();
-        std::string format = thisArray.request().format;
-        if (format.find("q") != std::string::npos)
-            temp_info.ptr = (void*)((std::int64_t*)(thisArray.request().ptr) + start);
-        else if (format.find("Q") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint64_t*)(thisArray.request().ptr) + start);
-        else if (format.find("L") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint32_t*)(thisArray.request().ptr) + start);
-        else if (format.find("h") != std::string::npos)
-            temp_info.ptr = (void*)((std::int16_t*)(thisArray.request().ptr) + start);
-        else if (format.find("H") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint16_t*)(thisArray.request().ptr) + start);
-        else if (format.find("b") != std::string::npos)
-            temp_info.ptr = (void*)((std::int8_t*)(thisArray.request().ptr) + start);
-        else if (format.find("B") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint8_t*)(thisArray.request().ptr) + start);
-        /*if (format.find("w") != std::string::npos)
-            temp_info.ptr = (void*)((std::string*)(thisArray.request().ptr) + start);*/
-        else if (format.find("?") != std::string::npos)
-            temp_info.ptr = (void*)((bool*)(thisArray.request().ptr) + start);
-        else if (format.find("Zf") != std::string::npos)
-            temp_info.ptr = (void*)((std::complex<float>*)(thisArray.request().ptr) + start);
-        else if (format.find("Zd") != std::string::npos)
-            temp_info.ptr = (void*)((std::complex<double>*)(thisArray.request().ptr) + start);
-        else if (format.find("f") != std::string::npos)
-            temp_info.ptr = (void*)((float*)(thisArray.request().ptr) + start);
-        else if (format.find("d") != std::string::npos)
-            temp_info.ptr = (void*)((double*)(thisArray.request().ptr) + start);
-        else
-            temp_info.ptr = (void*)((std::int32_t*)(thisArray.request().ptr) + start);
-        temp_info.itemsize = thisArray.request().itemsize;
-        temp_info.size = end - start;
-        temp_info.format = thisArray.request().format;
-        temp_info.ndim = thisArray.request().ndim;
-        temp_info.strides = thisArray.request().strides;
-        temp_info.shape = thisArray.request().shape;
-        temp_info.shape[0] = temp_info.size;
-        return new NumpyArray(py::array(temp_info));
-    }
-
-    ContentType* __getitem__(ssize_t e) {
-        throw std::invalid_argument("__getitem__(ssize_t) is not yet implemented in NumpyArray");
-        return this;
-    }
-
-    /*ContentType* __iter__() {
-        iter_index = 0;
-        return this;
-    }
-
-    std::int64_t __next__() {
-        if (iter_index >= __len__()) {
-            throw py::stop_iteration();
-        }
-        return __getitem__(iter_index++);
-    }*/
-
-    NumpyArray(py::array input) { thisArray = input; }
-    py::buffer_info request() { return thisArray.request(); }
-    py::array get_array() { return thisArray; }
-};
-
-class AwkwardArray : public ContentType {
-public:
-
-};
-
-class JaggedArraySrc : public AwkwardArray {
+class JaggedArray : public AwkwardArray {
 public:
     py::array_t<std::int64_t> starts,
                               stops;
-    ContentType*              content;
-    ssize_t                   iter_index;
+    AnyArray*                 content;
 
-    ContentType* get_content() { return content; }
+    py::object unwrap() {
+        return py::cast(this);
+    }
 
-    void set_content(py::object content_) {
+    AnyArray* get_content() { return content; }
+
+    py::object python_get_content() {
+        return content->unwrap();
+    }
+
+    void set_content(AnyArray* content_) {
+        content = content_;
+    }
+
+    void python_set_content(py::object content_) {
         try {
-            content = content_.cast<JaggedArraySrc*>();
+            set_content(content_.cast<JaggedArray*>());
             return;
         }
         catch (py::cast_error e) { }
         try {
-            content = new NumpyArray(content_.cast<py::array>());
+            set_content(getNumpyArray_t(content_.cast<py::array>()));
             return;
         }
         catch (py::cast_error e) {
@@ -270,8 +87,14 @@ public:
         }
         stops = stops_;
     }
-    
-    JaggedArraySrc(py::array starts_, py::array stops_, py::object content_) {
+
+    JaggedArray(py::array starts_, py::array stops_, py::object content_) {
+        set_starts(starts_);
+        set_stops(stops_);
+        python_set_content(content_);
+    }
+
+    JaggedArray(py::array starts_, py::array stops_, AnyArray* content_) {
         set_starts(starts_);
         set_stops(stops_);
         set_content(content_);
@@ -488,12 +311,48 @@ public:
         return out;
     }
 
-    ContentType* __getitem__(ssize_t start, ssize_t stop) { // TODO
-        throw std::invalid_argument("to be implemented later");
-        return this;
+    ssize_t len() {
+        return starts.request().size;
     }
 
-    ContentType* __getitem__(ssize_t index) {
+    AnyArray* getitem(ssize_t start, ssize_t end) {
+        if (start < 0) {
+            start += len();
+        }
+        if (end < 0) {
+            end += len();
+        }
+        if (start < 0 || start > end || end > len()) {
+            throw std::out_of_range("getitem must be in the bounds of the array");
+        }
+        auto newStarts = py::array_t<std::int64_t>(end - start);
+        py::buffer_info newStarts_info = newStarts.request();
+        auto newStarts_ptr = (std::int64_t*)newStarts_info.ptr;
+
+        py::buffer_info starts_info = starts.request();
+        auto starts_ptr = (std::int64_t*)starts_info.ptr;
+
+        auto newStops = py::array_t<std::int64_t>(end - start);
+        py::buffer_info newStops_info = newStops.request();
+        auto newStops_ptr = (std::int64_t*)newStops_info.ptr;
+
+        py::buffer_info stops_info = stops.request();
+        auto stops_ptr = (std::int64_t*)stops_info.ptr;
+
+        ssize_t newIndex = 0;
+        for (ssize_t i = start; i < end; i++) {
+            newStarts_ptr[newIndex] = starts_ptr[i];
+            newStops_ptr[newIndex++] = stops_ptr[i];
+        }
+
+        return new JaggedArray(newStarts, newStops, content);
+    }
+
+    py::object python_getitem(ssize_t start, ssize_t end) {
+        return getitem(start, end)->unwrap();
+    }
+
+    AnyArray* getitem(ssize_t index) {
         py::buffer_info starts_info = starts.request();
         py::buffer_info stops_info = stops.request();
         if (index < 0) {
@@ -511,12 +370,16 @@ public:
         ssize_t start = (ssize_t)((std::int64_t*)starts_info.ptr)[index];
         ssize_t stop = (ssize_t)((std::int64_t*)stops_info.ptr)[index];
 
-        return content->__getitem__(start, stop);
+        return content->getitem(start, stop);
     }
 
-    std::string __str__() {
+    py::object python_getitem(ssize_t index) {
+        return getitem(index)->unwrap();
+    }
+
+    std::string str() {
         std::string out;
-        
+
         py::buffer_info starts_info = starts.request();
         auto starts_ptr = (std::int64_t*)starts_info.ptr;
 
@@ -534,59 +397,43 @@ public:
             if (i != 0) {
                 out.append(" ");
             }
-            out.append((__getitem__(i))->__str__());
+            out.append((getitem(i))->str());
         }
         out.append("]");
         out.shrink_to_fit();
         return out;
     }
 
-    std::string __repr__() {
-        return "<JaggedArray " + __str__() + ">";
+    std::string repr() {
+        std::stringstream stream;
+        stream << std::hex << (long)this;
+        return "<JaggedArray " + str() + " at 0x" + stream.str() + ">";
     }
 
-    ssize_t __len__() {
-        return starts.request().size;
-    }
+    class JaggedArrayIterator {
+    private:
+        JaggedArray* thisArray;
+        ssize_t      iter_index;
 
-    ContentType* __iter__() {
-        iter_index = 0;
-        return this;
-    }
-
-    ContentType* __next__() {
-        if (iter_index >= starts.request().size) {
-            throw py::stop_iteration();
+    public:
+        JaggedArrayIterator(JaggedArray* thisArray_) {
+            iter_index = 0;
+            thisArray = thisArray_;
         }
-        return __getitem__(iter_index++);
+
+        JaggedArrayIterator* iter() {
+            return this;
+        }
+
+        py::object next() {
+            if (iter_index >= thisArray->len()) {
+                throw py::stop_iteration();
+            }
+            return thisArray->getitem(iter_index++)->unwrap();
+        }
+    };
+
+    JaggedArrayIterator* iter() {
+        return new JaggedArrayIterator(this);
     }
 };
-
-PYBIND11_MODULE(_jagged, m) {
-    py::class_<ContentType>(m, "ContentType");
-    py::class_<NumpyArray>(m, "NumpyArray")
-        .def(py::init<py::array>())
-        .def("__str__", &NumpyArray::__str__)
-        .def("__repr__", &NumpyArray::__repr__)
-        .def("__len__", &NumpyArray::__len__)
-        .def("__getitem__", (ContentType* (NumpyArray::*)(ssize_t)) &NumpyArray::__getitem__)
-        .def("__getitem__", (ContentType* (NumpyArray::*)(ssize_t, ssize_t)) &NumpyArray::__getitem__);
-    py::class_<AwkwardArray>(m, "AwkwardArray");
-    py::class_<JaggedArraySrc>(m, "JaggedArraySrc")
-        .def(py::init<py::array, py::array, py::object>())
-        .def_property("starts", &JaggedArraySrc::get_starts, &JaggedArraySrc::set_starts)
-        .def_property("stops", &JaggedArraySrc::get_stops, &JaggedArraySrc::set_stops)
-        .def_property("content", &JaggedArraySrc::get_content, &JaggedArraySrc::set_content)
-        .def_static("offsets2parents", &JaggedArraySrc::offsets2parents)
-        .def_static("counts2offsets", &JaggedArraySrc::counts2offsets)
-        .def_static("startsstops2parents", &JaggedArraySrc::startsstops2parents)
-        .def_static("parents2startsstops", &JaggedArraySrc::parents2startsstops)
-        .def_static("uniques2offsetsparents", &JaggedArraySrc::uniques2offsetsparents)
-        .def("__getitem__", (ContentType* (JaggedArraySrc::*)(ssize_t)) &JaggedArraySrc::__getitem__)
-        .def("__getitem__", (ContentType* (JaggedArraySrc::*)(ssize_t, ssize_t)) &JaggedArraySrc::__getitem__)
-        .def("__str__", &JaggedArraySrc::__str__)
-        .def("__repr__", &JaggedArraySrc::__repr__)
-        .def("__len__", &JaggedArraySrc::__len__)
-        .def("__iter__", &JaggedArraySrc::__iter__)
-        .def("__next__", &JaggedArraySrc::__next__);
-}
