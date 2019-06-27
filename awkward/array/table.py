@@ -138,6 +138,26 @@ class Table(awkward.array.base.AwkwardArray):
         def __ne__(self, other):
             return not self.__eq__(other)
 
+        def __getattr__(self, where):
+            if where in super(Table.Row, self).__dir__():
+                return super(Table.Row, self).__getattribute__(where)
+            else:
+                if where in self.columns:
+                    try:
+                        return self[where]
+                    except Exception as err:
+                        raise AttributeError("while trying to get column {0}, an exception occurred:\n{1}: {2}".format(repr(where), type(err), str(err)))
+                else:
+                    raise AttributeError("no column named {0}".format(repr(where)))
+
+        def __dir__(self):
+            return sorted(set(super(Table.Row, self).__dir__() + [x for x in self.columns if self._dir_pattern.match(x) and not keyword.iskeyword(x)]))
+        _dir_pattern = re.compile(r"^[a-zA-Z_]\w*$")
+
+        @property
+        def columns(self):
+            return self._table.columns
+
         @property
         def i0(self):
             return self["0"]
@@ -285,7 +305,7 @@ class Table(awkward.array.base.AwkwardArray):
             out._base = base
             out._rowstart = None
             return out
-            
+
         else:
             raise TypeError("view must be None, a 3-tuple of integers, or a Numpy array of integers")
 

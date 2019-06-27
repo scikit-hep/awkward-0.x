@@ -83,7 +83,7 @@ a.sum()   # reduce (by summation) to get a scalar per inner list
 # This tutorial starts with a data analyst's perspective—using awkward-array to manipulate data—and then focuses on each awkward-array type. Like Numpy, the features of this library are deliberately simple, yet compositional. Any awkward array may be the content of any other awkward array. Building and analyzing complex data structures is up to you.
 
 # %%markdown
-# # Getting data
+# # Getting data and initial exploration
 #
 # A lot of the examples in this tutorial use ``awkward.fromiter`` to make awkward arrays from lists and ``array.tolist()`` to turn them back into lists (or dicts for structures, tuples for structures with anonymous fields, Python objects for ``ObjectArrays``, etc.). This should be thought of as a slow method, since Python instructions are executed in the loop, but that's the only way to convert to and from Python objects. I only use it for small datasets, though if you have JSON-formatted data, ``awkward.fromiter`` may be a necessary preprocessing step.
 #
@@ -182,4 +182,52 @@ stars.planets.columns
 print(stars.type)
 
 # %%markdown
-# The above should be read like a function's data type, where the
+# The above should be read like a function's data type, where the function in question is indexing with square brackets. The ``[0, 2935)`` means that you could put any non-negative integer less than ``2935`` in square brackets after ``stars``.
+
+# %%
+stars[1734]
+
+# %%markdown
+# The ``'dec'``, ``'dist'``, ``'mass'``, ``'name'``, ``'planets'``, ``'ra'``, and ``'radius'`` at the next level indicate that the next square bracket can contain one of those strings (or, as stated above, use the dot notation).
+
+# %%
+stars[1734]["mass"]   # type is float64
+
+# %%
+stars[1734]["name"]   # type is <class 'str'>
+
+# %%
+stars[1734]["planets"]
+
+# %%markdown
+# The ``'planets'`` field can take another index whose type is ``[0, inf)``, any non-negative integer. That is, it's a jagged array—every subarray can have a different length and those lengths would be too numerous to specify. All of them have finite upper limits, and requesting an index out of range would raise an error.
+
+# %%
+stars[1734]["planets"][4]
+
+# %%markdown
+# Within this jagged array, there are six string fields: ``'eccen'``, ``'mass'``, ``'name'``, ``'orbit'``, ``'period'``, and ``'radius'``. Passing any one of these strings in square brackets returns a ``float64`` or a ``<class 'str'>``.
+
+# %%
+stars[1734]["planets"][4]["period"]
+
+# %%
+stars[1734]["planets"][4]["name"]
+
+# %%
+stars[1734]["planets"][4].tolist()
+
+# %%markdown
+# Incidentally, this was the `first potentially habitable exoplanet <https://www.nasa.gov/ames/kepler/kepler-186f-the-first-earth-size-planet-in-the-habitable-zone>`__` discovered.
+
+# %%
+stars[1734]["name"], stars[1734]["planets"][4]["name"]
+
+# %%markdown
+# Another way to describe the cross-cutting view of an attribute as a jagged array is to say that
+
+# %%
+stars["planets"]["name"][1734][4]
+
+# %%
+stars[1734]["planets"][4]["name"]
