@@ -5,7 +5,6 @@ TODO:
 = Wrap methods for python
 = Deal with more array characteristics
     - Multidimensional arrays
-    - Offset arrays
 = Handle endianness in converting scalar types to strings
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #pragma once
@@ -13,6 +12,7 @@ TODO:
 #include <pybind11/numpy.h>
 #include <cinttypes>
 #include <stdexcept>
+#include <sstream>
 #include "util.h"
 #include "any.h"
 #include "numpytypes.h"
@@ -405,6 +405,12 @@ public:
         out.append("]");
         out.shrink_to_fit();
         return out;
+    }
+
+    std::string repr() {
+        std::stringstream stream;
+        stream << std::hex << (int)this;
+        return "<JaggedArray " + str() + " at 0x" + stream.str() + ">";
     }
 
     class JaggedArrayIterator {

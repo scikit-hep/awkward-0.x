@@ -15,7 +15,8 @@ PYBIND11_MODULE(array_impl, m) {
         .def("__getitem__", (py::object (JaggedArray::*)(ssize_t, ssize_t)) &JaggedArray::python_getitem)
         .def("__str__", &JaggedArray::str)
         .def("__len__", &JaggedArray::len)
-        .def("__iter__", &JaggedArray::iter);
+        .def("__iter__", &JaggedArray::iter)
+        .def("__repr__", &JaggedArray::repr);
     py::class_<JaggedArray::JaggedArrayIterator>(m, "JaggedArrayIterator")
         .def(py::init<JaggedArray*>())
         .def("__iter__", &JaggedArray::JaggedArrayIterator::iter)
