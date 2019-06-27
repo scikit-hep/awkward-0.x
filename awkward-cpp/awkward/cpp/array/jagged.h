@@ -1,5 +1,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 TODO:
+= Expand array types
+    - std::string
+    - py::object
+    - zero-terminated bytes
+    - raw data
+= Make strides work negatively
+= Add more getitem functions
 = Deal with more array characteristics
     - Multidimensional arrays
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
