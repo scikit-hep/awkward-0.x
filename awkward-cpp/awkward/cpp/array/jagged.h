@@ -1,11 +1,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 TODO:
-*** Implement AnyNumpy and NumpyArray<T> Class
-*** Implement NumpyScalar Class
-= Wrap methods for python
 = Deal with more array characteristics
     - Multidimensional arrays
-= Handle endianness in converting scalar types to strings
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #pragma once
 #include <pybind11/pybind11.h>
@@ -343,9 +339,10 @@ public:
         py::buffer_info stops_info = stops.request();
         auto stops_ptr = (std::int64_t*)stops_info.ptr;
 
+        ssize_t newIndex = 0;
         for (ssize_t i = start; i < end; i++) {
-            newStarts_ptr[i] = starts_ptr[i];
-            newStops_ptr[i] = stops_ptr[i];
+            newStarts_ptr[newIndex] = starts_ptr[i];
+            newStops_ptr[newIndex++] = stops_ptr[i];
         }
 
         return new JaggedArray(newStarts, newStops, content);
