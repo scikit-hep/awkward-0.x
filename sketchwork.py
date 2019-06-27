@@ -48,7 +48,7 @@ a.counts, a.content
 a.content.contents
 
 # %%markdown
-# This decomposition is variously called "splitting" (by particle physicists) or "shredding" or "striping" (by `Arrow <https://arrow.apache.org>`__ and `Parquet <https://parquet.apache.org/>`__ developers).
+# This decomposition is variously called "splitting" (by particle physicists) or "shredding" or "striping" (by  `Arrow <https://arrow.apache.org>`__ and `Parquet <https://parquet.apache.org>`__ developers).
 #
 # Most importantly, you can do Numpy vectorized operations,
 
@@ -83,6 +83,9 @@ a.sum()
 # This tutorial starts with a data analyst's perspective—using awkward-array to manipulate data—and then focuses on each awkward-array type. Like Numpy, the features of this library are deliberately simple, yet compositional. Any awkward array may be the content of any other awkward array. Building and analyzing complex data structures is up to you.
 
 # %%markdown
-# # Example data analysis: NASA exoplanets
+# # Getting data
 #
-# HERE...
+# A lot of the examples in this tutorial use ``awkward.fromiter`` to make awkward arrays from lists and ``array.tolist()`` to turn them back into lists (or dicts for structures, tuples for structures with anonymous fields, Python objects for ``ObjectArrays``, etc.). This should be thought of as a slow method, since Python instructions are executed in the loop, but that's the only way to convert to and from Python data. I only use it for small datasets, though if you have JSON-formatted data, ``awkward.fromiter`` may be a necessary preprocessing step.
+#
+# Ideally, data should be provided in a `columnar format <https://towardsdatascience.com/the-beauty-of-column-oriented-data-2945c0c9f560>`__ or converted only once. `Parquet <https://parquet.apache.org>`__ is a popular columnar format for storing data on disk and `Arrow <https://arrow.apache.org>`__ is a popular columnar format for sharing data in memory (between functions or applications). `ROOT <https://root.cern>`__ is a popular columnar format among particle physicists, and `uproot <https://github.com/scikit-hep/uproot>`__ natively produces awkward arrays from ROOT data. `HDF5 <https://www.hdfgroup.org>`__ and its Python library `h5py <https://www.h5py.org/>`__ are only columnar for rectangular arrays. All of the others at least do jagged arrays.
+
