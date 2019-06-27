@@ -52,7 +52,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
         out = self.copy(tags=tags, index=index, contents=contents)
         out._tags = self._util_deepcopy(out._tags)
         out._index = self._util_deepcopy(out._index)
-        out._contents = [self._util_deepcopy(x) for x in out._contents]            
+        out._contents = [self._util_deepcopy(x) for x in out._contents]
         return out
 
     def empty_like(self, **overrides):
@@ -73,20 +73,28 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 return False
         return True
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
         if self.issequential:
-            return {"id": ident,
-                    "call": ["awkward", "UnionArray", "fromtags"],
-                    "args": [fill(self._tags, "UnionArray.tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"list": [fill(x, "UnionArray.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
+            return serializer.encode_call(
+                ["awkward", "UnionArray", "fromtags"],
+                serializer(self._tags, "UnionArray.tags"),
+                {"list": [
+                    serializer(x, "UnionArray.contents")
+                    for x in self._contents
+                ]},
+            )
 
         else:
-            return {"id": ident,
-                    "call": ["awkward", "UnionArray"],
-                    "args": [fill(self._tags, "UnionArray.tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._index, "UnionArray.index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"list": [fill(x, "UnionArray.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
+            return serializer.encode_call(
+                ["awkward", "UnionArray"],
+                serializer(self._tags, "UnionArray.tags"),
+                serializer(self._index, "UnionArray.index"),
+                {"list": [
+                    serializer(x, "UnionArray.contents")
+                    for x in self._contents
+                ]}
+            )
 
     @property
     def tags(self):
@@ -302,7 +310,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 return self._contents[tags[0]][(index,) + tail]
             else:
                 return self.copy(tags=tags, index=index)
-    
+
     def __setitem__(self, where, what):
         if what.shape[:len(self._tags.shape)] != self._tags.shape:
             raise ValueError("array to assign does not have the same starting shape as tags")

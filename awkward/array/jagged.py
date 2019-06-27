@@ -267,19 +267,20 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides))
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
-        self._valid()
-        if self.offsetsaliased(self._starts, self._stops) and len(self._starts) > 0 and self._starts[0] == 0:
-            return {"id": ident,
-                    "call": ["awkward", "JaggedArray", "fromcounts"],
-                    "args": [fill(self.counts, "JaggedArray.counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._content, "JaggedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
+    def __awkward_serialize__(self, serializer):
+        if self._canuseoffset():
+            return serializer.encode_call(
+                ["awkward", "JaggedArray", "fromcounts"],
+                serializer(self.counts, "JaggedArray.counts"),
+                serializer(self._content, "JaggedArray.content"),
+            )
         else:
-            return {"id": ident,
-                    "call": ["awkward", "JaggedArray"],
-                    "args": [fill(self._starts, "JaggedArray.starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._stops, "JaggedArray.stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._content, "JaggedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
+            return serializer.encode_call(
+                ["awkward", "JaggedArray"],
+                serializer(self._starts, "JaggedArray.starts"),
+                serializer(self._stops, "JaggedArray.stops"),
+                serializer(self._content, "JaggedArray.content"),
+            )
 
     @property
     def starts(self):

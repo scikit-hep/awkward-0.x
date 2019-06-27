@@ -12,6 +12,7 @@ import pickle
 import types
 import zipfile
 import zlib
+from itertools import count
 try:
     from collections.abc import Mapping, MutableMapping
 except ImportError:
@@ -25,10 +26,6 @@ import awkward.version
 compression = [
         {"minsize": 8192, "types": [numpy.bool_, numpy.bool, numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
     ]
-
-partner = {
-        zlib.compress: ("zlib", "decompress"),
-    }
 
 whitelist = [
         ["numpy", "frombuffer"],
@@ -233,144 +230,302 @@ def jsonable(obj):
     else:
         raise TypeError("object cannot be losslessly serialized as JSON")
 
-def serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=None, compression=compression, **kwargs):
-    import awkward.array.base
-    import awkward.array.virtual
+class ObjRef(object):
+    def __init__(self, idgen=None):
+        if idgen:
+            self.idgen = iter(idgen)
+        self._i2r = {}
+        self._r2o = {}
 
-    for n in kwargs:
-        if n not in ():
-            raise TypeError("unrecognized serialization option: {0}".format(repr(n)))
+    def nextid(self):
+        return next(self.idgen)
 
-    if name is None or name == "":
-        name = ""
-        prefix = ""
-    elif delimiter is None:
-        prefix = name
-    else:
-        prefix = name + delimiter
+    def __contains__(self, obj):
+        return id(obj) in self._i2r
 
-    if suffix is None:
-        suffix = ""
+    def __setitem__(self, obj, ref):
+        self._i2r[id(obj)] = ref
+        self._r2o[ref] = obj
 
-    if schemasuffix is None:
-        schemasuffix = ""
+    def __getitem__(self, obj):
+        if obj not in self:
+            self[obj] = self.nextid()
+        return self._i2r[id(obj)]
 
-    if compression is None:
-        compression = []
-    if isinstance(compression, dict) or callable(compression) or (len(compression) == 2 and callable(compression[0])):
-        compression = [compression]
+    def __delitem__(self, obj):
+        assert obj in self
+        del self._r2o[self._i2r[id(obj)]]
+        del self._i2r[id(obj)]
 
-    normalized = []
-    for x in compression:
-        if isinstance(x, dict):
-            pass
+    def get(self, obj, default=None):
+        return self[obj] if obj in self else default
 
-        elif callable(x):
-            if not x in partner:
-                raise ValueError("decompression partner for {0} not known".format(x))
-            x = {"pair": (x, partner[x])}
+    def obj(self, ref):
+        if ref in self._r2o:
+            return self._r2o[ref]
+        else:
+            return awkward.array.virtual.VirtualArray(lambda: self._r2o[ref])
 
-        elif len(x) == 2 and callable(x[0]):
-            x = {"pair": x}
+class Serializer(object):
+    def __init__(self, storage, prefix="", suffix="", schemasuffix=""):
+        self.storage = storage
+        self.suffix = suffix
+        self.prefix = prefix
+        self.schemasuffix = schemasuffix
+        self.seen = ObjRef(idgen=count())
 
-        minsize = x.get("minsize", 0)
-        tpes = x.get("types", (object,))
-        if not isinstance(tpes, tuple):
-            try:
-                tpes = tuple(tpes)
-            except TypeError:
-                tpes = (tpes,)
-        contexts = x.get("contexts", "*")
-        pair = x["pair"]
+    def store(self, name, obj):
+        schema = dict(
+            awkward=awkward.version.__version__,
+            schema=self(obj),
+        )
+        if self.prefix != "":
+            schema["prefix"] = self.prefix
 
-        normalized.append({"minsize": minsize, "types": tpes, "contexts": contexts, "pair": pair})
+        schema = self._finalize_schema(schema) or schema
 
-    seen = {}
-    def fill(obj, context, prefix, suffix, schemasuffix, storage, compression, **kwargs):
-        if id(obj) in seen:
-            return {"ref": seen[id(obj)]}
+        self.storage[name + self.schemasuffix] = self._encode_schema(schema)
+        return schema
 
-        ident = len(seen)
-        seen[id(obj)] = ident
+    def load(self, *args, **kwargs):
+        return deserialize(*args, storage=self.storage, seen=self.seen, **kwargs)
 
-        if type(obj) is numpy.dtype:
+    # encoding helper
+    def encode_call(self, *args, **kwargs):
+        func, args = args[0], args[1:]
+        ret = dict(
+            call=self._obj2spec(func) if callable(func) else tuple(func),
+        )
+        if args:
+            ret["args"] = list(args)
+        if kwargs:
+            ret["kwargs"] = kwargs
+        return ret
+
+    def encode_json(self, obj):
+        return dict(json=jsonable(obj))
+
+    def encode_python(self, obj):
+        return dict(python=frompython(obj))
+
+    # internal encoding hooks
+    @classmethod
+    def _encode_primitive(cls, obj):
+        if isinstance(obj, numpy.dtype):
             return {"dtype": dtype2json(obj)}
 
-        elif type(obj) is numpy.ndarray and len(obj.shape) != 0:
-            if len(obj.shape) > 1:
-                dtype = numpy.dtype((obj.dtype, obj.shape[1:]))
-            else:
-                dtype = obj.dtype
-
-            for policy in normalized:
-                minsize, tpes, contexts, pair = policy["minsize"], policy["types"], policy["contexts"], policy["pair"]
-                if obj.nbytes >= minsize and issubclass(obj.dtype.type, tuple(tpes)) and any(fnmatch.fnmatchcase(context, p) for p in contexts):
-                    compress, decompress = pair
-                    if obj.flags.c_contiguous:
-                        compressed = compress(obj)
-                    else:
-                        compressed = compress(obj.copy())
-                    storage[prefix + str(ident) + suffix] = compressed
-
-                    return {"id": ident,
-                            "call": ["awkward", "numpy", "frombuffer"],
-                            "args": [{"call": decompress, "args": [{"read": str(ident) + suffix}]},
-                                     {"dtype": dtype2json(dtype)},
-                                     {"json": len(obj)}]}
-
-            else:
-                storage[prefix + str(ident) + suffix] = obj.tostring()
-                return {"id": ident,
-                        "call": ["awkward", "numpy", "frombuffer"],
-                        "args": [{"read": str(ident) + suffix},
-                                 {"dtype": dtype2json(dtype)},
-                                 {"json": len(obj)}]}
-
-        elif hasattr(obj, "__awkward_persist__"):
-            return obj.__awkward_persist__(ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs)
-
+    @classmethod
+    def _obj2spec(cls, obj, test=True):
+        if hasattr(obj, "__qualname__"):
+            spec = [obj.__module__] + obj.__qualname__.split(".")
         else:
-            if hasattr(obj, "__module__") and (hasattr(obj, "__qualname__") or hasattr(obj, "__name__")) and obj.__module__ != "__main__":
-                if hasattr(obj, "__qualname__"):
-                    spec = [obj.__module__] + obj.__qualname__.split(".")
-                else:
-                    spec = [obj.__module__, obj.__name__]
+            spec = [obj.__module__, obj.__name__]
 
-                gen, genname = importlib.import_module(spec[0]), spec[1:]
-                while len(genname) > 0:
-                    if not hasattr(gen, genname[0]):
-                        break
-                    gen, genname = getattr(gen, genname[0]), genname[1:]
+        if test:
+            val = importlib.import_module(spec[0])
+            for key in spec[1:]:
+                val = getattr(val, key)
+            assert val == obj
 
-                if len(genname) == 0 and gen is obj:
-                    return {"id": ident, "function": spec}
+        return spec
 
-            if hasattr(obj, "tojson") and hasattr(type(obj), "fromjson") and getattr(importlib.import_module(type(obj).__module__), type(obj).__name__) is type(obj):
-                try:
-                    return {"id": ident, "call": [type(obj).__module__, type(obj).__name__, "fromjson"], "args": [{"json": obj.tojson()}]}
-                except:
-                    pass
+    def _encode_complex(self, obj, context):
+        # TODO: get rid of this signature
+        if callable(getattr(obj, "__awkward_serialize__", None)):
+            return obj.__awkward_serialize__(self)
+        if callable(getattr(obj, "__awkward_persist__", None)):
+            return obj.__awkward_persist__(
+                ident=self.seen.get(obj, None),
+                fill=self.fill,
+                prefix=self.prefix,
+                suffix=self.suffix,
+                schemasuffix=self.schemasuffix,
+                storage=self.storage,
+                compression=self.compression,
+            )
 
+        if hasattr(obj, "tojson") and hasattr(type(obj), "fromjson"):
             try:
-                obj = jsonable(obj)
-            except TypeError:
-                try:
-                    return {"id": ident, "python": awkward.persist.frompython(obj)}
+                return self.encode_call(
+                    self._obj2spec(type(obj).fromjson),
+                    self.encode_json(obj.tojson()),
+                )
+            except:
+                pass
 
-                except Exception as err:
-                    raise TypeError("could not persist component as an array, awkward-array, importable function/class, JSON, or pickle; pickle error is\n\n    {0}: {1}".format(err.__class__.__name__, str(err)))
+        if isinstance(obj, numpy.ndarray):
+            return self._encode_numpy(obj, context)
+
+        if hasattr(obj, "__module__") and (
+            hasattr(obj, "__qualname__") or hasattr(obj, "__name__")
+        ) and obj.__module__ != "__main__":
+            try:
+                return dict(function=self._obj2spec(obj))
+            except:
+                pass
+
+        try:
+            return self.encode_json(obj)
+        except TypeError:
+            pass
+
+        try:
+            return self.encode_python(obj)
+        except:
+            pass
+
+    def _encode_numpy(self, obj, context):
+        key = str(self.seen[obj]) + self.suffix
+        self.storage[self.prefix + key] = obj
+        return dict(read=key)
+
+    def _encode_schema(self, schema):
+        return json.dumps(schema).encode("ascii")
+
+    def _finalize_schema(self, schema):
+        pass
+
+    def __call__(self, obj, context=""):
+        ret = self._encode_primitive(obj)
+
+        if ret is not None:
+            return ret
+
+        if obj in self.seen:
+            return dict(ref=self.seen[obj])
+        else:
+            ident = self.seen[obj]
+
+        ret = self._encode_complex(obj, context)
+        if ret is None:
+            raise TypeError("failed to encode %r (type: %s)" % (obj, type(obj)))
+
+        if "id" in ret:
+            if ret["id"] is False:
+                del self.seen[obj]
+            elif ret["id"] != self.seen[obj]:
+                raise RuntimeError("unexpected id change")
+        else:
+            ret["id"] = ident
+
+        return ret
+
+    def fill(self, obj, context, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+        assert self.prefix == prefix
+        assert self.suffix == suffix
+        assert self.schemasuffix == schemasuffix
+        assert self.storage == storage
+        assert self.compression == compression
+        return self(obj, context=context)
+
+
+class BlobSerializer(Serializer):
+
+    class CompressPolicy(object):
+        enc2dec = {
+            zlib.compress: ("zlib", "decompress"),
+        }
+
+        @classmethod
+        def parse(cls, x):
+            if isinstance(x, cls):
+                return x
+            elif isinstance(x, dict):
+                return cls(**x)
+            elif callable(x):
+                return cls(enc=x)
+            elif len(x) == 2 and callable(x[0]):
+                return cls(enc=x[0], dec=x[1])
             else:
-                return {"id": ident, "json": obj}
+                raise TypeError("can't parse policy %r" % x)
 
-    schema = {"awkward": awkward.version.__version__,
-              "schema": fill(obj, "", prefix, suffix, schemasuffix, storage, compression, **kwargs)}
-    if prefix != "":
-        schema["prefix"] = prefix
+        def __init__(self, pair=None, enc=None, dec=None, minsize=0, types=object, contexts="*"):
+            if pair:
+                enc, dec = pair
+            if dec is None:
+                dec = self.enc2dec[enc]
+            if isinstance(types, list):
+                types = tuple(types)
+            elif not isinstance(types, tuple):
+                types = types,
+            if isinstance(contexts, list):
+                contexts = tuple(contexts)
+            elif not isinstance(contexts, tuple):
+                contexts = contexts,
+            assert callable(enc)
+            assert isinstance(dec, tuple)
+            assert 0 <= minsize
+            self.enc = enc
+            self.dec = dec
+            self.minsize = minsize
+            self.types = types
+            self.contexts = contexts
 
-    storage[name + schemasuffix] = json.dumps(schema).encode("ascii")
-    return schema
+        @property
+        def pair(self):
+            return (self.enc, self.dec)
 
-def deserialize(storage, name="", awkwardlib="awkward", whitelist=whitelist, cache=None):
+        def test(self, obj, context):
+            return (
+                obj.nbytes >= self.minsize and
+                issubclass(obj.dtype.type, tuple(self.types)) and
+                any(fnmatch.fnmatchcase(context, p) for p in self.contexts)
+            )
+
+    @classmethod
+    def _parse_compression(cls, comp):
+        if comp is None:
+            comp = []
+        elif not isinstance(comp, (list, tuple)):
+            comp = [comp]
+
+        return list(map(cls.CompressPolicy.parse, comp))
+
+    def __init__(self, *args, **kwargs):
+        self.compression = self._parse_compression(
+            kwargs.pop("compression", compression)
+        )
+        super(BlobSerializer, self).__init__(*args, **kwargs)
+
+    def _put_raw(self, data, ref=None):
+        if ref is None:
+            ref = data
+        key = str(self.seen[ref]) + self.suffix
+        self.storage[self.prefix + key] = data
+        return dict(read=key)
+
+    def _encode_numpy(self, obj, context):
+        if obj.ndim > 1:
+            dtype = numpy.dtype((obj.dtype, obj.shape[1:]))
+        else:
+            dtype = obj.dtype
+
+        buf = None
+        for policy in self._parse_compression(self.compression):
+            if policy.test(obj, context):
+                buf = self.encode_call(
+                    policy.dec,
+                    self._put_raw(policy.enc(obj.ravel()), ref=obj),
+                )
+                break
+        else:
+            buf = self._put_raw(obj.ravel(), ref=obj)
+
+        return self.encode_call(
+            ["awkward", "numpy", "frombuffer"],
+            buf,
+            self(dtype),
+            self(obj.shape[0]),
+        )
+
+def serialize(obj, storage, name="", delimiter="-", **kwargs):
+    if delimiter is None:
+        delimiter = ""
+    if name:
+        kwargs.setdefault("prefix", name + delimiter)
+    return BlobSerializer(storage, **kwargs).store(name, obj)
+
+def deserialize(storage, name="", awkwardlib="awkward", whitelist=whitelist, cache=None, seen=None):
     import awkward.array.virtual
 
     schema = storage[name]
@@ -384,7 +539,8 @@ def deserialize(storage, name="", awkwardlib="awkward", whitelist=whitelist, cac
         raise ValueError("JSON object is not an awkward-array schema (missing 'awkward' field)")
 
     prefix = schema.get("prefix", "")
-    seen = {}
+    if seen is None:
+        seen = ObjRef()
 
     if isinstance(whitelist, str):
         whitelist = [whitelist]
@@ -438,16 +594,13 @@ def deserialize(storage, name="", awkwardlib="awkward", whitelist=whitelist, cac
                 out = topython(schema["python"])
 
             elif "ref" in schema:
-                if schema["ref"] in seen:
-                    out = seen[schema["ref"]]
-                else:
-                    out = awkward.array.virtual.VirtualArray(lambda: seen[schema["ref"]])
+                out = seen.obj(schema["ref"])
 
             else:
                 raise ValueError("unrecognized JSON object with fields {0}".format(", ".join(repr(x) for x in schema)))
 
             if "id" in schema:
-                seen[schema["id"]] = out
+                seen[out] = schema["id"]
             return out
 
         elif isinstance(schema, list):
