@@ -15,69 +15,40 @@ public:
 
 };
 
-class NumpyArray : public AnyArray {
+template <typename T>
+class NumpyScalar_t : public NumpyScalar {
 private:
-    py::array thisArray;
+    T thisScalar;
 
-    template <typename T>
-    std::string toString(bool comma = false) {
-        py::buffer_info array_info = thisArray.request();
-        auto array_ptr = (T*)array_info.ptr;
-        int N = array_info.strides[0] / array_info.itemsize;
+public:
+    NumpyScalar_t<T>(T scalar) { thisScalar = scalar; }
 
-        std::string out;
-        out.reserve(array_info.size * 10);
-        ssize_t len = array_info.size;
-        out.append("[");
-        for (ssize_t i = 0; i < len; i++) {
-            if (i != 0) {
-                if (comma) {
-                    out.append(",");
-                }
-                out.append(" ");
-            }
-            out.append(convert_to_string(array_ptr[i * N]));
-        }
-        out.append("]");
-        out.shrink_to_fit();
-        return out;
+    AnyOutput* getitem(ssize_t) {
+        throw std::domain_error("getitem is not allowed on a NumpyScalar");
     }
+
+    py::object unwrap() { return py::cast(thisScalar); }
+
+    std::string str() {
+        return py::str(unwrap());
+    }
+};
+
+class NumpyArray : public AnyArray {
+public:
+    virtual py::buffer_info request() = 0;
+};
+
+template <typename T>
+class NumpyArray_t : public NumpyArray {
+private:
+    py::array_t<T> thisArray;
 
 public:
     py::object unwrap() { return thisArray; }
 
     std::string str() {
-        std::string format = thisArray.request().format;
-        if (format.find("q") != std::string::npos)
-            return toString<std::int64_t>();
-        if (format.find("Q") != std::string::npos)
-            return toString<std::uint64_t>();
-        if (format.find("l") != std::string::npos)
-            return toString<std::int32_t>();
-        if (format.find("L") != std::string::npos)
-            return toString<std::uint32_t>();
-        if (format.find("h") != std::string::npos)
-            return toString<std::int16_t>();
-        if (format.find("H") != std::string::npos)
-            return toString<std::uint16_t>();
-        if (format.find("b") != std::string::npos)
-            return toString<std::int8_t>();
-        if (format.find("B") != std::string::npos)
-            return toString<std::uint8_t>();
-        /*if (format.find("w") != std::string::npos)
-            return toString<std::string>();
-        if (format.find("?") != std::string::npos)
-            return toString<bool>();*/
-        if (format.find("Zf") != std::string::npos)
-            return toString<std::complex<float>>();
-        if (format.find("Zd") != std::string::npos)
-            return toString<std::complex<double>>();
-        if (format.find("f") != std::string::npos)
-            return toString<float>();
-        if (format.find("d") != std::string::npos)
-            return toString<double>();
-
-        throw std::invalid_argument("[__str__ is not supported for this type]");
+        return py::str(thisArray);
     }
 
     ssize_t len() {
@@ -95,35 +66,7 @@ public:
             throw std::out_of_range("getitem must be in the bounds of the array");
         }
         py::buffer_info temp_info = py::buffer_info();
-        std::string format = thisArray.request().format;
-        if (format.find("q") != std::string::npos)
-            temp_info.ptr = (void*)((std::int64_t*)(thisArray.request().ptr) + start);
-        else if (format.find("Q") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint64_t*)(thisArray.request().ptr) + start);
-        else if (format.find("L") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint32_t*)(thisArray.request().ptr) + start);
-        else if (format.find("h") != std::string::npos)
-            temp_info.ptr = (void*)((std::int16_t*)(thisArray.request().ptr) + start);
-        else if (format.find("H") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint16_t*)(thisArray.request().ptr) + start);
-        else if (format.find("b") != std::string::npos)
-            temp_info.ptr = (void*)((std::int8_t*)(thisArray.request().ptr) + start);
-        else if (format.find("B") != std::string::npos)
-            temp_info.ptr = (void*)((std::uint8_t*)(thisArray.request().ptr) + start);
-        /*if (format.find("w") != std::string::npos)
-            temp_info.ptr = (void*)((std::string*)(thisArray.request().ptr) + start);*/
-        else if (format.find("?") != std::string::npos)
-            temp_info.ptr = (void*)((bool*)(thisArray.request().ptr) + start);
-        else if (format.find("Zf") != std::string::npos)
-            temp_info.ptr = (void*)((std::complex<float>*)(thisArray.request().ptr) + start);
-        else if (format.find("Zd") != std::string::npos)
-            temp_info.ptr = (void*)((std::complex<double>*)(thisArray.request().ptr) + start);
-        else if (format.find("f") != std::string::npos)
-            temp_info.ptr = (void*)((float*)(thisArray.request().ptr) + start);
-        else if (format.find("d") != std::string::npos)
-            temp_info.ptr = (void*)((double*)(thisArray.request().ptr) + start);
-        else
-            temp_info.ptr = (void*)((std::int32_t*)(thisArray.request().ptr) + start);
+        temp_info.ptr = (void*)((T*)(thisArray.request().ptr) + start);
         temp_info.itemsize = thisArray.request().itemsize;
         temp_info.size = end - start;
         temp_info.format = thisArray.request().format;
@@ -131,15 +74,46 @@ public:
         temp_info.strides = thisArray.request().strides;
         temp_info.shape = thisArray.request().shape;
         temp_info.shape[0] = temp_info.size;
-        return new NumpyArray(py::array(temp_info));
+        return new NumpyArray_t<T>(py::array(temp_info));
     }
 
-    AnyArray* getitem(ssize_t e) {
-        throw std::invalid_argument("getitem(ssize_t) is not yet implemented in NumpyArray");
-        return this;
+    AnyOutput* getitem(ssize_t i) {
+        return new NumpyScalar_t<T>(((T*)thisArray.request().ptr)[i]);
     }
 
-    NumpyArray(py::array input) { thisArray = input; }
+    NumpyArray_t<T>(py::array_t<T> input) { thisArray = input; }
 
     py::buffer_info request() { return thisArray.request(); }
 };
+
+NumpyArray* getNumpyArray_t(py::array input) {
+    std::string format = input.request().format;
+    if (format.find("q") != std::string::npos)
+        return new NumpyArray_t<std::int64_t>(input.cast<py::array_t<std::int64_t>>());
+    else if (format.find("Q") != std::string::npos)
+        return new NumpyArray_t<std::uint64_t>(input.cast<py::array_t<std::uint64_t>>());
+    else if (format.find("l") != std::string::npos)
+        return new NumpyArray_t<std::int32_t>(input.cast<py::array_t<std::int32_t>>());
+    else if (format.find("L") != std::string::npos)
+        return new NumpyArray_t<std::uint32_t>(input.cast<py::array_t<std::uint32_t>>());
+    else if (format.find("h") != std::string::npos)
+        return new NumpyArray_t<std::int16_t>(input.cast<py::array_t<std::int16_t>>());
+    else if (format.find("H") != std::string::npos)
+        return new NumpyArray_t<std::uint16_t>(input.cast<py::array_t<std::uint16_t>>());
+    else if (format.find("b") != std::string::npos)
+        return new NumpyArray_t<std::int8_t>(input.cast<py::array_t<std::int8_t>>());
+    else if (format.find("B") != std::string::npos)
+        return new NumpyArray_t<std::uint8_t>(input.cast<py::array_t<std::uint8_t>>());
+    else if (format.find("?") != std::string::npos)
+        return new NumpyArray_t<bool>(input.cast<py::array_t<bool>>());
+    else if (format.find("Zf") != std::string::npos)
+        return new NumpyArray_t<std::complex<float>>(input.cast<py::array_t<std::complex<float>>>());
+    else if (format.find("Zd") != std::string::npos)
+        return new NumpyArray_t<std::complex<double>>(input.cast<py::array_t<std::complex<double>>>());
+    else if (format.find("f") != std::string::npos)
+        return new NumpyArray_t<float>(input.cast<py::array_t<float>>());
+    else if (format.find("d") != std::string::npos)
+        return new NumpyArray_t<double>(input.cast<py::array_t<double>>());
+    else
+        throw std::invalid_argument("array type not supported");
+}

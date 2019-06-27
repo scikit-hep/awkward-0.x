@@ -1,16 +1,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 TODO:
-= Implement NumpyScalar Class
-    - Handle typing and printing of every type
-    - Would be really useful to have a system of determining array
-        type from a method
-    - Once this is done, can do getitem + iter in NumpyArray
+*** Implement AnyNumpy and NumpyArray<T> Class
+*** Implement NumpyScalar Class
+= Wrap methods for python
 = Deal with more array characteristics
     - Multidimensional arrays
     - Offset arrays
 = Handle endianness in converting scalar types to strings
-= Figure out how to separate a pybind11 project into multiple
-    *.cpp files
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #pragma once
 #include <pybind11/pybind11.h>
@@ -50,7 +46,7 @@ public:
         }
         catch (py::cast_error e) { }
         try {
-            set_content(new NumpyArray(content_.cast<py::array>()));
+            set_content(getNumpyArray_t(content_.cast<py::array>()));
             return;
         }
         catch (py::cast_error e) {
@@ -100,6 +96,12 @@ public:
         set_starts(starts_);
         set_stops(stops_);
         python_set_content(content_);
+    }
+
+    JaggedArray(py::array starts_, py::array stops_, AnyArray* content_) {
+        set_starts(starts_);
+        set_stops(stops_);
+        set_content(content_);
     }
 
     static py::array_t<std::int64_t> offsets2parents(py::array offsets) {
@@ -313,9 +315,44 @@ public:
         return out;
     }
 
-    AnyArray* getitem(ssize_t start, ssize_t stop) { // TODO
-        throw std::invalid_argument("to be implemented later");
-        return this;
+    ssize_t len() {
+        return starts.request().size;
+    }
+
+    AnyArray* getitem(ssize_t start, ssize_t end) {
+        if (start < 0) {
+            start += len();
+        }
+        if (end < 0) {
+            end += len();
+        }
+        if (start < 0 || start > end || end > len()) {
+            throw std::out_of_range("getitem must be in the bounds of the array");
+        }
+        auto newStarts = py::array_t<std::int64_t>(end - start);
+        py::buffer_info newStarts_info = newStarts.request();
+        auto newStarts_ptr = (std::int64_t*)newStarts_info.ptr;
+
+        py::buffer_info starts_info = starts.request();
+        auto starts_ptr = (std::int64_t*)starts_info.ptr;
+
+        auto newStops = py::array_t<std::int64_t>(end - start);
+        py::buffer_info newStops_info = newStops.request();
+        auto newStops_ptr = (std::int64_t*)newStops_info.ptr;
+
+        py::buffer_info stops_info = stops.request();
+        auto stops_ptr = (std::int64_t*)stops_info.ptr;
+
+        for (ssize_t i = start; i < end; i++) {
+            newStarts_ptr[i] = starts_ptr[i];
+            newStops_ptr[i] = stops_ptr[i];
+        }
+
+        return new JaggedArray(newStarts, newStops, content);
+    }
+
+    py::object python_getitem(ssize_t start, ssize_t end) {
+        return getitem(start, end)->unwrap();
     }
 
     AnyArray* getitem(ssize_t index) {
@@ -337,6 +374,10 @@ public:
         ssize_t stop = (ssize_t)((std::int64_t*)stops_info.ptr)[index];
 
         return content->getitem(start, stop);
+    }
+
+    py::object python_getitem(ssize_t index) {
+        return getitem(index)->unwrap();
     }
 
     std::string str() {
@@ -364,10 +405,6 @@ public:
         out.append("]");
         out.shrink_to_fit();
         return out;
-    }
-
-    ssize_t len() {
-        return starts.request().size;
     }
 
     class JaggedArrayIterator {
