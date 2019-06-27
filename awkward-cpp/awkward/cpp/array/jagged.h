@@ -406,7 +406,7 @@ public:
 
     std::string repr() {
         std::stringstream stream;
-        stream << std::hex << (int)this;
+        stream << std::hex << (long)this;
         return "<JaggedArray " + str() + " at 0x" + stream.str() + ">";
     }
 
