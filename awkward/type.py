@@ -538,7 +538,10 @@ class OptionType(Type):
 
     @property
     def shape(self):
-        return self._type.shape
+        if isinstance(self._type, (Type, numpy.dtype)):
+            return self._type.shape
+        else:
+            return ()
 
     @property
     def dtype(self):
