@@ -411,7 +411,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @property
     def index(self):
         if len(self) == 0:
-            return self.JaggedArray([], [], [])
+            return self.JaggedArray([], [], self.numpy.array([], dtype=self.INDEXTYPE))
         elif self._canuseoffset():
             out = self.numpy.arange(self.offsets[0], self.offsets[-1], dtype=self.INDEXTYPE)
             out -= self.offsets[self.parents[self.parents >= 0]]
