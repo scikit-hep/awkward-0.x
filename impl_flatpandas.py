@@ -22,7 +22,7 @@ pandas_friendly["star_name"] = stars.name
 pandas_friendly["star_ra"] = stars.ra
 pandas_friendly["star_radius"] = stars.radius
 pandas_friendly["index0"] = numpy.arange(len(pandas_friendly))
-index = pandas.MultiIndex.from_arrays([pandas_friendly["index0"].flatten(), pandas_friendly.index.flatten()])
+index = pandas.MultiIndex.from_arrays([pandas_friendly["index0"].flatten(), pandas_friendly.localindex.flatten()])
 columns = pandas.MultiIndex.from_tuples([
     ("planet", "eccen"), ("planet", "mass"), ("planet", "name"), ("planet", "orbit"), ("planet", "period"), ("planet", "radius"),
     ("dec", ""), ("dist", ""), ("mass", ""), ("name", ""), ("ra", ""), ("radius", "")])
@@ -31,13 +31,21 @@ df = pandas.DataFrame(data={columns[i]: pandas_friendly[pandas_friendly.columns[
 import numpy
 
 def flatpandas(array):
+    import pandas
+
     import awkward.type
+    import awkward.array.jagged
 
     columns = []
     def recurse(array, tpe, cols):
         if isinstance(tpe, awkward.type.TableType):
+            out = None
             starts, stops = None, None
+
             for n in tpe.columns:
+                if n == "" or not isinstance(n, str):
+                    raise ValueError("column names must be non-empty strings")
+
                 tpen = tpe[n]
                 colsn = cols + (n,)
                 if isinstance(tpen, awkward.type.OptionType):
@@ -45,47 +53,53 @@ def flatpandas(array):
                     tpen = tpen.type
 
                 if isinstance(tpen, numpy.dtype):
-                    pass
+                    columns.append(colsn)
+
                 elif isinstance(tpen, type) and issubclass(tpen, (str, bytes)):
-                    pass
+                    columns.append(colsn)
+
                 elif isinstance(tpen, awkward.type.ArrayType) and tpen.takes == numpy.inf:
-                    if starts is None:
+                    tmp = recurse(array[n].content, tpen.to, colsn)
+                    if out is None:
                         starts, stops = array[n].starts, array[n].stops
+                        out = array.JaggedArray(starts, stops, array.Table({n: tmp}))
                     elif not numpy.array_equal(starts, array[n].starts) or not numpy.array_equal(stops, array[n].stops):
                         raise ValueError("this array has more than one jagged array structure")
-                    recurse(array[n].content, tpen.to, colsn)
+                    else:
+                        out[n] = array.JaggedArray(starts, stops, array.Table({n: tmp}))
+                    
                 elif isinstance(tpen, awkward.type.TableType):
-                    recurse(array[n], tpen, colsn)
+                    out[n] = recurse(array[n], tpen, colsn)
+
                 else:
                     raise ValueError("this array has unflattenable substructure: {0}".format(str(tpen)))
-                columns.append(colsn)
 
-
-            if starts is None:
+            if out is None:
                 out = array.Table()
-            else:
-                out = None
-                for n in tpe.columns:
-                    if isinstance(tpe[n], awkward.type.ArrayType) and tpe[n].takes == numpy.inf:
-                        if out is None:
-                            out = array.JaggedArray(starts, stops, array.Table({n: array[n].content}))
-                        else:
-                            out.content[n] = array.content[n]
 
             for n in tpe.columns:
                 if not (isinstance(tpe[n], awkward.type.ArrayType) and tpe[n].takes == numpy.inf):
                     out[n] = array[n]
 
+            if isinstance(out, awkward.array.jagged.JaggedArray):
+                out = out.flatten()
+
             return out[tpe.columns]
 
         else:
             raise ValueError("this array is not a Table")
-    
-    out = recurse(array, awkward.type.fromarray(array).to, ())
-    deepest = max(len(x) for x in columns)
-    for i, x in enumerate(columns):
-        columns[i] = columns[i] + ("",) * (deepest - len(x))
 
-    return out
+    tmp = recurse(array, awkward.type.fromarray(array).to, ())
+    deepest = max(len(x) for x in columns)
+
+    out = {}
+    for i, col in enumerate(columns):
+        x = tmp[col[0]]
+        for c in col[1:]:
+            x = x[c]
+        columns[i] = col + ("",) * (deepest - len(col))
+        out[columns[i]] = x
+    
+    return pandas.DataFrame(data=out, columns=pandas.MultiIndex.from_tuples(columns))
 
 out = flatpandas(stars)
