@@ -5,6 +5,7 @@
 import itertools
 import importlib
 import sys
+import os
 from collections import OrderedDict
 try:
     from collections.abc import Iterable
@@ -47,6 +48,13 @@ class bothmethod(object):
             return lambda *args, **kwargs: self.fcn(True, typ, *args, **kwargs)
         else:
             return lambda *args, **kwargs: self.fcn(False, ins, *args, **kwargs)
+
+# numpy on windows has some strange behavior with dtypes of certain functions
+# requiring us to cast down to int32 for (at least): ufunc.reduceat, repeat
+def windows_safe(array):
+    if os.name == "nt":
+        return array.astype(numpy.int32)
+    return array
 
 ################################################################ wrappers (used to be in uproot-methods)
 

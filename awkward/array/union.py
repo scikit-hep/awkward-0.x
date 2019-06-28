@@ -74,20 +74,28 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 return False
         return True
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
         if self.issequential:
-            return {"id": ident,
-                    "call": ["awkward", "UnionArray", "fromtags"],
-                    "args": [fill(self._tags, "UnionArray.tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"list": [fill(x, "UnionArray.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
+            return serializer.encode_call(
+                ["awkward", "UnionArray", "fromtags"],
+                serializer(self._tags, "UnionArray.tags"),
+                {"list": [
+                    serializer(x, "UnionArray.contents")
+                    for x in self._contents
+                ]},
+            )
 
         else:
-            return {"id": ident,
-                    "call": ["awkward", "UnionArray"],
-                    "args": [fill(self._tags, "UnionArray.tags", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self._index, "UnionArray.index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             {"list": [fill(x, "UnionArray.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._contents]}]}
+            return serializer.encode_call(
+                ["awkward", "UnionArray"],
+                serializer(self._tags, "UnionArray.tags"),
+                serializer(self._index, "UnionArray.index"),
+                {"list": [
+                    serializer(x, "UnionArray.contents")
+                    for x in self._contents
+                ]}
+            )
 
     @property
     def tags(self):

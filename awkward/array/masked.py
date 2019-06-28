@@ -67,13 +67,14 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-        return {"id": ident,
-                "call": ["awkward", "MaskedArray"],
-                "args": [fill(self._mask, "MaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, "MaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         {"json": bool(self._maskedwhen)}]}
+        return serializer.encode_call(
+            ["awkward", "MaskedArray"],
+            serializer(self._mask, "MaskedArray.mask"),
+            serializer(self._content, "MaskedArray.content"),
+            {"json": bool(self._maskedwhen)},
+        )
 
     @property
     def mask(self):
@@ -342,14 +343,15 @@ class BitMaskedArray(MaskedArray):
         mine["lsborder"] = overrides.pop("lsborder", self._lsborder)
         return mine
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-        return {"id": ident,
-                "call": ["awkward", "BitMaskedArray"],
-                "args": [fill(self._mask, "BitMaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, "BitMaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         {"json": bool(self._maskedwhen)},
-                         {"json": bool(self._lsborder)}]}
+        return serializer.encode_call(
+            ["awkward", "BitMaskedArray"],
+            serializer(self._mask, "BitMaskedArray.mask"),
+            serializer(self._content, "BitMaskedArray.content"),
+            {"json": bool(self._maskedwhen)},
+            {"json": bool(self._lsborder)},
+        )
 
     @property
     def mask(self):
@@ -570,13 +572,14 @@ class IndexedMaskedArray(MaskedArray):
             out._maskedwhen = maskedwhen
         return out
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-        return {"id": ident,
-                "call": ["awkward", "IndexedMaskedArray"],
-                "args": [fill(self._mask, "IndexedMaskedArray.mask", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, "IndexedMaskedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         {"json": int(self._maskedwhen)}]}
+        return serializer.encode_call(
+            ["awkward", "IndexedMaskedArray"],
+            serializer(self._mask, "IndexedMaskedArray.mask"),
+            serializer(self._content, "IndexedMaskedArray.content"),
+            {"json": int(self._maskedwhen)},
+        )
 
     @property
     def mask(self):

@@ -92,14 +92,20 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-        return {"id": ident,
-                "call": ["awkward", "ObjectArray"],
-                "args": [fill(self._content, "ObjectArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._generator, "ObjectArray.generator", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         {"tuple": [fill(x, "ObjectArray.args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
-                         {"dict": {n: fill(x, "ObjectArray.kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}]}
+        return serializer.encode_call(
+            ["awkward", "ObjectArray"],
+            serializer(self._content, "ObjectArray.content"),
+            serializer(self._generator, "ObjectArray.generator"),
+            {"tuple": [
+                serializer(x, "ObjectArray.args") for x in self._args
+            ]},
+            {"dict": {
+                n: serializer(x, "ObjectArray.kwargs")
+                for n, x in self._kwargs.items()
+            }},
+        )
 
     @property
     def content(self):
@@ -472,21 +478,23 @@ class StringArray(StringMethods, ObjectArray):
         jagged = self._content.ones_like(**overrides)
         return self.copy(jagged.starts, jagged.stops, jagged.content, **mine)
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-        if self_content.offsetsaliased(self.starts, self.stops) and len(self.starts) > 0 and self.starts[0] == 0:
-            return {"id": ident,
-                    "call": ["awkward", "StringArray", "fromcounts"],
-                    "args": [fill(self.counts, "StringArray.counts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self.content, "StringArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             self._encoding]}
+        if self._content.offsetsaliased(self.starts, self.stops) and len(self.starts) > 0 and self.starts[0] == 0:
+            return serializer.encode_call(
+                ["awkward", "StringArray", "fromcounts"],
+                serializer(self.counts, "StringArray.counts"),
+                serializer(self.content, "StringArray.content"),
+                serializer(self._encoding),
+            )
         else:
-            return {"id": ident,
-                    "call": ["awkward", "StringArray"],
-                    "args": [fill(self.starts, "StringArray.starts", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self.stops, "StringArray.stops", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             fill(self.content, "StringArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                             self._encoding]}
+            return serializer.encode_call(
+                ["awkward", "StringArray"],
+                serializer(self.starts, "StringArray.starts"),
+                serializer(self.stops, "StringArray.stops"),
+                serializer(self.content, "StringArray.content"),
+                serializer(self._encoding),
+            )
 
     @property
     def starts(self):

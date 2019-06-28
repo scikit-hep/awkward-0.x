@@ -359,21 +359,35 @@ class Table(awkward.array.base.AwkwardArray):
                 out[n] = x.ones_like(**overrides)
         return out
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-        out = {"call": ["awkward", "Table", "frompairs"],
-               "args": [{"pairs": [[n, fill(x, "Table.contents", prefix, suffix, schemasuffix, storage, compression, **kwargs)] for n, x in self._contents.items()]},
-                        {"json": self.rowstart}]}
+        out = serializer.encode_call(
+            ["awkward", "Table", "frompairs"],
+            {"pairs": [
+                [n, serializer(x, "Table.contents")]
+                for n, x in self._contents.items()
+            ]},
+            {"json": self.rowstart}
+        )
         if isinstance(self._view, tuple):
             start, step, length = self._view
-            out = {"call": ["awkward", "Table", "fromview"],
-                   "args": [{"tuple": [{"json": start}, {"json": step}, {"json": length}]}, out]}
+            out = serializer.encode_call(
+                ["awkward", "Table", "fromview"],
+                {"tuple": [
+                    {"json": start},
+                    {"json": step},
+                    {"json": length},
+                ]},
+                out,
+            )
 
         elif isinstance(self._view, self.numpy.ndarray):
-            out = {"call": ["awkward", "Table", "fromview"],
-                   "args": [fill(self._view, "Table" + ".view", prefix, suffix, schemasuffix, storage, compression, **kwargs), out]}
+            out = serializer.encode_call(
+                ["awkward", "Table", "fromview"],
+                serializer(self._view, "Table.view"),
+                out
+            )
 
-        out["id"] = ident
         return out
 
     @property

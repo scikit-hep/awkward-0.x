@@ -108,31 +108,40 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         else:
             return self.array.ones_like(**overrides)
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
 
         if self._persistvirtual:
-            out = {"id": ident,
-                   "call": ["awkward", "VirtualArray"],
-                   "args": [fill(self._generator, "VirtualArray.generator", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                            {"tuple": [fill(x, "VirtualArray.args", prefix, suffix, schemasuffix, storage, compression, **kwargs) for x in self._args]},
-                            {"dict": {n: fill(x, "VirtualArray.kwargs", prefix, suffix, schemasuffix, storage, compression, **kwargs) for n, x in self._kwargs.items()}}],
-                   "cacheable": True}
+            out = serializer.encode_call(
+                ["awkward", "VirtualArray"],
+                serializer(self._generator, "VirtualArray.generator"),
+                {"tuple": [
+                    serializer(x, "VirtualArray.args")
+                    for x in self._args
+                ]},
+                {"dict": {
+                    n: serializer(x, "VirtualArray.kwargs")
+                    for n, x in self._kwargs.items()
+                }}
+            )
+            out["cacheable"] = True
             others = {}
             if self._persistentkey is not None:
-                try:
-                    others["persistentkey"] = {"json": awkward.persist.jsonable(self._persistentkey)}
-                except TypeError:
-                    others["persistentkey"] = {"python": awkward.persist.frompython(self._persistentkey)}
+                others["persistentkey"] = serializer(self._persistentkey)
 
             if self._type is not None:
-                others["type"] = {"call": ["awkward.persist", "json2type"], "args": [{"json": awkward.persist.type2json(self._type)}], "whitelistable": True}
-            if len(others) > 0:
+                others["type"] = serializer.encode_call(
+                    ["awkward.persist", "json2type"],
+                    {"json": awkward.persist.type2json(self._type)},
+                )
+                others["type"]["whitelistable"] = True
+            if others:
                 out["kwargs"] = others
-            return out
-
         else:
-            return fill(self.array, "VirtualArray.array", prefix, suffix, schemasuffix, storage, compression, **kwargs)
+            out = serializer(self.array, "VirtualArray.array")
+            out.pop("id")
+
+        return out
 
     @property
     def generator(self):

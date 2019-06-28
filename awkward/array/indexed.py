@@ -68,12 +68,13 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides))
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-        return {"id": ident,
-                "call": ["awkward", "IndexedArray"],
-                "args": [fill(self._index, "IndexedArray.index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, "IndexedArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs)]}
+        return serializer.encode_call(
+            ["awkward", "IndexedArray"],
+            serializer(self._index, "IndexedArray.index"),
+            serializer(self._content, "IndexedArray.content"),
+        )
 
     @property
     def index(self):
@@ -296,24 +297,15 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content.ones_like(**overrides), **mine)
 
-    def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
+    def __awkward_serialize__(self, serializer):
         self._valid()
-
-        if self._default is None:
-            default = {"json": self._default}
-        elif self._util_isinteger(self._default):
-            default = {"json": int(self._default)}
-        elif isinstance(self._default, (numbers.Real, self.numpy.floating)) and self.numpy.isfinite(self._default):
-            default = {"json": float(self._default)}
-        else:
-            default = fill(self._default, "SparseArray.default", prefix, suffix, schemasuffix, storage, compression, **kwargs)
-
-        return {"id": ident,
-                "call": ["awkward", "SparseArray"],
-                "args": [{"json": int(self._length)},
-                         fill(self._index, "SparseArray.index", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         fill(self._content, "SparseArray.content", prefix, suffix, schemasuffix, storage, compression, **kwargs),
-                         default]}
+        return serializer.encode_call(
+            ["awkward", "SparseArray"],
+            {"json": int(self._length)},
+            serializer(self._index, "SparseArray.index"),
+            serializer(self._content, "SparseArray.content"),
+            serializer(self._default, "SparseArray.default"),
+        )
 
     @property
     def length(self):
