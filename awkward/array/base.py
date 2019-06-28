@@ -174,7 +174,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         return self._reduce(self.numpy.maximum, -self.numpy.inf, None, regularaxis)
 
     def __getattr__(self, where):
-        if where in super(AwkwardArray, self).__dir__():
+        if where in dir(super(AwkwardArray, self)):
             return super(AwkwardArray, self).__getattribute__(where)
         else:
             if where in self.columns:
@@ -186,7 +186,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                 raise AttributeError("no column named {0}".format(repr(where)))
 
     def __dir__(self):
-        return sorted(set(super(AwkwardArray, self).__dir__() + [x for x in self.columns if self._dir_pattern.match(x) and not keyword.iskeyword(x)]))
+        return sorted(set(dir(super(AwkwardArray, self)) + [x for x in self.columns if self._dir_pattern.match(x) and not keyword.iskeyword(x)]))
     _dir_pattern = re.compile(r"^[a-zA-Z_]\w*$")
 
     @property

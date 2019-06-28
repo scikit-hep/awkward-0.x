@@ -236,7 +236,7 @@ class Test(unittest.TestCase):
             assert len(c[3]) == 0
             assert c[2]["0"].tolist() == sum([[x] * (i - x) for x in range(i)], [])
             assert c[2]["1"].tolist() == sum([list(range(x, i)) for x in range(i)], [])
-        
+
     def test_jagged_distincts(self):
         for i in range(50):
             a = JaggedArray.fromiter([[], [123], list(range(i)), []])
@@ -582,11 +582,11 @@ class Test(unittest.TestCase):
         assert all(array1[indices1] == array2[indices1])
         assert all(array2[indices1] == array2[indices2])
 
-    def test_jagged_index(self):
+    def test_jagged_localindex(self):
         a = awkward.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
-        assert a.index.tolist() == [[0, 1, 2, 3, 4], [], [0, 1, 2], [0]]
+        assert a.localindex.tolist() == [[0, 1, 2, 3, 4], [], [0, 1, 2], [0]]
         b = a[[False, True, False, True]]
-        assert b.index.tolist() == [[], [0]]
+        assert b.localindex.tolist() == [[], [0]]
 
     def test_jagged_parents(self):
         a = awkward.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
