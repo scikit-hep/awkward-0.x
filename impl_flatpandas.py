@@ -31,19 +31,29 @@
 # import numpy
 
 def topandas_regular(array):
+    import numpy
     import pandas
 
     import awkward.type
+    import awkward.array.base
     import awkward.array.jagged
     import awkward.array.table
+
+    if isinstance(array, awkward.array.base.AwkwardArray):
+        numpy = array.numpy
+        JaggedArray = array.JaggedArray
+        Table = array.Table
+    else:
+        JaggedArray = awkward.array.jagged.JaggedArray
+        Table = awkward.array.table.Table
 
     globalindex = [None]
     localindex = []
     columns = []
     def recurse(array, tpe, cols, seriously):
         if isinstance(tpe, awkward.type.TableType):
-            out = None
             starts, stops = None, None
+            out, deferred = None, {}
 
             for n in tpe.columns:
                 if not isinstance(n, str):
@@ -57,68 +67,57 @@ def topandas_regular(array):
 
                 if isinstance(tpen, numpy.dtype):
                     columns.append(colsn)
+                    tmp = array[n]
 
                 elif isinstance(tpen, type) and issubclass(tpen, (str, bytes)):
                     columns.append(colsn)
+                    tmp = array[n]
 
                 elif isinstance(tpen, awkward.type.ArrayType) and tpen.takes == numpy.inf:
-                    print("jagged")
-
-                    tmp = recurse(array[n].content, tpen.to, colsn, True)
-                    if out is None:
-                        starts, stops = array[n].starts, array[n].stops
-                        out = array.JaggedArray(starts, stops, array.Table({n: tmp}))
-                    elif not numpy.array_equal(starts, array[n].starts) or not numpy.array_equal(stops, array[n].stops):
-                        raise ValueError("this array has more than one jagged array structure")
-                    else:
-                        out[n] = array.JaggedArray(starts, stops, tmp)
+                    tmp = JaggedArray(array[n].starts, array[n].stops, recurse(array[n].content, tpen.to, colsn, True))
 
                 elif isinstance(tpen, awkward.type.TableType):
-                    print("table")
-
                     tmp = recurse(array[n], tpen, colsn, True)
-                    if out is None:
-                        out = array.Table({n: tmp})
-                    else:
-                        out[n] = tmp
 
                 else:
                     raise ValueError("this array has unflattenable substructure: {0}".format(str(tpen)))
 
+                if isinstance(tmp, awkward.array.jagged.JaggedArray):
+                    if starts is None:
+                        starts, stops = tmp.starts, tmp.stops
+                    elif not numpy.array_equal(starts, tmp.starts) or not numpy.array_equal(stops, tmp.stops):
+                        raise ValueError("this array has more than one jagged array structure")
+                    if out is None:
+                        out = JaggedArray(starts, stops, Table({n: tmp.content}))
+                    else:
+                        out[n] = tmp
+                else:
+                    deferred[n] = tmp
+
             if out is None:
-                out = array.Table()
+                out = Table()
 
-            for n in tpe.columns:
-                if n not in out.columns:
-                    out[n] = array[n]
+            for n, x in deferred.items():
+                out[n] = x
 
-            if isinstance(out, awkward.array.jagged.JaggedArray):
-                n = ""
-                while n in tpe.columns:
-                    n = n + " "
-                out[n] = array.numpy.arange(len(out))
-                globalindex[0] = out[n].flatten()
+            n = ""
+            while n in tpe.columns:
+                n = n + " "
+            out[n] = numpy.arange(len(out))
+            globalindex[0] = out[n].flatten()
+
+            if any(isinstance(array[n], awkward.array.jagged.JaggedArray) for n in tpe.columns):
                 localindex.insert(0, out.localindex.flatten())
-                out = out.flatten()
-            else:
-                globalindex[0] = array.numpy.arange(len(out))
-
-            print("returning", out[tpe.columns].tolist())
 
             return out[tpe.columns]
 
         else:
-            if isinstance(array, numpy.ndarray):
-                Table = awkward.array.table.Table
-            else:
-                Table = array.Table
-
-            out = recurse(Table({"": array}), awkward.type.TableType(**{"": tpe}), cols, False)[""]
-            print("return", out.tolist())
-
-            return out
+            return recurse(Table({"": array}), awkward.type.TableType(**{"": tpe}), cols, False)[""]
 
     tmp = recurse(array, awkward.type.fromarray(array).to, (), True)
+    if isinstance(tmp, awkward.array.jagged.JaggedArray):
+        tmp = tmp.flatten()
+
     deepest = max(len(x) for x in columns)
 
     out = {}
@@ -138,12 +137,6 @@ def topandas_regular(array):
     if len(columns) == 1 and deepest == 0:
         return pandas.Series(out[()], index=index)
     else:
-        columns = pandas.MultiIndex.from_tuples(columns)
-
-        print("data", out)
-        print("index", index)
-        print("columns", columns)
-
-        return pandas.DataFrame(data=out, index=index, columns=columns)
+        return pandas.DataFrame(data=out, index=index, columns=pandas.MultiIndex.from_tuples(columns))
 
 # out = topandas_regular(stars)
