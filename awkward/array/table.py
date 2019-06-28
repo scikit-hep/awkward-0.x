@@ -808,12 +808,14 @@ class Table(awkward.array.base.AwkwardArray):
         out._valid()
         return out
 
+    _topandas_name = "TableSeries"
+
     def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("TableSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             out._contents = OrderedDict((n, x._topandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x) for n, x in out._contents.items())
             return out

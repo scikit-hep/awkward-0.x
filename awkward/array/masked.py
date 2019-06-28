@@ -301,13 +301,15 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         out[self.boolmask(maskedwhen=True)] = value
         return out
 
+    _topandas_name = "MaskedSeries"
+
     def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("MaskedSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             if isinstance(self._content, awkward.array.base.AwkwardArray):
                 out._content = out._content._topandas(seen)
             return out

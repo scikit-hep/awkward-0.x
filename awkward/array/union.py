@@ -479,12 +479,14 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def fillna(self, value):
         return self.copy(contents=[self._util_fillna(x, value) for x in self._contents])
 
+    _topandas_name = "UnionSeries"
+
     def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("UnionSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             out._contents = [x._topandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x for x in out._contents]
             return out

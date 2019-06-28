@@ -427,11 +427,13 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def _topandas_doit(virtualarray):
         return virtualarray.array._topandas()
 
+    _topandas_name = "VirtualSeries"
+
     def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.VirtualArray(self._topandas_doit, (self,), cache=self.cache, persistentkey=self.persistentkey, type=self.type, nbytes=self.nbytes, persistvirtual=self.persistvirtual)
-            out.__class__ = awkward.pandas.mixin("VirtualSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             return out

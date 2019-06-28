@@ -231,13 +231,15 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         out._content = arrays[0]._content.__class__.concatenate([a._content for a in arrays])
         return out
 
+    _topandas_name = "ObjectSeries"
+
     def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("ObjectSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             if isinstance(self._content, awkward.array.base.AwkwardArray):
                 out._content = out._content._topandas(seen)
             return out
@@ -607,13 +609,15 @@ class StringArray(StringMethods, ObjectArray):
     def fillna(self, value):
         return self
 
+    _topandas_name = "StringSeries"
+
     def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("StringSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             if isinstance(self._content, awkward.array.base.AwkwardArray):
                 out._content = out._content._topandas(seen)
             return out

@@ -1783,13 +1783,15 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(starts=starts, stops=stops, content=self.MaskedArray(mask, content, maskedwhen=maskedwhen))
 
+    _topandas_name = "JaggedSeries"
+
     def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("JaggedSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             if isinstance(self._content, awkward.array.base.AwkwardArray):
                 out._content = out._content._topandas(seen)
             return out

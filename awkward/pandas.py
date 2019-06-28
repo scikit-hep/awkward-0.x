@@ -100,5 +100,57 @@ class AwkwardSeries(object):
     def _concat_same_type(cls, to_concat):
         return cls.concatenate(to_concat)
 
-def mixin(name, array):
-    return type(name, (AwkwardSeries, type(array), pandas.api.extensions.ExtensionArray), {})
+    @property
+    def ChunkedArray(self):
+        return mixin(self._findclass(type(self)).ChunkedArray.fget(self))
+
+    @property
+    def AppendableArray(self):
+        return mixin(self._findclass(type(self)).AppendableArray.fget(self))
+
+    @property
+    def IndexedArray(self):
+        return mixin(self._findclass(type(self)).IndexedArray.fget(self))
+
+    @property
+    def SparseArray(self):
+        return mixin(self._findclass(type(self)).SparseArray.fget(self))
+
+    @property
+    def JaggedArray(self):
+        return mixin(self._findclass(type(self)).JaggedArray.fget(self))
+
+    @property
+    def MaskedArray(self):
+        return mixin(self._findclass(type(self)).MaskedArray.fget(self))
+
+    @property
+    def BitMaskedArray(self):
+        return mixin(self._findclass(type(self)).BitMaskedArray.fget(self))
+
+    @property
+    def IndexedMaskedArray(self):
+        return mixin(self._findclass(type(self)).IndexedMaskedArray.fget(self))
+
+    @property
+    def ObjectArray(self):
+        return mixin(self._findclass(type(self)).ObjectArray.fget(self))
+
+    @property
+    def StringArray(self):
+        return mixin(self._findclass(type(self)).StringArray.fget(self))
+
+    @property
+    def Table(self):
+        return mixin(self._findclass(type(self)).Table.fget(self))
+
+    @property
+    def UnionArray(self):
+        return mixin(self._findclass(type(self)).UnionArray.fget(self))
+
+    @property
+    def VirtualArray(self):
+        return mixin(self._findclass(type(self)).VirtualArray.fget(self))
+
+def mixin(tpe):
+    return type(tpe._topandas_name, (AwkwardSeries, tpe, pandas.api.extensions.ExtensionArray), {})
