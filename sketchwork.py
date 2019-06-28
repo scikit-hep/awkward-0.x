@@ -156,19 +156,17 @@ numpy.sqrt(crazy).tolist()
 #
 # `HDF5 <https://www.hdfgroup.org>`__ and its Python library `h5py <https://www.h5py.org/>`__ are columnar, but only for rectangular arrays, unlike the others mentioned here. Awkward-array can *wrap* HDF5 with an interpretation layer to store columnar data structures, but then the awkward-array library wuold be needed to read the data back in a meaningful way. Awkward also has a native file format, ``.awkd`` files, which are simply ZIP archives of columns as binary blobs and metadata (just as Numpy's ``.npz`` is a ZIP of arrays with metadata). The HDF5, awkd, and pickle serialization procedures use the same protocol, which has backward and forward compatibility features.
 
-######################################### HERE
-
 # %%markdown
 # ## Parquet files
 #
-# If you have a Parquet file, open it with
+# Let's start by opening a Parquet file. Awkward reads Parquet through the `pyarrow <https://arrow.apache.org/docs/python>`__ module, which is an optional dependency, so be sure you have it installed before trying the next line.
 
 # %%
 stars = awkward.fromparquet("tests/samples/exoplanets.parquet")
 stars
 
 # %%markdown
-# (There is also an ``awkward.toparquet`` that takes the file name and awkward array as arguments.)
+# (There is also an ``awkward.toparquet`` that takes the file name and array as arguments.)
 #
 # Columns are accessible with square brackets and strings
 
@@ -176,13 +174,13 @@ stars
 stars["name"]
 
 # %%markdown
-# or by attribute (if it doesn't have weird characters and doesn't conflict with a method or property name).
+# or by dot-attribute (if the name doesn't have weird characters and doesn't conflict with a method or property name).
 
 # %%
 stars.ra, stars.dec
 
 # %%markdown
-# In this dataset, each star has one or more planets (the second-to-last has three planets). Thus, the planet attributes are jagged arrays.
+# This file contains data about extrasolar planets and their host stars. As such, it's a ``Table`` full of Numpy arrays and ``JaggedArrays``. The star attributes (`"name"`, `"ra"` or right ascension in degrees, `"dec"` or declination in degrees, `"dist"` or distance in parsecs, `"mass"` in multiples of the sun's mass, and `"radius"` in multiples of the sun's radius) are plain Numpy arrays and the planet attributes (`"name"`, `"orbit"` or orbital distance in AU, `"eccen"` or eccentricity, `"period"` or periodicity in days, `"mass"` in multiples of Jupyter's mass, and `"radius"` in multiples of Jupiter's radius) are jagged because each star may have a different number of planets.
 
 # %%
 stars.planet_name
@@ -191,24 +189,26 @@ stars.planet_name
 stars.planet_period, stars.planet_orbit
 
 # %%markdown
-# These arrays are called ``ChunkedArrays`` because the Parquet file is lazily read in chunks (Parquet's row group structure). They support the same Numpy features as vectorized computation
+# For large arrays, only the first and last values are printed: the second-to-last star has three planets; all the other stars shown here have one planet.
+#
+# These arrays are called ``ChunkedArrays`` because the Parquet file is lazily read in chunks (Parquet's row group structure). The ``ChunkedArray`` (subdivides the file) contains ``VirtualArrays`` (read one chunk on demand), which generate the ``JaggedArrays``. This is an illustration of how each awkward class provides one feature, and you get desired behavior by combining them.
+#
+# The ``ChunkedArrays`` and ``VirtualArrays`` support the same Numpy-like access as ``JaggedArray``, so we can compute with them just as we would any other array.
 
 # %%
 # distance in parsecs → distance in light years
 stars.dist * 3.26156
 
-# %%markdown
-# and multidimensional slicing.
-
 # %%
+# for all stars, drop the first planet
 stars.planet_mass[:, 1:]
 
 # %%markdown
 # ## Arrow buffers
 #
-# Parquet and Arrow go through the `pyarrow <https://arrow.apache.org/docs/python>`__ library, which has support for more data structures in Arrow than Parquet.
+# The pyarrow implementation of Arrow is more complete than its implementation of Parquet, so we can use more features in the Arrow format, such as nested tables.
 #
-# But whereas it's obvious that Parquet will come from a file on disk, Arrow buffers may come from anywhere: the output of another function, interprocess communication, a network call, or even a file.
+# Unlike Parquet, which is intended as a file format, Arrow is a memory format. You might get an Arrow buffer as the output of another function, through interprocess communication, from a network RPC call, a message bus, etc. Arrow can be saved as files, though this isn't common. In this case, we'll get it from a file.
 
 # %%
 import pyarrow
@@ -219,10 +219,18 @@ stars
 # %%markdown
 # (There is also an ``uproot.toarrow`` that takes an awkward array as its only argument, returning the relevant Arrow structure.)
 #
-# Since Arrow has more features than Parquet (through pyarrow), this file has been packed more intuitively: planets are objects within a jagged array.
+# This file is structured differently. Instead of jagged arrays of numbers like ``"planet_mass"``, ``"planet_period"``, and ``"planet_orbit"``, this file has a jagged table of ``"planets"``. A jagged table is a ``JaggedArray`` of ``Table``.
 
 # %%
 stars["planets"]
+
+# %%markdown
+# Notice that the square brackets are nested, but the contents are ``<Row>`` objects. The second-to-last star has three planets, as before.
+#
+# We can find the non-jagged ``Table`` in the ``JaggedArray.content``.
+
+# %%
+stars["planets"].content
 
 # %%markdown
 # When viewed as Python lists and dicts, the ``'planets'`` field is a list of planet dicts, each with its own fields.
@@ -231,7 +239,7 @@ stars["planets"]
 stars[:2].tolist()
 
 # %%markdown
-# But the cross-cutting view of each planet attribute we had earlier is still immediately accessible: selecting a column of a table inside a jagged array produces a jagged array of that attribute.
+# Despite being packaged in an arguably more intuitive way, we can still get jagged arrays of numbers by requesting ``"planets"`` and a planet attribute (two column selections) without specifying which star or which parent.
 
 # %%
 stars.planets.name
@@ -240,7 +248,7 @@ stars.planets.name
 stars.planets.mass
 
 # %%markdown
-# The ``stars`` and ``stars.planets`` are both tables, though ``stars.planets`` is a jagged table (a ``Table`` inside a ``JaggedArray``). This structure keeps their columns separate.
+# Even though the ``Table`` is hidden inside the ``JaggedArray``, its ``columns`` pass through to the top.
 
 # %%
 stars.columns
@@ -249,19 +257,19 @@ stars.columns
 stars.planets.columns
 
 # %%markdown
-# For a more global view of the structures contained within one of these arrays, print out its type.
+# For a more global view of the structures contained within one of these arrays, print out its high-level type. ("High-level" because it presents logical distinctions, like jaggedness and tables, but not physical distinctions, like chunking and virtualness.)
 
 # %%
 print(stars.type)
 
 # %%markdown
-# The above should be read like a functional data type: ``argument type -> return type`` for the function that takes an index in square brackets and returns something else. For example, the first ``[0, 2935)`` means that you could put any non-negative integer less than ``2935`` in square brackets after ``stars``, like this:
+# The above should be read like a function's data type: ``argument type -> return type`` for the function that takes an index in square brackets and returns something else. For example, the first ``[0, 2935)`` means that you could put any non-negative integer less than ``2935`` in square brackets after ``stars``, like this:
 
 # %%
 stars[1734]
 
 # %%markdown
-# and get an object that would take ``'dec'``, ``'dist'``, ``'mass'``, ``'name'``, ``'planets'``, ``'ra'``, or ``'radius'`` in its square brackets. Depending on which of these strings you provide, the next type will be different.
+# and get an object that would take ``'dec'``, ``'dist'``, ``'mass'``, ``'name'``, ``'planets'``, ``'ra'``, or ``'radius'`` in its square brackets. The return type depends on which of those strings you provide.
 
 # %%
 stars[1734]["mass"]   # type is float64
@@ -273,13 +281,13 @@ stars[1734]["name"]   # type is <class 'str'>
 stars[1734]["planets"]
 
 # %%markdown
-# The planets have additional nested structure:
+# The planets have their own table structure:
 
 # %%
 print(stars[1734]["planets"].type)
 
 # %%markdown
-# Notice that within the context of ``stars``, the ``planets`` could take any non-negative integer ``[0, inf)``, but for a particular star, the allowed domain is known with more precision: ``[0, 5)``. This is because ``stars["planets"]`` is a jagged array—a different number of planets for each star—but one ``stars[1734]["planets"]`` is a simple array—five planets for this star.
+# Notice that within the context of ``stars``, the ``planets`` could take any non-negative integer ``[0, inf)``, but for a particular star, the allowed domain is known with more precision: ``[0, 5)``. This is because ``stars["planets"]`` is a jagged array—a different number of planets for each star—but one ``stars[1734]["planets"]`` is a simple array—five planets for *this* star.
 #
 # Passing a non-negative integer less than 5 to this array, we get an object that takes one of six strings: : ``'eccen'``, ``'mass'``, ``'name'``, ``'orbit'``, ``'period'``, and ``'radius'``.
 
@@ -287,7 +295,7 @@ print(stars[1734]["planets"].type)
 stars[1734]["planets"][4]
 
 # %%markdown
-# and these are numbers and strings.
+# and the return type of these depends on which string you provide.
 
 # %%
 stars[1734]["planets"][4]["period"]   # type is float
@@ -299,13 +307,13 @@ stars[1734]["planets"][4]["name"]   # type is <class 'str'>
 stars[1734]["planets"][4].tolist()
 
 # %%markdown
-# Incidentally, this was the `first potentially habitable exoplanet <https://www.nasa.gov/ames/kepler/kepler-186f-the-first-earth-size-planet-in-the-habitable-zone>`__` discovered.
+# (Incidentally, this is a `potentially habitable exoplanet <https://www.nasa.gov/ames/kepler/kepler-186f-the-first-earth-size-planet-in-the-habitable-zone>`__`, the first ever discovered.)
 
 # %%
 stars[1734]["name"], stars[1734]["planets"][4]["name"]
 
 # %%markdown
-# You don't have to pass all of these arguments in the same order. Integer indexes and string indexes commute with each other, but integers don't commute with integers (dimensions have a particular order) and strings don't commute with strings (nesting has a particular order). Another way to say it is that you can specify the row first (integer) or the column first (string) and get a particular table cell. This logic works even when the table is jagged.
+# Some of these arguments "commute" and others don't. Dimensional axes have a particular order, so you can't request a planet by its row number before selecting a star, but you can swap a column-selection (string) and a row-selection (integer). For a rectangular table, it's easy to see how you can slice column-first or row-first, but it even works when the table is jagged.
 
 # %%
 stars["planets"]["name"][1734][4]
@@ -314,32 +322,73 @@ stars["planets"]["name"][1734][4]
 stars[1734]["planets"][4]["name"]
 
 # %%markdown
-# Above, the first example projects planet name through the structure, maintaining jaggedness:
-
-# %%
-stars["planets"]["name"]
-
-# %%markdown
-# and then row ``1734`` in the first dimension, ``4`` in the second (jagged) dimension.
-#
-# The second example picks star ``1734``, views its planets, picks planet ``4``, and views its name.
-#
-# Neither of these is considerably faster than the other. The internal data (``content`` of the ``JaggedArray``) are untouched by the transformation; only a new view is returned at each step. Projections, even multi-column projections
+# None of these intermediate slices actually process data, so you can slice in any order that is logically correct without worrying about performance. Projections, even multi-column projections
 
 # %%
 orbits = stars["planets"][["name", "eccen", "orbit", "period"]]
-orbits
+orbits[1734].tolist()
 
 # %%markdown
-# are a way to quickly restructure datasets.
+# are a useful way to restructure data without incurring a runtime cost.
+
+# %%markdown
+# ## Relationship to Pandas
+#
+# Arguably, this kind of dataset could be manipulated as a `Pandas DataFrame <https://pandas.pydata.org>`__ instead of awkward arrays. Despite the variable number of planets per star, the exoplanets dataset could be flattened into a rectangular DataFrame, in which the distinction between solar systems is in a two-component index (left column), a `MultiIndex <https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html>`__.
 
 # %%
-orbits[1734].tolist()   # unitless eccentricity, orbit in AU, period in days
+awkward.topandas(stars, flatten=True)[-9:]
+
+# %%markdown
+# The star's attributes are duplicated for each planet and it wouldn't be possible to show stars that have no planets, but the information is preserved in a way that Pandas can recognize and operate on. (For instance, ``.unstack()`` would widen this into a column per planet attribute per planet and strictly one row per star.)
+#
+# The only kinds of awkward arrays that can be translated into Pandas indexes are those that involve a single jagged structure. The structure can be arbitrarily deep in ``Tables`` (which add column name depth),
+
+# %%
+array = awkward.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
+                          {"a": {"b": 4, "c": {"d": [5, 5.1]}}, "e": 6},
+                          {"a": {"b": 7, "c": {"d": [8, 8.1, 8.2]}}, "e": 9}])
+awkward.topandas(array, flatten=True)
+
+# %%markdown
+# or arbitrarily deep in ``JaggedArrays`` (which add row name depth),
+
+# %%
+array = awkward.fromiter([{"a": 1, "b": [[2.2, 3.3, 4.4], [], [5.5, 6.6]]},
+                          {"a": 10, "b": [[1.1], [2.2, 3.3], [], [4.4]]},
+                          {"a": 100, "b": [[], [9.9]]}])
+awkward.topandas(array, flatten=True)
+
+# %%markdown
+# and they can even have two ``JaggedArrays`` at the same level if their number of elements is the same (at all levels of depth).
+
+# %%
+array = awkward.fromiter([{"a": [[1.1, 2.2, 3.3], [], [4.4, 5.5]], "b": [[1, 2, 3], [], [4, 5]]},
+                          {"a": [[1.1], [2.2, 3.3], [], [4.4]],    "b": [[1], [2, 3], [], [4]]},
+                          {"a": [[], [9.9]],                       "b": [[], [9]]}])
+awkward.topandas(array, flatten=True)
+
+# %%markdown
+# However, if there are two ``JaggedArrays`` with different structure at the same level, a single DataFrame cannot represent them.
+
+# %%
+array = awkward.fromiter([{"a": [1, 2, 3], "b": [1.1, 2.2]},
+                          {"a": [1],       "b": [1.1, 2.2, 3.3]},
+                          {"a": [1, 2],    "b": []}])
+try:
+    awkward.topandas(array, flatten=True)
+except Exception as err:
+    print(type(err), str(err))
+
+# %%markdown
+# To describe data like these, we would need two DataFrames, and operations relating ``"a"`` and ``"b"`` would have to include a join on those DataFrames.
 
 # %%markdown
 # ## ROOT files
 #
-# Particle physicists have needed structured data for decades, and created a file format in the mid-90's to serialize arbitrary C++ objects to disk. The `ROOT <https://root.cern>`__ project reads and writes these files in C++ and, through `dynamic wrapping <https://root.cern.ch/pyroot>`__, in Python as well. The `uproot <https://github.com/scikit-hep/uproot>`__ project reads (and soon will write) these files natively in Python, returning awkward arrays.
+# HERE HERE HERE
+#
+# Particle physicists especially have needed structured data for decades, and created a file format in the mid-90's to serialize arbitrary C++ objects to disk. The `ROOT <https://root.cern>`__ project reads and writes these files in C++ and, through `dynamic wrapping <https://root.cern.ch/pyroot>`__, in Python as well. The `uproot <https://github.com/scikit-hep/uproot>`__ project reads (and soon will write) these files natively in Python, returning awkward arrays.
 
 # %%
 import uproot
