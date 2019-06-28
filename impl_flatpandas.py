@@ -30,12 +30,14 @@ df = pandas.DataFrame(data={columns[i]: pandas_friendly[pandas_friendly.columns[
 
 import numpy
 
-def flatpandas(array):
+def topandas_regular(array):
     import pandas
 
     import awkward.type
     import awkward.array.jagged
 
+    globalindex = [None]
+    localindex = []
     columns = []
     def recurse(array, tpe, cols):
         if isinstance(tpe, awkward.type.TableType):
@@ -66,8 +68,8 @@ def flatpandas(array):
                     elif not numpy.array_equal(starts, array[n].starts) or not numpy.array_equal(stops, array[n].stops):
                         raise ValueError("this array has more than one jagged array structure")
                     else:
-                        out[n] = array.JaggedArray(starts, stops, array.Table({n: tmp}))
-                    
+                        out[n] = array.JaggedArray(starts, stops, tmp)
+
                 elif isinstance(tpen, awkward.type.TableType):
                     out[n] = recurse(array[n], tpen, colsn)
 
@@ -82,7 +84,12 @@ def flatpandas(array):
                     out[n] = array[n]
 
             if isinstance(out, awkward.array.jagged.JaggedArray):
+                out[""] = array.numpy.arange(len(out))
+                globalindex[0] = out[""].flatten()
+                localindex.insert(0, out.localindex.flatten())
                 out = out.flatten()
+            else:
+                globalindex[0] = array.numpy.arange(len(out))
 
             return out[tpe.columns]
 
@@ -99,7 +106,9 @@ def flatpandas(array):
             x = x[c]
         columns[i] = col + ("",) * (deepest - len(col))
         out[columns[i]] = x
-    
-    return pandas.DataFrame(data=out, columns=pandas.MultiIndex.from_tuples(columns))
 
-out = flatpandas(stars)
+    return pandas.DataFrame(data=out,
+                            index=pandas.MultiIndex.from_arrays(globalindex + localindex),
+                            columns=pandas.MultiIndex.from_tuples(columns))
+
+out = topandas_regular(stars)
