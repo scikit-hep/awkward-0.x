@@ -7,87 +7,157 @@
 #
 #     m = \\sqrt{(E_1 + E_2)^2 - (p_{x1} + p_{x2})^2 - (p_{y1} + p_{y2})^2 - (p_{z1} + p_{z2})^2}
 #
-# the analyst might first compute :math:`\\sqrt{(p_{x1} + p_{x2})^2 + (p_{y1} + p_{y2})^2}` for all data (which has a meaning: :math:`p_T`), then compute :math:`\\sqrt{{p_T}^2 + (p_{z1} + p_{z2})^2}` for all data (which has a meaning: :math:`|p|`), then compute the whole expression as :math:`\\sqrt{(E_1 + E_2)^2 - |p|^2}`. Performing each step separately on all data allows the analyzer to plot and cross-check distributions of partial computations, to discover surprises as early as possible.
+# you might first compute :math:`\\sqrt{(p_{x1} + p_{x2})^2 + (p_{y1} + p_{y2})^2}` for all data (which is a meaningful quantity: :math:`p_T`), then compute :math:`\\sqrt{{p_T}^2 + (p_{z1} + p_{z2})^2}` for all data (another meaningful quantity: :math:`|p|`), then compute the whole expression as :math:`\\sqrt{(E_1 + E_2)^2 - |p|^2}`. Performing each step separately on all data lets you plot and cross-check distributions of partial computations, to discover surprises as early as possible.
 #
-# This order of data processing is called "columnar" in the sense that a dataset may be visualized as a table in which rows are repeated measurements and columns are the different measurable quantities (same layout as `Pandas DataFrames <https://pandas.pydata.org>`__). It is also called "vectorized" in that a Single (virtual) Instruction is applied to Multiple Data (virtual SIMD). Numpy can be hundreds to thousands of times faster than pure Python because it avoids the overhead of handling Python instructions in the loop over numbers. Most data processing languages (R, MATLAB, IDL, all the way back to APL) work this way: an interactive interpreter with fast, vectorized math.
+# This order of data processing is called "columnar" in the sense that a dataset may be visualized as a table in which rows are repeated measurements and columns are the different measurable quantities (same layout as `Pandas DataFrames <https://pandas.pydata.org>`__). It is also called "vectorized" in that a Single (virtual) Instruction is applied to Multiple Data (virtual SIMD). Numpy can be hundreds to thousands of times faster than pure Python because it avoids the overhead of handling Python instructions in the loop over numbers. Most data processing languages (R, MATLAB, IDL, all the way back to APL) work this way: an interactive interpreter controlling fast, array-at-a-time math.
 #
-# However, it's difficult to apply this to non-rectangular data. If your dataset has nested structure, a different number of values per row, different data types in the same column, or cross-references or even circular references, Numpy can't help you.
+# However, it's difficult to apply this methodology to non-rectangular data. If your dataset has nested structure, a different number of values per row, different data types in the same column, or cross-references or even circular references, Numpy can't help you.
 #
 # If you try to make an array with non-trivial types:
 
 # %%
 import numpy
-a = numpy.array([[1.1, 2.2, "three"], [], ["four", [5]]])
-a
+nested = numpy.array([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}, {"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])
+nested
 
 # %%markdown
-# Numpy gives up and returns a ``dtype=object`` array, which means Python objects and pure Python processing. Neither the columnar operations nor the performance boost apply.
+# Numpy gives up and returns a ``dtype=object`` array, which means Python objects and pure Python processing. You don't get the columnar operations or the performance boost.
 #
-# That's what **awkward-array** is for: it generalizes Numpy's array language to complex data types. It's for analyzing data that are not only structured in the sense of having correlations among their values, but also in the sense of having non-trivial data structures. It's for arrays that are just, well, awkward.
+# For instance, you might want to say
+
+# %%
+try:
+    nested + 100
+except Exception as err:
+    print(type(err), str(err))
+
+# %%markdown
+# but there is no vectorized addition for an array of dicts because there is no addition for dicts defined in pure Python. Numpy is not using its vectorized routines—it's calling Python code on each element.
+#
+# The same applies to variable-length data, such as lists of lists, where the inner lists have different lengths. This is a more serious shortcoming than the above because the list of dicts (Python's equivalent of an "`array of structs <https://en.wikipedia.org/wiki/AOS_and_SOA>`__`") could be manually reorganized into two numerical arrays, ``"x"`` and ``"y"`` (a "`struct of arrays <https://en.wikipedia.org/wiki/AOS_and_SOA>`__"). Not so with a list of variable-length lists.
+
+# %%
+varlen = numpy.array([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6], [7.7, 8.8, 9.9]])
+varlen
+
+# %%markdown
+# As before, we get a ``dtype=object`` without vectorized methods.
+
+# %%
+try:
+    varlen + 100
+except Exception as err:
+    print(type(err), str(err))
+
+# %%markdown
+# What's worse, this array looks purely numerical and could have been made by a process that was *supposed* to create equal-length inner lists.
+#
+# Awkward-array provides a way of talking about these data structures as arrays.
 
 # %%
 import awkward
-a = awkward.fromiter([[1.1, 2.2, "three"], [], ["four", [5]]])
+nested = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}, {"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])
+nested
 
 # %%markdown
-# Instead of relying on Python, ``awkward.fromiter`` converts these data structures into an internally columnar one, using Numpy for each column. The resulting class is called a "jagged" (or "ragged") array:
+# This ``Table`` is a columnar data structure with the same meaning as the Python data we built it with. To undo ``awkward.fromiter``, call ``.tolist()``.
 
 # %%
-a
+nested.tolist()
 
 # %%markdown
-# The structure (3 items in the first list, 0 in the second, and 2 in the third) is stored in one array and the data in another.
+# Values at the same position of the tree structure are contiguous in memory: this is a struct of arrays.
 
 # %%
-a.counts, a.content
-
-# %%markdown
-# The heterogeneity (different data types) of the content is encoded in additional arrays, one for each type (the third of which is another jagged array).
+nested.contents["x"]
 
 # %%
-a.content.contents
+nested.contents["y"]
 
 # %%markdown
-# This decomposition is variously called "splitting" (by particle physicists) or "shredding" or "striping" (by  `Arrow <https://arrow.apache.org>`__ and `Parquet <https://parquet.apache.org>`__ developers).
+# Having a structure like this means that we can perform vectorized operations on the whole structure with relatively few Python instructions (number of Python instructions scales with the complexity of the data type, not with the number of values in the dataset).
+
+# %%
+(nested + 100).tolist()
+
+# %%
+(nested + numpy.arange(100, 600, 100)).tolist()
+
+# %%markdown
+# It's less obvious that variable-length data can be represented in a columnar format, but it can.
+
+# %%
+varlen = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6], [7.7, 8.8, 9.9]])
+varlen
+
+# %%markdown
+# Unlike Numpy's ``dtype=object`` array, the inner lists are *not* Python lists and the numerical values *are* contiguous in memory. This is made possible by representing the structure (where each inner list starts and stops) in one array and the values in another.
+
+# %%
+varlen.counts, varlen.content
+
+# %%markdown
+# (For fast random access, the more basic representation is ``varlen.offsets``, which is in turn a special case of a ``varlen.starts, varlen.stops`` pair. These details are discussed below.)
 #
-# Most importantly, you can do Numpy vectorized operations,
+# A structure like this can be broadcast like Numpy with a small number of Python instructions (scales with the complexity of the data type, not the number of values).
 
 # %%
-a = awkward.fromiter([[1, 4, None], [], [9, {"x": 16, "y": 25}]])
-numpy.sqrt(a).tolist()   # numbers at all levels of depth are square-rooted
+varlen + 100
+
+# %%
+varlen + numpy.arange(100, 600, 100)
 
 # %%markdown
-# multidimensional slicing,
+# You can even slice this object as though it were multidimensional (each element is a tensor of the same rank, but with different numbers of dimensions).
 
 # %%
-a = awkward.fromiter([[1], [], [2, 3], [4, 5, [6]]])
-a[2:, 1:]   # drop the first two outer lists and the first element of every remaining list
+# Skip the first two inner lists; skip the last value in each inner list that remains.
+varlen[2:, :-1]
 
 # %%markdown
-# and broadcasting,
+# The data are not rectangular, so some inner lists might have as many elements as your selection. Don't worry—you'll get error messages.
 
 # %%
-a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-a * 10   # multiply all numbers by the scalar 10
+try:
+    varlen[:, 1]
+except Exception as err:
+    print(type(err), str(err))
 
 # %%markdown
-# including jagged-only extensions of these concepts,
+# Masking with the ``.counts`` is handy because all the Numpy advanced indexing rules apply (in an extended sense) to jagged arrays.
 
 # %%
-a + numpy.array([100, 200, 300])   # add 100 to the whole first list and 300 to the last
-
-# %%
-a.sum()   # reduce (by summation) to get a scalar per inner list
+varlen[varlen.counts > 1, 1]
 
 # %%markdown
-# This tutorial starts with a data analyst's perspective—using awkward-array to manipulate data—and then focuses on each awkward-array type. Like Numpy, the features of this library are deliberately simple, yet compositional. Any awkward array may be the content of any other awkward array. Building and analyzing complex data structures is up to you.
+# I've only presented the two most important awkward classes, ``Table`` and ``JaggedArray`` (and not how they combine). Each class is presented in more detail below. For now, I'd just like to point out that you can make crazy complicated data structures
+
+# %%
+crazy = awkward.fromiter([[1.21, 4.84, None, 10.89, None],
+                          [19.36, [30.25]],
+                          [{"x": 36, "y": {"z": 49}}, None, {"x": 64, "y": {"z": 81}}]
+                         ])
+
+# %%markdown
+# and they vectorize and slice as expected.
+
+# %%
+numpy.sqrt(crazy).tolist()
+
+# %%markdown
+# This is because any awkward array can be the content of any other awkward array. Like Numpy, the features of awkward-array are simple, yet compose nicely to let you build what you need.
 
 # %%markdown
 # # Getting data and initial exploration
 #
-# A lot of the examples in this tutorial use ``awkward.fromiter`` to make awkward arrays from lists and ``array.tolist()`` to turn them back into lists (or dicts for structures, tuples for structures with anonymous fields, Python objects for ``ObjectArrays``, etc.). This should be thought of as a slow method, since Python instructions are executed in the loop, but that's the only way to convert to and from Python objects. I only use it for small datasets, though if you have JSON-formatted data, ``awkward.fromiter`` may be a necessary preprocessing step.
+# A lot of the examples in this tutorial use ``awkward.fromiter`` to make awkward arrays from lists and ``array.tolist()`` to turn them back into lists (or dicts for structures, tuples for structures with anonymous fields, Python objects for ``ObjectArrays``, etc.). These should be thought of as slow methods, since Python instructions are executed in the loop, but that's a necessary part of examining or building Python objects.
 #
-# Ideally, data should be provided in a `columnar format <https://towardsdatascience.com/the-beauty-of-column-oriented-data-2945c0c9f560>`__ or converted only once. `Parquet <https://parquet.apache.org>`__ is a popular columnar format for storing data on disk and `Arrow <https://arrow.apache.org>`__ is a popular columnar format for sharing data in memory (between functions or applications). `ROOT <https://root.cern>`__ is a popular columnar format for particle physicists, and `uproot <https://github.com/scikit-hep/uproot>`__ natively produces awkward arrays from ROOT files. `HDF5 <https://www.hdfgroup.org>`__ and its Python library `h5py <https://www.h5py.org/>`__ are only columnar for rectangular arrays. All of the others at least do jagged arrays.
+# Ideally, you'd want to get your data from a binary, columnar source and produce binary, columnar output, or convert only once and reuse the converted data. `Parquet <https://parquet.apache.org>`__ is a popular columnar format for storing data on disk and `Arrow <https://arrow.apache.org>`__ is a popular columnar format for sharing data in memory (between functions or applications). `ROOT <https://root.cern>`__ is a popular columnar format for particle physicists, and `uproot <https://github.com/scikit-hep/uproot>`__ natively produces awkward arrays from ROOT files. `HDF5 <https://www.hdfgroup.org>`__ and its Python library `h5py <https://www.h5py.org/>`__ are columnar, but only for rectangular arrays, unlike the others.
+
+############################################ HERE
+
+
+
 
 # %%markdown
 # ## Parquet files
