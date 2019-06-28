@@ -1,35 +1,3 @@
-# import awkward
-# import numpy
-# import pyarrow
-# import pandas
-
-# arrow_buffer = pyarrow.ipc.open_file(open("tests/samples/exoplanets.arrow", "rb")).get_batch(0)
-# stars = awkward.fromarrow(arrow_buffer)
-# stars
-
-# pandas_friendly = awkward.JaggedArray.zip(
-#     planet_eccen = stars.planets.eccen,
-#     planet_mass = stars.planets.mass,
-#     planet_name = stars.planets.name,
-#     planet_orbit = stars.planets.orbit,
-#     planet_period = stars.planets.period,
-#     planet_radius = stars.planets.radius
-# )
-# pandas_friendly["star_dec"] = stars.dec
-# pandas_friendly["star_dist"] = stars.dist
-# pandas_friendly["star_mass"] = stars.mass
-# pandas_friendly["star_name"] = stars.name
-# pandas_friendly["star_ra"] = stars.ra
-# pandas_friendly["star_radius"] = stars.radius
-# pandas_friendly["index0"] = numpy.arange(len(pandas_friendly))
-# index = pandas.MultiIndex.from_arrays([pandas_friendly["index0"].flatten(), pandas_friendly.localindex.flatten()])
-# columns = pandas.MultiIndex.from_tuples([
-#     ("planet", "eccen"), ("planet", "mass"), ("planet", "name"), ("planet", "orbit"), ("planet", "period"), ("planet", "radius"),
-#     ("dec", ""), ("dist", ""), ("mass", ""), ("name", ""), ("ra", ""), ("radius", "")])
-# df = pandas.DataFrame(data={columns[i]: pandas_friendly[pandas_friendly.columns[i]].flatten() for i in range(len(columns))}, columns=columns, index=index)
-
-# import numpy
-
 def topandas_regular(array):
     import numpy
     import pandas
@@ -151,5 +119,3 @@ def topandas_regular(array):
         return pandas.Series(out[()], index=index)
     else:
         return pandas.DataFrame(data=out, index=index, columns=pandas.MultiIndex.from_tuples(columns))
-
-# out = topandas_regular(stars)
