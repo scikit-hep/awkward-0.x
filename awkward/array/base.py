@@ -184,7 +184,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                     raise AttributeError("while trying to get column {0}, an exception occurred:\n{1}: {2}".format(repr(where), type(err), str(err)))
             else:
                 raise AttributeError("no column named {0}".format(repr(where)))
-    
+
     def __dir__(self):
         return sorted(set(super(AwkwardArray, self).__dir__() + [x for x in self.columns if self._dir_pattern.match(x) and not keyword.iskeyword(x)]))
     _dir_pattern = re.compile(r"^[a-zA-Z_]\w*$")
@@ -409,7 +409,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     @bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
-        if isclassmethod: 
+        if isclassmethod:
             cls = cls_or_self
         else:
             self = cls_or_self
@@ -481,10 +481,6 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     def unzip(self):
         return tuple(self[column_name] for column_name in self.columns)
-
-    @property
-    def pandas(self):
-        return self._util_pandas({})
 
 class AwkwardArrayWithContent(AwkwardArray):
     """

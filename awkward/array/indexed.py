@@ -218,7 +218,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self._content._prepare(identity, dtype)[self._index]
 
-    def _util_pandas(self, seen):
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
@@ -226,7 +226,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             out = seen[id(self)] = self.copy()
             out.__class__ = awkward.pandas.mixin("IndexedSeries", self)
             if isinstance(self._content, awkward.array.base.AwkwardArray):
-                out._content = out._content._util_pandas(seen)
+                out._content = out._content._topandas(seen)
             return out
 
 class SparseArray(awkward.array.base.AwkwardArrayWithContent):
@@ -296,7 +296,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        
+
         if self._default is None:
             default = {"json": self._default}
         elif self._util_isinteger(self._default):
@@ -323,7 +323,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             if not self._util_isinteger(value):
                 raise TypeError("length must be an integer")
             if value < 0:
-                raise ValueError("length must be a non-negative integer") 
+                raise ValueError("length must be a non-negative integer")
         self._length = value
 
     @property
@@ -473,7 +473,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
                 length = d + (1 if m != 0 else 0)
             else:
                 length = 0
-            
+
             if abs(step) > 1:
                 index, remainder = self.numpy.divmod(index, abs(step))
                 mask[remainder != 0] = False
@@ -523,7 +523,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
                     head[mask] += self._length
                 if (head < 0).any() or (head >= self._length).any():
                     raise IndexError("indexes out of bounds for size {0}".format(self._length))
-                
+
                 match = self.numpy.searchsorted(self._index, head, side="left")
                 match[match >= len(self._index)] = len(self._index) - 1
                 explicit = (self._index[match] == head)
@@ -651,7 +651,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(content=self._content._prepare(identity, dtype)).dense
 
-    def _util_pandas(self, seen):
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
@@ -659,5 +659,5 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             out = seen[id(self)] = self.copy()
             out.__class__ = awkward.pandas.mixin("SparseSeries", self)
             if isinstance(self._content, awkward.array.base.AwkwardArray):
-                out._content = out._content._util_pandas(seen)
+                out._content = out._content._topandas(seen)
             return out

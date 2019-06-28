@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
@@ -52,7 +53,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
         out = self.copy(tags=tags, index=index, contents=contents)
         out._tags = self._util_deepcopy(out._tags)
         out._index = self._util_deepcopy(out._index)
-        out._contents = [self._util_deepcopy(x) for x in out._contents]            
+        out._contents = [self._util_deepcopy(x) for x in out._contents]
         return out
 
     def empty_like(self, **overrides):
@@ -302,7 +303,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 return self._contents[tags[0]][(index,) + tail]
             else:
                 return self.copy(tags=tags, index=index)
-    
+
     def __setitem__(self, where, what):
         if what.shape[:len(self._tags.shape)] != self._tags.shape:
             raise ValueError("array to assign does not have the same starting shape as tags")
@@ -478,12 +479,12 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def fillna(self, value):
         return self.copy(contents=[self._util_fillna(x, value) for x in self._contents])
 
-    def _util_pandas(self, seen):
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
             out.__class__ = awkward.pandas.mixin("UnionSeries", self)
-            out._contents = [x._util_pandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x for x in out._contents]
+            out._contents = [x._topandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x for x in out._contents]
             return out

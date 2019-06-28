@@ -301,7 +301,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         out[self.boolmask(maskedwhen=True)] = value
         return out
 
-    def _util_pandas(self, seen):
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
@@ -309,7 +309,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             out = seen[id(self)] = self.copy()
             out.__class__ = awkward.pandas.mixin("MaskedSeries", self)
             if isinstance(self._content, awkward.array.base.AwkwardArray):
-                out._content = out._content._util_pandas(seen)
+                out._content = out._content._topandas(seen)
             return out
 
 class BitMaskedArray(MaskedArray):
@@ -326,7 +326,7 @@ class BitMaskedArray(MaskedArray):
     @classmethod
     def fromboolmask(cls, mask, content, maskedwhen=True, lsborder=False):
         return cls(cls.bool2bit(mask, lsborder=lsborder), content, maskedwhen=maskedwhen, lsborder=lsborder)
-        
+
     def copy(self, mask=None, content=None, maskedwhen=None, lsborder=None):
         out = super(BitMaskedArray, self).copy(mask=mask, content=content, maskedwhen=maskedwhen)
         out._lsborder = self._lsborder
@@ -375,7 +375,7 @@ class BitMaskedArray(MaskedArray):
         if lsborder:
             out = out.reshape(-1, 8)[:,::-1].reshape(-1)
         return out.view(cls.MASKTYPE)
-        
+
     @classmethod
     def bool2bit(cls, boolmask, lsborder=False):
         boolmask = cls._util_toarray(boolmask, cls.MaskedArray.fget(None).MASKTYPE, cls.numpy.ndarray)
@@ -496,7 +496,7 @@ class BitMaskedArray(MaskedArray):
                 byteposes, bitmasks = self._maskat(where)
                 self.numpy.bitwise_and(bitmasks, self._mask[byteposes], bitmasks)
                 return bitmasks.astype(self.numpy.bool_)
-        
+
             elif len(where.shape) == 1 and issubclass(where.dtype.type, (self.numpy.bool, self.numpy.bool_)):
                 # scales with the size of the mask anyway, so go ahead and unpack the whole mask
                 unpacked = self.numpy.unpackbits(self._mask).view(self.MASKTYPE)

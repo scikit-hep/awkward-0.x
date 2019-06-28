@@ -110,7 +110,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        
+
         if self._persistvirtual:
             out = {"id": ident,
                    "call": ["awkward", "VirtualArray"],
@@ -242,7 +242,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
                 if not self._util_isinteger(value):
                     raise TypeError("nbytes must be an integer or None")
                 if value < 0:
-                    raise ValueError("nbytes must be a non-negative integer or None") 
+                    raise ValueError("nbytes must be a non-negative integer or None")
             self._nbytes = value
 
     def __len__(self):
@@ -424,14 +424,14 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         return self._util_fillna(self.array, value)
 
     @staticmethod
-    def _util_pandas_doit(virtualarray):
-        return virtualarray.array.pandas
+    def _topandas_doit(virtualarray):
+        return virtualarray.array._topandas()
 
-    def _util_pandas(self, seen):
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
-            out = seen[id(self)] = self.VirtualArray(self._util_pandas_doit, (self,), cache=self.cache, persistentkey=self.persistentkey, type=self.type, nbytes=self.nbytes, persistvirtual=self.persistvirtual)
+            out = seen[id(self)] = self.VirtualArray(self._topandas_doit, (self,), cache=self.cache, persistentkey=self.persistentkey, type=self.type, nbytes=self.nbytes, persistvirtual=self.persistvirtual)
             out.__class__ = awkward.pandas.mixin("VirtualSeries", self)
             return out

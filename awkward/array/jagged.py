@@ -762,7 +762,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
             tmp = self.compact()
             tmpparents = self.offsets2parents(tmp.offsets)
-            
+
             index = self.JaggedArray(tmp._starts, tmp._stops, (self.numpy.arange(tmp._stops[-1], dtype=self.INDEXTYPE) - tmp._starts[tmpparents]))
 
             data = data.compact()
@@ -1783,7 +1783,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(starts=starts, stops=stops, content=self.MaskedArray(mask, content, maskedwhen=maskedwhen))
 
-    def _util_pandas(self, seen):
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
@@ -1791,5 +1791,5 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out = seen[id(self)] = self.copy()
             out.__class__ = awkward.pandas.mixin("JaggedSeries", self)
             if isinstance(self._content, awkward.array.base.AwkwardArray):
-                out._content = out._content._util_pandas(seen)
+                out._content = out._content._topandas(seen)
             return out

@@ -15,7 +15,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def __init__(self, chunks, chunksizes=[]):
         self.chunks = chunks
         self.chunksizes = chunksizes
-        
+
     def copy(self, chunks=None, chunksizes=None):
         out = self.__class__.__new__(self.__class__)
         out._chunks = list(self._chunks)
@@ -524,7 +524,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                 else:
                     batch.append(x)
             batches.append(batch)
-        
+
         out = None
         chunks = {}
         types = {}
@@ -662,14 +662,14 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             chunksizes.append(self._chunksizes[i])
         return self.copy(chunks=chunks, chunksizes=chunksizes)
 
-    def _util_pandas(self, seen):
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
             out.__class__ = awkward.pandas.mixin("ChunkedSeries", self)
-            out._chunks = [x._util_pandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x for x in out._chunks]
+            out._chunks = [x._topandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x for x in out._chunks]
             return out
 
 class AppendableArray(ChunkedArray):
@@ -705,7 +705,7 @@ class AppendableArray(ChunkedArray):
 
     def __awkward_persist__(self, ident, fill, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         self._valid()
-        
+
         chunks = []
         for c, x in zip(self._chunksizes, self._chunks):
             if 0 < c < len(x):

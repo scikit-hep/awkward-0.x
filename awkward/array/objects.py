@@ -157,7 +157,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def _valid(self):
         if self.check_whole_valid:
             pass
-        
+
     def __iter__(self, checkiter=True):
         if checkiter:
             self._checkiter()
@@ -231,7 +231,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         out._content = arrays[0]._content.__class__.concatenate([a._content for a in arrays])
         return out
 
-    def _util_pandas(self, seen):
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
@@ -239,7 +239,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
             out = seen[id(self)] = self.copy()
             out.__class__ = awkward.pandas.mixin("ObjectSeries", self)
             if isinstance(self._content, awkward.array.base.AwkwardArray):
-                out._content = out._content._util_pandas(seen)
+                out._content = out._content._topandas(seen)
             return out
 
 ####################################################################### strings
@@ -365,7 +365,7 @@ class StringArray(StringMethods, ObjectArray):
         out._kwargs = {}
         out.encoding = encoding
         return out
-        
+
     @classmethod
     def fromiter(cls, iterable, encoding="utf-8"):
         if encoding is None:
@@ -590,7 +590,7 @@ class StringArray(StringMethods, ObjectArray):
 
     @awkward.util.bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
-        if isclassmethod: 
+        if isclassmethod:
             cls = cls_or_self
             if not all(isinstance(x, StringArray) for x in arrays):
                 raise TypeError("cannot concatenate non-StringArrays with StringArray.concatenate")
@@ -607,7 +607,7 @@ class StringArray(StringMethods, ObjectArray):
     def fillna(self, value):
         return self
 
-    def _util_pandas(self, seen):
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
@@ -615,5 +615,5 @@ class StringArray(StringMethods, ObjectArray):
             out = seen[id(self)] = self.copy()
             out.__class__ = awkward.pandas.mixin("StringSeries", self)
             if isinstance(self._content, awkward.array.base.AwkwardArray):
-                out._content = out._content._util_pandas(seen)
+                out._content = out._content._topandas(seen)
             return out
