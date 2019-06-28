@@ -53,7 +53,7 @@ def topandas_regular(array):
     def recurse(array, tpe, cols, seriously):
         if isinstance(tpe, awkward.type.TableType):
             starts, stops = None, None
-            out, deferred = None, {}
+            out, deferred, unflattened = None, {}, None
 
             for n in tpe.columns:
                 if not isinstance(n, str):
@@ -83,6 +83,10 @@ def topandas_regular(array):
                     raise ValueError("this array has unflattenable substructure: {0}".format(str(tpen)))
 
                 if isinstance(tmp, awkward.array.jagged.JaggedArray):
+                    if isinstance(tmp.content, awkward.array.jagged.JaggedArray):
+                        unflattened = tmp
+                        tmp = tmp.flatten(axis=1)
+
                     if starts is None:
                         starts, stops = tmp.starts, tmp.stops
                     elif not numpy.array_equal(starts, tmp.starts) or not numpy.array_equal(stops, tmp.stops):
@@ -91,23 +95,32 @@ def topandas_regular(array):
                         out = JaggedArray(starts, stops, Table({n: tmp.content}))
                     else:
                         out[n] = tmp
+
                 else:
                     deferred[n] = tmp
-
+            
             if out is None:
                 out = Table()
 
             for n, x in deferred.items():
                 out[n] = x
 
-            n = ""
-            while n in tpe.columns:
-                n = n + " "
-            out[n] = numpy.arange(len(out))
-            globalindex[0] = out[n].flatten()
+            m = ""
+            while m in tpe.columns:
+                m = m + " "
+            out[m] = numpy.arange(len(out))
+            globalindex[0] = out[m].flatten()
 
-            if any(isinstance(array[n], awkward.array.jagged.JaggedArray) for n in tpe.columns):
-                localindex.insert(0, out.localindex.flatten())
+            for n in tpe.columns:
+                if isinstance(array[n], awkward.array.jagged.JaggedArray):
+                    if unflattened is None:
+                        localindex.insert(0, out[n].localindex.flatten())
+                    else:
+                        oldloc = unflattened.content.localindex
+                        tab = JaggedArray(oldloc.starts, oldloc.stops, Table({"oldloc": oldloc.content}))
+                        tab["newloc"] = array[n].localindex.flatten()
+                        localindex.insert(0, tab["newloc"].flatten())
+                    break
 
             return out[tpe.columns]
 
