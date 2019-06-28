@@ -48,7 +48,7 @@ def topandas_regular(array):
                     tmp = recurse(array[n], tpen, colsn, True)
 
                 else:
-                    raise ValueError("this array has unflattenable substructure: {0}".format(str(tpen)))
+                    raise ValueError("this array has unflattenable substructure:\n\n{0}".format(str(tpen)))
 
                 if isinstance(tmp, awkward.array.jagged.JaggedArray):
                     if isinstance(tmp.content, awkward.array.jagged.JaggedArray):
@@ -66,7 +66,7 @@ def topandas_regular(array):
 
                 else:
                     deferred[n] = tmp
-            
+
             if out is None:
                 out = Table()
 
