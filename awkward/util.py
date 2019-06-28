@@ -199,3 +199,5 @@ except AttributeError:
             __pos__ = _unary_method(um.positive, 'pos')
             __abs__ = _unary_method(um.absolute, 'abs')
             __invert__ = _unary_method(um.invert, 'invert')
+
+################################################################ conversion of regular structures to Pandas

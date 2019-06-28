@@ -309,5 +309,8 @@ pandas_friendly["star_ra"] = stars.ra
 pandas_friendly["star_radius"] = stars.radius
 pandas_friendly["index0"] = numpy.arange(len(pandas_friendly))
 index = pandas.MultiIndex.from_arrays([pandas_friendly["index0"].flatten(), pandas_friendly.index.flatten()])
-df = pandas.DataFrame({n: pandas_friendly[n].flatten() for n in pandas_friendly.columns}, index=index)
+columns = pandas.MultiIndex.from_tuples([
+    ("planet", "eccen"), ("planet", "mass"), ("planet", "name"), ("planet", "orbit"), ("planet", "period"), ("planet", "radius"),
+    ("star", "dec"), ("star", "dist"), ("star", "mass"), ("star", "name"), ("star", "ra"), ("star", "radius")])
+df = pandas.DataFrame(data={columns[i]: pandas_friendly[pandas_friendly.columns[i]].flatten() for i in range(len(columns))}, columns=columns, index=index)
 df

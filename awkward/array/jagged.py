@@ -170,7 +170,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return out
 
     @classmethod
-    def fromindex(cls, index, content, validate=True):
+    def fromlocalindex(cls, index, content, validate=True):
         index = cls._util_toarray(index, cls.INDEXTYPE, (cls.numpy.ndarray, JaggedArray))
         original_counts = None
         if isinstance(index, JaggedArray):
@@ -179,13 +179,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             index = index.flatten()
 
         if not cls._util_isintegertype(index.dtype.type):
-            raise TypeError("index must have integer dtype")
+            raise TypeError("localindex must have integer dtype")
         if len(index.shape) != 1 or len(index) != len(content):
-            raise ValueError("index array must be one-dimensional with the same length as content")
+            raise ValueError("localindex array must be one-dimensional with the same length as content")
 
         if validate:
             if not ((index[1:] - index[:-1])[(index != 0)[1:]] == 1).all():
-                raise ValueError("every index that is not zero must be one greater than the previous")
+                raise ValueError("every localindex that is not zero must be one greater than the previous")
 
         starts = cls.numpy.nonzero(index == 0)[0]
         offsets = cls.numpy.empty(len(starts) + 1, dtype=cls.INDEXTYPE)
@@ -193,7 +193,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         offsets[-1] = len(index)
         if original_counts is not None:
             if not cls.numpy.array_equal(offsets[1:] - starts, original_counts):
-                raise ValueError("jagged structure of index does not match jagged structure derived from index")
+                raise ValueError("jagged structure of index does not match jagged structure derived from localindex")
 
         return cls.fromoffsets(offsets, content)
 
@@ -407,7 +407,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         self._parents = value
 
     @property
-    def index(self):
+    def localindex(self):
         tmp = self.compact()
         out = self.numpy.arange(len(tmp._content), dtype=self.INDEXTYPE)
         return self.JaggedArray(tmp._starts, tmp._stops, (out - tmp._starts[tmp.parents]))
@@ -1163,7 +1163,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out = self._argdistincts(absolute=False)
 
         if nested:
-            out = self.JaggedArray.fromcounts(self.numpy.maximum(0, self.counts - 1), self.JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
+            out = self.JaggedArray.fromcounts(self.numpy.maximum(0, self.counts - 1), self.JaggedArray.fromcounts(self.localindex[:, :0:-1].flatten(), out._content))
 
         return out
 
@@ -1183,7 +1183,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out._parents = argpairs._parents
 
         if nested:
-            out = self.JaggedArray.fromcounts(self.numpy.maximum(0, self.counts - 1), self.JaggedArray.fromcounts(self.index[:, :0:-1].flatten(), out._content))
+            out = self.JaggedArray.fromcounts(self.numpy.maximum(0, self.counts - 1), self.JaggedArray.fromcounts(self.localindex[:, :0:-1].flatten(), out._content))
 
         return out
 
@@ -1193,7 +1193,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out["1"] = out["1"] - self._starts
 
         if nested:
-            out = self.JaggedArray.fromcounts(self.counts, self.JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
+            out = self.JaggedArray.fromcounts(self.counts, self.JaggedArray.fromcounts((self.localindex[:, ::-1] + 1).flatten(), out._content))
 
         return out
 
@@ -1206,7 +1206,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out._parents = argpairs._parents
 
         if nested:
-            out = self.JaggedArray.fromcounts(self.counts, self.JaggedArray.fromcounts((self.index[:, ::-1] + 1).flatten(), out._content))
+            out = self.JaggedArray.fromcounts(self.counts, self.JaggedArray.fromcounts((self.localindex[:, ::-1] + 1).flatten(), out._content))
 
         return out
 
