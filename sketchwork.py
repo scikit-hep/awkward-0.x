@@ -430,7 +430,40 @@ events[0].tolist()
 # Particle physics probably isn't alone in this. Nested data structures are useful and working with them as arrays provides a new way to do exploratory data analysis: one array at a time.
 
 # %%markdown
-# # Types of awkward arrays
+# # High-level operations: common to all types
+
+# %%markdown
+# ## Slicing with square brackets
+
+# %%markdown
+# ## Assigning with square brackets
+
+# %%markdown
+# ## Numpy universal functions and broadcasting
+
+# %%markdown
+# ## Reducers
+
+# %%markdown
+# ## Jagged properties and methods
+
+# %%markdown
+# ## Tabular properties and methods
+
+# %%markdown
+# ## Nullable properties and methods
+
+# %%markdown
+# # High-level types
+
+# %%markdown
+# # Low-level types
+
+# %%markdown
+# # Global switches
+
+# %%markdown
+# # Awkward array classes
 
 # %%markdown
 # ## JaggedArray: variable-length lists
@@ -460,10 +493,10 @@ events[0].tolist()
 # ## ChunkedArray: non-contiguous data
 
 # %%markdown
-# ## VirtualArray: data on demand
+# ## AppendableArray: efficiently add rows of data
 
 # %%markdown
-# # High-level operations: common to all types
+# ## VirtualArray: data on demand
 
 # %%markdown
 # # Serialization: reading and writing data
@@ -488,6 +521,9 @@ events[0].tolist()
 
 # %%markdown
 # ## ROOT
+
+# %%markdown
+# ## Persist virtual: mixed-source data
 
 # %%markdown
 # # Using Pandas with awkward arrays
