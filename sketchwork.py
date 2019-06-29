@@ -494,3 +494,6 @@ events[0].tolist()
 
 # %%markdown
 # # Using Numba with awkward arrays
+
+# %%markdown
+# # Flattening awkard arrays for machine learning

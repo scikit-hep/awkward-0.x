@@ -23,14 +23,11 @@ versus
 
     all_r = sqrt(all_x**2 + all_y**2)
 
-Not only is the latter easier to read, it's hundreds of times faster than the for loop (and provides opportunities for hidden vectorization and parallelization). However, the Numpy abstraction stops at rectangular arrays of numbers or character strings. While it's possible to put ...
+Not only is the latter easier to read, it's hundreds of times faster than the for loop (and provides opportunities for hidden vectorization and parallelization). However, the Numpy abstraction stops at rectangular arrays of numbers or character strings. While it's possible to put arbitrary Python data in a Numpy array, Numpy's ``dtype=object`` is essentially a fixed-length list: data are not contiguous in memory and operations are not vectorized.
 
-TODO!
+Awkward-array is a pure Python+Numpy library for manipulating complex data structures as you would Numpy arrays. Even if your data structures
 
-
-awkward-array is a pure Python+Numpy library for manipulating complex data structures as you would Numpy arrays. Even if your data structures
-
-* contain variable-length lists (jagged or ragged),
+* contain variable-length lists (jagged/ragged),
 * are deeply nested (record structure),
 * have different data types in the same list (heterogeneous),
 * are masked, bit-masked, or index-mapped (nullable),
@@ -40,9 +37,7 @@ awkward-array is a pure Python+Numpy library for manipulating complex data struc
 * are not contiguous in memory,
 * should not be loaded into memory all at once (lazy),
 
-this library can access them with the efficiency of Numpy arrays. They may be converted from JSON or Python data, loaded from "awkd" files, `HDF5 <https://www.hdfgroup.org>`__, `Parquet <https://parquet.apache.org>`__, or `ROOT <https://root.cern>`__ files, or they may be views into memory buffers like `Arrow <https://arrow.apache.org>`__.
-
-`columnar <https://towardsdatascience.com/the-beauty-of-column-oriented-data-2945c0c9f560>`__
+this library can access them as `columnar data structures <https://towardsdatascience.com/the-beauty-of-column-oriented-data-2945c0c9f560>`__, with the efficiency of Numpy arrays. They may be converted from JSON or Python data, loaded from "awkd" files, `HDF5 <https://www.hdfgroup.org>`__, `Parquet <https://parquet.apache.org>`__, or `ROOT <https://root.cern>`__ files, or they may be views into memory buffers like `Arrow <https://arrow.apache.org>`__.
 
 .. inclusion-marker-2-do-not-remove
 
@@ -71,6 +66,7 @@ Recommended packages:
 
 - `pyarrow <https://arrow.apache.org/docs/python/install.html>`__ to view Arrow and Parquet data as awkward-arrays
 - `h5py <https://www.h5py.org>`__ to read and write awkward-arrays in HDF5 files
+- `Pandas <https://pandas.pydata.org>`__ as an alternative view
 
 .. inclusion-marker-3-do-not-remove
 
@@ -88,11 +84,8 @@ Reference
 
 For a list of all functions, classes, methods, and their parameters, click below.
 
-Getting started
----------------
 
-TODO
-
+TODO: insert sketchwork.py here, converted to REsT.
 
 
 Acknowledgements
