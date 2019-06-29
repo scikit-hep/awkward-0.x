@@ -148,7 +148,7 @@ numpy.sqrt(crazy).tolist()
 # This is because any awkward array can be the content of any other awkward array. Like Numpy, the features of awkward-array are simple, yet compose nicely to let you build what you need.
 
 # %%markdown
-# # Getting data and initial exploration
+# # Overview with sample datasets
 #
 # Many of the examples in this tutorial use ``awkward.fromiter`` to make awkward arrays from lists and ``array.tolist()`` to turn them back into lists (or dicts for ``Table``, tuples for ``Table`` with anonymous fields, Python objects for ``ObjectArrays``, etc.). These should be considered slow methods, since Python instructions are executed in the loop, but that's a necessary part of examining or building Python objects.
 #
@@ -157,7 +157,7 @@ numpy.sqrt(crazy).tolist()
 # `HDF5 <https://www.hdfgroup.org>`__ and its Python library `h5py <https://www.h5py.org/>`__ are columnar, but only for rectangular arrays, unlike the others mentioned here. Awkward-array can *wrap* HDF5 with an interpretation layer to store columnar data structures, but then the awkward-array library wuold be needed to read the data back in a meaningful way. Awkward also has a native file format, ``.awkd`` files, which are simply ZIP archives of columns as binary blobs and metadata (just as Numpy's ``.npz`` is a ZIP of arrays with metadata). The HDF5, awkd, and pickle serialization procedures use the same protocol, which has backward and forward compatibility features.
 
 # %%markdown
-# ## Parquet files
+# ## NASA exoplanets from a Parquet file
 #
 # Let's start by opening a Parquet file. Awkward reads Parquet through the `pyarrow <https://arrow.apache.org/docs/python>`__ module, which is an optional dependency, so be sure you have it installed before trying the next line.
 
@@ -204,7 +204,7 @@ stars.dist * 3.26156
 stars.planet_mass[:, 1:]
 
 # %%markdown
-# ## Arrow buffers
+# ## NASA exoplanets from an Arrow buffer
 #
 # The pyarrow implementation of Arrow is more complete than its implementation of Parquet, so we can use more features in the Arrow format, such as nested tables.
 #
@@ -384,35 +384,113 @@ except Exception as err:
 # To describe data like these, you'd need two DataFrames, and any calculations involving both ``"a"`` and ``"b"`` would have to include a join on those DataFrames. Awkward arrays are not limited in this way: the last ``array`` above is a valid awkward array and is useful for calculations that mix ``"a"`` and ``"b"``.
 
 # %%markdown
-# ## ROOT files
+# ## LHC data from a ROOT file
 #
-# Particle physicsts need structures like these—in fact, they have been a staple of particle physics analyses for decades. The `ROOT <https://root.cern>`__ file format was developed in the mid-90's to serialize arbitrary C++ data structures in a columnar way (replacing ZEBRA and similar Fortran projects that date back to the 70's). The `PyROOT <https://root.cern.ch/pyroot>`__ library dynamically wraps these objects to present them in Python, though with a performance penalty. The `uproot <https://github.com/scikit-hep/uproot>`__ library reads columnar data directly from ROOT files into Python without intermediary C++.
+# Particle physicsts need structures like these—in fact, they have been a staple of particle physics analyses for decades. The `ROOT <https://root.cern>`__ file format was developed in the mid-90's to serialize arbitrary C++ data structures in a columnar way (replacing ZEBRA and similar Fortran projects that date back to the 70's). The `PyROOT <https://root.cern.ch/pyroot>`__ library dynamically wraps these objects to present them in Python, though with a performance penalty. The `uproot <https://github.com/scikit-hep/uproot>`__ library reads columnar data directly from ROOT files in Python without intermediary C++.
 
 # %%
 import uproot
 events = uproot.open("http://scikit-hep.org/uproot/examples/HZZ-objects.root")["events"].lazyarrays()
 events
 
+# %%
+events.columns
+
 # %%markdown
 # This is a typical particle physics dataset (though small!) in that it represents the momentum and energy (``"p4"`` for `Lorentz 4-momentum <https://en.wikipedia.org/wiki/Four-vector`__) of several different species of particles: ``"jet"``, ``"muon"``, ``"electron"``, and ``"photon"``. Each collision can produce a different number of particles in each species. Other variables, such as missing transverse energy or ``"MET"``, have one value per collision event. Events with zero particles in a species are valuable for the event-level data.
 
 # %%
-events.columns
-
-# %%
+# The first event has two muons.
 events.muonp4
 
 # %%
+# The first event has zero jets.
 events.jetp4
 
 # %%
+# Every event has exactly one MET.
 events.MET
 
 # %%markdown
-# Unlike the exoplanet data, these events cannot be represented as a DataFrame because of the different numbers in each species and the value of zero-particle events. Even with just ``"muonp4"``, ``"jetp4"``, and ``"MET"``, there is no translation.
+# Unlike the exoplanet data, these events cannot be represented as a DataFrame because of the different numbers of particles in each species and because zero-particle events have value. Even with just ``"muonp4"``, ``"jetp4"``, and ``"MET"``, there is no translation.
 
 # %%
 try:
     awkward.topandas(events[["muonp4", "jetp4", "MET"]], flatten=True)
 except Exception as err:
     print(type(err), str(err))
+
+# %%markdown
+# It could be described as a collection of DataFrames, in which every operation relating particles in the same event would require a join. But that would make analysis harder, not easier. An event has meaning on its own.
+
+# %%
+events[0].tolist()
+
+# %%markdown
+# Particle physics probably isn't alone in this. Nested data structures are useful and working with them as arrays provides a new way to do exploratory data analysis: one array at a time.
+
+# %%markdown
+# # Types of awkward arrays
+
+# %%markdown
+# ## JaggedArray: variable-length lists
+
+# %%markdown
+# ## Table: nested records
+
+# %%markdown
+# ## MaskedArray: nullable data
+
+# %%markdown
+# ## UnionArray: heterogeneous lists
+
+# %%markdown
+# ## ObjectArray and Methods: interactivity in Python
+
+# %%markdown
+# ## StringArray: strings
+
+# %%markdown
+# ## IndexedArray: cross-references and circular references
+
+# %%markdown
+# ## SparseArray: sparse data
+
+# %%markdown
+# ## ChunkedArray: non-contiguous data
+
+# %%markdown
+# ## VirtualArray: data on demand
+
+# %%markdown
+# # High-level operations: common to all types
+
+# %%markdown
+# # Serialization: reading and writing data
+
+# %%markdown
+# ## JSON and Python data
+
+# %%markdown
+# ## Awkward files
+
+# %%markdown
+# ## HDF5
+
+# %%markdown
+# ## Pickle
+
+# %%markdown
+# ## Arrow
+
+# %%markdown
+# ## Parquet
+
+# %%markdown
+# ## ROOT
+
+# %%markdown
+# # Using Pandas with awkward arrays
+
+# %%markdown
+# # Using Numba with awkward arrays
