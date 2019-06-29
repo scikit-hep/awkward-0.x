@@ -334,15 +334,15 @@ orbits[1734].tolist()
 # %%markdown
 # ## Relationship to Pandas
 #
-# Arguably, this kind of dataset could be manipulated as a `Pandas DataFrame <https://pandas.pydata.org>`__ instead of awkward arrays. Despite the variable number of planets per star, the exoplanets dataset could be flattened into a rectangular DataFrame, in which the distinction between solar systems is in a two-component index (left column), a `MultiIndex <https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html>`__.
+# Arguably, this kind of dataset could be manipulated as a `Pandas DataFrame <https://pandas.pydata.org>`__ instead of awkward arrays. Despite the variable number of planets per star, the exoplanets dataset could be flattened into a rectangular DataFrame, in which the distinction between solar systems is represented by a two-component index (leftmost pair of columns below), a `MultiIndex <https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html>`__.
 
 # %%
 awkward.topandas(stars, flatten=True)[-9:]
 
 # %%markdown
-# The star's attributes are duplicated for each planet and it wouldn't be possible to show stars that have no planets, but the information is preserved in a way that Pandas can recognize and operate on. (For instance, ``.unstack()`` would widen this into a column per planet attribute per planet and strictly one row per star.)
+# In this representation, each star's attributes must be duplicated for all of its planets, and it is not possible to show stars that have no planets (not present in this dataset), but the information is preserved in a way that Pandas can recognize and operate on. (For instance, ``.unstack()`` would widen each planet attribute into a separate column per planet and simplify the index to strictly one row per star.)
 #
-# The only kinds of awkward arrays that can be translated into Pandas indexes are those that involve a single jagged structure. The structure can be arbitrarily deep in ``Tables`` (which add column name depth),
+# The limitation is that only a single jagged structure can be represented by a DataFrame. The structure can be arbitrarily deep in ``Tables`` (which add depth to the column names),
 
 # %%
 array = awkward.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
@@ -351,7 +351,7 @@ array = awkward.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
 awkward.topandas(array, flatten=True)
 
 # %%markdown
-# or arbitrarily deep in ``JaggedArrays`` (which add row name depth),
+# and arbitrarily deep in ``JaggedArrays`` (which add depth to the row names),
 
 # %%
 array = awkward.fromiter([{"a": 1, "b": [[2.2, 3.3, 4.4], [], [5.5, 6.6]]},
@@ -369,7 +369,7 @@ array = awkward.fromiter([{"a": [[1.1, 2.2, 3.3], [], [4.4, 5.5]], "b": [[1, 2, 
 awkward.topandas(array, flatten=True)
 
 # %%markdown
-# However, if there are two ``JaggedArrays`` with different structure at the same level, a single DataFrame cannot represent them.
+# But if there are two ``JaggedArrays`` with *different* structure at the same level, a single DataFrame cannot represent them.
 
 # %%
 array = awkward.fromiter([{"a": [1, 2, 3], "b": [1.1, 2.2]},
@@ -381,19 +381,20 @@ except Exception as err:
     print(type(err), str(err))
 
 # %%markdown
-# To describe data like these, we would need two DataFrames, and operations relating ``"a"`` and ``"b"`` would have to include a join on those DataFrames.
+# To describe data like these, you'd need two DataFrames, and any calculations involving both ``"a"`` and ``"b"`` would have to include a join on those DataFrames. Awkward arrays are not limited in this way: the last ``array`` above is a valid awkward array and is useful for calculations that mix ``"a"`` and ``"b"``.
 
 # %%markdown
 # ## ROOT files
 #
-# HERE HERE HERE
-#
-# Particle physicists especially have needed structured data for decades, and created a file format in the mid-90's to serialize arbitrary C++ objects to disk. The `ROOT <https://root.cern>`__ project reads and writes these files in C++ and, through `dynamic wrapping <https://root.cern.ch/pyroot>`__, in Python as well. The `uproot <https://github.com/scikit-hep/uproot>`__ project reads (and soon will write) these files natively in Python, returning awkward arrays.
+# Particle physicsts need structures like these—in fact, they have been a staple of particle physics analyses for decades. The `ROOT <https://root.cern>`__ file format was developed in the mid-90's to serialize arbitrary C++ data structures in a columnar way (replacing ZEBRA and similar Fortran projects that date back to the 70's). The `PyROOT <https://root.cern.ch/pyroot>`__ library dynamically wraps these objects to present them in Python, though with a performance penalty. The `uproot <https://github.com/scikit-hep/uproot>`__ library reads columnar data directly from ROOT files into Python without intermediary C++.
 
 # %%
 import uproot
 events = uproot.open("http://scikit-hep.org/uproot/examples/HZZ-objects.root")["events"].lazyarrays()
 events
+
+# %%markdown
+# This is a typical particle physics dataset (though small!) in that it represents the momentum and energy (``"p4"`` for `Lorentz 4-momentum <https://en.wikipedia.org/wiki/Four-vector`__) of several different species of particles: ``"jet"``, ``"muon"``, ``"electron"``, and ``"photon"``. Each collision can produce a different number of particles in each species. Other variables, such as missing transverse energy or ``"MET"``, have one value per collision event. Events with zero particles in a species are valuable for the event-level data.
 
 # %%
 events.columns
@@ -404,31 +405,14 @@ events.muonp4
 # %%
 events.jetp4
 
-# %%markdown
-# The exoplanets dataset could have been analyzed with Pandas, particularly using a `MultiIndex <https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html>`__, because it has only one jagged dimension (the planets) and does not include any stars without planets.
+# %%
+events.MET
 
-# TODO: hide the following inside an awkward.topandas function and move this to the very end of the last section, as "This could all be done in Pandas, but the next example from particle physics cannot."
+# %%markdown
+# Unlike the exoplanet data, these events cannot be represented as a DataFrame because of the different numbers in each species and the value of zero-particle events. Even with just ``"muonp4"``, ``"jetp4"``, and ``"MET"``, there is no translation.
 
 # %%
-import pandas
-pandas_friendly = awkward.JaggedArray.zip(
-    planet_eccen = stars.planets.eccen,
-    planet_mass = stars.planets.mass,
-    planet_name = stars.planets.name,
-    planet_orbit = stars.planets.orbit,
-    planet_period = stars.planets.period,
-    planet_radius = stars.planets.radius
-)
-pandas_friendly["star_dec"] = stars.dec
-pandas_friendly["star_dist"] = stars.dist
-pandas_friendly["star_mass"] = stars.mass
-pandas_friendly["star_name"] = stars.name
-pandas_friendly["star_ra"] = stars.ra
-pandas_friendly["star_radius"] = stars.radius
-pandas_friendly["index0"] = numpy.arange(len(pandas_friendly))
-index = pandas.MultiIndex.from_arrays([pandas_friendly["index0"].flatten(), pandas_friendly.index.flatten()])
-columns = pandas.MultiIndex.from_tuples([
-    ("planet", "eccen"), ("planet", "mass"), ("planet", "name"), ("planet", "orbit"), ("planet", "period"), ("planet", "radius"),
-    ("star", "dec"), ("star", "dist"), ("star", "mass"), ("star", "name"), ("star", "ra"), ("star", "radius")])
-df = pandas.DataFrame(data={columns[i]: pandas_friendly[pandas_friendly.columns[i]].flatten() for i in range(len(columns))}, columns=columns, index=index)
-df
+try:
+    awkward.topandas(events[["muonp4", "jetp4", "MET"]], flatten=True)
+except Exception as err:
+    print(type(err), str(err))

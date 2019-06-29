@@ -234,10 +234,13 @@ def topandas_flatten(array):
     import numpy
     import pandas
 
-    import awkward.type
     import awkward.array.base
+    import awkward.array.chunked
     import awkward.array.jagged
+    import awkward.array.objects
     import awkward.array.table
+    import awkward.array.virtual
+    import awkward.type
 
     if isinstance(array, awkward.array.base.AwkwardArray):
         numpy = array.numpy
@@ -246,6 +249,18 @@ def topandas_flatten(array):
     else:
         JaggedArray = awkward.array.jagged.JaggedArray
         Table = awkward.array.table.Table
+
+    def unwrap(a):
+        if isinstance(a, awkward.array.chunked.ChunkedArray):
+            chunks = [unwrap(x) for x in a.chunks]
+            if any(isinstance(x, awkward.array.jagged.JaggedArray) for x in chunks):
+                return awkward.array.jagged.JaggedArray.concatenate(chunks)
+            else:
+                return numpy.concatenate([x.regular() for x in chunks])
+        elif isinstance(a, awkward.array.virtual.VirtualArray):
+            return a.array
+        else:
+            return a
 
     globalindex = [None]
     localindex = []
@@ -259,25 +274,27 @@ def topandas_flatten(array):
                 if not isinstance(n, str):
                     raise ValueError("column names must be strings")
 
+                arrayn = unwrap(array[n])
                 tpen = tpe[n]
                 colsn = cols + (n,) if seriously else cols
-                if isinstance(tpen, awkward.type.OptionType):
-                    array = array.content
-                    tpen = tpen.type
 
+                if isinstance(arrayn, awkward.array.objects.ObjectArray):
+                    arrayn = arrayn.content
+                if not isinstance(tpen, (numpy.dtype, str, bytes, awkward.type.Type)):
+                    tpen = awkward.type.fromarray(arrayn).to
                 if isinstance(tpen, numpy.dtype):
                     columns.append(colsn)
-                    tmp = array[n]
+                    tmp = arrayn
 
                 elif isinstance(tpen, type) and issubclass(tpen, (str, bytes)):
                     columns.append(colsn)
-                    tmp = array[n]
+                    tmp = arrayn
 
                 elif isinstance(tpen, awkward.type.ArrayType) and tpen.takes == numpy.inf:
-                    tmp = JaggedArray(array[n].starts, array[n].stops, recurse(array[n].content, tpen.to, colsn, True))
+                    tmp = JaggedArray(arrayn.starts, arrayn.stops, recurse(arrayn.content, tpen.to, colsn, True))
 
                 elif isinstance(tpen, awkward.type.TableType):
-                    tmp = recurse(array[n], tpen, colsn, True)
+                    tmp = recurse(arrayn, tpen, colsn, True)
 
                 else:
                     raise ValueError("this array has unflattenable substructure:\n\n{0}".format(str(tpen)))
@@ -312,13 +329,14 @@ def topandas_flatten(array):
             globalindex[0] = out[m].flatten()
 
             for n in tpe.columns:
-                if isinstance(array[n], awkward.array.jagged.JaggedArray):
+                arrayn = unwrap(array[n])
+                if isinstance(arrayn, awkward.array.jagged.JaggedArray):
                     if unflattened is None:
                         localindex.insert(0, out[n].localindex.flatten())
                     else:
                         oldloc = unflattened.content.localindex
                         tab = JaggedArray(oldloc.starts, oldloc.stops, Table({"oldloc": oldloc.content}))
-                        tab["newloc"] = array[n].localindex.flatten()
+                        tab["newloc"] = arrayn.localindex.flatten()
                         localindex.insert(0, tab["newloc"].flatten())
                     break
 
