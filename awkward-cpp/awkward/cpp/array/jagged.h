@@ -6,6 +6,10 @@ TODO:
     - zero-terminated bytes
     - raw data
 = Make strides work negatively
+= Add c++ indexing util function for slicing
+    - negative indices work like C, not python
+    - python-style can be implemented when called
+    - slices will have to be interpreted on python side
 = Add more getitem functions
 = Deal with more array characteristics
     - Multidimensional arrays
@@ -322,41 +326,69 @@ public:
         return starts.request().size;
     }
 
-    AnyArray* getitem(ssize_t start, ssize_t end) {
-        if (start < 0) {
-            start += len();
+    AnyArray* getitem(ssize_t start, ssize_t length, ssize_t step = 1) {
+        if (step == 0) {
+            throw std::invalid_argument("slice step cannot be 0");
         }
-        if (end < 0) {
-            end += len();
+        if (length < 0) {
+            throw std::invalid_argument("slice length cannot be less than 0");
         }
-        if (start < 0 || start > end || end > len()) {
-            throw std::out_of_range("getitem must be in the bounds of the array");
+        if (start < 0 || start >= len() || start + (length * step) > len() || start + (length * step) < -1) {
+            throw std::out_of_range("getitem must be in the bounds of the array.");
         }
-        auto newStarts = py::array_t<std::int64_t>(end - start);
+        auto newStarts = py::array_t<std::int64_t>(length);
         py::buffer_info newStarts_info = newStarts.request();
         auto newStarts_ptr = (std::int64_t*)newStarts_info.ptr;
 
         py::buffer_info starts_info = starts.request();
         auto starts_ptr = (std::int64_t*)starts_info.ptr;
+        int N_starts = starts_info.strides[0] / starts_info.itemsize;
 
-        auto newStops = py::array_t<std::int64_t>(end - start);
+        auto newStops = py::array_t<std::int64_t>(length);
         py::buffer_info newStops_info = newStops.request();
         auto newStops_ptr = (std::int64_t*)newStops_info.ptr;
 
         py::buffer_info stops_info = stops.request();
         auto stops_ptr = (std::int64_t*)stops_info.ptr;
+        int N_stops = stops_info.strides[0] / stops_info.itemsize;
 
         ssize_t newIndex = 0;
-        for (ssize_t i = start; i < end; i++) {
-            newStarts_ptr[newIndex] = starts_ptr[i];
-            newStops_ptr[newIndex++] = stops_ptr[i];
+        for (ssize_t i = 0; i < length; i++) {
+            newStarts_ptr[newIndex] = starts_ptr[start + (i * step * N_starts)];
+            newStops_ptr[newIndex++] = stops_ptr[start + (i * step * N_stops)];
         }
 
         return new JaggedArray(newStarts, newStops, content);
     }
 
-    py::object python_getitem(ssize_t start, ssize_t end) {
-        return getitem(start, end)->unwrap();
+    py::object python_getitem(ssize_t start, ssize_t stop, ssize_t step) {
+        if (step == 0) {
+            throw std::invalid_argument("slice step cannot be 0");
+        }
+        ssize_t length = len();
+        if (start < 0) {
+            start += length;
+        }
+        if (stop < 0) {
+            stop += length;
+        }
+        if (step > 0) {
+            if (stop > length) {
+                stop = length;
+            }
+            if (start >= stop) {
+                return getitem(length - 1, 0, step)->unwrap();
+            }
+        }
+        else {
+            if (stop < -1) {
+                stop = -1;
+            }
+            if (start <= stop) {
+                return getitem(0, 0, step)->unwrap();
+            }
+        }
+        return getitem(start, (stop + step - start) / step, step)->unwrap();
     }
 
     AnyArray* getitem(ssize_t index) {
@@ -377,7 +409,7 @@ public:
         ssize_t start = (ssize_t)((std::int64_t*)starts_info.ptr)[index];
         ssize_t stop = (ssize_t)((std::int64_t*)stops_info.ptr)[index];
 
-        return content->getitem(start, stop);
+        return content->getitem(start, stop - start);
     }
 
     py::object python_getitem(ssize_t index) {
