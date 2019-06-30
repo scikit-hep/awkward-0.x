@@ -427,7 +427,7 @@ except Exception as err:
 events[0].tolist()
 
 # %%markdown
-# Particle physics probably isn't alone in this. Nested data structures are useful and working with them as arrays provides a new way to do exploratory data analysis: one array at a time.
+# Particle physics isn't alone in this: analyzing JSON-formatted log files in production systems and allele likelihoods in genomics are two other fields where variable-length, nested structures can help. Arbitrary data structures are useful and working with them in columns provides a new way to do exploratory data analysis: one array at a time.
 
 # %%markdown
 # # High-level operations: common to all types
