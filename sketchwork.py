@@ -499,21 +499,143 @@ events[0].tolist()
 # * ``VirtualArray``: no counterpart (though a reader may lazily load data).
 
 # %%markdown
-# # High-level operations: common to all types
-
-
+# # High-level operations: common to all classes
+#
+# There are three levels of abstraction in awkward-array: high-level operations for data analysis, low-level operations for engineering the structure of the data, and implementation details. Implementation details are handled in the usual way for Python: if exposed at all, class, method, and function names begin with underscores and are not guaranteed to be stable from one release to the next. There is more than one implementation of awkward: the original awkward library, which depends only on Numpy, awkward-numba, which uses Numba to just-in-time compile its operations, and awkward-cpp, which has precompiled operations. Each has its own implementation details.
+#
+# The distinction between high-level operations and low-level operations is more subtle and developed as awkward-array was put to use. Data analysts care about the logical structure of the data—whether it is jagged, what the column names are, whether certain values could be ``None``, etc. Data engineers (or an analyst in "engineering mode") care about contiguousness, how much data are in memory at a given time, whether strings are dictionary-encoded, whether arrays have unreachable elements, etc. The dividing line is between high-level types and low-level array layout (both of which are defined in their own sections below). The following awkward classes have the same high-level type as their content:
+#
+# * ``IndexedArray`` because indirection to type ``T`` has type ``T``,
+# * ``SparseArray`` because a lookup of elements with type ``T`` has type ``T``,
+# * ``ChunkedArray`` because the chunks, which must have the same type as each other, collectively have that type when logically concatenated,
+# * ``AppendableArray`` because it's a special case of ``ChunkedArray``,
+# * ``VirtualArray`` because it produces an array of a given type on demand,
+# * ``UnionArray`` has the same type as its ``contents`` *only if* all ``contents`` have the same type as each other.
+#
+# All other classes, such as ``JaggedArray``, have a logically distinct type from their contents.
+#
+# This section describes a suite of operations that are common to all awkward classes. For some high-level types, the operation is meaningless or results in an error, such as the jagged ``counts`` of an array that is not jagged at any level, or the ``columns`` of an array that contains no tables, but the operation has a well-defined action on every array class. To use these operations, you do need to understand the high-level type of your data, but not whether it is wrapped in an ``IndexedArray``, a ``SparseArray``, a ``ChunkedArray``, an ``AppendableArray``, or a ``VirtualArray``.
 
 # %%markdown
 # ## Slicing with square brackets
+#
+# The primary operation for all classes is slicing with square brackets. This is the operation defined by Python's ``__getitem__`` method. It is so basic that high-level types are defined in terms of what they return when a scalar argument is passed in square brakets.
+#
+# Just as Numpy's slicing reproduces but generalizes Python sequence behavior, awkward-array reproduces (most of) `Numpy's slicing behavior <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>`__ and generalizes it in certain cases. An integer argument, a single slice argument, a single Numpy array-like of booleans or integers, and a tuple of any of the above is handled just like Numpy. Awkward-array does not handle ellipsis (because the depth of an awkward array can be different on different branches of a ``Table`` or ``UnionArray``) or ``None`` (because it's not always possible to insert a ``newaxis``).
+#
+# An integer argument selects one element from the top-level array (starting at zero), changing the type by decreasing rank or jaggedness by one level.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8], [9.9]])
+a[0]
+
+# %%markdown
+# Negative indexes count backward from the last element,
+
+# %%
+a[-1]
+
+# %%markdown
+# and the index (after translating negative indexes) must be at least zero and less than the length of the top-level array.
+
+# %%
+try:
+    a[-6]
+except Exception as err:
+    print(type(err), str(err))
+
+# %%markdown
+# A slice selects a range of elements from the top-level array, maintaining the array's type. The first index is the inclusive starting point (starting at zero) and the second index is the exclusive endpoint.
+
+# %%
+a[2:4]
+
+# %%markdown
+# Python's slice syntax (above) or literal ``slice`` objects may be used.
+
+# %%
+a[slice(2, 4)]
+
+# %%markdown
+# Negative indexes count backward from the last element and endpoints may be omitted.
+
+# %%
+a[-2:]
+
+# %%markdown
+# Start and endpoints beyond the array are not errors: they are truncated.
+
+# %%
+a[2:100]
+
+# %%markdown
+# A skip value (third index of the slice) sets the stride for indexing, allowing you to skip elements, and this skip can be negative. It cannot, however, be zero.
+
+# %%
+a[::-1]
+
+# %%markdown
+# A Numpy array-like of booleans with the same length as the array may be used to filter elements. Numpy has a specialized `numpy.compress <https://docs.scipy.org/doc/numpy/reference/generated/numpy.compress.html>`__ function for this operation, but the only way to get it in awkward-array is through square brackets.
+
+# %%
+a[[True, True, False, True, False]]
+
+# %%markdown
+# A Numpy array-like of integers with the same length as the array may be used to select a collection of indexes. Numpy has a specialized `numpy.take <https://docs.scipy.org/doc/numpy/reference/generated/numpy.take.html>`__ function for this operation, but the only way to get it in awkward-array is through square brakets. Negative indexes and repeated elements are handled in the same way as Numpy.
+
+# %%
+a[[-1, 0, 1, 2, 2, 2]]
+
+# %%markdown
+# A tuple of length ``N`` applies selections to the first ``N`` levels of rank or jaggedness. Our example array has only two levels, so we can apply two kinds of indexes.
+
+# %%
+a[2:, 0]
+
+# %%
+a[[True, False, True, True, False], ::-1]
+
+# %%
+a[[0, 3, 0], 1::]
+
+# %%markdown
+# As described in Numpy's `advanced indexing <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`__, advanced indexes (boolean or integer arrays) are broadcast and iterated as one:
+
+# %%
+a[[0, 3], [True, False, True]]
+
+# %%markdown
+# Awkward array has two extensions beyond Numpy, both of which affect only jagged data. If an array is jagged and a jagged array of booleans with the same structure (same length at all levels) is passed in square brackets, only inner arrays would be filtered.
+
+# %%
+a    = awkward.fromiter([[  1.1,   2.2,  3.3], [], [ 4.4,  5.5], [ 6.6,  7.7,   8.8], [  9.9]])
+mask = awkward.fromiter([[False, False, True], [], [True, True], [True, True, False], [False]])
+a[mask]
+
+# %%markdown
+# Similarly, if an array is jagged and a jagged array of integers with the same structure is passed in square brackets, only inner arrays would be filtered/duplicated/rearranged.
+
+# %%
+a     = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8], [9.9]])
+index = awkward.fromiter([[2, 2, 2, 2], [], [1, 0], [2, 1, 0], []])
+a[index]
+
+# %%markdown
+# Although all of the above use a ``JaggedArray`` as an example, the principles are general: you should get analogous results with jagged tables, masked jagged arrays, etc. Non-jagged arrays only support Numpy-like slicing.
 
 # %%markdown
 # ## Assigning with square brackets
+
+# HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE
 
 # %%markdown
 # ## Numpy universal functions and broadcasting
 
 # %%markdown
 # ## Reducers
+
+# %%markdown
+# ## Free-standing functions, common properties and methods
 
 # %%markdown
 # ## Jagged properties and methods
@@ -526,15 +648,17 @@ events[0].tolist()
 
 # %%markdown
 # # High-level types
+#
+# TODO: copy this wholesale from the specification.adoc.
 
 # %%markdown
-# # Low-level types
+# # Low-level array layout
 
 # %%markdown
 # # Global switches
 
 # %%markdown
-# # Awkward array classes
+# # Details for each awkward array class
 
 # %%markdown
 # ## JaggedArray: variable-length lists
@@ -576,7 +700,7 @@ events[0].tolist()
 # ## JSON and Python data
 
 # %%markdown
-# ## Awkward files
+# ## Awkward (awkd) files
 
 # %%markdown
 # ## HDF5
