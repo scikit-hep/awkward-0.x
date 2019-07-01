@@ -521,7 +521,7 @@ events[0].tolist()
 #
 # The primary operation for all classes is slicing with square brackets. This is the operation defined by Python's ``__getitem__`` method. It is so basic that high-level types are defined in terms of what they return when a scalar argument is passed in square brakets.
 #
-# Just as Numpy's slicing reproduces but generalizes Python sequence behavior, awkward-array reproduces (most of) `Numpy's slicing behavior <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>`__ and generalizes it in certain cases. An integer argument, a single slice argument, a single Numpy array-like of booleans or integers, and a tuple of any of the above is handled just like Numpy. Awkward-array does not handle ellipsis (because the depth of an awkward array can be different on different branches of a ``Table`` or ``UnionArray``) or ``None`` (because it's not always possible to insert a ``newaxis``).
+# Just as Numpy's slicing reproduces but generalizes Python sequence behavior, awkward-array reproduces (most of) `Numpy's slicing behavior <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>`__ and generalizes it in certain cases. An integer argument, a single slice argument, a single Numpy array-like of booleans or integers, and a tuple of any of the above is handled just like Numpy. Awkward-array does not handle ellipsis (because the depth of an awkward array can be different on different branches of a ``Table`` or ``UnionArray``) or ``None`` (because it's not always possible to insert a ``newaxis``). Numpy `record arrays <https://docs.scipy.org/doc/numpy/user/basics.rec.html>`__ accept a string or sequence of strings as a column argument if it is the only argument, not in a tuple with other types. Awkward-array accepts a string or sequence of strings if it contains a ``Table`` at some level.
 #
 # An integer argument selects one element from the top-level array (starting at zero), changing the type by decreasing rank or jaggedness by one level.
 
@@ -622,11 +622,88 @@ a[index]
 
 # %%markdown
 # Although all of the above use a ``JaggedArray`` as an example, the principles are general: you should get analogous results with jagged tables, masked jagged arrays, etc. Non-jagged arrays only support Numpy-like slicing.
+#
+# If an array contains a ``Table``, it can be selected with a string or a sequence of strings, just like Numpy `record arrays <https://docs.scipy.org/doc/numpy/user/basics.rec.html>`__.
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}, {"x": 3, "y": 3.3, "z": "three"}])
+a
+
+# %%
+a["x"]
+
+# %%
+a[["z", "y"]].tolist()
+
+# %%markdown
+# Like Numpy, integer indexes and string indexes commute if the integer index corresponds to a structure outside the ``Table`` (this condition is always met for Numpy record arrays).
+
+# %%
+a["y"][1]
+
+# %%
+a[1]["y"]
+
+# %%
+a = awkward.fromiter([[{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}], [], [{"x": 3, "y": 3.3, "z": "three"}]])
+a
+
+# %%
+a["y"][0][1]
+
+# %%
+a[0]["y"][1]
+
+# %%
+a[0][1]["y"]
+
+# %%markdown
+# but not
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": [1.1]}, {"x": 2, "y": [2.1, 2.2]}, {"x": 3, "y": [3.1, 3.2, 3.3]}])
+a
+
+# %%
+a["y"][2][1]
+
+# %%
+a[2]["y"][1]
+
+# %%
+try:
+    a[2][1]["y"]
+except Exception as err:
+    print(type(err), str(err))
+
+# %%markdown
+because
+
+# %%
+a[2].tolist()
+
+# %%markdown
+# cannot take a ``1`` argument before ``"y"``.
+#
+# Just as integer indexes can be alternated with string/sequence of string indexes, so can slices, arrays, and tuples of slices and arrays.
+
+# %%
+a["y"][:, 0]
+
+# %%markdown
+# Generally speaking, string and sequence of string indexes are *column* indexes, while all other types are *row* indexes.
 
 # %%markdown
 # ## Assigning with square brackets
+#
+# As discussed above, awkward arrays are generally immutable with few exceptions. Row assignment is only possible via appending to an ``AppendableArray``. Column assignment, reassignment, and deletion are in general allowed. The syntax for assigning and reassigning columns is through assignment to a square bracket expression. This operation is defined by Python's ``__setitem__`` method. The syntax for deleting columns is through the ``del`` operators on a square bracket expression. This operation is defined by Python's ``__delitem__`` method.
 
-# HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE
+
+
+
+
+
+
 
 # %%markdown
 # ## Numpy universal functions and broadcasting
