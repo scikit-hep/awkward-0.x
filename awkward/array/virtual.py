@@ -418,13 +418,11 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         else:
             return array._prepare(identity, dtype)
 
-    @property
-    def columns(self):
-        array = self.array
-        if isinstance(array, self.numpy.ndarray):
+    def _util_columns(self, seen):
+        if id(self) in seen:
             return []
-        else:
-            return array.columns
+        seen.add(id(self))
+        return self._util_columns_descend(self.array, seen)
 
     def astype(self, dtype):
         return self.array.astype(dtype)

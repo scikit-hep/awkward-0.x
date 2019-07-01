@@ -168,6 +168,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             self._content[where] = self._invert(what)
 
         elif self._util_isstringslice(where):
+            what = what.unzip()
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
@@ -584,6 +585,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             self._content[where] = self._invert(what)
 
         elif self._util_isstringslice(where):
+            what = what.unzip()
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):

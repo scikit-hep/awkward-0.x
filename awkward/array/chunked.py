@@ -637,15 +637,14 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         else:
             return out
 
-    @property
-    def columns(self):
+    def _util_columns(self, seen):
+        if id(self) in seen:
+            return []
+        seen.add(id(self))
         for chunkid in range(len(self._chunks)):
             self.knowchunksizes(chunkid + 1)
             if self._chunksizes[chunkid] > 0:
-                if isinstance(self._chunks[chunkid], self.numpy.ndarray):
-                    return []
-                else:
-                    return self._chunks[chunkid].columns
+                return self._util_columns_descend(self._chunks[chunkid], seen)
 
     def astype(self, dtype):
         chunks = []

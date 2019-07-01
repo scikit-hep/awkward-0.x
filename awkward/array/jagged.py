@@ -753,6 +753,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             self._content[where] = self.tojagged(what)._content
 
         elif self._util_isstringslice(where):
+            what = what.unzip()
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):

@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 
 # BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
@@ -322,6 +321,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 self._contents[tag][where] = self.IndexedArray(inverseindex, what)
 
         elif self._util_isstringslice(where):
+            what = what.unzip()
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for tag in self.numpy.unique(self._tags):
@@ -464,18 +464,17 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
         return out
 
-    @property
-    def columns(self):
+    def _util_columns(self, seen):
+        if id(self) in seen:
+            return []
+        seen.add(id(self))
         out = None
         for content in self._contents:
-            if isinstance(content, self.numpy.ndarray):
-                return []
-
+            tmp = self._util_columns_descend(content, seen)
             if out is None:
-                out = content.columns
+                out = tmp
             else:
-                out = [x for x in content.columns if x in out]
-
+                out = out + [x for x in tmp if x not in out]
         if out is None:
             return []
         else:

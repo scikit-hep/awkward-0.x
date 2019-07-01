@@ -697,8 +697,24 @@ a["y"][:, 0]
 # ## Assigning with square brackets
 #
 # As discussed above, awkward arrays are generally immutable with few exceptions. Row assignment is only possible via appending to an ``AppendableArray``. Column assignment, reassignment, and deletion are in general allowed. The syntax for assigning and reassigning columns is through assignment to a square bracket expression. This operation is defined by Python's ``__setitem__`` method. The syntax for deleting columns is through the ``del`` operators on a square bracket expression. This operation is defined by Python's ``__delitem__`` method.
+#
+# Since only columns can be changed, only strings and sequences of strings are allowed as indexes.
 
+# %%
+a = awkward.fromiter([[{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}], [], [{"x": 3, "y": 3.3, "z": "three"}]])
+a
 
+# %%
+a["a"] = awkward.fromiter([[100, 200], [], [300]])
+a.tolist()
+
+# %%
+del a["a"]
+a.tolist()
+
+# %%
+a[["a", "b"]] = awkward.fromiter([[{"first": 100, "second": 111}, {"first": 200, "second": 222}], [], [{"first": 300, "second": 333}]])
+a.tolist()
 
 
 

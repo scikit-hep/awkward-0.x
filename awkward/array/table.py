@@ -623,6 +623,7 @@ class Table(awkward.array.base.AwkwardArray):
             self._contents[where] = self._util_toarray(what, self.DEFAULTTYPE)
 
         elif self._util_isstringslice(where):
+            what = what.unzip()
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
@@ -786,8 +787,10 @@ class Table(awkward.array.base.AwkwardArray):
             out[n] = self.numpy.array([self._util_reduce(x, ufunc, identity, dtype, regularaxis)])
         return out.Row(out, 0)
 
-    @property
-    def columns(self):
+    def _util_columns(self, seen):
+        if id(self) in seen:
+            return []
+        seen.add(id(self))
         return list(self._contents)
 
     def astype(self, dtype):

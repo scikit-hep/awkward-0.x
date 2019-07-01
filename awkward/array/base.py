@@ -479,8 +479,22 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return array.fillna(value)
 
+    @classmethod
+    def _util_columns_descend(cls, array, seen):
+        if isinstance(array, cls.numpy.ndarray):
+            if array.dtype.fields is None:
+                return []
+            else:
+                return list(array.dtype.fields)
+        else:
+            return array._util_columns(seen)
+
+    @property
+    def columns(self):
+        return self._util_columns(set())
+
     def unzip(self):
-        return tuple(self[column_name] for column_name in self.columns)
+        return tuple(self[column_name] for column_name in self._util_columns(set()))
 
 class AwkwardArrayWithContent(AwkwardArray):
     """
@@ -492,6 +506,7 @@ class AwkwardArrayWithContent(AwkwardArray):
             self._content[where] = what
 
         elif self._util_isstringslice(where):
+            what = what.unzip()
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
@@ -512,12 +527,11 @@ class AwkwardArrayWithContent(AwkwardArray):
     def _hasjagged(self):
         return self._util_hasjagged(self._content)
 
-    @property
-    def columns(self):
-        if isinstance(self._content, self.numpy.ndarray):
+    def _util_columns(self, seen):
+        if id(self) in seen:
             return []
-        else:
-            return self._content.columns
+        seen.add(id(self))
+        return self._util_columns_descend(self._content, seen)
 
     def astype(self, dtype):
         return self.copy(content=self._content.astype(dtype))
