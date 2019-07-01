@@ -47,7 +47,7 @@ class Test(unittest.TestCase):
         a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         a["stuff"] = [5, 4, 3, 2, 1]
         assert a.tolist() == [{"0": 0, "1": 0.0, "stuff": 5}, {"0": 1, "1": 1.1, "stuff": 4}, {"0": 2, "1": 2.2, "stuff": 3}, {"0": 3, "1": 3.3, "stuff": 2}, {"0": 4, "1": 4.4, "stuff": 1}]
-        a[["x", "y"]] = range(3), range(100)
+        a[["x", "y"]] = Table(range(3), range(100))
         assert a.tolist() == [{"0": 0, "1": 0.0, "stuff": 5, "x": 0, "y": 0}, {"0": 1, "1": 1.1, "stuff": 4, "x": 1, "y": 1}, {"0": 2, "1": 2.2, "stuff": 3, "x": 2, "y": 2}]
 
     def test_table_ufunc(self):

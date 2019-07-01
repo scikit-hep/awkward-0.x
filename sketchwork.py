@@ -716,7 +716,24 @@ a.tolist()
 a[["a", "b"]] = awkward.fromiter([[{"first": 100, "second": 111}, {"first": 200, "second": 222}], [], [{"first": 300, "second": 333}]])
 a.tolist()
 
+# %%markdown
+# Note that the names of the columns on the right-hand side of the assignment are irrelevant; we're setting two columns, there needs to be two columns on the right. Columns can be anonymous:
 
+# %%
+a[["a", "b"]] = awkward.Table(awkward.fromiter([[100, 200], [], [300]]), awkward.fromiter([[111, 222], [], [333]]))
+a.tolist()
+
+# %%markdown
+# Another thing to note is that the structure (lengths at all levels of jaggedness) must match if the depth is the same.
+
+# %%
+try:
+    a["c"] = awkward.fromiter([[100, 200, 300], [400], [500, 600]])
+except Exception as err:
+    print(type(err), str(err))
+
+# %%markdown
+# But if the right-hand side is shallower and can be *broadcasted* to the left-hand side, it will be. (See below for broadcasting.)
 
 
 
