@@ -735,11 +735,55 @@ except Exception as err:
 # %%markdown
 # But if the right-hand side is shallower and can be *broadcasted* to the left-hand side, it will be. (See below for broadcasting.)
 
-
-
+# %%
+a["c"] = awkward.fromiter([100, 200, 300])
+a.tolist()
 
 # %%markdown
-# ## Numpy universal functions and broadcasting
+# ## Numpy-like broadcasting
+#
+# In assignments and mathematical operations between higher-rank and lower-rank arrays, Numpy repeats values in the lower-rank array to "fit," if possible, before applying the operation. This is called `boradcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__. For example,
+
+# %%
+numpy.array([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]]) + 100
+
+# %%markdown
+Singletons are also expanded to fit.
+
+# %%
+numpy.array([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]]) + numpy.array([[100], [200]])
+
+# %%markdown
+# Awkward arrays have the same feature, but this has particularly useful effects for jagged arrays. In an operation involving two arrays of different depths of jaggedness, the shallower one expands to fit the deeper one.
+
+# %%
+awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]) + awkward.fromiter([100, 200, 300])
+
+# %%markdown
+# Note that the ``100`` was broadcasted to all three of the elements of the first inner array, ``200`` was broadcasted to no elements in the second inner array (because the second inner array is empty), and ``300`` was broadcasted to all two of the elements of the third inner array.
+#
+# This is the columnar equivalent to accessing a variable defined outside of an inner loop.
+
+# %%
+jagged = [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+flat = [100, 200, 300]
+for i in range(3):
+    for j in range(len(jagged[i])):
+        print(i, j, jagged[i][j] + flat[i])
+
+# %%markdown
+# Many translations of non-columnar code to columnar code has this form. It's often surprising to users that they don't have to do anything special to get this feature (e.g. ``cross``).
+
+# %%markdown
+# ## Support for Numpy universal functions (ufuncs)
+
+# HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE 
+
+
+
+
+
+
 
 # %%markdown
 # ## Reducers
