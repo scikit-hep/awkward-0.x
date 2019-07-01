@@ -5,11 +5,6 @@ TODO:
     - py::object
     - zero-terminated bytes
     - raw data
-= Make strides work negatively
-= Add c++ indexing util function for slicing
-    - negative indices work like C, not python
-    - python-style can be implemented when called
-    - slices will have to be interpreted on python side
 = Add more getitem functions
 = Deal with more array characteristics
     - Multidimensional arrays
@@ -99,17 +94,104 @@ public:
         stops = stops_;
     }
 
+    bool check_validity() {
+        py::buffer_info starts_info = starts.request();
+        py::buffer_info stops_info = stops.request();
+        if (starts_info.size > stops_info.size) {
+            throw std::invalid_argument("starts must have the same (or shorter) length than stops");
+        }
+        if (starts_info.ndim != stops_info.ndim) {
+            throw std::domain_error("starts and stops must have the same dimensionality");
+        }
+        int N_starts = starts_info.strides[0] / starts_info.itemsize;
+        int N_stops = stops_info.strides[0] / stops_info.itemsize;
+        std::int64_t starts_max = 0;
+        std::int64_t stops_max = 0;
+        auto starts_ptr = (std::int64_t*)starts_info.ptr;
+        auto stops_ptr = (std::int64_t*)stops_info.ptr;
+        for (ssize_t i = 0; i < starts_info.size; i++) {
+            if (stops_ptr[i * N_stops] < starts_ptr[i * N_starts]) {
+                throw std::invalid_argument("stops must be greater than or equal to starts");
+            }
+            if (starts_ptr[i * N_starts] > starts_max) {
+                starts_max = starts_ptr[i * N_starts];
+            }
+            if (stops_ptr[i * N_stops] > stops_max) {
+                stops_max = stops_ptr[i * N_stops];
+            }
+        }
+        if (starts_info.size > 0) {
+            if (starts_max >= content->len()) {
+                throw std::invalid_argument("The maximum of starts for non-empty elements must be less than the length of content");
+            }
+            if (stops_max > content->len()) {
+                throw std::invalid_argument("The maximum of stops for non-empty elements must be less than or equal to the length of content");
+            }
+        }
+        return true;
+    }
+
     JaggedArray(py::array starts_, py::array stops_, py::object content_) {
         set_starts(starts_);
         set_stops(stops_);
         python_set_content(content_);
+        check_validity();
     }
 
     JaggedArray(py::array starts_, py::array stops_, AnyArray* content_) {
         set_starts(starts_);
         set_stops(stops_);
         set_content(content_);
+        check_validity();
     }
+
+    static JaggedArray* fromoffsets(py::array offsets, AnyArray* content_) {
+        makeIntNative(offsets);
+        py::array_t<std::int64_t> temp = offsets.cast<py::array_t<std::int64_t>>();
+        ssize_t length = temp.request().size;
+        if (length < 1) {
+            throw std::invalid_argument("offsets must have at least one element");
+        }
+        if (temp.request().ndim > 1) {
+            throw std::domain_error("offsets must be one-dimensional");
+        }
+        return new JaggedArray(
+            slice_numpy(temp, 0, length - 1),
+            slice_numpy(temp, 1, length - 1),
+            content_
+        );
+    }
+
+    static JaggedArray* python_fromoffsets(py::array offsets, py::object content_) {
+        try {
+            return fromoffsets(offsets, content_.cast<JaggedArray*>());
+        }
+        catch (py::cast_error e) { }
+        try {
+            return fromoffsets(offsets, getNumpyArray_t(content_.cast<py::array>()));
+        }
+        catch (py::cast_error e) {
+            throw std::invalid_argument("Invalid type for JaggedArray.content");
+        }
+    }
+
+    static JaggedArray* fromcounts(py::array counts, AnyArray* content_) {
+        return fromoffsets(counts2offsets(counts), content_);
+    }
+
+    static JaggedArray* python_fromcounts(py::array counts, py::object content_) {
+        try {
+            return fromcounts(counts, content_.cast<JaggedArray*>());
+        }
+        catch (py::cast_error e) { }
+        try {
+            return fromcounts(counts, getNumpyArray_t(content_.cast<py::array>()));
+        }
+        catch (py::cast_error e) {
+            throw std::invalid_argument("Invalid type for JaggedArray.content");
+        }
+    }
+
 
     static py::array_t<std::int64_t> offsets2parents(py::array offsets) {
         makeIntNative(offsets);

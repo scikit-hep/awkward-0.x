@@ -56,26 +56,7 @@ public:
     }
 
     AnyArray* getitem(ssize_t start, ssize_t length, ssize_t step = 1) {
-        if (step == 0) {
-            throw std::invalid_argument("slice step cannot be 0");
-        }
-        if (length < 0) {
-            throw std::invalid_argument("slice length cannot be less than 0");
-        }
-        if (start < 0 || start >= len() || start + (length * step) > len() || start + (length * step) < -1) {
-            throw std::out_of_range("getitem must be in the bounds of the array");
-        }
-        py::buffer_info temp_info = py::buffer_info();
-        temp_info.ptr = (void*)((T*)(thisArray.request().ptr) + start);
-        temp_info.itemsize = thisArray.request().itemsize;
-        temp_info.size = length;
-        temp_info.format = thisArray.request().format;
-        temp_info.ndim = thisArray.request().ndim;
-        temp_info.strides = thisArray.request().strides;
-        temp_info.strides[0] = temp_info.strides[0] * step;
-        temp_info.shape = thisArray.request().shape;
-        temp_info.shape[0] = temp_info.size;
-        return new NumpyArray_t<T>(py::array(temp_info));
+        return new NumpyArray_t<T>(slice_numpy(thisArray, start, length, step));
     }
 
     AnyOutput* getitem(ssize_t i) {
