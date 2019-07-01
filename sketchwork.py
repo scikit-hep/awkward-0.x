@@ -427,10 +427,28 @@ except Exception as err:
 events[0].tolist()
 
 # %%markdown
-# Particle physics isn't alone in this: analyzing JSON-formatted log files in production systems and allele likelihoods in genomics are two other fields where variable-length, nested structures can help. Arbitrary data structures are useful and working with them in columns provides a new way to do exploratory data analysis: one array at a time.
+# Particle physics isn't alone in this: analyzing JSON-formatted log files in production systems or allele likelihoods in genomics are two other fields where variable-length, nested structures can help. Arbitrary data structures are useful and working with them in columns provides a new way to do exploratory data analysis: one array at a time.
+
+# %%markdown
+# # Awkward-array scope
+#
+# Awkward array features are provided by a suite of classes that each extend Numpy arrays in one small way. These classes may then be composed to combine features.
+#
+# In this sense, Numpy arrays are awkward-array's most basic array class. A Numpy array is a small Python object that points to a large, contiguous region of memory, and, as much as possible, operations on that array replace the Pythonic interpretation, not the data themselves. Therefore, many Numpy operations are *views*, rather than *in-place operations* or *copies*, leaving the original value intact but returning a new value that is linked with the original. Assigning to arrays and in-place operations are allowed, but they add complexity because one must be aware of which arrays are views and which are copies.
+#
+# Awkward-array's model is to treat all arrays as though they were immutable, favoring views over copies, and not providing any high-level in-place operations on array data. (In other words, awkward arrays have no square-bracket assignment, ``__setitem__``, though the Pythonic interpretation objects can be changed in-place.)
+#
+# A Numpy array has a ``dtype`` to interpret bytes as signed and unsigned integers of various bit-widths, floating-point numbers, booleans, little endian and big endian, fixed-width bytestrings (for applications such as 6-byte MAC addresses or human-readable strings with padding), or `record arrays <https://docs.scipy.org/doc/numpy/user/basics.rec.html>`__ for contiguous structures. (Awkward-array's ``Table`` has the same interface as Numpy record arrays, except that fields are not required to be contiguous in memory.) A Numpy array has a pointer to the start of the data (``array.ctypes.data``) and a ``shape`` to describe its ``N`` lengths as a rank-``N`` tensor. Only the first of these lengths is the length as returned by the Python function ``len``. Furthermore, an ``order`` flag determines if rank > 1 arrays are laid out in "C" order or "Fortran" order. A Numpy array also has a ``stride`` to determine how many bytes separate one element from the next. (Data in a Numpy array need not be strictly contiguous, but they must be regular: the number of bytes seprating them is a constant.) This ``stride`` may even be negative to describe a reversed view of an array. This allows any ``slice`` of an array, even those with ``skip != 1`` to be a view, not a copy. Numpy arrays also have flags to determine whether they "own" their data buffer (and should therefore delete it when the Python object goes out of scope) and whether the data buffer is writable.
+
+
+
+
+
 
 # %%markdown
 # # High-level operations: common to all types
+
+
 
 # %%markdown
 # ## Slicing with square brackets
