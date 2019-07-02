@@ -41,8 +41,16 @@ awkward_cpp = pytest.importorskip("awkward.cpp")
 class Test(unittest.TestCase):
     def runTest(self):
         pass
-    def test_table_nbytes(self):
-        assert isinstance(Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]).nbytes, int)
+    def test_cpp_table_init(self):
+        a = [0, 1, 2]
+        b = [10, 11, 12, 13, 14]
+        c = [20]
+        t1 = awkward_cpp.Table(a)
+        t2 = awkward_cpp.Table({'column1' : a, 'column2' : b, 'column3' : c})
+        t3 = awkward_cpp.Table(column1 = a, column2 = b)
+        pass
+    # def test_table_nbytes(self):
+    #     assert isinstance(Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]).nbytes, int)
 
     # def test_table_get(self):
     #     a = Table([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
