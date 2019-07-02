@@ -201,15 +201,15 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
         return self._util_regular(self._content)[self._index]
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
+    def _reduce(self, ufunc, identity, dtype):
         if self._util_hasjagged(self._content):
-            return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
+            return self.copy(content=self._content._reduce(ufunc, identity, dtype))
 
         elif isinstance(self._content, awkward.array.table.Table):
             out = awkward.array.table.Table()
             for n, x in self._content._contents.items():
                 out[n] = self.copy(content=x)
-            return out._reduce(ufunc, identity, dtype, regularaxis)
+            return out._reduce(ufunc, identity, dtype)
 
         else:
             return ufunc.reduce(self._prepare(identity, dtype))
@@ -628,15 +628,15 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             out[mask] = content[self._inverse[mask]]
         return out
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
+    def _reduce(self, ufunc, identity, dtype):
         if self._util_hasjagged(self._content):
-            return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
+            return self.copy(content=self._content._reduce(ufunc, identity, dtype))
 
         elif isinstance(self._content, awkward.array.table.Table):
             out = awkward.array.table.Table()
             for n, x in self._content._contents.items():
                 out[n] = self.copy(content=x)
-            return out._reduce(ufunc, identity, dtype, regularaxis)
+            return out._reduce(ufunc, identity, dtype)
 
         else:
             return ufunc.reduce(self._prepare(identity, dtype))

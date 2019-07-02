@@ -583,14 +583,14 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         else:
             return False
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
+    def _reduce(self, ufunc, identity, dtype):
         self.knowchunksizes()
         self._valid()
 
         if self._util_hasjagged(self):
             chunks = []
             for chunkid, chunk in enumerate(self._chunks):
-                this = chunk._reduce(ufunc, identity, dtype, regularaxis)
+                this = chunk._reduce(ufunc, identity, dtype)
                 if len(this) > 0:
                     chunks.append(this)
             return self.copy(chunks=chunks)
@@ -598,7 +598,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         out = None
         for chunkid, chunk in enumerate(self._chunks):
             if self._chunksizes[chunkid] > 0:
-                this = self._util_reduce(chunk[:self._chunksizes[chunkid]], ufunc, identity, dtype, regularaxis)
+                this = self._util_reduce(chunk[:self._chunksizes[chunkid]], ufunc, identity, dtype)
                 if out is None:
                     out = this
                 else:

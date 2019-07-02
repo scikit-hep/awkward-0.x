@@ -225,7 +225,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def regular(self):
         return self.numpy.array(self)
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
+    def _reduce(self, ufunc, identity, dtype):
         raise TypeError("cannot call reducer on object array")
 
     def _prepare(self, identity, dtype):

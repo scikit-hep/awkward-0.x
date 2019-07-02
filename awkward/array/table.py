@@ -770,7 +770,7 @@ class Table(awkward.array.base.AwkwardArray):
     def _hasjagged(self):
         return False
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
+    def _reduce(self, ufunc, identity, dtype):
         out = self.Table.named({
             self.numpy.bitwise_or: "Any",
             self.numpy.bitwise_and: "All",
@@ -784,7 +784,7 @@ class Table(awkward.array.base.AwkwardArray):
         out._showdict = True
         for n in self._contents:
             x = self._contents[n][self._index()]
-            out[n] = self.numpy.array([self._util_reduce(x, ufunc, identity, dtype, regularaxis)])
+            out[n] = self.numpy.array([self._util_reduce(x, ufunc, identity, dtype)])
         return out.Row(out, 0)
 
     def _util_columns(self, seen):

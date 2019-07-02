@@ -1362,23 +1362,23 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def _hasjagged(self):
         return True
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
+    def _reduce(self, ufunc, identity, dtype):
         import awkward.array.table
         self._valid()
 
         if self._util_hasjagged(self._content):
-            return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
+            return self.copy(content=self._content._reduce(ufunc, identity, dtype))
 
         elif isinstance(self._content, awkward.array.table.Table):
             out = self._content.copy(contents=[])
             for n, x in self._content._contents.items():
-                out[n] = self.copy(content=x)._reduce(ufunc, identity, dtype, regularaxis)
+                out[n] = self.copy(content=x)._reduce(ufunc, identity, dtype)
             return out
 
         elif isinstance(self._content, awkward.array.base.AwkwardArray):
             thyself = self.copy(content=self._content._prepare(identity, dtype))
 
-        elif regularaxis is not None and regularaxis != 0:
+        elif len(self._content.shape) > 1:
             if ufunc is None:
                 ufunc = self.numpy.add
                 if isinstance(self._content, (self.numpy.floating, self.numpy.complexfloating)):
@@ -1396,7 +1396,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             if dtype is not None:
                 content = content.astype(dtype)
 
-            return self.copy(content=ufunc.reduce(content, axis=regularaxis))
+            return self.copy(content=ufunc.reduce(content, axis=-1))
 
         else:
             thyself = self.copy()
@@ -1446,17 +1446,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             elif self._util_isintegertype(dtype.type):
                 identity = self.numpy.iinfo(dtype.type).min
 
-        if regularaxis is None:
-            out = self.numpy.empty(thyself._starts.shape[:1], dtype=dtype)
-        else:
-            out = self.numpy.empty(thyself._starts.shape[:1] + content.shape[1:], dtype=dtype)
+        out = self.numpy.empty(thyself._starts.shape[:1], dtype=dtype)
 
         if len(out) != 0:
             nonterminal = thyself.offsets[thyself.offsets < len(content)]
 
-            if regularaxis is None:
-                for axis in range(1, len(content.shape)):
-                    content = ufunc.reduce(content, axis=axis)
+            for axis in range(1, len(content.shape)):
+                content = ufunc.reduce(content, axis=axis)
 
             out = ufunc.reduceat(content, awkward.util.windows_safe(nonterminal))[:len(out)]
             if len(out) < len(thyself):
@@ -1466,10 +1462,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
             out[thyself.starts == thyself.stops] = identity
 
-        if regularaxis is None:
-            return out.reshape(self._starts.shape)
-        else:
-            return out.reshape(self._starts.shape + self._content.shape[1:])
+        return out.reshape(self._starts.shape)
 
     def argmin(self):
         self._valid()

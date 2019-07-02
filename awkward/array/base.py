@@ -149,29 +149,29 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return True
 
-    def any(self, regularaxis=None):
-        return self._reduce(self.numpy.bitwise_or, False, self.BOOLTYPE, regularaxis)
+    def any(self):
+        return self._reduce(self.numpy.bitwise_or, False, self.BOOLTYPE)
 
-    def all(self, regularaxis=None):
-        return self._reduce(self.numpy.bitwise_and, True, self.BOOLTYPE, regularaxis)
+    def all(self):
+        return self._reduce(self.numpy.bitwise_and, True, self.BOOLTYPE)
 
-    def count(self, regularaxis=None):
-        return self._reduce(None, 0, None, regularaxis)
+    def count(self):
+        return self._reduce(None, 0, None)
 
-    def count_nonzero(self, regularaxis=None):
-        return self._reduce(self.numpy.count_nonzero, 0, None, regularaxis)
+    def count_nonzero(self):
+        return self._reduce(self.numpy.count_nonzero, 0, None)
 
-    def sum(self, regularaxis=None):
-        return self._reduce(self.numpy.add, 0, None, regularaxis)
+    def sum(self):
+        return self._reduce(self.numpy.add, 0, None)
 
-    def prod(self, regularaxis=None):
-        return self._reduce(self.numpy.multiply, 1, None, regularaxis)
+    def prod(self):
+        return self._reduce(self.numpy.multiply, 1, None)
 
-    def min(self, regularaxis=None):
-        return self._reduce(self.numpy.minimum, self.numpy.inf, None, regularaxis)
+    def min(self):
+        return self._reduce(self.numpy.minimum, self.numpy.inf, None)
 
-    def max(self, regularaxis=None):
-        return self._reduce(self.numpy.maximum, -self.numpy.inf, None, regularaxis)
+    def max(self):
+        return self._reduce(self.numpy.maximum, -self.numpy.inf, None)
 
     def __getattr__(self, where):
         if where in dir(super(AwkwardArray, self)):
@@ -379,14 +379,14 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return array
 
     @classmethod
-    def _util_reduce(cls, array, ufunc, identity, dtype, regularaxis):
+    def _util_reduce(cls, array, ufunc, identity, dtype):
         if isinstance(array, AwkwardArray):
-            return array._reduce(ufunc, identity, dtype, regularaxis)
+            return array._reduce(ufunc, identity, dtype)
 
         elif len(array) == 0:
             if dtype is None:
                 dtype = array.dtype
-            return ufunc.reduce(cls.numpy.full((1,) + array.shape[1:], identity, dtype=dtype), axis=regularaxis)
+            return ufunc.reduce(cls.numpy.full((1,) + array.shape[1:], identity, dtype=dtype), axis=-1)
 
         else:
             original = array
@@ -398,7 +398,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                     if array is original:
                         array = array.copy()
                     array[mask] = identity
-            return ufunc.reduce(array, axis=regularaxis)
+            return ufunc.reduce(array, axis=None)
 
     @classmethod
     def _util_concatenate(cls, arrays):

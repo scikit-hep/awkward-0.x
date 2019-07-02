@@ -832,7 +832,7 @@ numpy.add(awkward.fromiter([{"x": 1, "y": 1.1}, {"y": 1.1, "z": 100}]),
 isinstance(numpy.concatenate, numpy.ufunc)
 
 # %%markdown
-# and you can prevent accidental conversions to Numpy by setting ``allow_tonumpy`` to ``False``, either on one array or globally on a whole class of awkward arrays.
+# and you can prevent accidental conversions to Numpy by setting ``allow_tonumpy`` to ``False``, either on one array or globally on a whole class of awkward arrays. (See "global switches" below.)
 
 # %%
 x = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
@@ -848,8 +848,45 @@ except Exception as err:
 
 # %%markdown
 # ## Reducers
+#
+# Another set of important functions in Numpy are not called out as a special type, though they fit a common pattern and have an important role. Functions like ``sum``, ``min``, and ``max`` are reducers: they decrease the rank of a Numpy array by summarizing it with its sum, minimum value, or maximum value. These reducers are also methods on array objects.
+#
+# Generalizing to awkward arrays, reducers decrease the rank or jaggedness of an awkward array. Unlike Numpy reducers, which can be applied to any (regularly sized) axis, awkward reducers always apply to the deepest axis.
 
-# HERE
+# %%
+a = awkward.fromiter([[[[1, 2], [3]], [[4, 5]]], [[[], [6, 7, 8, 9]]]])
+a
+
+# %%
+a.sum()
+
+# %%
+a.sum().sum()
+
+# %%
+a.sum().sum().sum()
+
+# %%
+a.sum().sum().sum().sum()
+
+# %%markdown
+# In the following example, the fields of the table are at different depths: a simple table in ``"x"`` and a doubly jagged array in ``"y"``. The ``sum`` reduces each depth by one, producing a scalar ``"x"`` and a singly jagged array in ``"y"``.
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": [[0.1, 0.2], [], [0.3]]}, {"x": 2, "y": [[0.4], [], [0.5, 0.6]]}])
+a.tolist()
+
+# %%
+a.sum()
+
+# %%markdown
+# This sum cannot be reduced again because ``"x"`` is already a scalar.
+
+# %%
+try:
+    a.sum().sum()
+except Exception as err:
+    print(type(err), str(err))
 
 
 

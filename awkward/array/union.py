@@ -430,15 +430,15 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def _hasjagged(self):
         return all(self._util_hasjagged(x) for x in self._contents)
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
+    def _reduce(self, ufunc, identity, dtype):
         if self._hasjagged():
-            return self.copy(contents=[x._reduce(ufunc, identity, dtype, regularaxis) for x in self._contents])
+            return self.copy(contents=[x._reduce(ufunc, identity, dtype) for x in self._contents])
 
         elif self.columns != []:
             out = awkward.array.table.Table()
             for n in self.columns:
                 out[n] = self.copy(content=self[n])
-            return out._reduce(ufunc, identity, dtype, regularaxis)
+            return out._reduce(ufunc, identity, dtype)
 
         else:
             return ufunc.reduce(self._prepare(identity, dtype))
