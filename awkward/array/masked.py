@@ -270,7 +270,7 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype))
 
         elif isinstance(self._content, awkward.array.table.Table):
-            out = awkward.array.table.Table()
+            out = self._content.copy(contents={})
             for n, x in self._content._contents.items():
                 out[n] = self.copy(content=x)
             return out._reduce(ufunc, identity, dtype)
@@ -279,6 +279,12 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             return ufunc.reduce(self._prepare(identity, dtype))
 
     def _prepare(self, identity, dtype):
+        if isinstance(self._content, awkward.array.table.Table):
+            out = self._content.copy(contents={})
+            for n, x in self._content._contents.items():
+                out[n] = self.copy(content=x)._prepare(identity, dtype)
+            return out
+
         if isinstance(self._content, self.numpy.ndarray):
             if dtype is None and issubclass(self._content.dtype.type, (self.numpy.bool_, self.numpy.bool)):
                 dtype = self.numpy.dtype(type(identity))
@@ -705,6 +711,12 @@ class IndexedMaskedArray(MaskedArray):
         return self
 
     def _prepare(self, identity, dtype):
+        if isinstance(self._content, awkward.array.table.Table):
+            out = self._content.copy(contents={})
+            for n, x in self._content._contents.items():
+                out[n] = self.copy(content=x)._prepare(identity, dtype)
+            return out
+
         if isinstance(self._content, self.numpy.ndarray):
             if dtype is None and issubclass(self._content.dtype.type, (self.numpy.bool_, self.numpy.bool)):
                 dtype = self.numpy.dtype(type(identity))

@@ -870,17 +870,17 @@ a.sum().sum().sum()
 a.sum().sum().sum().sum()
 
 # %%markdown
-# In the following example, the fields of the table are at different depths: a simple table in ``"x"`` and a doubly jagged array in ``"y"``. The ``sum`` reduces each depth by one, producing a scalar ``"x"`` and a singly jagged array in ``"y"``.
+# In the following example, "the deepest axis" of different fields in the table are at different depths: singly jagged in ``"x"`` and doubly jagged array in ``"y"``. The ``sum`` reduces each depth by one, producing a flat array ``"x"`` and a singly jagged array in ``"y"``.
 
 # %%
-a = awkward.fromiter([{"x": 1, "y": [[0.1, 0.2], [], [0.3]]}, {"x": 2, "y": [[0.4], [], [0.5, 0.6]]}])
+a = awkward.fromiter([{"x": [], "y": [[0.1, 0.2], [], [0.3]]}, {"x": [1, 2, 3], "y": [[0.4], [], [0.5, 0.6]]}])
 a.tolist()
 
 # %%
-a.sum()
+a.sum().tolist()
 
 # %%markdown
-# This sum cannot be reduced again because ``"x"`` is already a scalar.
+# This sum cannot be reduced again because ``"x"`` is not jagged (would reduce to a scalar) and ``"y"`` is (would reduce to an array). The result cannot be scalar in one field (a single row, not a collection) and an array in another field (a collection).
 
 # %%
 try:
@@ -888,8 +888,9 @@ try:
 except Exception as err:
     print(type(err), str(err))
 
+
 # %%markdown
-# In all reducers, ``NaN`` in floating-point arrays and ``None`` in ``MaskedArrays`` are skipped, so these reducers are more like ``numpy.nansum``, ``numpy.nanmax``, and ``numpy.nanmin``, generalized to all nullable data.
+# In all reducers, ``NaN`` in floating-point arrays and ``None`` in ``MaskedArrays`` are skipped, so these reducers are more like ``numpy.nansum``, ``numpy.nanmax``, and ``numpy.nanmin``, but generalized to all nullable types.
 
 # %%
 a = awkward.fromiter([[[[1.1, numpy.nan], [2.2]], [[None, 3.3]]], [[[], [None, numpy.nan, None]]]])
@@ -898,8 +899,16 @@ a
 # %%
 a.sum()
 
-# %%markdown
-#
+# %%
+a = awkward.fromiter([[{"x": 1, "y": 1.1}, None, {"x": 3, "y": 3.3}], [], [{"x": 4, "y": numpy.nan}]])
+a.tolist()
+
+# %%
+a.sum().tolist()
+
+
+
+
 
 
 

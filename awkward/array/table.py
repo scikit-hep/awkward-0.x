@@ -768,24 +768,50 @@ class Table(awkward.array.base.AwkwardArray):
         return out
 
     def _hasjagged(self):
-        return False
+        num = sum(1 if self._util_hasjagged(x) else 0 for x in self._contents.values())
+        if num == 0:
+            return False
+        elif num == len(self._contents):
+            return True
+        else:
+            raise ValueError("some Table columns are jagged and others are not")
 
     def _reduce(self, ufunc, identity, dtype):
-        out = self.Table.named({
-            self.numpy.bitwise_or: "Any",
-            self.numpy.bitwise_and: "All",
-            None: "Count",
-            self.numpy.count_nonzero: "CountNonzero",
-            self.numpy.add: "Sum",
-            self.numpy.multiply: "Prod",
-            self.numpy.minimum: "Min",
-            self.numpy.maximum: "Max"
-            }[ufunc])
-        out._showdict = True
-        for n in self._contents:
-            x = self._contents[n][self._index()]
-            out[n] = self.numpy.array([self._util_reduce(x, ufunc, identity, dtype)])
-        return out.Row(out, 0)
+        if self._hasjagged():
+            out = self.copy(contents={})
+            for n, x in self._contents.items():
+                out[n] = self._util_reduce(x, ufunc, identity, dtype)
+            return out
+
+        else:
+            out = self.Table.named({
+                self.numpy.bitwise_or: "any",
+                self.numpy.bitwise_and: "all",
+                None: "count",
+                self.numpy.count_nonzero: "count_nonzero",
+                self.numpy.add: "sum",
+                self.numpy.multiply: "prod",
+                self.numpy.minimum: "min",
+                self.numpy.maximum: "max"
+                }[ufunc])
+            out._showdict = True
+            for n in self._contents:
+                x = self._contents[n][self._index()]
+                out[n] = self.numpy.array([self._util_reduce(x, ufunc, identity, dtype)])
+            return out.Row(out, 0)
+
+    def _prepare(self, identity, dtype):
+        out = self.copy(contents={})
+        for n, x in self._contents.items():
+            if isinstance(x, self.numpy.ndarray):
+                if dtype is None and issubclass(x.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                    dtype = self.numpy.dtype(type(identity))
+                if dtype is not None:
+                    x = x.astype(dtype)
+            else:
+                x = x._prepare(identity, dtype)
+            out[n] = x
+        return out
 
     def _util_columns(self, seen):
         if id(self) in seen:

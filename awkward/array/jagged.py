@@ -1401,6 +1401,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             thyself = self.copy()
 
+        if isinstance(thyself._content, awkward.array.table.Table):
+            out = thyself._content.copy(contents=[])
+            for n, x in thyself._content._contents.items():
+                out[n] = thyself.copy(content=x)._reduce(ufunc, identity, dtype)
+            return out
+
         if len(thyself._starts.shape) > 1:
             thyself._starts = thyself._starts.reshape(-1)
             thyself._stops = thyself._stops.reshape(-1)
