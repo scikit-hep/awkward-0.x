@@ -612,7 +612,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         else:
             return out
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
         self.knowchunksizes()
         out = None
         pos = 0

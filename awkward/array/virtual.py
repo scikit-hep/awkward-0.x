@@ -406,7 +406,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def _reduce(self, ufunc, identity, dtype):
         return self._util_reduce(self.array, ufunc, identity, dtype)
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
         array = self.array
         if isinstance(array, self.numpy.ndarray):
             if dtype is None and issubclass(array.dtype.type, (self.numpy.bool_, self.numpy.bool)):
@@ -416,7 +416,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             else:
                 return array.astype(dtype)
         else:
-            return array._prepare(identity, dtype)
+            return array._prepare(ufunc, identity, dtype)
 
     def _util_columns(self, seen):
         if id(self) in seen:

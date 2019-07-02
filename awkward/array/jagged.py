@@ -1376,7 +1376,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return out
 
         elif isinstance(self._content, awkward.array.base.AwkwardArray):
-            thyself = self.copy(content=self._content._prepare(identity, dtype))
+            thyself = self.copy(content=self._content._prepare(ufunc, identity, dtype))
 
         elif len(self._content.shape) > 1:
             if ufunc is None:

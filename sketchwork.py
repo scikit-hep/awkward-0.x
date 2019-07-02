@@ -943,9 +943,59 @@ a.tolist()
 # %%
 a.sum().tolist()
 
+# %%markdown
+# The following reducers are defined as methods on all awkward arrays.
 
+# %%markdown
+# * ``array.reduce(ufunc, identity)``: generic reducer, calls ``ufunc.reduceat`` and returns ``identity`` for empty arrays.
 
+# %%
+# numba.vectorize makes new ufuncs (requires type signatures and a kernel function)
+import numba
+@numba.vectorize([numba.int64(numba.int64, numba.int64)])
+def sum_mod_10(x, y):
+    return (x + y) % 10
 
+# %%
+a = awkward.fromiter([[1, 2, 3], [], [4, 5, 6], [7, 8, 9, 10]])
+a.sum()
+
+# %%
+a.reduce(sum_mod_10, 0)
+
+# %%markdown
+# * ``array.any()``: boolean reducer, returns ``True`` if any (logical or) of the elements of an array are ``True``, returns ``False`` for empty arrays.
+
+# %%
+a = awkward.fromiter([[False, False], [True, True], [True, False], []])
+a.any()
+
+# %%
+# Missing (None) values are ignored.
+a = awkward.fromiter([[False, None], [True, None], [None]])
+a.any()
+
+# %%markdown
+# * ``array.all()``: boolean reducer, returns ``True`` if all (logical and) of the elements of an array are ``True``, returns ``True`` for empty arrays.
+
+# %%
+a = awkward.fromiter([[False, False], [True, True], [True, False], []])
+a.all()
+
+# %%
+# Missing (None) values are ignored.
+a = awkward.fromiter([[False, None], [True, None], [None]])
+a.all()
+
+# %%markdown
+# * ``array.count()``: returns the number of elements in an array, skipping ``None`` or ``NaN``.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
+a.count()
+
+# %%markdown
+# * 
 
 
 

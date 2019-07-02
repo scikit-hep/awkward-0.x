@@ -141,13 +141,24 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                 out.append(self._try_tolist(x))
         return out
 
-    def valid(self):
+    def valid(self, exception=False, message=False):
         try:
             self._valid()
-        except:
-            return False
+        except Exception as err:
+            if exception:
+                raise err
+            elif message:
+                return "{0}: {1}".format(type(err), str(err))
+            else:
+                return False
         else:
-            return True
+            if message:
+                return None
+            else:
+                return True
+
+    def reduce(self, ufunc, identity):
+        return self._reduce(ufunc, identity, None)
 
     def any(self):
         return self._reduce(self.numpy.bitwise_or, False, self.BOOLTYPE)
@@ -412,7 +423,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             if issubclass(array.dtype.type, (cls.numpy.floating, cls.numpy.complexfloating)):
                 mask = cls.numpy.isnan(array)
                 if mask.any():
-                    if array is original:
+                    if array is original or not array.flags.owndata:
                         array = array.copy()
                     array[mask] = identity
             return ufunc.reduce(array, axis=None)

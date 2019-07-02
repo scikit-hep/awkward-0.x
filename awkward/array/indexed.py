@@ -212,13 +212,13 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             return out._reduce(ufunc, identity, dtype)
 
         else:
-            return ufunc.reduce(self._prepare(identity, dtype))
+            return ufunc.reduce(self._prepare(ufunc, identity, dtype))
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
         if isinstance(self._content, self.numpy.ndarray):
             return self._content[self._index]
         else:
-            return self._content._prepare(identity, dtype)[self._index]
+            return self._content._prepare(ufunc, identity, dtype)[self._index]
 
     _topandas_name = "IndexedSeries"
 
@@ -639,13 +639,13 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             return out._reduce(ufunc, identity, dtype)
 
         else:
-            return ufunc.reduce(self._prepare(identity, dtype))
+            return ufunc.reduce(self._prepare(ufunc, identity, dtype))
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
         if isinstance(self._content, self.numpy.ndarray):
             return self.dense
         else:
-            return self.copy(content=self._content._prepare(identity, dtype)).dense
+            return self.copy(content=self._content._prepare(ufunc, identity, dtype)).dense
 
     _topandas_name = "SparseSeries"
 

@@ -800,7 +800,7 @@ class Table(awkward.array.base.AwkwardArray):
                 out[n] = self.numpy.array([self._util_reduce(x, ufunc, identity, dtype)])
             return out.Row(out, 0)
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
         out = self.copy(contents={})
         for n, x in self._contents.items():
             if isinstance(x, self.numpy.ndarray):
@@ -809,7 +809,7 @@ class Table(awkward.array.base.AwkwardArray):
                 if dtype is not None:
                     x = x.astype(dtype)
             else:
-                x = x._prepare(identity, dtype)
+                x = x._prepare(ufunc, identity, dtype)
             out[n] = x
         return out
 

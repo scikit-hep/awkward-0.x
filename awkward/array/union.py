@@ -437,9 +437,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
             raise ValueError("some UnionArray possibilities are jagged and others are not")
 
     def _reduce(self, ufunc, identity, dtype):
-        return ufunc.reduce(self._prepare(identity, dtype))
+        return ufunc.reduce(self._prepare(ufunc, identity, dtype))
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
         if dtype is None and issubclass(self.dtype.type, (self.numpy.bool_, self.numpy.bool)):
             dtype = self.numpy.dtype(type(identity))
         if dtype is None:
@@ -449,7 +449,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
         index = self._index[:len(self._tags)]
         for tag, content in enumerate(self._contents):
             if not isinstance(content, self.numpy.ndarray):
-                content = content._prepare(identity, dtype)
+                content = content._prepare(ufunc, identity, dtype)
 
             if not isinstance(content, self.numpy.ndarray):
                 raise TypeError("cannot reduce a UnionArray of non-primitive type")

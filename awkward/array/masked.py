@@ -276,29 +276,35 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             return out._reduce(ufunc, identity, dtype)
 
         else:
-            return ufunc.reduce(self._prepare(identity, dtype))
+            return ufunc.reduce(self._prepare(ufunc, identity, dtype))
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
         if isinstance(self._content, awkward.array.table.Table):
             out = self._content.copy(contents={})
             for n, x in self._content._contents.items():
-                out[n] = self.copy(content=x)._prepare(identity, dtype)
+                out[n] = self.copy(content=x)._prepare(ufunc, identity, dtype)
             return out
 
         if isinstance(self._content, self.numpy.ndarray):
             if dtype is None and issubclass(self._content.dtype.type, (self.numpy.bool_, self.numpy.bool)):
                 dtype = self.numpy.dtype(type(identity))
-            if dtype is None:
+            if ufunc is None:
+                content = self.numpy.zeros(self._content.shape, dtype=self.numpy.float32)
+                content[self.numpy.isnan(self._content)] = self.numpy.nan
+            elif dtype is None:
                 content = self._content
             else:
                 content = self._content.astype(dtype)
         else:
-            content = self._content._prepare(identity, dtype)
+            content = self._content._prepare(ufunc, identity, dtype)
 
         if content is self._content or not content.flags.owndata:
             content = content.copy()
 
-        content[self.ismasked] = identity
+        if ufunc is None:
+            content[self.ismasked] = self.numpy.nan
+        else:
+            content[self.ismasked] = identity
         return content
 
     def fillna(self, value):
@@ -710,11 +716,11 @@ class IndexedMaskedArray(MaskedArray):
     def indexed(self):
         return self
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
         if isinstance(self._content, awkward.array.table.Table):
             out = self._content.copy(contents={})
             for n, x in self._content._contents.items():
-                out[n] = self.copy(content=x)._prepare(identity, dtype)
+                out[n] = self.copy(content=x)._prepare(ufunc, identity, dtype)
             return out
 
         if isinstance(self._content, self.numpy.ndarray):
@@ -725,7 +731,7 @@ class IndexedMaskedArray(MaskedArray):
             else:
                 content = self._content.astype(dtype)
         else:
-            content = self._content._prepare(identity, dtype)
+            content = self._content._prepare(ufunc, identity, dtype)
 
         out = self.numpy.full(self._mask.shape + content.shape[1:], identity, dtype=content.dtype)
         out[self.isunmasked] = content[self.mask[self.mask >= 0]]
