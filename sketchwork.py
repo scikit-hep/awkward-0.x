@@ -977,8 +977,17 @@ a.offsets.nbytes + a.content.nbytes
 # %%
 awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]).tolist()
 
+# %%
+awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}]).tolist()
 
+# %%
+awkward.Table.named("tuple", [1, 2, 3], [1.1, 2.2, 3.3]).tolist()
 
+# %%
+awkward.fromiter([[1.1, 2.2, None], [], [None, 3.3]]).tolist()
+
+# %%
+# HERE: ObjectArray example
 
 
 # * ``valid(exception=False, message=False)``
