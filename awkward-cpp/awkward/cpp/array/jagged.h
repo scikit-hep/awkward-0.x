@@ -192,6 +192,67 @@ public:
         }
     }
 
+    static JaggedArray* fromparents(py::array parents, AnyArray* content_, ssize_t length = -1) {
+        if (parents.request().ndim != 1 || parents.request().size != content_->len()) {
+            throw std::invalid_argument("parents array must be one-dimensional with the same length as content");
+        }
+        auto startsstops = parents2startsstops(parents, length);
+        return new JaggedArray(startsstops[0], startsstops[1], content_);
+    }
+
+    static JaggedArray* python_fromparents(py::array parents, py::object content_, ssize_t length = -1) {
+        try {
+            return fromparents(parents, content_.cast<JaggedArray*>(), length);
+        }
+        catch (py::cast_error e) { }
+        try {
+            return fromparents(parents, getNumpyArray_t(content_.cast<py::array>()), length);
+        }
+        catch (py::cast_error e) {
+            throw std::invalid_argument("Invalid type for JaggedArray.content");
+        }
+    }
+
+    static JaggedArray* fromuniques(py::array uniques, AnyArray* content_) {
+        if (uniques.request().ndim != 1 || uniques.request().size != content_->len()) {
+            throw std::invalid_argument("uniques array must be one-dimensional with the same length as content");
+        }
+        auto offsetsparents = uniques2offsetsparents(uniques);
+        return fromoffsets(offsetsparents[0], content_);
+    }
+
+    static JaggedArray* python_fromuniques(py::array uniques, py::object content_) {
+        try {
+            return fromuniques(uniques, content_.cast<JaggedArray*>());
+        }
+        catch (py::cast_error e) { }
+        try {
+            return fromuniques(uniques, getNumpyArray_t(content_.cast<py::array>()));
+        }
+        catch (py::cast_error e) {
+            throw std::invalid_argument("Invalid type for JaggedArray.content");
+        }
+    }
+
+    static JaggedArray* fromjagged(JaggedArray* jagged) {
+        return new JaggedArray(jagged->get_starts(), jagged->get_stops(), jagged->get_content());
+    }
+
+    JaggedArray* copy() {
+        return new JaggedArray(starts, stops, content);
+    }
+
+    AnyArray* deepcopy() {
+        return new JaggedArray(
+            pyarray_deepcopy(starts),
+            pyarray_deepcopy(stops),
+            content->deepcopy()
+        );
+    }
+
+    JaggedArray* python_deepcopy() {
+        return (JaggedArray*)deepcopy();
+    }
 
     static py::array_t<std::int64_t> offsets2parents(py::array offsets) {
         makeIntNative(offsets);

@@ -16,6 +16,7 @@ class AnyArray : public AnyOutput {
 public:
     virtual ssize_t     len()                                        = 0;
     virtual AnyArray*   getitem(ssize_t a, ssize_t b, ssize_t c = 1) = 0;
+    virtual AnyArray*   deepcopy()                                   = 0;
 };
 
 class AwkwardArray : public AnyArray {

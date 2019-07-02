@@ -51,6 +51,10 @@ public:
         return py::str(thisArray);
     }
 
+    AnyArray* deepcopy() {
+        return new NumpyArray_t<T>(pyarray_deepcopy(thisArray));
+    }
+
     ssize_t len() {
         return thisArray.request().size;
     }

@@ -131,3 +131,15 @@ py::array_t<T> slice_numpy(py::array_t<T> input, ssize_t start, ssize_t length, 
     temp_info.shape[0] = temp_info.size;
     return py::array_t<T>(temp_info);
 }
+
+template <typename T>
+py::array_t<T> pyarray_deepcopy(py::array_t<T> input) {
+    auto newArray = py::array_t<T>(input.request().size);
+    auto newArray_ptr = (T*)newArray.request().ptr;
+    auto input_ptr = (T*)input.request().ptr;
+    int N = input.request().strides[0] / input.request().itemsize;
+    for (ssize_t i = 0; i < input.request().size; i++) {
+        newArray_ptr[i] = input_ptr[i * N];
+    }
+    return newArray;
+}
