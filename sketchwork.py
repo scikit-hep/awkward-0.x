@@ -1121,9 +1121,13 @@ a.std(ddof=1)
 
 # **Functions:**
 #
-# * ``awkward.fromiter(???)``
-# * ``awkward.concatenate(arrays, axis=0)`` FIXME
-# * ``awkward.topandas()``
+# * ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False)``
+# * ``awkward.fromiterchunks(iterable, chunksize, awkwardlib=None, dictencoding=False)``
+# * ``awkward.concatenate(arrays, axis=0)`` TBD
+# * ``awkward.zip(columns...)`` TBD
+# * ``awkward.toarrow(array)``
+# * ``awkward.fromarrow(arrow, awkwardlib=None)``
+# * ``awkward.topandas(array, flatten=False)``
 
 # **Properties:**
 #
@@ -1135,22 +1139,33 @@ a.std(ddof=1)
 # * ``columns``
 # * ``i0`` through ``i9``
 # * ``counts``
+# * ``ismasked``
+# * ``isunmasked``
+# * ``istuple``
 
 # **Methods:**
 #
 # * All the reducers (see above).
+# * ``argmin()`` and ``argmax()``
 # * ``tolist``
 # * ``valid(exception=False, message=False)``
 # * ``unzip()``
 # * ``astype(dtype)``
-# * ``fillna(value)``
 # * ``copy(constructor arguments...)``
 # * ``deepcopy(constructor arguments...)``
 # * ``empty_like(constructor arguments...)``
 # * ``zeros_like(constructor arguments...)``
 # * ``ones_like(constructor arguments...)``
+# * ``boolmask(maskedwhen=True)``
+# * ``fillna(value)``
 # * ``regular()``
 # * ``choose(n)`` and ``argchoose(n)``
+# * ``distincts()`` and ``argdistincts()``
+# * ``pairs()`` and ``argpairs()``
+# * ``cross(other)`` and ``argcross(other)``
+# * ``flatten()``
+# * ``pad(length, maskedwhen=True, clip=False)``
+# * ``flattentuple()``
 
 # %%markdown
 # **Global switches:**
@@ -1191,15 +1206,6 @@ except Exception as err:
 
 # %%
 a
-
-# %%markdown
-# ## Jagged properties and methods
-
-# %%markdown
-# ## Tabular properties and methods
-
-# %%markdown
-# ## Nullable properties and methods
 
 # %%markdown
 # # High-level types
