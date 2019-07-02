@@ -888,6 +888,43 @@ try:
 except Exception as err:
     print(type(err), str(err))
 
+# %%markdown
+# A table can be reduced if all of its fields are jagged or if all of its fields are not jagged; here's an example of the latter.
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
+a.tolist()
+
+# %%
+a.sum()
+
+# %%markdown
+# The resulting object is a scalar row—for your convenience, it has been labeled with the reducer that produced it.
+
+# %%
+isinstance(a.sum(), awkward.Table.Row)
+
+# %%markdown
+# ``UnionArrays`` are even more constrained: they can only be reduced if they have primitive (Numpy) type.
+
+# %%
+a = awkward.fromiter([1, 2, 3, {"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}])
+a
+
+# %%
+try:
+    a.sum()
+except Exception as err:
+    print(type(err), str(err))
+
+# %%
+a = awkward.UnionArray.fromtags([0, 0, 0, 1, 1],
+                                [numpy.array([1, 2, 3], dtype=numpy.int32),
+                                 numpy.array([4, 5], dtype=numpy.float64)])
+a
+
+# %%
+a.sum()
 
 # %%markdown
 # In all reducers, ``NaN`` in floating-point arrays and ``None`` in ``MaskedArrays`` are skipped, so these reducers are more like ``numpy.nansum``, ``numpy.nanmax``, and ``numpy.nanmin``, but generalized to all nullable types.

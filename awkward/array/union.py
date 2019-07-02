@@ -428,20 +428,16 @@ class UnionArray(awkward.array.base.AwkwardArray):
         return out
 
     def _hasjagged(self):
-        return all(self._util_hasjagged(x) for x in self._contents)
+        num = sum(1 if self._util_hasjagged(x) else 0 for x in self._contents)
+        if num == 0:
+            return False
+        elif num == len(self._contents):
+            return True
+        else:
+            raise ValueError("some UnionArray possibilities are jagged and others are not")
 
     def _reduce(self, ufunc, identity, dtype):
-        if self._hasjagged():
-            return self.copy(contents=[x._reduce(ufunc, identity, dtype) for x in self._contents])
-
-        elif self.columns != []:
-            out = awkward.array.table.Table()
-            for n in self.columns:
-                out[n] = self.copy(content=self[n])
-            return out._reduce(ufunc, identity, dtype)
-
-        else:
-            return ufunc.reduce(self._prepare(identity, dtype))
+        return ufunc.reduce(self._prepare(identity, dtype))
 
     def _prepare(self, identity, dtype):
         if dtype is None and issubclass(self.dtype.type, (self.numpy.bool_, self.numpy.bool)):
@@ -454,6 +450,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
         for tag, content in enumerate(self._contents):
             if not isinstance(content, self.numpy.ndarray):
                 content = content._prepare(identity, dtype)
+
+            if not isinstance(content, self.numpy.ndarray):
+                raise TypeError("cannot reduce a UnionArray of non-primitive type")
 
             mask = (self._tags == tag)
             c = content[index[mask]]
