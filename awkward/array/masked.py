@@ -314,8 +314,23 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
         if ufunc is None:
             content[self.ismasked] = self.numpy.nan
+
         else:
+            dtype = content.dtype
+
+            if identity == self.numpy.inf:
+                if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                    identity = True
+                elif self._util_isintegertype(dtype.type):
+                    identity = self.numpy.iinfo(dtype.type).max
+            elif identity == -self.numpy.inf:
+                if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                    identity = False
+                elif self._util_isintegertype(dtype.type):
+                    identity = self.numpy.iinfo(dtype.type).min
+
             content[self.ismasked] = identity
+
         return content
 
     def fillna(self, value):
@@ -743,6 +758,18 @@ class IndexedMaskedArray(MaskedArray):
                 content = self._content.astype(dtype)
         else:
             content = self._content._prepare(ufunc, identity, dtype)
+
+        if identity == self.numpy.inf:
+            if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                identity = True
+            elif self._util_isintegertype(dtype.type):
+                identity = self.numpy.iinfo(dtype.type).max
+
+        elif identity == -self.numpy.inf:
+            if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                identity = False
+            elif self._util_isintegertype(dtype.type):
+                identity = self.numpy.iinfo(dtype.type).min
 
         out = self.numpy.full(self._mask.shape + content.shape[1:], identity, dtype=content.dtype)
         out[self.isunmasked] = content[self.mask[self.mask >= 0]]

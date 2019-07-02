@@ -963,6 +963,11 @@ a.sum()
 # %%
 a.reduce(sum_mod_10, 0)
 
+# %%
+# Missing (None) values are ignored.
+a = awkward.fromiter([[1, 2, None, 3], [], [None, None, None], [7, 8, 9, 10]])
+a.reduce(sum_mod_10, 0)
+
 # %%markdown
 # * ``array.any()``: boolean reducer, returns ``True`` if any (logical or) of the elements of an array are ``True``, returns ``False`` for empty arrays.
 
@@ -988,18 +993,46 @@ a = awkward.fromiter([[False, None], [True, None], [None]])
 a.all()
 
 # %%markdown
-# * ``array.count()``: returns the number of elements in an array, skipping ``None`` or ``NaN``.
+# * ``array.count()``: returns the (integer) number of elements in an array, skipping ``None`` or ``NaN``.
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.count()
 
 # %%markdown
-# * ``array.count_nonzero()``: returns the number of non-zero elements in an array, skipping ``None`` or ``NaN``.
+# * ``array.count_nonzero()``: returns the (integer) number of non-zero elements in an array, skipping ``None`` or ``NaN``.
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None, 0], [], [3.3, numpy.nan, 0]])
 a.count_nonzero()
+
+# %%markdown
+# * ``array.sum()``: returns the sum of each array, skipping ``None`` or ``NaN``, returning 0 for empty arrays.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
+a.sum()
+
+# %%markdown
+# * ``array.prod()``: returns the product (multiplication) of each array, skipping ``None`` or ``NaN``, returning 1 for empty arrays.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
+a.prod()
+
+# %%markdown
+# * ``array.min()``: returns the minimum number in each array, skipping ``None`` or ``NaN``, returning infinity or the largest possible integer for empty arrays. Numpy, on the other hand, raises an error.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
+a.min()
+
+# %%
+a = awkward.fromiter([[1, 2, None], [], [3]])
+a.min()
+
+# %%markdown
+# ``inf`` is the maximum possible floating point value and ``9223372036854775807`` is the maximum possible ``int64`` value. These are presented as the result of minimizing an empty list instead of errors because empty inner lists are common—you wouldn't want to test for it every time.
 
 
 
