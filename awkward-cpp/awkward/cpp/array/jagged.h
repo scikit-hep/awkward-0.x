@@ -546,8 +546,10 @@ public:
         if (starts_info.ndim != stops_info.ndim) {
             throw std::domain_error("starts and stops must have the same dimensionality");
         }
-        ssize_t start = (ssize_t)((std::int64_t*)starts_info.ptr)[index];
-        ssize_t stop = (ssize_t)((std::int64_t*)stops_info.ptr)[index];
+        int N_starts = starts_info.strides[0] / starts_info.itemsize;
+        int N_stops = stops_info.strides[0] / stops_info.itemsize;
+        ssize_t start = (ssize_t)((std::int64_t*)starts_info.ptr)[index * N_starts];
+        ssize_t stop = (ssize_t)((std::int64_t*)stops_info.ptr)[index * N_stops];
 
         return content->getitem(start, stop - start);
     }
@@ -557,6 +559,14 @@ public:
             index += starts.request().size;
         }
         return getitem(index)->unwrap();
+    }
+
+    py::object tolist() {
+        py::list out;
+        for (ssize_t i = 0; i < len(); i++) {
+            out.append(getitem(i)->tolist());
+        }
+        return out;
     }
 
     std::string str() {

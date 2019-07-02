@@ -29,6 +29,8 @@ public:
 
     py::object unwrap() { return py::cast(thisScalar); }
 
+    py::object tolist() { return unwrap(); }
+
     std::string str() {
         return py::str(unwrap());
     }
@@ -65,6 +67,14 @@ public:
 
     AnyOutput* getitem(ssize_t i) {
         return new NumpyScalar_t<T>(((T*)thisArray.request().ptr)[i]);
+    }
+
+    py::object tolist() {
+        py::list out;
+        for (ssize_t i = 0; i < len(); i++) {
+            out.append(getitem(i)->tolist());
+        }
+        return out;
     }
 
     NumpyArray_t<T>(py::array_t<T> input) { thisArray = input; }

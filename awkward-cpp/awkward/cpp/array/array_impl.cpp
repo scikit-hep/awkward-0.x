@@ -18,6 +18,7 @@ PYBIND11_MODULE(array_impl, m) {
         .def_static("fromjagged", &JaggedArray::fromjagged)
         .def("copy", &JaggedArray::copy)
         .def("deepcopy", &JaggedArray::deepcopy)
+        .def("tolist", &JaggedArray::tolist)
         .def("__getitem__", (py::object (JaggedArray::*)(ssize_t)) &JaggedArray::python_getitem)
         .def("__getitem__", (py::object (JaggedArray::*)(ssize_t, ssize_t, ssize_t)) &JaggedArray::python_getitem)
         .def("__str__", &JaggedArray::str)

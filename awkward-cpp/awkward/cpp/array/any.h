@@ -10,6 +10,7 @@ public:
     virtual AnyOutput*  getitem(ssize_t)                             = 0;
     virtual py::object  unwrap()                                     = 0;
     virtual std::string str()                                        = 0;
+    virtual py::object  tolist()                                     = 0;
 };
 
 class AnyArray : public AnyOutput {
