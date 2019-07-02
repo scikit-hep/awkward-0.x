@@ -45,8 +45,8 @@ ext_modules = [
         language='c++'
     ),
     Extension(
-        'awkward.cpp.array.table',
-        [os.path.join("awkward", "cpp", "array", "table.cpp")],
+        'awkward.cpp.array._table',
+        [os.path.join("awkward", "cpp", "array", "_table.cpp")],
         include_dirs=[
             # Path to pybind11 headers
             get_pybind_include(),
