@@ -40,7 +40,6 @@ awkward_cpp = pytest.importorskip("awkward.cpp")
 
 class Test(unittest.TestCase):
     def runTest(self):
-<<<<<<< HEAD
         pass
     def test_cpp_table_init(self):
         a = [0, 1, 2]
