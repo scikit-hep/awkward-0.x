@@ -537,9 +537,6 @@ public:
     AnyArray* getitem(ssize_t index) {
         py::buffer_info starts_info = starts.request();
         py::buffer_info stops_info = stops.request();
-        if (index < 0) {
-            index = starts_info.size + index;
-        }
         if (starts_info.size > stops_info.size) {
             throw std::out_of_range("starts must have the same or shorter length than stops");
         }
@@ -556,6 +553,9 @@ public:
     }
 
     py::object python_getitem(ssize_t index) {
+        if (index < 0) {
+            index += starts.request().size;
+        }
         return getitem(index)->unwrap();
     }
 

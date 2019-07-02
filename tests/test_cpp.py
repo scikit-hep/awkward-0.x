@@ -92,30 +92,28 @@ class Test(unittest.TestCase):
         test = awkward.cpp.JaggedArray(a, b, c)
         assert str(test) == "[[1] [4 5 6 7 8] [1 2 3 4] [0 1 2 3 4 5 6 7 8 9]]"
 
-    def test_cpp_getitem_neg01(self):
+    def test_cpp_init_neg01(self):
         a = numpy.array([1, 2, 3, 4])
         b = numpy.array([2, 3, 4])
         c = numpy.arange(10)
-        test = awkward.cpp.JaggedArray(a, b, c)
         thrown = False
         try:
-            d = test[0]
-        except IndexError as e:
-            if str(e) != "starts must have the same or shorter length than stops":
+            test = awkward.cpp.JaggedArray(a, b, c)
+        except ValueError as e:
+            if str(e) != "starts must have the same (or shorter) length than stops":
                 raise
             thrown = True
         assert thrown
 
-    def test_cpp_getitem_neg02(self):
+    def test_cpp_init_neg02(self):
         a = numpy.array([0, 1, 2])
         b = numpy.array([2, 3, 4])
         c = numpy.arange(2)
-        test = awkward.cpp.JaggedArray(a, b, c)
         thrown = False
         try:
-            d = test[2]
-        except IndexError as e:
-            if str(e) != "getitem must be in the bounds of the array":
+            test = awkward.cpp.JaggedArray(a, b, c)
+        except ValueError as e:
+            if str(e) != "The maximum of starts for non-empty elements must be less than the length of content":
                 raise
             thrown = True
         assert thrown
