@@ -888,13 +888,99 @@ a
 
 # %%markdown
 # ## Generic properties and methods
+#
+# All awkward arrays have the following properties and methods.
 
-# * ``type``
-# * ``dtype``
-# * ``shape``
-# * ``size``
-# * ``nbytes``
-# * ``tolist``
+# %%markdown
+# * ``type``: the high-level type of the array. (See below for a detailed description of high-level types.)
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+a.type
+
+# %%
+print(a.type)
+
+# * ``layout``: the low-level layout of the array. (See below for a detailed description of low-level layouts.)
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+a.layout
+
+# %%
+print(a.layout)
+
+# * ``dtype``: the `Numpy dtype <https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html>`__ that this array would have if cast as a Numpy array. Numpy dtypes cannot fully specify awkward arrays: use the ``type`` for an analyst-friendly description of the data type or ``layout`` for details about how the arrays are represented.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+a.dtype   # the closest Numpy dtype to a jagged array is dtype=object ('O')
+
+# %%
+numpy.array(a)
+
+# * ``shape``: the `Numpy shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.shape.html>`__ that this array would have if cast as a Numpy array. This only specifies the first regular dimensions, not any jagged dimensions or regular dimensions nested within awkward structures. The Python length (``__len__``) of the array is the first element of this ``shape``.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+a.shape
+
+# %%
+len(a)
+
+# %%markdown
+# The following ``JaggedArray`` has two fixed-size dimensions at the top, followed by a jagged dimension inside of that. The shape only represents the first few dimensions.
+
+# %%
+a = awkward.JaggedArray.fromcounts([[3, 0], [2, 4]], [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+a
+
+# %%
+a.shape
+
+# %%
+len(a)
+
+# %%
+print(a.type)
+
+# %%markdown
+# Also, a dimension can effectively be fixed-size, but represented by a ``JaggedArray``. The ``shape`` does not encompass any dimensions represented by a ``JaggedArray``.
+
+# %%
+# Same structure, but it's JaggedArrays all the way down.
+b = a.structure1d()
+b
+
+# %%
+b.shape
+
+# * ``size``: the product of ``shape``, as in Numpy.
+
+# %%
+a.shape
+
+# %%
+a.size
+
+# * ``nbytes``: the total number of bytes in all memory buffers referenced by the array, not including bytes in Python objects (which are Python-implementation dependent, not even available in PyPy). Same as the Numpy property of the same name.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+a.nbytes
+
+# %%
+a.offsets.nbytes + a.content.nbytes
+
+# * ``tolist()``: converts the array into Python objects: ``lists`` for arrays, ``dicts`` for table rows, ``tuples`` for table rows with anonymous fields and a ``rowname`` of ``"tuple"``, ``None`` for missing data, and Python objects from ``ObjectArrays``. This is an approximate inverse of ``awkward.fromiter``.
+
+# %%
+awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]).tolist()
+
+
+
+
+
 # * ``valid(exception=False, message=False)``
 # * ``astype(dtype)``
 # * ``regular()``
@@ -907,9 +993,9 @@ a
 # %%markdown
 # ## Reducers
 #
-# Another set of important functions in Numpy are not called out as a special type, though they fit a common pattern and have an important role. Functions like ``sum``, ``min``, and ``max`` are reducers: they decrease the rank of a Numpy array by summarizing it with its sum, minimum value, or maximum value, or any other monoid (associative operation with an identity). These reducer functions are also methods on array objects.
+# All awkward arrays also have a complete set of reducer methods. Reducers can be found in Numpy as well (as array methods and as free-standing functions), but they're not called out as a special class the way that universal functions ("ufuncs") are. Reducers decrease the rank or jaggedness of an array by one dimension, replacing subarrays with scalars. Examples include ``sum``, ``min``, and ``max``, but any monoid (associative operation with an identity) can be a reducer.
 #
-# Generalizing to awkward arrays, reducers decrease the rank or jaggedness of an awkward array. Unlike Numpy reducers, which can be applied to any (regularly sized) axis, awkward reducers always apply to the deepest axis.
+# In awkward-array, reducers are only array methods (not free-standing functions) and unlike Numpy, they do not take an ``axis`` parameter. When a reducer is called at any level, it reduces the innermost dimension. (Since outer dimensions can be jagged, this is the only dimension that can be meaningfully reduced.)
 
 # %%
 a = awkward.fromiter([[[[1, 2], [3]], [[4, 5]]], [[[], [6, 7, 8, 9]]]])
@@ -1005,7 +1091,7 @@ a.sum().tolist()
 # The following reducers are defined as methods on all awkward arrays.
 
 # %%markdown
-# * ``array.reduce(ufunc, identity)``: generic reducer, calls ``ufunc.reduceat`` and returns ``identity`` for empty arrays.
+# * ``reduce(ufunc, identity)``: generic reducer, calls ``ufunc.reduceat`` and returns ``identity`` for empty arrays.
 
 # %%
 # numba.vectorize makes new ufuncs (requires type signatures and a kernel function)
@@ -1027,7 +1113,7 @@ a = awkward.fromiter([[1, 2, None, 3], [], [None, None, None], [7, 8, 9, 10]])
 a.reduce(sum_mod_10, 0)
 
 # %%markdown
-# * ``array.any()``: boolean reducer, returns ``True`` if any (logical or) of the elements of an array are ``True``, returns ``False`` for empty arrays.
+# * ``any()``: boolean reducer, returns ``True`` if any (logical or) of the elements of an array are ``True``, returns ``False`` for empty arrays.
 
 # %%
 a = awkward.fromiter([[False, False], [True, True], [True, False], []])
@@ -1039,7 +1125,7 @@ a = awkward.fromiter([[False, None], [True, None], [None]])
 a.any()
 
 # %%markdown
-# * ``array.all()``: boolean reducer, returns ``True`` if all (logical and) of the elements of an array are ``True``, returns ``True`` for empty arrays.
+# * ``all()``: boolean reducer, returns ``True`` if all (logical and) of the elements of an array are ``True``, returns ``True`` for empty arrays.
 
 # %%
 a = awkward.fromiter([[False, False], [True, True], [True, False], []])
@@ -1051,35 +1137,35 @@ a = awkward.fromiter([[False, None], [True, None], [None]])
 a.all()
 
 # %%markdown
-# * ``array.count()``: returns the (integer) number of elements in an array, skipping ``None`` and ``NaN``.
+# * ``count()``: returns the (integer) number of elements in an array, skipping ``None`` and ``NaN``.
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.count()
 
 # %%markdown
-# * ``array.count_nonzero()``: returns the (integer) number of non-zero elements in an array, skipping ``None`` and ``NaN``.
+# * ``count_nonzero()``: returns the (integer) number of non-zero elements in an array, skipping ``None`` and ``NaN``.
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None, 0], [], [3.3, numpy.nan, 0]])
 a.count_nonzero()
 
 # %%markdown
-# * ``array.sum()``: returns the sum of each array, skipping ``None`` and ``NaN``, returning 0 for empty arrays.
+# * ``sum()``: returns the sum of each array, skipping ``None`` and ``NaN``, returning 0 for empty arrays.
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.sum()
 
 # %%markdown
-# * ``array.prod()``: returns the product (multiplication) of each array, skipping ``None`` and ``NaN``, returning 1 for empty arrays.
+# * ``prod()``: returns the product (multiplication) of each array, skipping ``None`` and ``NaN``, returning 1 for empty arrays.
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.prod()
 
 # %%markdown
-# * ``array.min()``: returns the minimum number in each array, skipping ``None`` and ``NaN``, returning infinity or the largest possible integer for empty arrays. (Note that Numpy raises errors for empty arrays.)
+# * ``min()``: returns the minimum number in each array, skipping ``None`` and ``NaN``, returning infinity or the largest possible integer for empty arrays. (Note that Numpy raises errors for empty arrays.)
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
@@ -1093,7 +1179,7 @@ a.min()
 # The identity of minimization is ``inf`` for floating-point values and ``9223372036854775807`` for ``int64`` because minimization with any other value would return the other value. This is more convenient for data analysts than raising an error because empty inner arrays are common.
 
 # %%markdown
-# * ``array.max()``: returns the maximum number in each array, skipping ``None`` and ``NaN``, returning negative infinity or the smallest possible integer for empty arrays. (Note that Numpy raises errors for empty arrays.)
+# * ``max()``: returns the maximum number in each array, skipping ``None`` and ``NaN``, returning negative infinity or the smallest possible integer for empty arrays. (Note that Numpy raises errors for empty arrays.)
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
@@ -1119,7 +1205,7 @@ a.max()
 # Functions like mean and standard deviation aren't true reducers because they're not associative (``mean(mean(x1, x2, x3), mean(x4, x5))`` is not equal to ``mean(mean(x1, x2), mean(x3, x4, x5))``). However, they're useful methods that exist on all awkward arrays, defined in terms of reducers.
 
 # %%markdown
-# * ``array.moment(n, weight=None)``: returns the ``n``th moment of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays. If ``weight`` is given, it is taken as an array of weights, which may have the same structure as the ``array`` or be broadcastable to it, though any broadcasted weights would have no effect on the moment.
+# * ``moment(n, weight=None)``: returns the ``n``th moment of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays. If ``weight`` is given, it is taken as an array of weights, which may have the same structure as the ``array`` or be broadcastable to it, though any broadcasted weights would have no effect on the moment.
 
 # %%
 a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
@@ -1149,14 +1235,14 @@ a.moment(1, numpy.array([100, 200, 300]))
 a.moment(1, awkward.fromiter([[1, 10, 100], [], [0, 100]]))
 
 # %%markdown
-# * ``array.mean(weight=None)``: returns the mean of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays, using optional ``weight`` as above.
+# * ``mean(weight=None)``: returns the mean of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays, using optional ``weight`` as above.
 
 # %%
 a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
 a.mean()
 
 # %%markdown
-# * ``array.var(weight=None, ddof=0)``: returns the variance of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays, using optional ``weight`` as above. The ``ddof`` or "Delta Degrees of Freedom" replaces a divisor of ``N`` (count or sum of weights) with a divisor of ``N - ddof``, following `numpy.var <https://docs.scipy.org/doc/numpy/reference/generated/numpy.var.html>`__.
+# * ``var(weight=None, ddof=0)``: returns the variance of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays, using optional ``weight`` as above. The ``ddof`` or "Delta Degrees of Freedom" replaces a divisor of ``N`` (count or sum of weights) with a divisor of ``N - ddof``, following `numpy.var <https://docs.scipy.org/doc/numpy/reference/generated/numpy.var.html>`__.
 
 # %%
 a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
@@ -1166,7 +1252,7 @@ a.var()
 a.var(ddof=1)
 
 # %%markdown
-# * ``array.std(weight=None, ddof=0)``: returns the standard deviation of each array, the square root of the variance described above.
+# * ``std(weight=None, ddof=0)``: returns the standard deviation of each array, the square root of the variance described above.
 
 # %%
 a.std()
@@ -1225,10 +1311,10 @@ a.std(ddof=1)
 # TODO: copy this wholesale from the specification.adoc.
 
 # %%markdown
-# # Low-level array layout
+# # Low-level layouts
 
 # %%markdown
-# # Low-level representations
+# # Details of array representations
 
 # %%markdown
 # ## JaggedArray: variable-length lists
