@@ -192,14 +192,30 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                 return self.numpy.true_divide(((self * weight)**n).sum(), (self * 0 + weight).sum())
 
     def mean(self, weight=None):
-        return self.moment(1, weight=weight)
-
-    def var(self, weight=None):
-        return self.moment(2, weight=weight) - self.moment(1, weight=weight)**2
-
-    def std(self, weight=None):
         with self.numpy.errstate(invalid="ignore"):
-            return self.numpy.sqrt(self.var(weight=weight))
+            if weight is None:
+                return self.numpy.true_divide(self.sum(), self.count())
+            else:
+                return self.numpy.true_divide((self * weight).sum(), (self * 0 + weight).sum())
+
+    def var(self, weight=None, ddof=0):
+        with self.numpy.errstate(invalid="ignore"):
+            if weight is None:
+                denom = self.count()
+                one = self.numpy.true_divide(self.sum(), denom)
+                two = self.numpy.true_divide((self**2).sum(), denom)
+            else:
+                denom (self * 0 + weight).sum()
+                one = self.numpy.true_divide((self * weight).sum(), denom)
+                two = self.numpy.true_divide(((self * weight)**2).sum(), denom)
+            if ddof != 0:
+                return (two - one**2) * denom / (denom - ddof)
+            else:
+                return two - one**2
+
+    def std(self, weight=None, ddof=0):
+        with self.numpy.errstate(invalid="ignore"):
+            return self.numpy.sqrt(self.var(weight=weight, ddof=ddof))
 
     def __getattr__(self, where):
         if where in dir(super(AwkwardArray, self)):

@@ -849,7 +849,7 @@ except Exception as err:
 # %%markdown
 # ## Reducers
 #
-# Another set of important functions in Numpy are not called out as a special type, though they fit a common pattern and have an important role. Functions like ``sum``, ``min``, and ``max`` are reducers: they decrease the rank of a Numpy array by summarizing it with its sum, minimum value, or maximum value. These reducers are also methods on array objects.
+# Another set of important functions in Numpy are not called out as a special type, though they fit a common pattern and have an important role. Functions like ``sum``, ``min``, and ``max`` are reducers: they decrease the rank of a Numpy array by summarizing it with its sum, minimum value, or maximum value, or any other monoid (associative operation with an identity). These reducer functions are also methods on array objects.
 #
 # Generalizing to awkward arrays, reducers decrease the rank or jaggedness of an awkward array. Unlike Numpy reducers, which can be applied to any (regularly sized) axis, awkward reducers always apply to the deepest axis.
 
@@ -993,35 +993,35 @@ a = awkward.fromiter([[False, None], [True, None], [None]])
 a.all()
 
 # %%markdown
-# * ``array.count()``: returns the (integer) number of elements in an array, skipping ``None`` or ``NaN``.
+# * ``array.count()``: returns the (integer) number of elements in an array, skipping ``None`` and ``NaN``.
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.count()
 
 # %%markdown
-# * ``array.count_nonzero()``: returns the (integer) number of non-zero elements in an array, skipping ``None`` or ``NaN``.
+# * ``array.count_nonzero()``: returns the (integer) number of non-zero elements in an array, skipping ``None`` and ``NaN``.
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None, 0], [], [3.3, numpy.nan, 0]])
 a.count_nonzero()
 
 # %%markdown
-# * ``array.sum()``: returns the sum of each array, skipping ``None`` or ``NaN``, returning 0 for empty arrays.
+# * ``array.sum()``: returns the sum of each array, skipping ``None`` and ``NaN``, returning 0 for empty arrays.
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.sum()
 
 # %%markdown
-# * ``array.prod()``: returns the product (multiplication) of each array, skipping ``None`` or ``NaN``, returning 1 for empty arrays.
+# * ``array.prod()``: returns the product (multiplication) of each array, skipping ``None`` and ``NaN``, returning 1 for empty arrays.
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.prod()
 
 # %%markdown
-# * ``array.min()``: returns the minimum number in each array, skipping ``None`` or ``NaN``, returning infinity or the largest possible integer for empty arrays. Numpy, on the other hand, raises an error.
+# * ``array.min()``: returns the minimum number in each array, skipping ``None`` and ``NaN``, returning infinity or the largest possible integer for empty arrays. (Note that Numpy raises errors for empty arrays.)
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
@@ -1032,12 +1032,89 @@ a = awkward.fromiter([[1, 2, None], [], [3]])
 a.min()
 
 # %%markdown
-# ``inf`` is the maximum possible floating point value and ``9223372036854775807`` is the maximum possible ``int64`` value. These are presented as the result of minimizing an empty list instead of errors because empty inner lists are common—you wouldn't want to test for it every time.
+# The identity of minimization is ``inf`` for floating-point values and ``9223372036854775807`` for ``int64`` because minimization with any other value would return the other value. This is more convenient for data analysts than raising an error because empty inner arrays are common.
 
+# %%markdown
+# * ``array.max()``: returns the maximum number in each array, skipping ``None`` and ``NaN``, returning negative infinity or the smallest possible integer for empty arrays. (Note that Numpy raises errors for empty arrays.)
 
+# %%
+a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
+a.max()
 
+# %%
+a = awkward.fromiter([[1, 2, None], [], [3]])
+a.max()
 
+# %%markdown
+# The identity of maximization is ``-inf`` for floating-point values and ``-9223372036854775808`` for ``int64`` because maximization with any other value would return the other value. This is more convenient for data analysts than raising an error because empty inner arrays are common.
+#
+# Note that the maximization-identity for unsigned types is ``0``.
 
+# %%
+a = awkward.JaggedArray.fromcounts([3, 0, 2], numpy.array([1.1, 2.2, 3.3, 4.4, 5.5], dtype=numpy.uint16))
+a
+
+# %%
+a.max()
+
+# %%markdown
+# Functions like mean and standard deviation aren't true reducers because they're not associative (``mean(mean(x1, x2, x3), mean(x4, x5))`` is not equal to ``mean(mean(x1, x2), mean(x3, x4, x5))``). However, they're useful methods that exist on all awkward arrays, defined in terms of reducers.
+
+# %%markdown
+# * ``array.moment(n, weight=None)``: returns the ``n``th moment of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays. If ``weight`` is given, it is taken as an array of weights, which may have the same structure as the ``array`` or be broadcastable to it, though any broadcasted weights would have no effect on the moment.
+
+# %%
+a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
+
+# %%
+a.moment(1)
+
+# %%
+a.moment(2)
+
+# %%markdown
+# Here is the first moment (mean) with a weight broadcasted from a scalar and from a non-jagged array, to show how it doesn't affect the result. The moment is calculated over an inner array, so if a constant value is broadcasted to all elements of that inner array, they all get the same weight.
+
+# %%
+a.moment(1)
+
+# %%
+a.moment(1, 100)
+
+# %%
+a.moment(1, numpy.array([100, 200, 300]))
+
+# %%markdown
+# Only when the weight varies across an inner array does it have an effect.
+
+# %%
+a.moment(1, awkward.fromiter([[1, 10, 100], [], [0, 100]]))
+
+# %%markdown
+# * ``array.mean(weight=None)``: returns the mean of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays, using optional ``weight`` as above.
+
+# %%
+a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
+a.mean()
+
+# %%markdown
+# * ``array.var(weight=None, ddof=0)``: returns the variance of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays, using optional ``weight`` as above. The ``ddof`` or "Delta Degrees of Freedom" replaces a divisor of ``N`` (count or sum of weights) with a divisor of ``N - ddof``, following `numpy.var <https://docs.scipy.org/doc/numpy/reference/generated/numpy.var.html>`__.
+
+# %%
+a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
+a.var()
+
+# %%
+a.var(ddof=1)
+
+# %%markdown
+# * ``array.std(weight=None, ddof=0)``: returns the standard deviation of each array, the square root of the variance described above.
+
+# %%
+a.std()
+
+# %%
+a.std(ddof=1)
 
 # %%markdown
 # ## Free-standing functions, common properties and methods
