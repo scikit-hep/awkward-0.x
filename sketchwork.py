@@ -847,6 +847,64 @@ except Exception as err:
     print(type(err), str(err))
 
 # %%markdown
+# ## Global switches
+#
+# The ``AwkwardArray`` abstract base class has the following switches to turn off sometmes-undesirable behavior. These switches could be set on the ``AwkwardArray`` class itself, affecting all awkward arrays, or they could be set on a particular class like ``JaggedArray`` to only affect ``JaggedArray`` instances, or they could be set on a particular instance, to affect only that instance.
+#
+# * ``allow_tonumpy`` (default is ``True``); if ``False``, forbid any action that would convert an awkward array into a Numpy array (with a likely loss of performance and functionality).
+# * ``allow_iter`` (default is ``True``); if ``False``, forbid any action that would iterate over an awkward array in Python (except printing a few elements as part of its string representation).
+# * ``check_prop_valid`` (default is ``True``); if ``False``, skip the single-property validity checks in array constructors and when setting properties.
+# * ``check_whole_valid`` (default is ``True``); if ``False``, skip the whole-array validity checks that are typically called before methods that need them.
+
+# %%
+awkward.AwkwardArray.check_prop_valid
+
+# %%
+awkward.JaggedArray.check_whole_valid
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+numpy.array(a)
+
+# %%
+a.allow_tonumpy = False
+try:
+    numpy.array(a)
+except Exception as err:
+    print(type(err), str(err))
+
+# %%
+list(a)
+
+# %%
+a.allow_iter = False
+try:
+    list(a)
+except Exception as err:
+    print(type(err), str(err))
+
+# %%
+a
+
+# %%markdown
+# ## Generic properties and methods
+
+# * ``type``
+# * ``dtype``
+# * ``shape``
+# * ``size``
+# * ``nbytes``
+# * ``tolist``
+# * ``valid(exception=False, message=False)``
+# * ``astype(dtype)``
+# * ``regular()``
+# * ``copy(optional constructor arguments...)``
+# * ``deepcopy(optional constructor arguments...)``
+# * ``empty_like(optional constructor arguments...)``
+# * ``zeros_like(optional constructor arguments...)``
+# * ``ones_like(optional constructor arguments...)``
+
+# %%markdown
 # ## Reducers
 #
 # Another set of important functions in Numpy are not called out as a special type, though they fit a common pattern and have an important role. Functions like ``sum``, ``min``, and ``max`` are reducers: they decrease the rank of a Numpy array by summarizing it with its sum, minimum value, or maximum value, or any other monoid (associative operation with an identity). These reducer functions are also methods on array objects.
@@ -1117,95 +1175,49 @@ a.std()
 a.std(ddof=1)
 
 # %%markdown
-# ## Free-standing functions, common properties and methods
+# ## Properties and methods for jaggedness
 
-# **Functions:**
-#
-# * ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False)``
-# * ``awkward.fromiterchunks(iterable, chunksize, awkwardlib=None, dictencoding=False)``
-# * ``awkward.concatenate(arrays, axis=0)`` TBD
-# * ``awkward.zip(columns...)`` TBD
-# * ``awkward.toarrow(array)``
-# * ``awkward.fromarrow(arrow, awkwardlib=None)``
-# * ``awkward.topandas(array, flatten=False)``
-
-# **Properties:**
-#
-# * ``type``
-# * ``dtype``
-# * ``shape``
-# * ``size``
-# * ``nbytes``
-# * ``columns``
-# * ``i0`` through ``i9``
 # * ``counts``
-# * ``ismasked``
-# * ``isunmasked``
-# * ``istuple``
-
-# **Methods:**
-#
-# * All the reducers (see above).
+# * ``flatten()``
+# * ``pad(length, maskedwhen=True, clip=False)``
 # * ``argmin()`` and ``argmax()``
-# * ``tolist``
-# * ``valid(exception=False, message=False)``
-# * ``unzip()``
-# * ``astype(dtype)``
-# * ``copy(constructor arguments...)``
-# * ``deepcopy(constructor arguments...)``
-# * ``empty_like(constructor arguments...)``
-# * ``zeros_like(constructor arguments...)``
-# * ``ones_like(constructor arguments...)``
-# * ``boolmask(maskedwhen=True)``
-# * ``fillna(value)``
-# * ``regular()``
 # * ``choose(n)`` and ``argchoose(n)``
 # * ``distincts()`` and ``argdistincts()``
 # * ``pairs()`` and ``argpairs()``
 # * ``cross(other)`` and ``argcross(other)``
-# * ``flatten()``
-# * ``pad(length, maskedwhen=True, clip=False)``
+# * ``JaggedArray.zip(columns...)``
+# * ``JaggedArray.concatenate(arrays, axis=0)``
+
+# %%markdown
+# ## Properties and methods for tabular columns
+
+# * ``columns``
+# * ``unzip()``
+# * ``istuple``
+# * ``i0`` through ``i9``
 # * ``flattentuple()``
 
 # %%markdown
-# **Global switches:**
-#
-# The ``AwkwardArray`` abstract base class has the following switches to turn off sometmes-undesirable behavior. These switches could be set on the ``AwkwardArray`` class itself, affecting all awkward arrays, or they could be set on a particular class like ``JaggedArray`` to only affect ``JaggedArray`` instances, or they could be set on a particular instance, to affect only that instance.
-#
-# * ``allow_tonumpy`` (default is ``True``); if ``False``, forbid any action that would convert an awkward array into a Numpy array (with a likely loss of performance and functionality).
-# * ``allow_iter`` (default is ``True``); if ``False``, forbid any action that would iterate over an awkward array in Python (except printing a few elements as part of its string representation).
-# * ``check_prop_valid`` (default is ``True``); if ``False``, skip the single-property validity checks in array constructors and when setting properties.
-# * ``check_whole_valid`` (default is ``True``); if ``False``, skip the whole-array validity checks that are typically called before methods that need them.
+# ## Properties and methods for missing values
 
-# %%
-awkward.AwkwardArray.check_prop_valid
+# * ``boolmask(maskedwhen=True)``
+# * ``ismasked``
+# * ``isunmasked``
+# * ``fillna(value)``
 
-# %%
-awkward.JaggedArray.check_whole_valid
+# %%markdown
+# # Input/output functions
 
-# %%
-a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-numpy.array(a)
-
-# %%
-a.allow_tonumpy = False
-try:
-    numpy.array(a)
-except Exception as err:
-    print(type(err), str(err))
-
-# %%
-list(a)
-
-# %%
-a.allow_iter = False
-try:
-    list(a)
-except Exception as err:
-    print(type(err), str(err))
-
-# %%
-a
+# * ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False)``
+# * ``awkward.fromiterchunks(iterable, chunksize, awkwardlib=None, dictencoding=False)``
+# * ``load(file, awkwardlib=None, whitelist=awkward.persist.whitelist, cache=None, schemasuffix=".json")``
+# * ``save(file, array, name=None, mode="a", compression=awkward.persist.compression, delimiter="-", suffix=".raw", schemasuffix=".json")``
+# * ``hdf5(group, awkwardlib=None, compression=awkward.persist.compression, whitelist=awkward.persist.whitelist, cache=None)``
+# * ``awkward.fromarrow(arrow, awkwardlib=None)``
+# * ``awkward.toarrow(array)``
+# * ``awkward.fromparquet(where, awkwardlib=None, schema=None)`` FIXME
+# * ``awkward.toparquet(where, array, schema=None)``
+# * ``awkward.topandas(array, flatten=False)``
 
 # %%markdown
 # # High-level types
@@ -1216,7 +1228,7 @@ a
 # # Low-level array layout
 
 # %%markdown
-# # Details for each awkward array class
+# # Low-level representations
 
 # %%markdown
 # ## JaggedArray: variable-length lists
@@ -1252,37 +1264,19 @@ a
 # ## VirtualArray: data on demand
 
 # %%markdown
-# # Serialization: reading and writing data
+# # Details of serialization
 
 # %%markdown
-# ## JSON and Python data
+# # Applications
 
 # %%markdown
-# ## Awkward (awkd) files
+# ## Mixed-source data with persistvirtual
 
 # %%markdown
-# ## HDF5
+# ## Using Pandas with awkward arrays
 
 # %%markdown
-# ## Pickle
+# ## Using Numba with awkward arrays
 
 # %%markdown
-# ## Arrow
-
-# %%markdown
-# ## Parquet
-
-# %%markdown
-# ## ROOT
-
-# %%markdown
-# ## Persist virtual: mixed-source data
-
-# %%markdown
-# # Using Pandas with awkward arrays
-
-# %%markdown
-# # Using Numba with awkward arrays
-
-# %%markdown
-# # Flattening awkard arrays for machine learning
+# ## Flattening awkard arrays for machine learning
