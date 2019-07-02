@@ -769,6 +769,7 @@ jagged = [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
 flat = [100, 200, 300]
 for i in range(3):
     for j in range(len(jagged[i])):
+        # j varies in this loop, but i is constant
         print(i, j, jagged[i][j] + flat[i])
 
 # %%markdown
@@ -776,17 +777,84 @@ for i in range(3):
 
 # %%markdown
 # ## Support for Numpy universal functions (ufuncs)
+#
+# Numpy's key feature of array-at-a-time programming is mainly provided by "universal functions" or "ufuncs." This is a special class of function that applies a scalars → scalar kernel independently to aligned elements of internal arrays to return a same-shape output array. That is, for a scalars → scalar function ``f(x1, ..., xN) → y``, the ufunc takes ``N`` input arrays of the same ``shape`` and returns one output array with that ``shape`` in which ``output[i] = f(input1[i], ..., inputN[i])`` for all ``i``.
 
-# HERE HERE HERE HERE HERE HERE HERE HERE HERE HERE 
+# %%
+# N = 1
+numpy.sqrt(numpy.array([1, 4, 9, 16, 25]))
 
+# %%
+# N = 2
+numpy.add(numpy.array([[1.1, 2.2], [3.3, 4.4]]), numpy.array([[100, 200], [300, 400]]))
 
+# %%markdown
+# Keep in mind that a ufunc is not simply a function that has this property, but a specially named class, deriving from a type in the Numpy library.
 
+# %%
+numpy.sqrt, numpy.add
 
+# %%
+isinstance(numpy.sqrt, numpy.ufunc), isinstance(numpy.add, numpy.ufunc)
 
+# %%markdown
+# This class of functions can be overridden, and awkward-array overrides them to recognize and properly handle awkward arrays.
 
+# %%
+numpy.sqrt(awkward.fromiter([[1, 4, 9], [], [16, 25]]))
+
+# %%
+numpy.add(awkward.fromiter([[[1.1], 2.2], [], [3.3, None]]), awkward.fromiter([[[100], 200], [], [None, 300]]))
+
+# %%markdown
+# Only the primary action of the ufunc (``ufunc.__call__``) has been overridden; methods like ``ufunc.at``, ``ufunc.reduce``, and ``ufunc.reduceat`` are not supported. Also, the in-place ``out`` parameter is not supported because awkward array data cannot be changed in-place.
+#
+# For awkward arrays, the input arguments to a ufunc must all have the same structure or, if shallower, be broadcastable to the deepest structure. (See above for "broadcasting.") The scalar function is applied to elements at the same positions within this structure from different input arrays. The output array has this structure, populated by return values of the scalar function.
+#
+# * Rectangular arrays must have the same shape, just as in Numpy. A scalar can be broadcasted (expanded) to have the same shape as the arrays.
+# * Jagged arrays must have the same number of elements in all inner arrays. A rectangular array with the same outer shape (i.e. containing scalars instead of inner arrays) can be broadcasted to inner arrays with the same lengths.
+# * Tables must have the same sets of columns (though not necessarily in the same order). There is no broadcasting of missing columns.
+# * Missing values (``None`` from ``MaskedArrays``) transform to missing values in every ufunc. That is, ``None + 5`` is ``None``, ``None + None`` is ``None``, etc.
+# * Different data types (through a ``UnionArray``) must be compatible at every site where values are included in the calculation. For instance, input arrays may contain tables with different sets of columns, but all inputs at index ``i`` must have the same sets of columns as each other:
+
+# %%
+numpy.add(awkward.fromiter([{"x": 1, "y": 1.1}, {"y": 1.1, "z": 100}]),
+          awkward.fromiter([{"x": 3, "y": 3.3}, {"y": 3.3, "z": 300}])).tolist()
+
+# %%markdown
+# Unary and binary operations on awkward arrays, such as ``-x``, ``x + y``, and ``x**2``, are actually Numpy ufuncs, so all of the above applies to them as well (such as broadcasting the scalar ``2`` in ``x**2``).
+#
+# Remember that only ufuncs have been overridden by awkward-array: other Numpy functions such as ``numpy.concatenate`` are ignorant of awkward arrays and will attempt to convert them to Numpy first. In some cases, that may be what you want, but in many, especially any cases involving jagged arrays, it will be a major performance loss and a loss of functionality: jagged arrays turn into Numpy ``dtype=object`` arrays containing Numpy arrays, which can be a very large number of Python objects and doesn't behave as a multidimensional array.
+#
+# You can check to see if a function from Numpy is a ufunc with ``isinstance``.
+
+# %%
+isinstance(numpy.concatenate, numpy.ufunc)
+
+# %%markdown
+# and you can prevent accidental conversions to Numpy by setting ``allow_tonumpy`` to ``False``, either on one array or globally on a whole class of awkward arrays.
+
+# %%
+x = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+y = awkward.fromiter([[6.6, 7.7, 8.8], [9.9]])
+numpy.concatenate([x, y])
+
+# %%
+x.allow_tonumpy = False
+try:
+    numpy.concatenate([x, y])
+except Exception as err:
+    print(type(err), str(err))
 
 # %%markdown
 # ## Reducers
+
+# HERE
+
+
+
+
+
 
 # %%markdown
 # ## Free-standing functions, common properties and methods
