@@ -1119,6 +1119,79 @@ a.std(ddof=1)
 # %%markdown
 # ## Free-standing functions, common properties and methods
 
+# **Functions:**
+#
+# * ``awkward.fromiter(???)``
+# * ``awkward.concatenate(arrays, axis=0)`` FIXME
+# * ``awkward.topandas()``
+
+# **Properties:**
+#
+# * ``type``
+# * ``dtype``
+# * ``shape``
+# * ``size``
+# * ``nbytes``
+# * ``columns``
+# * ``i0`` through ``i9``
+# * ``counts``
+
+# **Methods:**
+#
+# * All the reducers (see above).
+# * ``tolist``
+# * ``valid(exception=False, message=False)``
+# * ``unzip()``
+# * ``astype(dtype)``
+# * ``fillna(value)``
+# * ``copy(constructor arguments...)``
+# * ``deepcopy(constructor arguments...)``
+# * ``empty_like(constructor arguments...)``
+# * ``zeros_like(constructor arguments...)``
+# * ``ones_like(constructor arguments...)``
+# * ``regular()``
+# * ``choose(n)`` and ``argchoose(n)``
+
+# %%markdown
+# **Global switches:**
+#
+# The ``AwkwardArray`` abstract base class has the following switches to turn off sometmes-undesirable behavior. These switches could be set on the ``AwkwardArray`` class itself, affecting all awkward arrays, or they could be set on a particular class like ``JaggedArray`` to only affect ``JaggedArray`` instances, or they could be set on a particular instance, to affect only that instance.
+#
+# * ``allow_tonumpy`` (default is ``True``); if ``False``, forbid any action that would convert an awkward array into a Numpy array (with a likely loss of performance and functionality).
+# * ``allow_iter`` (default is ``True``); if ``False``, forbid any action that would iterate over an awkward array in Python (except printing a few elements as part of its string representation).
+# * ``check_prop_valid`` (default is ``True``); if ``False``, skip the single-property validity checks in array constructors and when setting properties.
+# * ``check_whole_valid`` (default is ``True``); if ``False``, skip the whole-array validity checks that are typically called before methods that need them.
+
+# %%
+awkward.AwkwardArray.check_prop_valid
+
+# %%
+awkward.JaggedArray.check_whole_valid
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+numpy.array(a)
+
+# %%
+a.allow_tonumpy = False
+try:
+    numpy.array(a)
+except Exception as err:
+    print(type(err), str(err))
+
+# %%
+list(a)
+
+# %%
+a.allow_iter = False
+try:
+    list(a)
+except Exception as err:
+    print(type(err), str(err))
+
+# %%
+a
+
 # %%markdown
 # ## Jagged properties and methods
 
@@ -1135,9 +1208,6 @@ a.std(ddof=1)
 
 # %%markdown
 # # Low-level array layout
-
-# %%markdown
-# # Global switches
 
 # %%markdown
 # # Details for each awkward array class

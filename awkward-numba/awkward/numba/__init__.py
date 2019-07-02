@@ -4,6 +4,7 @@
 
 import numpy
 
+from awkward.numba.array.base import NumbaMethods
 from awkward.numba.array.chunked import ChunkedArrayNumba as ChunkedArray
 from awkward.numba.array.chunked import AppendableArrayNumba as AppendableArray
 from awkward.numba.array.indexed import IndexedArrayNumba as IndexedArray
@@ -33,4 +34,4 @@ def fromiterchunks(iterable, chunksize, awkwardlib=None, **options):
 # convenient access to the version number
 from awkward.version import __version__
 
-__all__ = ["ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "__version__"]
+__all__ = ["NumbaMethods", "ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "__version__"]

@@ -43,6 +43,9 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     BITMASKTYPE = numpy.dtype(numpy.uint8)
     BOOLTYPE    = numpy.dtype(numpy.bool_)
 
+    def __init__(self, *args, **kwds):
+        raise TypeError("{0} is an abstract base class; do not instantiate".format(type(self)))
+
     def _checktonumpy(self):
         if not self.allow_tonumpy:
             raise RuntimeError("awkward.array.base.AwkwardArray.allow_tonumpy is False; refusing to convert to Numpy")
@@ -120,7 +123,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     @property
     def size(self):
-        return len(self)
+        out = 1
+        for x in self.shape:
+            out *= x
+        return out
 
     @property
     def nbytes(self):
