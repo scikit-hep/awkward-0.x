@@ -173,6 +173,23 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def max(self):
         return self._reduce(self.numpy.maximum, -self.numpy.inf, None)
 
+    def moment(self, n, weight=None):
+        with self.numpy.errstate(invalid="ignore"):
+            if weight is None:
+                return self.numpy.true_divide((self**n).sum(), self.count())
+            else:
+                return self.numpy.true_divide(((self * weight)**n).sum(), (self * 0 + weight).sum())
+
+    def mean(self, weight=None):
+        return self.moment(1, weight=weight)
+
+    def var(self, weight=None):
+        return self.moment(2, weight=weight) - self.moment(1, weight=weight)**2
+
+    def std(self, weight=None):
+        with self.numpy.errstate(invalid="ignore"):
+            return self.numpy.sqrt(self.var(weight=weight))
+
     def __getattr__(self, where):
         if where in dir(super(AwkwardArray, self)):
             return super(AwkwardArray, self).__getattribute__(where)
