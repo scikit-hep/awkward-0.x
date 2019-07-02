@@ -192,6 +192,47 @@ public:
         }
     }
 
+    static AnyArray* fromiter_helper(py::tuple input) {
+        if (input.size() == 0) {
+            return getNumpyArray_t(py::array_t<std::int32_t>(0));
+        }
+        try {
+            input[0].cast<py::tuple>();
+            return fromiter(input);
+        }
+        catch (std::exception e) {
+            py::array out = input.cast<py::array>();
+            return getNumpyArray_t(out);
+        }
+    }
+
+    static JaggedArray* fromiter(py::object input) {
+        py::tuple iter = input.cast<py::tuple>();
+        auto counts = py::array_t<std::int64_t>(iter.size());
+        auto counts_ptr = (std::int64_t*)counts.request().ptr;
+
+        py::list contentList;
+
+        if (iter.size() == 0) {
+            return fromcounts(counts, getNumpyArray_t(py::array_t<std::int32_t>(0)));
+        }
+        for (size_t i = 0; i < iter.size(); i++) {
+            py::tuple thisIter;
+            try {
+                thisIter = iter[i].cast<py::tuple>();
+            }
+            catch (std::exception e) {
+                throw std::invalid_argument("jagged iterable must contain only iterables to make a jagged array");
+            }
+            counts_ptr[i] = (std::int64_t)thisIter.size();
+            for (size_t i = 0; i < thisIter.size(); i++) {
+                contentList.append(thisIter[i]);
+            }
+        }
+        auto content_out = py::tuple(contentList);
+        return fromcounts(counts, fromiter_helper(content_out));
+    }
+
     static JaggedArray* fromparents(py::array parents, AnyArray* content_, ssize_t length = -1) {
         if (parents.request().ndim != 1 || parents.request().size != content_->len()) {
             throw std::invalid_argument("parents array must be one-dimensional with the same length as content");
