@@ -1381,7 +1381,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         elif len(self._content.shape) > 1:
             if ufunc is None:
                 ufunc = self.numpy.add
-                if isinstance(self._content, (self.numpy.floating, self.numpy.complexfloating)):
+                if issubclass(self._content.dtype.type, (self.numpy.floating, self.numpy.complexfloating)):
                     content = 1 - self.numpy.isnan(self._content).astype(self.INDEXTYPE)
                 else:
                     content = self.numpy.ones(self._content.shape, dtype=self.INDEXTYPE)
@@ -1412,7 +1412,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         content = thyself._content
         if ufunc is None:
             ufunc = self.numpy.add
-            if isinstance(content, (self.numpy.floating, self.numpy.complexfloating)):
+            if issubclass(content.dtype.type, (self.numpy.floating, self.numpy.complexfloating)):
                 content = 1 - self.numpy.isnan(content).astype(self.INDEXTYPE)
             else:
                 content = self.numpy.ones(content.shape, dtype=self.INDEXTYPE)
@@ -1421,7 +1421,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             ufunc = self.numpy.add
             content = 1 - (content == 0).astype(self.INDEXTYPE)
 
-        elif isinstance(content, (self.numpy.floating, self.numpy.complexfloating)):
+        elif issubclass(content.dtype.type, (self.numpy.floating, self.numpy.complexfloating)):
             mask = self.numpy.isnan(content)
             if mask.any():
                 content = content.copy()

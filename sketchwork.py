@@ -888,6 +888,18 @@ try:
 except Exception as err:
     print(type(err), str(err))
 
+# %%markdown
+# In all reducers, ``NaN`` in floating-point arrays and ``None`` in ``MaskedArrays`` are skipped, so these reducers are more like ``numpy.nansum``, ``numpy.nanmax``, and ``numpy.nanmin``, generalized to all nullable data.
+
+# %%
+a = awkward.fromiter([[[[1.1, numpy.nan], [2.2]], [[None, 3.3]]], [[[], [None, numpy.nan, None]]]])
+a
+
+# %%
+a.sum()
+
+# %%markdown
+#
 
 
 
