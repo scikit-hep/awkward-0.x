@@ -1,4 +1,7 @@
 # Byte-compiled / optimized / DLL files
+# vscode
+.vscode/
+
 # Allowing .pyd extension modules
 
 awkward-cpp/tmp

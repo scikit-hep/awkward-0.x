@@ -12,3 +12,8 @@ class CppMethods(object):
     def JaggedArray(self):
         import awkward.cpp.array.jagged
         return awkward.cpp.array.jagged.JaggedArrayCpp
+
+    @property
+    def Table(self):
+        import awkward.cpp.array.table
+        return awkward.cpp.array.table.TableCpp

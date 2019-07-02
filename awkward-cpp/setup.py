@@ -44,6 +44,16 @@ ext_modules = [
         ],
         language='c++'
     ),
+    Extension(
+        'awkward.cpp.array._table',
+        [os.path.join("awkward", "cpp", "array", "_table.cpp")],
+        include_dirs=[
+            # Path to pybind11 headers
+            get_pybind_include(),
+            get_pybind_include(user=True)
+        ],
+        language='c++'
+    ),
 ]
 
 def has_flag(compiler, flagname):

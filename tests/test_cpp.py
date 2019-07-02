@@ -36,7 +36,8 @@ import numpy
 import pytest
 
 import awkward
-awkward_cpp = pytest.importorskip("awkward.cpp")
+import awkward.cpp as awkward_cpp
+# awkward_cpp = pytest.importorskip("awkward.cpp")
 
 class Test(unittest.TestCase):
     def runTest(self):
