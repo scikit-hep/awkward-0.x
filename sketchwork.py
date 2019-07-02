@@ -995,7 +995,12 @@ a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.count()
 
 # %%markdown
-# * 
+# * ``array.count_nonzero()``: returns the number of non-zero elements in an array, skipping ``None`` or ``NaN``.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, None, 0], [], [3.3, numpy.nan, 0]])
+a.count_nonzero()
+
 
 
 

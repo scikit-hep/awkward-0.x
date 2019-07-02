@@ -276,7 +276,14 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             return out._reduce(ufunc, identity, dtype)
 
         else:
-            return ufunc.reduce(self._prepare(ufunc, identity, dtype))
+            prepared = self._prepare(ufunc, identity, dtype)
+            if ufunc is None:
+                return (1 - self.numpy.isnan(prepared)).sum()
+            elif ufunc is self.numpy.count_nonzero:
+                return (1 - (prepared == 0)).sum()
+            if issubclass(prepared.dtype.type, (self.numpy.floating, self.numpy.complexfloating)):
+                prepared = self.numpy.where(self.numpy.isnan(prepared), identity, prepared)
+            return ufunc.reduce(prepared)
 
     def _prepare(self, ufunc, identity, dtype):
         if isinstance(self._content, awkward.array.table.Table):
@@ -291,6 +298,10 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             if ufunc is None:
                 content = self.numpy.zeros(self._content.shape, dtype=self.numpy.float32)
                 content[self.numpy.isnan(self._content)] = self.numpy.nan
+            elif ufunc is self.numpy.count_nonzero:
+                content = self.numpy.ones(self._content.shape, dtype=self.numpy.int8)
+                content[self.numpy.isnan(self._content)] = 0
+                content[self._content == 0] = 0
             elif dtype is None:
                 content = self._content
             else:

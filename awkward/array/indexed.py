@@ -206,13 +206,20 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype))
 
         elif isinstance(self._content, awkward.array.table.Table):
-            out = awkward.array.table.Table()
+            out = self._content.copy(contents={})
             for n, x in self._content._contents.items():
                 out[n] = self.copy(content=x)
             return out._reduce(ufunc, identity, dtype)
 
         else:
-            return ufunc.reduce(self._prepare(ufunc, identity, dtype))
+            prepared = self._prepare(ufunc, identity, dtype)
+            if ufunc is None:
+                return (1 - self.numpy.isnan(prepared)).sum()
+            elif ufunc is self.numpy.count_nonzero:
+                return (1 - (prepared == 0)).sum()
+            if issubclass(prepared.dtype.type, (self.numpy.floating, self.numpy.complexfloating)):
+                prepared = self.numpy.where(self.numpy.isnan(prepared), identity, prepared)
+            return ufunc.reduce(prepared)
 
     def _prepare(self, ufunc, identity, dtype):
         if isinstance(self._content, self.numpy.ndarray):
@@ -633,13 +640,20 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=self._content._reduce(ufunc, identity, dtype))
 
         elif isinstance(self._content, awkward.array.table.Table):
-            out = awkward.array.table.Table()
+            out = self._content.copy(contents={})
             for n, x in self._content._contents.items():
                 out[n] = self.copy(content=x)
             return out._reduce(ufunc, identity, dtype)
 
         else:
-            return ufunc.reduce(self._prepare(ufunc, identity, dtype))
+            prepared = self._prepare(ufunc, identity, dtype)
+            if ufunc is None:
+                return (1 - self.numpy.isnan(prepared)).sum()
+            elif ufunc is self.numpy.count_nonzero:
+                return (1 - (prepared == 0)).sum()
+            if issubclass(prepared.dtype.type, (self.numpy.floating, self.numpy.complexfloating)):
+                prepared = self.numpy.where(self.numpy.isnan(prepared), identity, prepared)
+            return ufunc.reduce(prepared)
 
     def _prepare(self, ufunc, identity, dtype):
         if isinstance(self._content, self.numpy.ndarray):

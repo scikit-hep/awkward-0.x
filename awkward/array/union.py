@@ -437,7 +437,14 @@ class UnionArray(awkward.array.base.AwkwardArray):
             raise ValueError("some UnionArray possibilities are jagged and others are not")
 
     def _reduce(self, ufunc, identity, dtype):
-        return ufunc.reduce(self._prepare(ufunc, identity, dtype))
+        prepared = self._prepare(ufunc, identity, dtype)
+        if ufunc is None:
+            return (1 - self.numpy.isnan(prepared)).sum()
+        elif ufunc is self.numpy.count_nonzero:
+            return (1 - (prepared == 0)).sum()
+        if issubclass(prepared.dtype.type, (self.numpy.floating, self.numpy.complexfloating)):
+            prepared = self.numpy.where(self.numpy.isnan(prepared), identity, prepared)
+        return ufunc.reduce(prepared)
 
     def _prepare(self, ufunc, identity, dtype):
         if dtype is None and issubclass(self.dtype.type, (self.numpy.bool_, self.numpy.bool)):
