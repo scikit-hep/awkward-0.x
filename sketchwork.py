@@ -1502,10 +1502,6 @@ a
 # %%
 a.flatten(axis=1)
 
-
-
-
-
 # * ``pad(length, maskedwhen=True, clip=False)``
 # * ``argmin()`` and ``argmax()``
 # * ``choose(n)`` and ``argchoose(n)``

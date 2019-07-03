@@ -599,7 +599,12 @@ class StringArray(StringMethods, ObjectArray):
         return self.fromjagged(self._content.compact(), self.encoding)
 
     def flatten(self, axis=0):
-        return self.fromjagged(self._content.flatten(axis=axis), self.encoding)
+        import awkward.array.jagged
+        content = self._util_flatten(self._content, axis)
+        if isinstance(content, awkward.array.jagged.JaggedArray):
+            return self.fromjagged(content, self.encoding)
+        else:
+            return self.fromjagged(self.JaggedArray.fromcounts([len(content)], content))
 
     @awkward.util.bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
