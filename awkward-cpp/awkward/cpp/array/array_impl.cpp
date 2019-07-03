@@ -9,7 +9,8 @@ PYBIND11_MODULE(array_impl, m) {
         .def_static("offsets2parents", &JaggedArray::python_offsets2parents)
         .def_static("counts2offsets", &JaggedArray::python_counts2offsets)
         .def_static("startsstops2parents", &JaggedArray::python_startsstops2parents)
-        .def_static("parents2startsstops", &JaggedArray::python_parents2startsstops)
+        .def_static("parents2startsstops", &JaggedArray::python_parents2startsstops,
+            py::arg("parents"), py::arg("length") = -1)
         .def_static("uniques2offsetsparents", &JaggedArray::python_uniques2offsetsparents)
         .def_static("fromiter", &JaggedArray::fromiter)
         .def_static("fromoffsets", &JaggedArray::python_fromoffsets)
