@@ -23,6 +23,7 @@ PYBIND11_MODULE(array_impl, m) {
         .def("tolist", &JaggedArray::tolist)
         .def("__getitem__", (py::object (JaggedArray::*)(ssize_t)) &JaggedArray::python_getitem)
         .def("__getitem__", (py::object (JaggedArray::*)(py::slice)) &JaggedArray::python_getitem)
+        .def("__getitem__", (py::object (JaggedArray::*)(py::array)) &JaggedArray::python_getitem)
         .def("__str__", &JaggedArray::str)
         .def("__len__", &JaggedArray::len)
         .def("__iter__", &JaggedArray::iter)

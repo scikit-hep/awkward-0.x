@@ -620,6 +620,77 @@ public:
         return getitem(index)->unwrap();
     }
 
+    JaggedArray* boolarray_getitem(py::array input) {
+        ssize_t length = input.request().size;
+        if (length != len()) {
+            throw std::invalid_argument("bool array length must be equal to jagged array length");
+        }
+        auto array_ptr = (bool*)input.request().ptr;
+
+        py::list tempStarts;
+        py::list tempStops;
+
+        py::buffer_info starts_info = starts.request();
+        auto starts_ptr = (std::int64_t*)starts_info.ptr;
+        int N_starts = starts_info.strides[0] / starts_info.itemsize;
+
+        py::buffer_info stops_info = stops.request();
+        auto stops_ptr = (std::int64_t*)stops_info.ptr;
+        int N_stops = stops_info.strides[0] / stops_info.itemsize;
+
+        for (ssize_t i = 0; i < length; i++) {
+            if (array_ptr[i]) {
+                tempStarts.append(starts_ptr[i * N_starts]);
+                tempStops.append(stops_ptr[i * N_stops]);
+            }
+        }
+        py::array_t<std::int64_t> outStarts = tempStarts.cast<py::array_t<std::int64_t>>();
+        py::array_t<std::int64_t> outStops = tempStops.cast<py::array_t<std::int64_t>>();
+        return new JaggedArray(outStarts, outStops, content);
+    }
+
+    JaggedArray* intarray_getitem(py::array input) {
+        makeIntNative(input);
+        input = input.cast<py::array_t<std::int64_t>>();
+        py::buffer_info array_info = input.request();
+        auto array_ptr = (std::int64_t*)array_info.ptr;
+
+        auto newStarts = py::array_t<std::int64_t>(array_info.size);
+        auto newStarts_ptr = (std::int64_t*)newStarts.request().ptr;
+
+        py::buffer_info starts_info = starts.request();
+        auto starts_ptr = (std::int64_t*)starts_info.ptr;
+        int N_starts = starts_info.strides[0] / starts_info.itemsize;
+
+        auto newStops = py::array_t<std::int64_t>(array_info.size);
+        auto newStops_ptr = (std::int64_t*)newStops.request().ptr;
+
+        py::buffer_info stops_info = stops.request();
+        auto stops_ptr = (std::int64_t*)stops_info.ptr;
+        int N_stops = stops_info.strides[0] / stops_info.itemsize;
+
+        for (ssize_t i = 0; i < array_info.size; i++) {
+            std::int64_t here = array_ptr[i];
+            if (here < 0 || here >= len()) {
+                throw std::invalid_argument("int array indices must be within the bounds of the jagged array");
+            }
+            newStarts_ptr[i] = starts_ptr[N_starts * here];
+            newStops_ptr[i] = stops_ptr[N_stops * here];
+        }
+        return new JaggedArray(newStarts, newStops, content);
+    }
+
+    JaggedArray* getitem(py::array input) {
+        if (input.request().format.find("?") != std::string::npos) {
+            return boolarray_getitem(input);
+        }
+        return intarray_getitem(input);
+    }
+
+    py::object python_getitem(py::array input) {
+        return getitem(input)->unwrap();
+    }
+
     py::object tolist() {
         py::list out;
         for (ssize_t i = 0; i < len(); i++) {

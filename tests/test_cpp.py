@@ -117,6 +117,58 @@ class Test(unittest.TestCase):
         assert test1(a2, 0, 2).tolist() == [[[1.1, 2.2, 3.3], []], []]
         assert test1(a2, 1, 3).tolist() == [[], [[4.4, 5.5]]]
 
+    def test_cpp_getitem_intarray(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        starts = numpy.array([0, 3, 4])
+        stops = numpy.array([3, 3, 6])
+        content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
+        a2 = awkward_cpp.JaggedArray(starts, stops, content)
+        index = numpy.array([2, 2, 0, 1])
+        def test1(x, i):
+            return x[i]
+        z = test1(a, index)
+        assert z.tolist() == [[4.4, 5.5], [4.4, 5.5], [1.1, 2.2, 3.3], []]
+        assert z.content.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
+        z2 = test1(a2, index)
+        assert z2.tolist() == [[4.4, 5.5], [4.4, 5.5], [1.1, 2.2, 3.3], []]
+        assert z2.content.tolist() == [1.1, 2.2, 3.3, 999, 4.4, 5.5]
+        #def test2(x, i):
+        #    return x[i].compact()
+        #z = test2(a, index)
+        #assert z.tolist() == [[4.4, 5.5], [4.4, 5.5], [1.1, 2.2, 3.3], []]
+        #ssert z.content.tolist() == [4.4, 5.5, 4.4, 5.5, 1.1, 2.2, 3.3]
+        #z2 = test2(a2, index)
+        #assert z2.tolist() == [[4.4, 5.5], [4.4, 5.5], [1.1, 2.2, 3.3], []]
+        #assert z2.content.tolist() == [4.4, 5.5, 4.4, 5.5, 1.1, 2.2, 3.3]
+        #a3 = awkward_cpp.JaggedArray.fromcounts([2, 0, 1], a)
+        #assert test1(a3, index).tolist() == [[[4.4, 5.5]], [[4.4, 5.5]], [[1.1, 2.2, 3.3], []], []]
+
+    def test_cpp_getitem_boolarray(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        starts = numpy.array([0, 3, 4])
+        stops = numpy.array([3, 3, 6])
+        content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
+        a2 = awkward_cpp.JaggedArray(starts, stops, content)
+        index = numpy.array([False, True, True])
+        def test1(x, i):
+            return x[i]
+        z = test1(a, index)
+        assert z.tolist() == [[], [4.4, 5.5]]
+        assert z.content.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
+        z2 = test1(a2, index)
+        assert z2.tolist() == [[], [4.4, 5.5]]
+        assert z2.content.tolist() == [1.1, 2.2, 3.3, 999, 4.4, 5.5]
+        #def test2(x, i):
+        #    return x[i].compact()
+        #z = test2(a, index)
+        #assert z.tolist() == [[], [4.4, 5.5]]
+        #assert z.content.tolist() == [4.4, 5.5]
+        #z2 = test2(a2, index)
+        #assert z2.tolist() == [[], [4.4, 5.5]]
+        #assert z2.content.tolist() == [4.4, 5.5]
+        #a3 = awkward_cpp.JaggedArray.fromcounts([2, 0, 1], a)
+        #assert test1(a3, index).tolist() == [[], [[4.4, 5.5]]]
+
     def test_cpp_offsets2parents(self):
         offsets = numpy.array([0, 2, 4, 4, 7], dtype=numpy.int64)
         parents = awkward_cpp.JaggedArray.offsets2parents(offsets)
