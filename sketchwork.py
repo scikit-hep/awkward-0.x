@@ -987,17 +987,132 @@ awkward.Table.named("tuple", [1, 2, 3], [1.1, 2.2, 3.3]).tolist()
 awkward.fromiter([[1.1, 2.2, None], [], [None, 3.3]]).tolist()
 
 # %%
-# HERE: ObjectArray example
+class Point:
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+    def __repr__(self):
+        return f"Point({self.x}, {self.y})"
 
+a = awkward.fromiter([[Point(1, 1.1), Point(2, 2.2), Point(3, 3.3)], [], [Point(4, 4.4), Point(5, 5.5)]])
+a
 
-# * ``valid(exception=False, message=False)``
-# * ``astype(dtype)``
-# * ``regular()``
-# * ``copy(optional constructor arguments...)``
-# * ``deepcopy(optional constructor arguments...)``
+# %%
+a.tolist()
+
+# * ``valid(exception=False, message=False)``: manually invoke the whole-array validity checks on the top-level array (not recursively). With the default options, this function returns ``True`` if valid and ``False`` if not. If ``exception=True``, it returns nothing on success and raises the appropriate exception on failure. If ``message=True``, it returns ``None`` on success and the error string on failure. (TODO: ``recursive=True``?)
+
+# %%
+a = awkward.JaggedArray.fromcounts([3, 0, 2], [1.1, 2.2, 3.3, 4.4])  # content array is too short
+a.valid()
+
+# %%
+try:
+    a.valid(exception=True)
+except Exception as err:
+    print(type(err), str(err))
+
+# %%
+a.valid(message=True)
+
+# * ``astype(dtype)``: convert *nested Numpy arrays* into the given type while maintaining awkward structure.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+a.astype(numpy.int32)
+
+# * ``regular()``: convert the awkward array into a Numpy array and (unlike ``numpy.array(awkward_array)``) raise an error if it cannot be faithfully represented.
+
+# %%
+# This JaggedArray happens to have equal-sized inner arrays.
+a = awkward.fromiter([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.9]])
+a
+
+# %%
+a.regular()
+
+# %%
+# This one does not.
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+a
+
+# %%
+try:
+    a.regular()
+except Exception as err:
+    print(type(err), str(err))
+
+# * ``copy(optional constructor arguments...)``: copy an awkward array object, non-recursively and without copying memory buffers, possibly replacing some of its parameters. If the class is an awkward subclass or has mix-in methods, they are propagated to the copy.
+
+# %%
+class Special:
+    def get(self, index):
+        try:
+            return self[index]
+        except IndexError:
+            return None
+
+JaggedArrayMethods = awkward.Methods.mixin(Special, awkward.JaggedArray)
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+a.__class__ = JaggedArrayMethods
+a
+
+# %%
+a.get(2)
+
+# %%
+a.get(3)
+
+# %%
+b = a.copy(content=[100, 200, 300, 400, 500])
+b
+
+# %%
+b.get(2)
+
+# %%
+b.get(3)
+
+# %%markdown
+# Internally, all the methods that return views of the array (like slicing) use ``copy`` to retain the special methods.
+
+# %%
+c = a[1:]
+c
+
+# %%
+c.get(1)
+
+# %%
+c.get(2)
+
+# * ``deepcopy(optional constructor arguments...)``: like ``copy``, except that it recursively copies all internal structure, including memory buffers associated with Numpy arrays.
+
+# %%
+b = a.deepcopy(content=[100, 200, 300, 400, 500])
+b
+
+# %%
+# Modify the structure of a (not recommended; this is a demo).
+a.starts[0] = 1
+a
+
+# %%
+# But b is not modified. (If it were, it would start with 200.)
+b
+
 # * ``empty_like(optional constructor arguments...)``
 # * ``zeros_like(optional constructor arguments...)``
-# * ``ones_like(optional constructor arguments...)``
+# * ``ones_like(optional constructor arguments...)``: recursively copies structure, replacing contents with new uninitialized buffers, new buffers full of zeros, or new buffers full of ones. Not usually used in analysis, but needed for implementation.
+
+# %%
+d = a.zeros_like()
+d
+
+# %%
+e = a.ones_like()
+e
 
 # %%markdown
 # ## Reducers
@@ -1281,7 +1396,6 @@ a.std(ddof=1)
 # * ``pairs()`` and ``argpairs()``
 # * ``cross(other)`` and ``argcross(other)``
 # * ``JaggedArray.zip(columns...)``
-# * ``JaggedArray.concatenate(arrays, axis=0)``
 
 # %%markdown
 # ## Properties and methods for tabular columns
@@ -1301,7 +1415,12 @@ a.std(ddof=1)
 # * ``fillna(value)``
 
 # %%markdown
-# # Input/output functions
+# ## Functions for structure manipulation
+
+# * ``awkward.concatenate(arrays, axis=0)`` FIXME
+
+# %%markdown
+# # Functions for input/output and conversion
 
 # * ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False)``
 # * ``awkward.fromiterchunks(iterable, chunksize, awkwardlib=None, dictencoding=False)``
