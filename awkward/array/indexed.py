@@ -195,11 +195,15 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     @property
     def counts(self):
         self._valid()
-        return self._util_counts(self._content)[self._index]
+        return self._util_counts(self._content[self._index])
+
+    def flatten(self, axis=0):
+        self._valid()
+        return self._util_flatten(self._content[self._index], axis)
 
     def regular(self):
         self._valid()
-        return self._util_regular(self._content)[self._index]
+        return self._util_regular(self._content[self._index])
 
     def _reduce(self, ufunc, identity, dtype):
         if self._util_hasjagged(self._content):
@@ -620,7 +624,20 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     def counts(self):
         self._valid()
         content = self._util_counts(self._content)
-        out = self.numpy.zeros(self.shape, dtype=content.dtype)
+        try:
+            defaultlen = len(self.default)
+        except:
+            defaultlen = -1
+        out = self.numpy.full(self.shape, defaultlen, dtype=content.dtype)
+        if len(self._index) != 0:
+            mask = self.boolmask(maskedwhen=True)
+            out[mask] = content[self._inverse[mask]]
+        return out
+
+    def flatten(self, axis=0):
+        self._valid()
+        out = self._util_flatten(self._content, axis)
+        out = self.numpy.full(self.shape, self.default, dtype=content.dtype)
         if len(self._index) != 0:
             mask = self.boolmask(maskedwhen=True)
             out[mask] = content[self._inverse[mask]]

@@ -222,6 +222,9 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def counts(self):
         return self._util_counts(self._content)
 
+    def flatten(self, axis=0):
+        return self._util_flatten(self._content, axis)
+
     def regular(self):
         return self.numpy.array(self)
 
@@ -595,8 +598,8 @@ class StringArray(StringMethods, ObjectArray):
     def compact(self):
         return self.fromjagged(self._content.compact(), self.encoding)
 
-    def flatten(self):
-        return self.fromjagged(self._content.flatten(), self.encoding)
+    def flatten(self, axis=0):
+        return self.fromjagged(self._content.flatten(axis=axis), self.encoding)
 
     @awkward.util.bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays, axis=0):

@@ -1317,22 +1317,30 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def flatten(self, axis=0):
         if not self._util_isinteger(axis) or axis < 0:
             raise TypeError("axis must be a non-negative integer (can't count from the end)")
-        if axis > 0:
-            if isinstance(self._content, JaggedArray):
-                counts = self.JaggedArray.fromcounts(self.counts, self._content.counts).sum()
-                return self.JaggedArray.fromcounts(counts, self._content.flatten(axis=axis - 1))
 
-        if len(self) == 0:
-            return self._content[0:0]
-        elif self._canuseoffset():
-            return self._content[self._starts[0]:self._stops[-1]]
+        if axis > 1:
+            return self.copy(content=self._util_flatten(self._content, axis - 1))
+
+        elif axis == 1:
+            self = self.compact()
+            innercounts = self._util_counts(self._content)
+            if (innercounts < 0).any():
+                raise ValueError("cannot flatten an array containing scalar values")
+            counts = self.JaggedArray.fromcounts(self.counts, innercounts).sum()
+            return type(self).fromcounts(counts, self._util_flatten(self._content, axis - 1))
+
         else:
-            offsets = self.counts2offsets(self.counts.reshape(-1))
-            if len(self._starts.shape) == 1:
-                out = self
+            if len(self) == 0:
+                return self._content[0:0]
+            elif self._canuseoffset():
+                return self._content[self._starts[0]:self._stops[-1]]
             else:
-                out = self.JaggedArray(self._starts.reshape(-1), self._stops.reshape(-1), self._content)
-            return out._tojagged(offsets[:-1], offsets[1:], copy=False)._content
+                offsets = self.counts2offsets(self.counts.reshape(-1))
+                if len(self._starts.shape) == 1:
+                    out = self
+                else:
+                    out = self.JaggedArray(self._starts.reshape(-1), self._stops.reshape(-1), self._content)
+                return out._tojagged(offsets[:-1], offsets[1:], copy=False)._content
 
     def structure1d(self, levellimit=None):
         if len(self._starts) > len(self._stops):

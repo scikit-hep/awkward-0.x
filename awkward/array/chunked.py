@@ -571,6 +571,11 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def counts(self):
         return self.numpy.concatenate([self._util_counts(x) for x in self._chunks])
 
+    def flatten(self, axis=0):
+        out = self.copy(chunks=[self._util_flatten(x, axis) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
     def regular(self):
         self._valid()
         return self.numpy.concatenate([self._util_regular(x) for x in self._chunks])

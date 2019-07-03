@@ -418,6 +418,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
             out[mask] = array[self._index[mask]]
         return out
 
+    def flatten(self, axis=0):
+        raise NotImplementedError("flatten not yet implemented for UnionArray")
+
     def regular(self):
         self._valid()
         arrays = [self._util_regular(x) for x in self._contents]

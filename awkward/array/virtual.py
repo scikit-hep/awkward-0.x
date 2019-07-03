@@ -397,6 +397,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def counts(self):
         return self._util_counts(self.array)
 
+    def flatten(self, axis=0):
+        return self._util_flatten(self.array, axis)
+
     def regular(self):
         return self._util_regular(self.array)
 

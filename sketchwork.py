@@ -1396,12 +1396,21 @@ a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
 a.counts
 
 # %%
-# MaskedArrays return 0 for missing values.
+# MaskedArrays return -1 for missing values.
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], None, [6.6, 7.7, 8.8, 9.9]])
 a.counts
 
+# %%markdown
+# A missing inner array (counts is ``-1``) is distinct from an empty inner array (counts is ``0``), but if you want to ensure that you're working with data that have at least ``N`` elements, ``counts >= N`` works.
+
 # %%
-# UnionArrays return 0 for non-jagged arrays mixed with jagged arrays.
+a.counts >= 1
+
+# %%
+a[a.counts >= 1]
+
+# %%
+# UnionArrays return -1 for non-jagged arrays mixed with jagged arrays.
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], 999, [6.6, 7.7, 8.8, 9.9]])
 a.counts
 
@@ -1427,7 +1436,76 @@ b
 # %%
 b.counts
 
-# * ``flatten()``
+# * ``flatten(axis=0)``: removes one level of structure (losing information about boundaries between inner arrays) at a depth of jaggedness given by ``axis``.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+a.flatten()
+
+# %%markdown
+# Unlike a ``JaggedArray``'s ``content``, which is part of its low-level layout, ``flatten()`` performs a high-level logical operation. Here's an example of the distinction.
+
+# %%
+# JaggedArray with an unusual but valid structure.
+a = awkward.JaggedArray([3, 100, 0, 6], [6, 100, 2, 10],
+                        [4.4, 5.5, 999, 1.1, 2.2, 3.3, 6.6, 7.7, 8.8, 9.9, 123])
+a
+
+# %%
+a.flatten()   # gives you a logically flattened array
+
+# %%
+a.content     # gives you an internal structure component of the array
+
+# %%markdown
+# In many cases, the output of ``flatten()`` corresponds to the output of ``content``, but be aware of the difference and use the one you want.
+#
+# With ``flatten(axis=1)``, we can internally flatten nested ``JaggedArrays``.
+
+# %%
+a = awkward.fromiter([[[1.1, 2.2], [3.3]], [], [[4.4, 5.5]], [[6.6, 7.7, 8.8], [], [9.9]]])
+a
+
+# %%
+a.flatten(axis=0)
+
+# %%
+a.flatten(axis=1)
+
+# %%markdown
+# Even if a ``JaggedArray``'s inner structure is due to a fixed-shape Numpy array, the ``axis`` parameter propagates down and does the right thing.
+
+# %%
+a = awkward.JaggedArray.fromcounts(numpy.array([3, 0, 2]),
+                                   numpy.array([[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]]))
+a
+
+# %%
+type(a.content)
+
+# %%
+a.flatten(axis=1)
+
+# %%markdown
+# But, unlike Numpy, we can't ask for an ``axis`` starting from the other end (with a negative index). The "deepest array" is not a well-defined concept for awkward arrays.
+
+# %%
+try:
+    a.flatten(axis=-1)
+except Exception as err:
+    print(type(err), str(err))
+
+# %%
+a = awkward.fromiter([[[1.1, 2.2], [3.3]], [], None, [[6.6, 7.7, 8.8], [], [9.9]]])
+a
+
+# %%
+a.flatten(axis=1)
+
+
+
+
+
 # * ``pad(length, maskedwhen=True, clip=False)``
 # * ``argmin()`` and ``argmax()``
 # * ``choose(n)`` and ``argchoose(n)``

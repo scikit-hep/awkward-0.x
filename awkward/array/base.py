@@ -418,8 +418,18 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def _util_counts(cls, array):
         if isinstance(array, AwkwardArray):
             return array.counts
+        elif len(array.shape) == 1:
+            return cls.numpy.full(array.shape[0], -1, dtype=cls.INDEXTYPE)
         else:
-            return cls.numpy.zeros(array.shape, dtype=cls.INDEXTYPE)
+            return cls.numpy.full(array.shape[0], array.shape[1], dtype=cls.INDEXTYPE)
+
+    @classmethod
+    def _util_flatten(cls, array, axis):
+        if isinstance(array, AwkwardArray):
+            return array.flatten(axis=axis)
+        else:
+            axis = min(axis, len(array.shape) - 1)
+            return array.reshape(array.shape[:axis] + (-1,) + array.shape[axis + 2:])
 
     @classmethod
     def _util_regular(cls, array):

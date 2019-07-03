@@ -722,7 +722,13 @@ class Table(awkward.array.base.AwkwardArray):
 
     @property
     def counts(self):
-        return self.numpy.zeros(self.shape, dtype=self.INDEXTYPE)
+        return self.numpy.full(len(self), -1, dtype=self.INDEXTYPE)
+
+    def flatten(self, axis=0):
+        out = self.copy(contents={})
+        for n, x in self._contents.items():
+            out[n] = self._util_flatten(x, axis)
+        return out
 
     def regular(self):
         self._valid()

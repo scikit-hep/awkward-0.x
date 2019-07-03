@@ -249,10 +249,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def counts(self):
         self._valid()
         content = self._util_counts(self._content)
-        out = self.numpy.zeros(self.shape, dtype=content.dtype)
+        out = self.numpy.full(self.shape, -1, dtype=content.dtype)
         mask = self.boolmask(maskedwhen=False)
         out[mask] = content[mask]
         return out
+
+    def flatten(self, axis=0):
+        return self._util_flatten(self._content[self.boolmask(maskedwhen=False)], axis)
 
     def regular(self):
         self._valid()
@@ -730,7 +733,7 @@ class IndexedMaskedArray(MaskedArray):
     def counts(self):
         self._valid()
         out = self._util_counts(self._content)[self._index]
-        out[self.boolmask(maskedwhen=True)] = 0
+        out[self.boolmask(maskedwhen=True)] = -1
         return out
 
     def regular(self):
