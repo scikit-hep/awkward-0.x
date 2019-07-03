@@ -75,6 +75,11 @@ public:
         starts = starts_;
     }
 
+    void python_set_starts(py::object input) {
+        py::array starts_ = input.cast<py::array>();
+        set_starts(starts_);
+    }
+
     py::array_t<std::int64_t> get_stops() { return stops; }
 
     void set_stops(py::array stops_) {
@@ -92,6 +97,10 @@ public:
             }
         }
         stops = stops_;
+    }
+    void python_set_stops(py::object input) {
+        py::array stops_ = input.cast<py::array>();
+        set_stops(stops_);
     }
 
     bool check_validity() {
@@ -131,9 +140,9 @@ public:
         return true;
     }
 
-    JaggedArray(py::array starts_, py::array stops_, py::object content_) {
-        set_starts(starts_);
-        set_stops(stops_);
+    JaggedArray(py::object starts_, py::object stops_, py::object content_) {
+        python_set_starts(starts_);
+        python_set_stops(stops_);
         python_set_content(content_);
         check_validity();
     }
@@ -162,7 +171,8 @@ public:
         );
     }
 
-    static JaggedArray* python_fromoffsets(py::array offsets, py::object content_) {
+    static JaggedArray* python_fromoffsets(py::object input, py::object content_) {
+        py::array offsets = input.cast<py::array>();
         try {
             return fromoffsets(offsets, content_.cast<JaggedArray*>());
         }
@@ -179,7 +189,8 @@ public:
         return fromoffsets(counts2offsets(counts), content_);
     }
 
-    static JaggedArray* python_fromcounts(py::array counts, py::object content_) {
+    static JaggedArray* python_fromcounts(py::object input, py::object content_) {
+        py::array counts = input.cast<py::array>();
         try {
             return fromcounts(counts, content_.cast<JaggedArray*>());
         }
@@ -241,7 +252,8 @@ public:
         return new JaggedArray(startsstops[0], startsstops[1], content_);
     }
 
-    static JaggedArray* python_fromparents(py::array parents, py::object content_, ssize_t length = -1) {
+    static JaggedArray* python_fromparents(py::object input, py::object content_, ssize_t length = -1) {
+        py::array parents = input.cast<py::array>();
         try {
             return fromparents(parents, content_.cast<JaggedArray*>(), length);
         }
@@ -262,7 +274,8 @@ public:
         return fromoffsets(offsetsparents[0], content_);
     }
 
-    static JaggedArray* python_fromuniques(py::array uniques, py::object content_) {
+    static JaggedArray* python_fromuniques(py::object input, py::object content_) {
+        py::array uniques = input.cast<py::array>();
         try {
             return fromuniques(uniques, content_.cast<JaggedArray*>());
         }
@@ -324,6 +337,11 @@ public:
         return parents;
     }
 
+    static py::array_t<std::int64_t> python_offsets2parents(py::object offsetsIter) {
+        py::array offsets = offsetsIter.cast<py::array>();
+        return offsets2parents(offsets);
+    }
+
     static py::array_t<std::int64_t> counts2offsets(py::array counts) {
         makeIntNative(counts);
         counts = counts.cast<py::array_t<std::int64_t>>();
@@ -342,17 +360,21 @@ public:
         }
         return offsets;
     }
+    static py::array_t<std::int64_t> python_counts2offsets(py::object countsIter) {
+        py::array counts = countsIter.cast<py::array>();
+        return counts2offsets(counts);
+    }
 
-    static py::array_t<std::int64_t> startsstops2parents(py::array starts, py::array stops) {
-        makeIntNative(starts);
-        makeIntNative(stops);
-        starts = starts.cast<py::array_t<std::int64_t>>();
-        stops = stops.cast<py::array_t<std::int64_t>>();
-        py::buffer_info starts_info = starts.request();
+    static py::array_t<std::int64_t> startsstops2parents(py::array starts_, py::array stops_) {
+        makeIntNative(starts_);
+        makeIntNative(stops_);
+        starts_ = starts_.cast<py::array_t<std::int64_t>>();
+        stops_ = stops_.cast<py::array_t<std::int64_t>>();
+        py::buffer_info starts_info = starts_.request();
         auto starts_ptr = (std::int64_t*)starts_info.ptr;
         int N_starts = starts_info.strides[0] / starts_info.itemsize;
 
-        py::buffer_info stops_info = stops.request();
+        py::buffer_info stops_info = stops_.request();
         auto stops_ptr = (std::int64_t*)stops_info.ptr;
         int N_stops = stops_info.strides[0] / stops_info.itemsize;
 
@@ -382,6 +404,12 @@ public:
         }
 
         return parents;
+    }
+
+    static py::array_t<std::int64_t> python_startsstops2parents(py::object startsIter, py::object stopsIter) {
+        py::array starts_ = startsIter.cast<py::array>();
+        py::array stops_ = stopsIter.cast<py::array>();
+        return startsstops2parents(starts_, stops_);
     }
 
     static py::tuple parents2startsstops(py::array parents, std::int64_t length = -1) {
@@ -437,6 +465,11 @@ public:
         temp.append(stops);
         py::tuple out(temp);
         return out;
+    }
+
+    static py::tuple python_parents2startsstops(py::object parentsIter, std::int64_t length = -1) {
+        py::array parents = parentsIter.cast<py::array>();
+        return parents2startsstops(parents, length);
     }
 
     static py::tuple uniques2offsetsparents(py::array uniques) {
@@ -506,6 +539,11 @@ public:
         return out;
     }
 
+    static py::tuple python_uniques2offsetsparents(py::object uniquesIter) {
+        py::array uniques = uniquesIter.cast<py::array>();
+        return uniques2offsetsparents(uniques);
+    }
+
     ssize_t len() {
         return starts.request().size;
     }
@@ -517,7 +555,9 @@ public:
         if (length < 0) {
             throw std::invalid_argument("slice length cannot be less than 0");
         }
-        if (start < 0 || start >= len() || start + (length * step) > len() || start + (length * step) < -1) {
+        if (start < 0 || start >= len() || (length > 0 &&
+            (start + ((length - 1) * step) > len() ||
+            start + ((length - 1) * step) < -1))) {
             throw std::out_of_range("getitem must be in the bounds of the array.");
         }
         auto newStarts = py::array_t<std::int64_t>(length);
@@ -560,19 +600,26 @@ public:
             if (stop > length) {
                 stop = length;
             }
+            if (start < 0) {
+                start = 0;
+            }
             if (start >= stop) {
                 return getitem(length - 1, 0, step)->unwrap();
             }
+            return getitem(start, (stop + step - start - 1) / step, step)->unwrap();
         }
         else {
             if (stop < -1) {
                 stop = -1;
             }
+            if (start >= length) {
+                start = length - 1;
+            }
             if (start <= stop) {
                 return getitem(0, 0, step)->unwrap();
             }
+            return getitem(start, (stop + step - start + 1) / step, step)->unwrap();
         }
-        return getitem(start, (stop + step - start) / step, step)->unwrap();
     }
 
     AnyArray* getitem(ssize_t index) {
