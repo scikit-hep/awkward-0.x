@@ -901,7 +901,7 @@ a.type
 # %%
 print(a.type)
 
-# * ``layout``: the low-level layout of the array. (See below for a detailed description of low-level layouts.)
+# * ``layout``: the low-level layout of the array. (See below for a detailed description of low-level layouts.) FIXME
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
@@ -1386,8 +1386,47 @@ a.std(ddof=1)
 
 # %%markdown
 # ## Properties and methods for jaggedness
+#
+# All awkward arrays have these methods, but they provide information about the first nested ``JaggedArray`` within a structure. If, for instance, the ``JaggedArray`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``JaggedArray``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``MaskedArray``, then that's what they do. If, however, it reaches a ``Table``, which may have some jagged columns and some non-jagged columns, the propagation stops.
 
-# * ``counts``
+# * ``counts``: Numpy array of the number of elements in each inner array of the shallowest ``JaggedArray``. The ``counts`` may have rank > 1 if there are any fixed-size dimensions before the ``JaggedArray``.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+a.counts
+
+# %%
+# MaskedArrays return 0 for missing values.
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], None, [6.6, 7.7, 8.8, 9.9]])
+a.counts
+
+# %%
+# UnionArrays return 0 for non-jagged arrays mixed with jagged arrays.
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], 999, [6.6, 7.7, 8.8, 9.9]])
+a.counts
+
+# %%
+# Same for tabular data, regardless of whether they contain nested jagged arrays.
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], {"x": 1, "y": [1.1, 1.2, 1.3]}, [6.6, 7.7, 8.8, 9.9]])
+a.counts
+
+# %%markdown
+# Note! This means that pure ``Tables`` will always return zeros for counts, regardless of what they contain.
+
+# %%
+a = awkward.fromiter([{"x": [], "y": []}, {"x": [1], "y": [1.1]}, {"x": [1, 2], "y": [1.1, 2.2]}])
+a.counts
+
+# %%markdown
+# If all of the columns of a ``Table`` are ``JaggedArrays`` with the same structure, you probably want to zip them into a single ``JaggedArray``.
+
+# %%
+b = awkward.JaggedArray.zip(x=a.x, y=a.y)
+b
+
+# %%
+b.counts
+
 # * ``flatten()``
 # * ``pad(length, maskedwhen=True, clip=False)``
 # * ``argmin()`` and ``argmax()``

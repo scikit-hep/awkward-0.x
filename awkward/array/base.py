@@ -419,7 +419,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         if isinstance(array, AwkwardArray):
             return array.counts
         else:
-            raise TypeError("{0} has no 'counts' array".format(cls.__name__))
+            return cls.numpy.zeros(array.shape, dtype=cls.INDEXTYPE)
 
     @classmethod
     def _util_regular(cls, array):

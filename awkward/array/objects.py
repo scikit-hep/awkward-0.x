@@ -220,7 +220,7 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
     @property
     def counts(self):
-        raise TypeError("{0} has no 'counts' array".format(type(self).__name__))
+        return self._util_counts(self._content)
 
     def regular(self):
         return self.numpy.array(self)

@@ -722,7 +722,7 @@ class Table(awkward.array.base.AwkwardArray):
 
     @property
     def counts(self):
-        raise TypeError("{0} has no 'counts' array".format(type(self).__name__))
+        return self.numpy.zeros(self.shape, dtype=self.INDEXTYPE)
 
     def regular(self):
         self._valid()
