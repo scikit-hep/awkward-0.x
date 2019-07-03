@@ -1502,7 +1502,38 @@ a
 # %%
 a.flatten(axis=1)
 
-# * ``pad(length, maskedwhen=True, clip=False)``
+# * ``pad(length, maskedwhen=True, clip=False)``: ensures that each inner array has at least ``length`` elements by filling in the empty spaces with ``None`` (i.e. by inserting a ``MaskedArray`` layer). The ``maskedwhen`` parameter determines whether ``mask[i] == True`` means the element is ``None`` (``maskedwhen=True``) or not ``None`` (``maskedwhen=False``). Setting ``maskedwhen`` doesn't change the logical meaning of the array. If ``clip=True``, then the inner arrays will have exactly ``length`` elements (by clipping the ones that are too long). Even though this results in regular sizes, they are still represented by a ``JaggedArray``.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+a
+
+# %%
+a.pad(3)
+
+# %%
+a.pad(3, maskedwhen=False)
+
+# %%
+a.pad(3, clip=True)
+
+# %%markdown
+# If you want to get rid of the ``MaskedArray`` layer, replace ``None`` with some value.
+
+# %%
+a.pad(3).fillna(-999)
+
+# %%markdown
+# If you want to make an effectively regular array into a real Numpy array, use ``regular``.
+
+# %%
+a.pad(3, clip=True).fillna(0).regular()
+
+# HERE: implement pad through other types (examples with tables?)
+
+
+
+
 # * ``argmin()`` and ``argmax()``
 # * ``choose(n)`` and ``argchoose(n)``
 # * ``distincts()`` and ``argdistincts()``
