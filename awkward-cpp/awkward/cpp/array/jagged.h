@@ -585,41 +585,12 @@ public:
         return new JaggedArray(newStarts, newStops, content);
     }
 
-    py::object python_getitem(ssize_t start, ssize_t stop, ssize_t step) {
-        if (step == 0) {
-            throw std::invalid_argument("slice step cannot be 0");
+    py::object python_getitem(py::slice input) {
+        size_t start, stop, step, slicelength;
+        if (!input.compute(len(), &start, &stop, &step, &slicelength)) {
+            throw py::error_already_set();
         }
-        ssize_t length = len();
-        if (start < 0) {
-            start += length;
-        }
-        if (stop < 0) {
-            stop += length;
-        }
-        if (step > 0) {
-            if (stop > length) {
-                stop = length;
-            }
-            if (start < 0) {
-                start = 0;
-            }
-            if (start >= stop) {
-                return getitem(length - 1, 0, step)->unwrap();
-            }
-            return getitem(start, (stop + step - start - 1) / step, step)->unwrap();
-        }
-        else {
-            if (stop < -1) {
-                stop = -1;
-            }
-            if (start >= length) {
-                start = length - 1;
-            }
-            if (start <= stop) {
-                return getitem(0, 0, step)->unwrap();
-            }
-            return getitem(start, (stop + step - start + 1) / step, step)->unwrap();
-        }
+        return getitem((ssize_t)start, (ssize_t)slicelength, (ssize_t)step)->unwrap();
     }
 
     AnyArray* getitem(ssize_t index) {
