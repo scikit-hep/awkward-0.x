@@ -201,6 +201,9 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
         return self._util_flatten(self._content[self._index], axis)
 
+    def pad(self, length, maskedwhen=True, clip=False):
+        return self._util_pad(self._content[self._index], length, maskedwhen, clip)
+
     def regular(self):
         self._valid()
         return self._util_regular(self._content[self._index])
@@ -642,6 +645,9 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             mask = self.boolmask(maskedwhen=True)
             out[mask] = content[self._inverse[mask]]
         return out
+
+    def pad(self, length, maskedwhen=True, clip=False):
+        return self._util_pad(self._content.dense, length, maskedwhen, clip)
 
     def regular(self):
         self._valid()

@@ -727,6 +727,12 @@ class Table(awkward.array.base.AwkwardArray):
     def flatten(self, axis=0):
         raise ValueError("cannot flatten through a Table")
 
+    def pad(self, length, maskedwhen=True, clip=False):
+        out = self.copy(contents={})
+        for n, x in self._contents.items():
+            out[n] = self._util_pad(x, length, maskedwhen, clip)
+        return out
+
     def regular(self):
         self._valid()
         pairs = [(n, self._util_regular(x)) for n, x in self.items()]

@@ -432,6 +432,49 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return array.reshape(array.shape[:axis] + (-1,) + array.shape[axis + 2:])
 
     @classmethod
+    def _util_pad(cls, array, length, maskedwhen, clip):
+        if isinstance(array, AwkwardArray):
+            return array.pad(length, maskedwhen=maskedwhen, clip=clip)
+
+        elif len(array.shape) == 1:
+            raise ValueError("pad cannot be applied to scalars")
+
+        elif length == 0 and clip:
+            if isinstance(maskedwhen, cls.numpy.ma.core.MaskedConstant):
+                return cls.JaggedArray.fget(None).fromoffsets([0], cls.numpy.ma.array([]))
+            else:
+                return cls.JaggedArray.fget(None).fromoffsets([0], cls.MaskedArray.fget(None)([], []))
+
+        elif array.shape[1] > length and clip:
+            offsets = cls.numpy.arange(0, length*(len(array) + 1), length, dtype=cls.INDEXTYPE)
+            content = array[(slice(None), slice(length)) + array.shape[2:]]
+            if isinstance(maskedwhen, cls.numpy.ma.core.MaskedConstant):
+                return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.numpy.ma.array(content.reshape((-1,) + array.shape[2:])))
+            else:
+                return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.MaskedArray.fget(None).fromcontent(content.reshape((-1,) + array.shape[2:]), maskedwhen=maskedwhen))
+
+        elif array.shape[1] >= length:
+            offsets = cls.numpy.arange(0, array.shape[1]*(len(array) + 1), array.shape[1], dtype=cls.INDEXTYPE)
+            if isinstance(maskedwhen, cls.numpy.ma.core.MaskedConstant):
+                return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.numpy.ma.array(array.reshape((-1,) + array.shape[2:])))
+            else:
+                return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.MaskedArray.fget(None).fromcontent(array.reshape((-1,) + array.shape[2:]), maskedwhen=maskedwhen))
+
+        else:
+            offsets = cls.numpy.arange(0, length*(len(array) + 1), length, dtype=cls.INDEXTYPE)
+            content = cls.numpy.empty(array.shape[:1] + (length,) + array.shape[2:], dtype=array.dtype)
+            content[:, :array.shape[1]] = array
+            if isinstance(maskedwhen, cls.numpy.ma.core.MaskedConstant):
+                mask = cls.numpy.ones(len(array), dtype=cls.MASKTYPE)
+                return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.numpy.ma.array(content.reshape((-1,) + array.shape[2:]), mask=mask))
+            if maskedwhen:
+                mask = cls.numpy.ones((len(array), length), dtype=cls.MASKTYPE)
+            else:
+                mask = cls.numpy.zeros((len(array), length), dtype=cls.MASKTYPE)
+            mask[:, :array.shape[1]] = not maskedwhen
+            return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.MaskedArray.fget(None)(mask.reshape((-1,) + array.shape[2:]), content.reshape((-1,) + array.shape[2:]), maskedwhen=maskedwhen))
+
+    @classmethod
     def _util_regular(cls, array):
         if isinstance(array, AwkwardArray):
             return array.regular()

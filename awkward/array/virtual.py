@@ -400,6 +400,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def flatten(self, axis=0):
         return self._util_flatten(self.array, axis)
 
+    def pad(self, length, maskedwhen=True, clip=False):
+        return self._util_pad(self.array, length, maskedwhen, clip)
+
     def regular(self):
         return self._util_regular(self.array)
 

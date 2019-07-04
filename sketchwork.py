@@ -1529,10 +1529,87 @@ a.pad(3).fillna(-999)
 # %%
 a.pad(3, clip=True).fillna(0).regular()
 
-# HERE: implement pad through other types (examples with tables?)
+# %%markdown
+# If a ``JaggedArray`` is nested within some other type, ``pad`` will propagate down to it.
 
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], None, [4.4, 5.5], None])
+a
 
+# %%
+a.pad(3)
 
+# %%
+a = awkward.Table(x=[[1, 1], [2, 2], [3, 3], [4, 4]],
+                  y=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]]))
+a.tolist()
+
+# %%
+a.pad(3).tolist()
+
+# %%
+a.pad(3, clip=True).tolist()
+
+# %%markdown
+# If you pass a ``pad`` through a ``Table``, be sure that every field in each record is a nested array (and therefore can be padded).
+
+# %%
+a = awkward.Table(x=[1, 2, 3, 4],
+                  y=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]]))
+a.tolist()
+
+# %%
+try:
+    a.pad(3)
+except Exception as err:
+    print(type(err), str(err))
+
+# %%markdown
+# The same goes for ``UnionArrays``.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3, [1, 2, 3]], [], [4.4, 5.5, [4, 5]]])
+a
+
+# %%
+a.pad(5)
+
+# %%
+a = awkward.UnionArray.fromtags([0, 0, 0, 1, 1],
+                                [awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
+                                 awkward.fromiter([[100, 101], [102]])])
+a
+
+# %%
+a.pad(3)
+
+# %%
+a = awkward.UnionArray.fromtags([0, 0, 0, 1, 1],
+                                [awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
+                                 awkward.fromiter([100, 200])])
+a
+
+# %%
+try:
+    a.pad(3)
+except Exception as err:
+    print(type(err), str(err))
+
+# %%markdown
+# The general behavior of ``pad`` is to replace the shallowest ``JaggedArray`` with a ``JaggedArray`` containing a ``MaskedArray``. The one exception to this type signature is that ``StringArrays`` are padded with characters.
+
+# %%
+a = awkward.fromiter(["one", "two", "three"])
+a
+
+# %%
+a.pad(4, clip=True)
+
+# %%
+a.pad(4, maskedwhen=b".", clip=True)
+
+# %%
+a.pad(4, maskedwhen=b"\x00", clip=True)
 
 # * ``argmin()`` and ``argmax()``
 # * ``choose(n)`` and ``argchoose(n)``

@@ -576,6 +576,9 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         out.knowchunksizes()
         return out
 
+    def pad(self, length, maskedwhen=True, clip=False):
+        return self.copy(chunks=[self._util_pad(x, length, maskedwhen, clip) for x in self._chunks], chunksizes=self.chunksizes)
+
     def regular(self):
         self._valid()
         return self.numpy.concatenate([self._util_regular(x) for x in self._chunks])

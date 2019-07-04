@@ -21,6 +21,14 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         self.content = content
         self.maskedwhen = maskedwhen
 
+    @classmethod
+    def fromcontent(cls, content, maskedwhen=True):
+        if maskedwhen:
+            mask = cls.numpy.zeros(len(content), dtype=cls.MASKTYPE)
+        else:
+            mask = cls.numpy.ones(len(content), dtype=cls.MASKTYPE)
+        return cls(mask, content, maskedwhen=maskedwhen)
+
     def copy(self, mask=None, content=None, maskedwhen=None):
         out = self.__class__.__new__(self.__class__)
         out._mask = self._mask
@@ -257,6 +265,9 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def flatten(self, axis=0):
         return self._util_flatten(self._content[self.boolmask(maskedwhen=False)], axis)
 
+    def pad(self, length, maskedwhen=True, clip=False):
+        return self.copy(content=self._util_pad(self._content, length, maskedwhen, clip))
+
     def regular(self):
         self._valid()
         out = self._util_regular(self._content).astype(self.numpy.float64)
@@ -366,6 +377,14 @@ class BitMaskedArray(MaskedArray):
     def __init__(self, mask, content, maskedwhen=True, lsborder=False):
         super(BitMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
         self.lsborder = lsborder
+
+    @classmethod
+    def fromcontent(cls, content, maskedwhen=True, lsborder=False):
+        if maskedwhen:
+            mask = cls.numpy.zeros(cls._ceildiv8(len(content)), dtype=cls.BITMASKTYPE)
+        else:
+            mask = cls.numpy.ones(cls._ceildiv8(len(content)), dtype=cls.BITMASKTYPE)
+        return cls(mask, content, maskedwhen=maskedwhen, lsborder=lsborder)
 
     @classmethod
     def fromboolmask(cls, mask, content, maskedwhen=True, lsborder=False):
@@ -598,6 +617,11 @@ class IndexedMaskedArray(MaskedArray):
     def __init__(self, mask, content, maskedwhen=-1):
         super(IndexedMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
         self._isvalid = False
+
+    @classmethod
+    def fromcontent(cls, content, maskedwhen=-1):
+        mask = cls.numpy.arange(len(content), dtype=cls.INDEXTYPE)
+        return cls(mask, content, maskedwhen=maskedwhen)
 
     def copy(self, mask=None, content=None, maskedwhen=None):
         out = self.__class__.__new__(self.__class__)

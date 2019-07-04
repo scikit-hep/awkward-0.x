@@ -223,7 +223,10 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         return self._util_counts(self._content)
 
     def flatten(self, axis=0):
-        return self._util_flatten(self._content, axis)
+        return self.copy(content=self._util_flatten(self._content, axis))
+
+    def pad(self, length, maskedwhen=True, clip=False):
+        return self.copy(content=self._util_pad(self._content, length, maskedwhen, clip))
 
     def regular(self):
         return self.numpy.array(self)
@@ -602,9 +605,29 @@ class StringArray(StringMethods, ObjectArray):
         import awkward.array.jagged
         content = self._util_flatten(self._content, axis)
         if isinstance(content, awkward.array.jagged.JaggedArray):
-            return self.fromjagged(content, self.encoding)
+            return self.fromjagged(content, self._encoding)
         else:
             return self.fromjagged(self.JaggedArray.fromcounts([len(content)], content))
+
+    def pad(self, length, maskedwhen=None, clip=False):
+        if maskedwhen is None:
+            maskedwhen = ord(b" ")
+        elif not isinstance(maskedwhen, bytes) or not len(maskedwhen) == 1:
+            raise TypeError("to pad a StringArray, set maskedwhen to a one-character bytestring, such as b' '")
+        else:
+            maskedwhen = ord(maskedwhen)
+        import awkward.array.jagged
+        import awkward.array.masked
+        padded = self._util_pad(self._content, length, True, clip)
+        assert isinstance(padded, awkward.array.jagged.JaggedArray)
+        assert isinstance(padded.content, awkward.array.masked.MaskedArray)
+        if padded.content.content is self._content.content:
+            chars = padded.content.content.copy()
+        else:
+            chars = padded.content.content
+        chars[padded.content.mask] = maskedwhen
+        padded.content = chars
+        return self.fromjagged(padded, self._encoding)
 
     @awkward.util.bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
