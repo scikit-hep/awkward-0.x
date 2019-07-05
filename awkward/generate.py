@@ -104,11 +104,15 @@ class UnknownFillable(Fillable):
                 return MaskedFillable(fillable.append(obj, tpe), self.count, self.awkwardlib)
 
     def finalize(self, **options):
+        maskedwhen = options.get("maskedwhen", True)
         if self.count == 0:
             return self.awkwardlib.numpy.empty(0, dtype=self.awkwardlib.JaggedArray.DEFAULTTYPE)
         else:
-            mask = self.awkwardlib.numpy.zeros(self.count, dtype=self.awkwardlib.MaskedArray.MASKTYPE)
-            return self.awkwardlib.MaskedArray(mask, mask, maskedwhen=False)
+            if maskedwhen:
+                mask = self.awkwardlib.numpy.ones(self.count, dtype=self.awkwardlib.MaskedArray.MASKTYPE)
+            else:
+                mask = self.awkwardlib.numpy.zeros(self.count, dtype=self.awkwardlib.MaskedArray.MASKTYPE)
+            return self.awkwardlib.MaskedArray(mask, mask, maskedwhen=maskedwhen)
 
 class SimpleFillable(Fillable):
     __slots__ = ["data", "awkwardlib"]
@@ -316,6 +320,8 @@ class MaskedFillable(Fillable):
         return self
 
     def finalize(self, **options):
+        maskedwhen = options.get("maskedwhen", True)
+
         if isinstance(self.content, (TableFillable, ObjectFillable, UnionFillable)):
             index = self.awkwardlib.numpy.zeros(len(self), dtype=self.awkwardlib.IndexedMaskedArray.INDEXTYPE)
             index[self.nullpos] = -1
@@ -331,7 +337,10 @@ class MaskedFillable(Fillable):
             expanded = self.awkwardlib.numpy.empty(len(self), dtype=compact.dtype)
             expanded[valid] = compact
 
-            return self.awkwardlib.MaskedArray(valid, expanded, maskedwhen=False)
+            if maskedwhen:
+                return self.awkwardlib.MaskedArray(~valid, expanded, maskedwhen=maskedwhen)
+            else:
+                return self.awkwardlib.MaskedArray(valid, expanded, maskedwhen=maskedwhen)
 
         elif isinstance(self.content, (BytesFillable, StringFillable)):
             compact = self.content.finalize(**options)
@@ -345,7 +354,10 @@ class MaskedFillable(Fillable):
                 counts[valid] = compact.counts
                 expanded = self.awkwardlib.StringArray.fromcounts(counts, compact.content, encoding=compact.encoding)
 
-            return self.awkwardlib.MaskedArray(valid, expanded, maskedwhen=False)
+            if maskedwhen:
+                return self.awkwardlib.MaskedArray(~valid, expanded, maskedwhen=maskedwhen)
+            else:
+                return self.awkwardlib.MaskedArray(valid, expanded, maskedwhen=maskedwhen)
 
         elif isinstance(self.content, JaggedFillable):
             compact = self.content.finalize(**options)
@@ -353,7 +365,10 @@ class MaskedFillable(Fillable):
             counts[valid] = compact.counts
             expanded = self.awkwardlib.JaggedArray.fromcounts(counts, compact.content)
 
-            return self.awkwardlib.MaskedArray(valid, expanded, maskedwhen=False)
+            if maskedwhen:
+                return self.awkwardlib.MaskedArray(~valid, expanded, maskedwhen=maskedwhen)
+            else:
+                return self.awkwardlib.MaskedArray(valid, expanded, maskedwhen=maskedwhen)
 
         else:
             raise AssertionError(self.content)
@@ -400,7 +415,7 @@ class UnionFillable(Fillable):
         return self.awkwardlib.UnionArray(self.tags, self.index, [x.finalize(**options) for x in self.contents])
 
 def _checkoptions(options):
-    unrecognized = set(options).difference(["dictencoding"])
+    unrecognized = set(options).difference(["dictencoding", "maskedwhen"])
     if len(unrecognized) != 0:
         raise TypeError("unrecognized options: {0}".format(", ".join(sorted(unrecognized))))
 

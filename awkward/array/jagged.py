@@ -1802,6 +1802,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self.copy(starts=starts, stops=stops, content=self.MaskedArray(mask, content, maskedwhen=maskedwhen))
 
+    def boolmask(self, maskedwhen=True):
+        if maskedwhen:
+            return self.numpy.zeros(len(self), dtype=self.MASKTYPE)
+        else:
+            return self.numpy.ones(len(self), dtype=self.MASKTYPE)
+
     _topandas_name = "JaggedSeries"
 
     def _topandas(self, seen):

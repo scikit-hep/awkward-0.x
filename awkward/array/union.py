@@ -418,6 +418,15 @@ class UnionArray(awkward.array.base.AwkwardArray):
             out[mask] = array[self._index[mask]]
         return out
 
+    def boolmask(self, maskedwhen=True):
+        self._valid()
+        arrays = [self._util_boolmask(x, maskedwhen) for x in self._contents]
+        out = self.numpy.empty(len(self), self.MASKTYPE)
+        for tag, array in enumerate(arrays):
+            mask = (self._tags == tag)
+            out[mask] = array[self._index[mask]]
+        return out
+
     def choose(self, n):
         raise NotImplementedError("choose not yet implemented for UnionArray")
 

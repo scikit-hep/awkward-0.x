@@ -397,6 +397,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def counts(self):
         return self._util_counts(self.array)
 
+    def boolmask(self, maskedwhen=True):
+        return self._util_boolmask(self.array, maskedwhen)
+
     def choose(self, n):
         return self.array.choose(n)
 

@@ -571,6 +571,9 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def counts(self):
         return self.numpy.concatenate([self._util_counts(x) for x in self._chunks])
 
+    def boolmask(self, maskedwhen=True):
+        return self.numpy.concatenate([self._util_boolmask(x, maskedwhen) for x in self._chunks])
+
     def choose(self, n):
         out = self.copy(chunks=[x.choose(n) for x in self._chunks])
         out.knowchunksizes()

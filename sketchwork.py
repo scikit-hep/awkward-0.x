@@ -1922,15 +1922,45 @@ a.cross(b).cross(c).tolist()
 
 # %%markdown
 # ## Properties and methods for missing values
+#
+# All awkward arrays have these methods, but they provide information about the first nested ``MaskedArray`` within a structure. If, for instance, the ``MaskedArray`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``MaskedArray``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``JaggedArray``, then that's what they do.
+
+# * ``boolmask(maskedwhen=None)``: returns a Numpy array of booleans indicating which elements are missing ("masked") and which are not. If ``maskedwhen=True``, a ``True`` value in the Numpy array means missing/masked; if ``maskedwhen=False``, a ``False`` value in the Numpy array means missing/masked. If no value is passed (or ``None``), the ``MaskedArray``'s own ``maskedwhen`` property is used (which is by default ``True``). Non-``MaskedArrays`` are assumed to have a ``maskedwhen`` of ``True`` (the default).
+
+# %%
+a = awkward.fromiter([1, 2, None, 3, 4, None, None, 5])
+a.boolmask()
+
+# %%
+a.boolmask(maskedwhen=False)
+
+# %%markdown
+# ``MaskedArrays`` inside of ``JaggedArrays`` or ``Tables`` are hidden.
+
+# %%
+a = awkward.fromiter([[1.1, None, 2.2], [], [3.3, 4.4, None, 5.5]])
+a.boolmask()
+
+# %%
+a.flatten().boolmask()
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": None, "y": 2.2}, {"x": None, "y": 3.3}, {"x": 4, "y": None}])
+a.boolmask()
+
+# %%
+a.x.boolmask()
+
+# %%
+a.y.boolmask()
+
+# * ``ismasked``
+# * ``isunmasked``
+
 
 # %%
 import awkward, numpy
 
-
-
-# * ``boolmask(maskedwhen=True)``
-# * ``ismasked``
-# * ``isunmasked``
 # * ``fillna(value)``
 
 # %%markdown

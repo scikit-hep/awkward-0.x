@@ -197,6 +197,10 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
         return self._util_counts(self._content[self._index])
 
+    def boolmask(self, maskedwhen=True):
+        self._valid()
+        return self._util_boolmask(self._content[self._index], maskedwhen)
+
     def choose(self, n):
         self._valid()
         return self._content[self._index].choose(n)

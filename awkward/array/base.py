@@ -431,6 +431,29 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return cls.numpy.full(array.shape[0], array.shape[1], dtype=cls.INDEXTYPE)
 
     @classmethod
+    def _util_boolmask(cls, array, maskedwhen):
+        if isinstance(array, AwkwardArray):
+            return array.boolmask(maskedwhen=maskedwhen)
+        elif isinstance(array, cls.numpy.ma.MaskedArray) and array.mask is not False:
+            if maskedwhen:
+                return array.mask
+            else:
+                return ~array.mask
+        else:
+            if maskedwhen:
+                return cls.numpy.zeros(len(array), dtype=cls.MASKTYPE)
+            else:
+                return cls.numpy.ones(len(array), dtype=cls.MASKTYPE)
+
+    @property
+    def ismasked(self):
+        return self.boolmask(maskedwhen=True)
+
+    @property
+    def isunmasked(self):
+        return self.boolmask(maskedwhen=False)
+
+    @classmethod
     def _util_flattentuple(cls, array):
         if isinstance(array, AwkwardArray):
             return array.flattentuple()

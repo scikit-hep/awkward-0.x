@@ -108,14 +108,6 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.numpy.logical_not(self._mask)
 
     @property
-    def ismasked(self):
-        return self.boolmask(maskedwhen=True)
-
-    @property
-    def isunmasked(self):
-        return self.boolmask(maskedwhen=False)
-
-    @property
     def content(self):
         return self._content
 

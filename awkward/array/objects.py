@@ -222,6 +222,9 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def counts(self):
         return self._util_counts(self._content)
 
+    def boolmask(self, maskedwhen=True):
+        return self._util_boolmask(self._content, maskedwhen)
+
     def choose(self, n):
         raise TypeError("cannot call choose on ObjectArray")
 

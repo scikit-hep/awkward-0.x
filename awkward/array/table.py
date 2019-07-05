@@ -727,6 +727,12 @@ class Table(awkward.array.base.AwkwardArray):
     def counts(self):
         return self.numpy.full(len(self), -1, dtype=self.INDEXTYPE)
 
+    def boolmask(self, maskedwhen=True):
+        if maskedwhen:
+            return self.numpy.zeros(len(self), dtype=self.MASKTYPE)
+        else:
+            return self.numpy.ones(len(self), dtype=self.MASKTYPE)
+
     def choose(self, n):
         raise TypeError("cannot call choose on a Table")
 
