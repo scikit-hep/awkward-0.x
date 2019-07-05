@@ -689,7 +689,9 @@ class StringArray(StringMethods, ObjectArray):
     @classmethod
     def _concatenate_axis1(cls, arrays):
         assert all(isinstance(x, StringArray) for x in arrays)
-        return cls.fromjagged(cls.JaggedArray.fget(None)._concatenate_axis1([x._content for x in arrays]), encoding=arrays[0]._encoding)
+        tmp = cls.JaggedArray.fget(None)._concatenate_axis1([x._content for x in arrays])
+        tmp._content = tmp._content.astype(cls.CHARTYPE)
+        return cls.fromjagged(tmp, encoding=arrays[0]._encoding)
 
     def fillna(self, value):
         return self

@@ -1979,6 +1979,8 @@ a.fillna(999).tolist()
 
 # %%markdown
 # ## Functions for structure manipulation
+#
+# Only one function (for now) is defined at top-level in awkward-array: ``awkward.concatenate``.
 
 # * ``awkward.concatenate(arrays, axis=0)``: concatenate two or more ``arrays``. If ``axis=0``, the arrays are concatenated lengthwise (the resulting length is the sum of the lengths of each of the ``arrays``). If ``axis=1``, each inner array is concatenated: the input ``arrays`` must all be jagged with the same outer array length. (Values of ``axis`` greater than ``1`` are not yet supported.)
 
