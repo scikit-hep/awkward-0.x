@@ -557,6 +557,12 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def fillna(self, value):
         return self.copy(contents=[self._util_fillna(x, value) for x in self._contents])
 
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, UnionArray) for x in arrays)
+        tags = cls.numpy.concatenate([cls.numpy.full(len(x), i, dtype=cls.TAGTYPE) for i, x in enumerate(arrays)])
+        return cls.UnionArray.fget(None).fromtags(tags, arrays)
+
     _topandas_name = "UnionSeries"
 
     def _topandas(self, seen):

@@ -478,6 +478,16 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def fillna(self, value):
         return self._util_fillna(self.array, value)
 
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, VirtualArray) for x in arrays)
+        return awkward.array.base.AwkwardArray.concatenate([x.array for x in arrays], axis=0)
+
+    @classmethod
+    def _concatenate_axis1(cls, arrays):
+        assert all(isinstance(x, VirtualArray) for x in arrays)
+        return awkward.array.base.AwkwardArray.concatenate([x.array for x in arrays], axis=1)
+
     @staticmethod
     def _topandas_doit(virtualarray):
         return virtualarray.array._topandas()

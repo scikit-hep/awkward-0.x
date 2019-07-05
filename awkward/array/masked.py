@@ -387,6 +387,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         out[self.boolmask(maskedwhen=True)] = value
         return out
 
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, MaskedArray) for x in arrays)
+        mask = cls.numpy.concatenate([x.boolmask(maskedwhen=True) for x in arrays])
+        content = awkward.array.base.AwkwardArray.concatenate([x._content for x in arrays])
+        return cls(mask, content, maskedwhen=True)
+
     _topandas_name = "MaskedSeries"
 
     def _topandas(self, seen):
@@ -640,6 +647,10 @@ class BitMaskedArray(MaskedArray):
             else:
                 return self.copy(mask=self.bool2bit(mask, lsborder=self._lsborder), content=self._content[(head,) + tail], lsborder=self._lsborder)
 
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        raise NotImplementedError("concatenate not implemented for BitMaskedArray")
+
 class IndexedMaskedArray(MaskedArray):
     """
     IndexedMaskedArray
@@ -855,3 +866,20 @@ class IndexedMaskedArray(MaskedArray):
             out = self.numpy.array(out)
         out[self.mask < 0] = value
         return out
+
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, IndexedMaskedArray) for x in arrays)
+
+        indexes = []
+        offset = 0
+        for x in arrays:
+            tmp = x._index.copy()
+            tmp[tmp >= 0] += offset
+            indexes.append(tmp)
+            offset += len(x._content)
+        index = cls.numpy.concatenate(indexes)
+
+        content = awkward.array.base.AwkwardArray.concatenate([x._content for x in arrays], axis=0)
+
+        return cls(index, content, maskedwhen=maskedwhen)

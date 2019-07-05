@@ -549,23 +549,33 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     @bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
+        if len(arrays) < 1:
+            raise ValueError("at least one array needed to concatenate")
+
         if isclassmethod:
             cls = cls_or_self
         else:
             self = cls_or_self
-            cls = self.__class__
+            cls = type(self)
             arrays = (self,) + tuple(arrays)
 
+        if all(type(x) == cls.numpy.ndarray for x in arrays):
+            return cls.numpy.concatenate(arrays, axis=axis)
+
         if not all(type(x) == type(arrays[0]) for x in arrays):
-            raise TypeError("cannot concatenate arrays of different type with AwkwardArray.concatenate")
+            if axis == 0:
+                tags = cls.numpy.concatenate([cls.numpy.full(len(x), i, dtype=cls.TAGTYPE) for i, x in enumerate(arrays)])
+                return cls.UnionArray.fget(None).fromtags(tags, arrays)
+            else:
+                raise NotImplementedError("axis > 0 for different types")
 
         for x in arrays:
             x.valid()
 
         if axis == 0:
-            return cls._concatenate_axis0(arrays)
+            return type(arrays[0])._concatenate_axis0(arrays)
         elif axis == 1:
-            return cls._concatenate_axis1(arrays)
+            return type(arrays[0])._concatenate_axis1(arrays)
         else:
             raise NotImplementedError("axis > 1")
 

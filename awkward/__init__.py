@@ -18,6 +18,9 @@ from awkward.array.table import Table
 from awkward.array.union import UnionArray
 from awkward.array.virtual import VirtualArray
 
+def concatenate(arrays, axis=0):
+    return AwkwardArray.concatenate(arrays, axis=axis)
+
 from awkward.generate import fromiter, fromiterchunks
 
 from awkward.persist import serialize, deserialize, save, load, hdf5

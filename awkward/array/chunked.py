@@ -746,6 +746,16 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             chunksizes.append(self._chunksizes[i])
         return self.copy(chunks=chunks, chunksizes=chunksizes)
 
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, ChunkedArray) for x in arrays)
+        if all(x.chunksizesknown for x in arrays):
+            chunksizes = [y for x in arrays for y in x._chunksizes]
+        else:
+            chunksizes = []
+        chunks = [y for x in arrays for y in x._chunks]
+        return cls(chunks, chunksizes)
+
     _topandas_name = "ChunkedSeries"
 
     def _topandas(self, seen):

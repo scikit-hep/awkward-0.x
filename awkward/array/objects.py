@@ -665,21 +665,31 @@ class StringArray(StringMethods, ObjectArray):
         padded.content = chars
         return self.fromjagged(padded, self._encoding)
 
-    @awkward.util.bothmethod
-    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
-        if isclassmethod:
-            cls = cls_or_self
-            if not all(isinstance(x, StringArray) for x in arrays):
-                raise TypeError("cannot concatenate non-StringArrays with StringArray.concatenate")
-        else:
-            self = cls_or_self
-            cls = self.__class__
-            if not isinstance(self, StringArray) or not all(isinstance(x, StringArray) for x in arrays):
-                raise TypeError("cannot concatenate non-StringArrays with StringArrays.concatenate")
-            arrays = (self,) + tuple(arrays)
+    # @awkward.util.bothmethod
+    # def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
+    #     if isclassmethod:
+    #         cls = cls_or_self
+    #         if not all(isinstance(x, StringArray) for x in arrays):
+    #             raise TypeError("cannot concatenate non-StringArrays with StringArray.concatenate")
+    #     else:
+    #         self = cls_or_self
+    #         cls = self.__class__
+    #         if not isinstance(self, StringArray) or not all(isinstance(x, StringArray) for x in arrays):
+    #             raise TypeError("cannot concatenate non-StringArrays with StringArrays.concatenate")
+    #         arrays = (self,) + tuple(arrays)
+    #
+    #     jagged = self.JaggedArray.concatenate([x._content for x in arrays], axis=axis)
+    #     return self.fromjagged(jagged, self.encoding)
 
-        jagged = self.JaggedArray.concatenate([x._content for x in arrays], axis=axis)
-        return self.fromjagged(jagged, self.encoding)
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, StringArray) for x in arrays)
+        return cls.fromjagged(cls.JaggedArray.fget(None)._concatenate_axis0([x._content for x in arrays]), encoding=arrays[0]._encoding)
+
+    @classmethod
+    def _concatenate_axis1(cls, arrays):
+        assert all(isinstance(x, StringArray) for x in arrays)
+        return cls.fromjagged(cls.JaggedArray.fget(None)._concatenate_axis1([x._content for x in arrays]), encoding=arrays[0]._encoding)
 
     def fillna(self, value):
         return self

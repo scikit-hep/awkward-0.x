@@ -280,6 +280,21 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     def argmax(self):
         return self._content[self._index].argmax()
 
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, IndexedArray) for x in arrays)
+
+        indexes = []
+        offset = 0
+        for x in arrays:
+            indexes.append(x._index + offset)
+            offset += len(x._content)
+        index = cls.numpy.concatenate(indexes)
+
+        content = awkward.array.base.AwkwardArray.concatenate([x._content for x in arrays], axis=0)
+
+        return cls(index, content)
+
     _topandas_name = "IndexedSeries"
 
     def _topandas(self, seen):

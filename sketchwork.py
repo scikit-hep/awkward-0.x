@@ -1980,12 +1980,47 @@ a.fillna(999).tolist()
 # %%markdown
 # ## Functions for structure manipulation
 
-# * ``awkward.concatenate(arrays, axis=0)`` FIXME
+# * ``awkward.concatenate(arrays, axis=0)``: concatenate two or more ``arrays``. If ``axis=0``, the arrays are concatenated lengthwise (the resulting length is the sum of the lengths of each of the ``arrays``). If ``axis=1``, each inner array is concatenated: the input ``arrays`` must all be jagged with the same outer array length. (Values of ``axis`` greater than ``1`` are not yet supported.)
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+b = awkward.fromiter([[100, 200], [300], [400, 500, 600]])
+awkward.concatenate([a, b])
+
+# %%
+awkward.concatenate([a, b], axis=1)
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
+b = awkward.fromiter([{"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])
+awkward.concatenate([a, b]).tolist()
+
+# %%markdown
+# If the arrays have different types, their concatenation is a ``UnionArray``.
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
+b = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+awkward.concatenate([a, b]).tolist()
+
+# %%
+a = awkward.fromiter([1, None, 2])
+b = awkward.fromiter([None, 3, None])
+awkward.concatenate([a, b])
+
+# %%
+import awkward, numpy
+a = awkward.fromiter(["one", "two", "three"])
+b = awkward.fromiter(["four", "five", "six"])
+awkward.concatenate([a, b])
+
+# %%
+awkward.concatenate([a, b], axis=1)
 
 # %%markdown
 # # Functions for input/output and conversion
 
-# * ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False)``
+# * ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False, maskedwhen=True)``
 # * ``awkward.fromiterchunks(iterable, chunksize, awkwardlib=None, dictencoding=False)``
 # * ``load(file, awkwardlib=None, whitelist=awkward.persist.whitelist, cache=None, schemasuffix=".json")``
 # * ``save(file, array, name=None, mode="a", compression=awkward.persist.compression, delimiter="-", suffix=".raw", schemasuffix=".json")``
