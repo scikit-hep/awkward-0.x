@@ -234,6 +234,12 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             return self._content._prepare(ufunc, identity, dtype)[self._index]
 
+    def argmin(self):
+        return self._content[self._index].argmin()
+
+    def argmax(self):
+        return self._content[self._index].argmax()
+
     _topandas_name = "IndexedSeries"
 
     def _topandas(self, seen):
@@ -683,6 +689,12 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             return self.dense
         else:
             return self.copy(content=self._content._prepare(ufunc, identity, dtype)).dense
+
+    def argmin(self):
+        return self.dense.argmin()
+
+    def argmax(self):
+        return self.dense.argmax()
 
     _topandas_name = "SparseSeries"
 

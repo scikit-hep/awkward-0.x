@@ -424,6 +424,12 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         else:
             return array._prepare(ufunc, identity, dtype)
 
+    def argmin(self):
+        return self.array.argmin()
+
+    def argmax(self):
+        return self.array.argmax()
+
     def _util_columns(self, seen):
         if id(self) in seen:
             return []

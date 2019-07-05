@@ -347,6 +347,20 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
         return content
 
+    def argmin(self):
+        if self._util_hasjagged(self):
+            return self.copy(content=self._content.argmin())
+        else:
+            index = self._content[self.isunmasked()].argmin()
+            return self.numpy.searchsorted(self.numpy.cumsum(self.ismasked()), index, side="right")
+
+    def argmax(self):
+        if self._util_hasjagged(self):
+            return self.copy(content=self._content.argmax())
+        else:
+            index = self._content[self.isunmasked()].argmax()
+            return self.numpy.searchsorted(self.numpy.cumsum(self.ismasked()), index, side="right")
+
     def fillna(self, value):
         out = self._util_fillna(self._content, value)
         if not isinstance(out, self.numpy.ndarray):
@@ -801,6 +815,20 @@ class IndexedMaskedArray(MaskedArray):
         out = self.numpy.full(self._mask.shape + content.shape[1:], identity, dtype=content.dtype)
         out[self.isunmasked] = content[self.mask[self.mask >= 0]]
         return out
+
+    def argmin(self):
+        if self._util_hasjagged(self):
+            return self.copy(content=self._content.argmin())
+        else:
+            index = self._content[self._mask[self.isunmasked()]].argmin()
+            return self.numpy.searchsorted(self.numpy.cumsum(self.ismasked()), index, side="right")
+
+    def argmax(self):
+        if self._util_hasjagged(self):
+            return self.copy(content=self._content.argmax())
+        else:
+            index = self._content[self._mask[self.isunmasked()]].argmax()
+            return self.numpy.searchsorted(self.numpy.cumsum(self.ismasked()), index, side="right")
 
     def fillna(self, value):
         out = self._util_fillna(self._content, value)

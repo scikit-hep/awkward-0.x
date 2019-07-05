@@ -237,6 +237,12 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def _prepare(self, ufunc, identity, dtype):
         raise TypeError("cannot call reducer on object array")
 
+    def argmin(self):
+        raise TypeError("cannot call argmin on object array")
+
+    def argmax(self):
+        raise TypeError("cannot call argmax on object array")
+
     @classmethod
     def _concatenate_axis0(cls, arrays):
         out = arrays[0].copy(content=[])

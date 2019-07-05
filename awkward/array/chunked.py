@@ -620,6 +620,24 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         else:
             return out
 
+    def argmin(self):
+        if self._util_hasjagged(self):
+            return self.copy(chunks=[x.argmin() for x in self._chunks], chunksizes=self._chunksizes)
+        else:
+            indexes = [x.argmin() for x in self._chunks]
+            chunkid = self.numpy.argmin([x[i] for i, x in zip(indexes, self._chunks)])
+            self.knowchunksizes(chunkid)
+            return self.offsets[chunkid] + indexes[chunkid]
+
+    def argmax(self):
+        if self._util_hasjagged(self):
+            return self.copy(chunks=[x.argmax() for x in self._chunks], chunksizes=self._chunksizes)
+        else:
+            indexes = [x.argmax() for x in self._chunks]
+            chunkid = self.numpy.argmax([x[i] for i, x in zip(indexes, self._chunks)])
+            self.knowchunksizes(chunkid)
+            return self.offsets[chunkid] + indexes[chunkid]
+
     def _prepare(self, ufunc, identity, dtype):
         self.knowchunksizes()
         out = None

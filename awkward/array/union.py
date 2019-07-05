@@ -477,6 +477,12 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
         return out
 
+    def argmin(self):
+        raise NotImplementedError("argmin not yet implemented for UnionArray")
+
+    def argmax(self):
+        raise NotImplementedError("argmax not yet implemented for UnionArray")
+
     def _util_columns(self, seen):
         if id(self) in seen:
             return []

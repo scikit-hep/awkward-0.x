@@ -822,6 +822,12 @@ class Table(awkward.array.base.AwkwardArray):
             out[n] = x
         return out
 
+    def argmin(self):
+        raise TypeError("cannot call argmin on Table")
+
+    def argmax(self):
+        raise TypeError("cannot call argmax on Table")
+
     def _util_columns(self, seen):
         if id(self) in seen:
             return []
