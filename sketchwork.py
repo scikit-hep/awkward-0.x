@@ -1782,10 +1782,79 @@ awkward.JaggedArray.zip(a, 1000)
 
 # %%markdown
 # ## Properties and methods for tabular columns
+#
+# All awkward arrays have these methods, but they provide information about the first nested ``Table`` within a structure. If, for instance, the ``Table`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``Table``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``MaskedArray``, then that's what they do.
 
-# * ``columns``
-# * ``unzip()``
-# * ``istuple``
+# * ``columns``: the names of the columns at the first tabular level of depth.
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}, {"x": 3, "y": 3.3, "z": "three"}])
+a.tolist()
+
+# %%
+a.columns
+
+# %%
+a = awkward.Table(x=[1, 2, 3],
+                  y=[1.1, 2.2, 3.3],
+                  z=awkward.Table(a=[4, 5, 6], b=[4.4, 5.5, 6.6]))
+a.tolist()
+
+# %%
+a.columns
+
+# %%
+a["z"].columns
+
+# %%
+a.z.columns
+
+# * ``unzip()``: returns a tuple of projections through each of the columns (in the same order as the ``columns`` property).
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}, {"x": 3, "y": 3.3, "z": "three"}])
+a.unzip()
+
+# %%markdown
+# The ``unzip`` method is the opposite of the ``Table`` constructor,
+
+# %%
+a = awkward.Table(x=[1, 2, 3],
+                  y=[1.1, 2.2, 3.3],
+                  z=awkward.fromiter(["one", "two", "three"]))
+a.tolist()
+
+# %%
+a.unzip()
+
+# %%markdown
+# but it is also the opposite of ``JaggedArray.zip``.
+
+# %%
+b = awkward.JaggedArray.zip(x=awkward.fromiter([[1, 2, 3], [], [4, 5]]),
+                            y=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
+                            z=awkward.fromiter([["a", "b", "c"], [], ["d", "e"]]))
+b.tolist()
+
+# %%
+b.unzip()
+
+# %%markdown
+# ``JaggedArray.zip`` produces a jagged array of ``Table`` whereas the ``Table`` constructor produces just a ``Table``, and these are distinct things, though they can both be inverted by the same function because row indexes and column indexes commute:
+
+# %%
+b[0]["y"]
+
+# %%
+b["y"][0]
+
+# %%
+# So ``unzip`` turns a flat ``Table`` into a tuple of flat arrays (opposite of the ``Table`` constructor) and it turns a jagged ``Table`` into a tuple of jagged arrays (opposite of ``JaggedArray.zip``).
+
+# * ``istuple``: 
+
+
+
 # * ``i0`` through ``i9``
 # * ``flattentuple()``
 

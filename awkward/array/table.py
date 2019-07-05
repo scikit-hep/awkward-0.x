@@ -48,7 +48,7 @@ class Table(awkward.array.base.AwkwardArray):
 
         def tolist(self):
             if self._table.istuple:
-                return tuple(self[n].tolist() for n in self._table._contents)
+                return tuple(self._table._try_tolist(self[n]) for n in self._table._contents)
             else:
                 return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._contents.items())
 

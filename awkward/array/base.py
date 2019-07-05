@@ -145,7 +145,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         for x in self:
             if isinstance(x, awkward.array.table.Table.Row):
                 if x._table.istuple:
-                    out.append(tuple(x[n].tolist() for n in x._table._contents))
+                    out.append(tuple(self._try_tolist(x[n]) for n in x._table._contents))
                 else:
                     out.append(dict((n, self._try_tolist(x[n])) for n in x._table._contents))
             elif isinstance(x, self.numpy.ma.core.MaskedConstant):
