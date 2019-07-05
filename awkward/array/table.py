@@ -203,7 +203,7 @@ class Table(awkward.array.base.AwkwardArray):
     def __init__(self, columns1={}, *columns2, **columns3):
         self._view = None
         self._base = None
-        self.rowname = "Row"
+        self.rowname = "Row" if isinstance(columns1, dict) or len(columns3) > 0 else "tuple"
         self.rowstart = None
         self._contents = OrderedDict()
 
@@ -252,6 +252,9 @@ class Table(awkward.array.base.AwkwardArray):
             if not isinstance(value, awkward.util.string):
                 raise TypeError("rowname must be a string")
         self._rowname = value
+
+    def _util_rowname(self, seen):
+        return self._rowname
 
     @property
     def rowstart(self):
@@ -764,10 +767,6 @@ class Table(awkward.array.base.AwkwardArray):
         for n, x in pairs:
             out[n] = x
         return out
-
-    @property
-    def istuple(self):
-        return self._rowname == "tuple" and list(self._contents) == [str(x) for x in range(len(self._contents))]
 
     def flattentuple(self):
         out = self.copy()

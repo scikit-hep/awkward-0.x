@@ -460,6 +460,12 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         seen.add(id(self))
         return self._util_columns_descend(self.array, seen)
 
+    def _util_rowname(self, seen):
+        if id(self) in seen:
+            raise TypeError("not a Table, so there is no rowname")
+        seen.add(id(self))
+        return self._util_rowname_descend(self.array, seen)
+
     def astype(self, dtype):
         return self.array.astype(dtype)
 

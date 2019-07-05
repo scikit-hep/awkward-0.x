@@ -603,6 +603,25 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def columns(self):
         return self._util_columns(set())
 
+    @classmethod
+    def _util_rowname_descend(cls, array, seen):
+        if isinstance(array, cls.numpy.ndarray):
+            if array.dtype.fields is None:
+                raise TypeError("not a Table, so there is no rowname")
+            else:
+                return None
+        else:
+            return array._util_rowname(seen)
+
+    @property
+    def rowname(self):
+        return self._util_rowname(set())
+
+    @property
+    def istuple(self):
+        columns = self.columns
+        return self.rowname == "tuple" and columns == [str(x) for x in range(len(columns))]
+
     def unzip(self):
         return tuple(self[column_name] for column_name in self._util_columns(set()))
 
@@ -642,6 +661,12 @@ class AwkwardArrayWithContent(AwkwardArray):
             return []
         seen.add(id(self))
         return self._util_columns_descend(self._content, seen)
+
+    def _util_rowname(self, seen):
+        if id(self) in seen:
+            raise TypeError("not a Table, so there is no rowname")
+        seen.add(id(self))
+        return self._util_rowname_descend(self._content, seen)
 
     def astype(self, dtype):
         return self.copy(content=self._content.astype(dtype))

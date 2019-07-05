@@ -523,6 +523,22 @@ class UnionArray(awkward.array.base.AwkwardArray):
         else:
             return out
 
+    def _util_rowname(self, seen):
+        if id(self) in seen:
+            raise TypeError("not a Table, so there is no rowname")
+        seen.add(id(self))
+        out = None
+        for content in self._contents:
+            tmp = self._util_rowname_descend(content, seen)
+        if out is None:
+            out = tmp
+        elif out != tmp:
+            raise TypeError("union of multiple Tables with different names, so there is no single rowname")
+        if out is None:
+            raise TypeError("not a Table, so there is no rowname")
+        else:
+            return out
+
     def astype(self, dtype):
         return self.copy(contents=[x.astype(dtype) for x in self._contents])
 

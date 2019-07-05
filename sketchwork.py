@@ -1851,9 +1851,37 @@ b["y"][0]
 # %%
 # So ``unzip`` turns a flat ``Table`` into a tuple of flat arrays (opposite of the ``Table`` constructor) and it turns a jagged ``Table`` into a tuple of jagged arrays (opposite of ``JaggedArray.zip``).
 
-# * ``istuple``: 
+# * ``istuple``: an array of tuples is a special kind of ``Table``, one whose ``rowname`` is ``"tuple"`` and columns are ``"0"``, ``"1"``, ``"2"``, etc. If these conditions are met, ``istuple`` is ``True``; otherwise, ``False``.
 
+# %%
+a = awkward.Table(x=[1, 2, 3],
+                  y=[1.1, 2.2, 3.3],
+                  z=awkward.fromiter(["one", "two", "three"]))
+a.tolist()
 
+# %%
+a.istuple
+
+# %%
+a = awkward.Table([1, 2, 3],
+                  [1.1, 2.2, 3.3],
+                  awkward.fromiter(["one", "two", "three"]))
+a.tolist()
+
+# %%
+a.istuple
+
+# %%markdown
+# Even though the following tuples are inside of a jagged array, the first level of ``Table`` is a tuple, so ``istuple`` is ``True``.
+
+# %%
+b = awkward.JaggedArray.zip(awkward.fromiter([[1, 2, 3], [], [4, 5]]),
+                            awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
+                            awkward.fromiter([["a", "b", "c"], [], ["d", "e"]]))
+b
+
+# %%
+b.istuple
 
 # * ``i0`` through ``i9``
 # * ``flattentuple()``

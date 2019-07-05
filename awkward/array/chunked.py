@@ -712,6 +712,14 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             if self._chunksizes[chunkid] > 0:
                 return self._util_columns_descend(self._chunks[chunkid], seen)
 
+    def _util_rowname(self, seen):
+        if id(self) in seen:
+            raise TypeError("not a Table, so there is no rowname")
+        for chunkid in range(len(self._chunks)):
+            self.knowchunksizes(chunkid + 1)
+            if self._chunksizes[chunkid] > 0:
+                return self._util_rowname_descend(self._chunks[chunkid], seen)
+
     def astype(self, dtype):
         chunks = []
         chunksizes = []
