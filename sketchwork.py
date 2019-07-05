@@ -1954,14 +1954,28 @@ a.x.boolmask()
 # %%
 a.y.boolmask()
 
-# * ``ismasked``
-# * ``isunmasked``
-
+# * ``ismasked`` and ``isunmasked``: shortcut for ``boolmask(maskedwhen=True)`` and ``boolmask(maskedwhen=False)`` as a property, which is more appropriate for analysis.
 
 # %%
-import awkward, numpy
+a = awkward.fromiter([1, 2, None, 3, 4, None, None, 5])
+a.ismasked
 
-# * ``fillna(value)``
+# %%
+a.isunmasked
+
+# * ``fillna(value)``: turn a ``MaskedArray`` into a non-``MaskedArray`` by replacing ``None`` with ``value``. Applies to the outermost ``MaskedArray``, but it passes through ``JaggedArrays`` and into all ``Table`` columns.
+
+# %%
+a = awkward.fromiter([1, 2, None, 3, 4, None, None, 5])
+a.fillna(999)
+
+# %%
+a = awkward.fromiter([[1.1, None, 2.2], [], [3.3, 4.4, None, 5.5]])
+a.fillna(999)
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": None, "y": 2.2}, {"x": None, "y": 3.3}, {"x": 4, "y": None}])
+a.fillna(999).tolist()
 
 # %%markdown
 # ## Functions for structure manipulation
