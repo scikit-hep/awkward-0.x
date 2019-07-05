@@ -1611,7 +1611,28 @@ a.pad(4, maskedwhen=b".", clip=True)
 # %%
 a.pad(4, maskedwhen=b"\x00", clip=True)
 
-# * ``argmin()`` and ``argmax()``
+# * ``argmin()`` and ``argmax()``: returns the index of the minimum or maximum value in a non-jagged array or the indexes where each inner array is minimized or maximized. The jagged structure of the return value consists of empty arrays for each empty array and singleton arrays for non-empty ones, consisting of a single index in an inner array. This is the form needed to extract one element from each inner array using jagged indexing.
+
+# %%
+a = awkward.fromiter([[-3.3, 5.5, -8.8], [], [-6.6, 0.0, 2.2, 3.3], [], [2.2, -2.2, 4.4]])
+absa = abs(a)
+
+# %%
+a
+
+# %%
+absa
+
+# %%
+index = absa.argmax()
+index
+
+# %%
+absa[index]
+
+# %%
+a[index]
+
 # * ``choose(n)`` and ``argchoose(n)``
 # * ``distincts()`` and ``argdistincts()``
 # * ``pairs()`` and ``argpairs()``
