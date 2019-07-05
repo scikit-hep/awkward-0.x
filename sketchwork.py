@@ -1756,7 +1756,29 @@ a.choose(3).unzip()
 # %%
 a.choose(4).unzip()
 
-# * ``JaggedArray.zip(columns...)``
+# * ``JaggedArray.zip(columns...)``: combines jagged arrays with the same structure into a single jagged array. The columns may be unnamed (resulting in a jagged array of tuples) or named with keyword arguments or dict keys (resulting in a jagged array of a table with named columns).
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+b = awkward.fromiter([[100, 200, 300], [], [400, 500]])
+awkward.JaggedArray.zip(a, b)
+
+# %%
+awkward.JaggedArray.zip(x=a, y=b).tolist()
+
+# %%
+awkward.JaggedArray.zip({"x": a, "y": b}).tolist()
+
+# %%markdown
+# Not all of the arguments need to be jagged; those that aren't will be broadcasted to the right shape.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+b = awkward.fromiter([100, 200, 300])
+awkward.JaggedArray.zip(a, b)
+
+# %%
+awkward.JaggedArray.zip(a, 1000)
 
 # %%markdown
 # ## Properties and methods for tabular columns
