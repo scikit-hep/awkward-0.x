@@ -571,6 +571,46 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def counts(self):
         return self.numpy.concatenate([self._util_counts(x) for x in self._chunks])
 
+    def choose(self, n):
+        out = self.copy(chunks=[x.choose(n) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def argchoose(self, n):
+        out = self.copy(chunks=[x.argchoose(n) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def distincts(self, nested=False):
+        out = self.copy(chunks=[x.distincts(nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def argdistincts(self, nested=False):
+        out = self.copy(chunks=[x.argdistincts(nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def pairs(self, nested=False):
+        out = self.copy(chunks=[x.pairs(nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def argpairs(self, nested=False):
+        out = self.copy(chunks=[x.argpairs(nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def cross(self, other, nested=False):
+        out = self.copy(chunks=[x.cross(other, nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def argcross(self, other, nested=False):
+        out = self.copy(chunks=[x.argcross(other, nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
     def flatten(self, axis=0):
         out = self.copy(chunks=[self._util_flatten(x, axis) for x in self._chunks])
         out.knowchunksizes()

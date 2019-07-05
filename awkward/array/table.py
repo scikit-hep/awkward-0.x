@@ -724,6 +724,30 @@ class Table(awkward.array.base.AwkwardArray):
     def counts(self):
         return self.numpy.full(len(self), -1, dtype=self.INDEXTYPE)
 
+    def choose(self, n):
+        raise TypeError("cannot call choose on a Table")
+
+    def argchoose(self, n):
+        raise TypeError("cannot call argchoose on a Table")
+
+    def distincts(self, nested=False):
+        raise TypeError("cannot call distincts on a Table")
+
+    def argdistincts(self, nested=False):
+        raise TypeError("cannot call argdistincts on a Table")
+
+    def pairs(self, nested=False):
+        raise TypeError("cannot call pairs on a Table")
+
+    def argpairs(self, nested=False):
+        raise TypeError("cannot call argpairs on a Table")
+
+    def cross(self, other, nested=False):
+        raise TypeError("cannot call cross on a Table")
+
+    def argcross(self, other, nested=False):
+        raise TypeError("cannot call argcross on a Table")
+
     def flatten(self, axis=0):
         raise ValueError("cannot flatten through a Table")
 

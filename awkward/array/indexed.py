@@ -197,6 +197,38 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
         return self._util_counts(self._content[self._index])
 
+    def choose(self, n):
+        self._valid()
+        return self._content[self._index].choose(n)
+
+    def argchoose(self, n):
+        self._valid()
+        return self._content[self._index].argchoose(n)
+
+    def distincts(self, nested=False):
+        self._valid()
+        return self._content[self._index].distincts(nested=nested)
+
+    def argdistincts(self, nested=False):
+        self._valid()
+        return self._content[self._index].argdistincts(nested=nested)
+
+    def pairs(self, nested=False):
+        self._valid()
+        return self._content[self._index].pairs(nested=nested)
+
+    def argpairs(self, nested=False):
+        self._valid()
+        return self._content[self._index].argpairs(nested=nested)
+
+    def cross(self, other, nested=False):
+        self._valid()
+        return self._content[self._index].cross(other, nested=nested)
+
+    def argcross(self, other, nested=False):
+        self._valid()
+        return self._content[self._index].argcross(other, nested=nested)
+
     def flatten(self, axis=0):
         self._valid()
         return self._util_flatten(self._content[self._index], axis)

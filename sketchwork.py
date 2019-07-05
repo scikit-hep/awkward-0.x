@@ -1633,10 +1633,129 @@ absa[index]
 # %%
 a[index]
 
-# * ``choose(n)`` and ``argchoose(n)``
-# * ``distincts()`` and ``argdistincts()``
-# * ``pairs()`` and ``argpairs()``
-# * ``cross(other)`` and ``argcross(other)``
+# * ``cross(other, nested=False)`` and ``argcross(other, nested=False)``: returns jagged tuples representing the `cross-join <https://en.wikipedia.org/wiki/Join_(SQL)#Cross_join>`__ of `array[i]` and `other[i]` separately for each `i`. If `nested=True`, the result is doubly jagged so that each element of the output corresponds to exactly one element in the original `array`.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+b = awkward.fromiter([["one", "two"], ["three"], ["four", "five", "six"], ["seven"]])
+a.cross(b)
+
+# %%
+a.cross(b, nested=True)
+
+# %%markdown
+# The "arg" version returns indexes at which the appropriate objects may be found, as usual.
+
+# %%
+a.argcross(b)
+
+# %%
+a.argcross(b, nested=True)
+
+# %%markdown
+# This method is good to use with ``unzip``, which separates the ``Table`` of tuples into a left half and a right half.
+
+# %%
+left, right = a.cross(b).unzip()
+left, right
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+b = awkward.fromiter([[1, 2], [3], [4, 5, 6], [7]])
+left, right = a.cross(b, nested=True).unzip()
+left, right
+
+# %%markdown
+# This can be handy if a subsequent function takes two jagged arrays as arguments.
+
+# %%
+distance = round(abs(left - right), 1)
+distance
+
+# %%markdown
+# Cross with ``nested=True``, followed by some calculation on the pairs and then some reducer, is a common pattern. Because of the ``nested=True`` and the reducer, the resulting array has the same structure as the original.
+
+# %%
+distance.min()
+
+# %%
+round(a + distance.min(), 1)
+
+# * ``pairs(nested=False)`` and ``argpairs(nested=False)``: returns jagged tuples representing the `self-join <https://en.wikipedia.org/wiki/Join_(SQL)#Self-join>`__ removing duplicates but not same-object pairs (i.e. a self-join with ``i1 <= i2``) for each inner array separately.
+
+# %%
+a = awkward.fromiter([["a", "b", "c"], [], ["d", "e"]])
+a.pairs()
+
+# %%markdown
+# The "arg" and ``nested=True`` versions have the same meanings as with ``cross`` (above).
+
+# %%
+a.argpairs()
+
+# %%
+a.pairs(nested=True)
+
+# %%markdown
+# Just as with ``cross`` (above), this is good to combine with ``unzip`` and maybe a reducer.
+
+# %%
+a.pairs().unzip()
+
+# * ``distincts(nested=False)`` and ``argdistincts(nested=False)``: returns jagged tuples representing the `self-join <https://en.wikipedia.org/wiki/Join_(SQL)#Self-join>`__ removing duplicates and same-object pairs (i.e. a self-join with ``i1 < i2``) for each inner array separately.
+
+# %%
+a = awkward.fromiter([["a", "b", "c"], [], ["d", "e"]])
+a.distincts()
+
+# %%markdown
+# The "arg" and ``nested=True`` versions have the same meanings as with ``cross`` (above).
+
+# %%
+a.argdistincts()
+
+# %%
+a.distincts(nested=True)
+
+# %%markdown
+# Just as with ``cross`` (above), this is good to combine with ``unzip`` and maybe a reducer.
+
+# %%
+a.distincts().unzip()
+
+# * ``choose(n)`` and ``argchoose(n)``: returns jagged tuples for distinct combinations of ``n`` elements from every inner array separately. ``array.choose(2)`` is the same as ``array.distincts()`` apart from order.
+
+# %%
+a = awkward.fromiter([["a", "b", "c"], [], ["d", "e"], ["f", "g", "h", "i", "j"]])
+a
+
+# %%
+a.choose(2)
+
+# %%
+a.choose(3)
+
+# %%
+a.choose(4)
+
+# %%markdown
+# The "arg" version has the same meaning as ``cross`` (above), but there is no ``nested=True`` because of the order.
+
+# %%
+a.argchoose(2)
+
+# %%markdown
+# Just as with ``cross`` (above), this is good to combine with ``unzip`` and maybe a reducer.
+
+# %%
+a.choose(2).unzip()
+
+# %%
+a.choose(3).unzip()
+
+# %%
+a.choose(4).unzip()
+
 # * ``JaggedArray.zip(columns...)``
 
 # %%markdown

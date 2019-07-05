@@ -397,6 +397,30 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def counts(self):
         return self._util_counts(self.array)
 
+    def choose(self, n):
+        return self.array.choose(n)
+
+    def argchoose(self, n):
+        return self.array.argchoose(n)
+
+    def distincts(self, nested=False):
+        return self.array.distincts(nested=nested)
+
+    def argdistincts(self, nested=False):
+        return self.array.argdistincts(nested=nested)
+
+    def pairs(self, nested=False):
+        return self.array.pairs(nested=nested)
+
+    def argpairs(self, nested=False):
+        return self.array.argpairs(nested=nested)
+
+    def cross(self, other, nested=False):
+        return self.array.cross(other, nested=nested)
+
+    def argcross(self, other, nested=False):
+        return self.array.argcross(other, nested=nested)
+
     def flatten(self, axis=0):
         return self._util_flatten(self.array, axis)
 

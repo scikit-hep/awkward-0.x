@@ -262,6 +262,30 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         out[mask] = content[mask]
         return out
 
+    def choose(self, n):
+        return self.copy(content=self._content.choose(n))
+
+    def argchoose(self, n):
+        return self.copy(content=self._content.argchoose(n))
+
+    def distincts(self, nested=False):
+        return self.copy(content=self._content.distincts(nested=nested))
+
+    def argdistincts(self, nested=False):
+        return self.copy(content=self._content.argdistincts(nested=nested))
+
+    def pairs(self, nested=False):
+        return self.copy(content=self._content.pairs(nested=nested))
+
+    def argpairs(self, nested=False):
+        return self.copy(content=self._content.argpairs(nested=nested))
+
+    def cross(self, other, nested=False):
+        return self.copy(content=self._content.cross(other, nested=nested))
+
+    def argcross(self, other, nested=False):
+        return self.copy(content=self._content.argcross(other, nested=nested))
+
     def flatten(self, axis=0):
         return self._util_flatten(self._content[self.boolmask(maskedwhen=False)], axis)
 

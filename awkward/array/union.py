@@ -418,6 +418,30 @@ class UnionArray(awkward.array.base.AwkwardArray):
             out[mask] = array[self._index[mask]]
         return out
 
+    def choose(self, n):
+        raise NotImplementedError("choose not yet implemented for UnionArray")
+
+    def argchoose(self, n):
+        raise NotImplementedError("argchoose not yet implemented for UnionArray")
+
+    def distincts(self, nested=False):
+        raise NotImplementedError("distincts not yet implemented for UnionArray")
+
+    def argdistincts(self, nested=False):
+        raise NotImplementedError("argdistincts not yet implemented for UnionArray")
+
+    def pairs(self, nested=False):
+        raise NotImplementedError("pairs not yet implemented for UnionArray")
+
+    def argpairs(self, nested=False):
+        raise NotImplementedError("argpairs not yet implemented for UnionArray")
+
+    def cross(self, other, nested=False):
+        raise NotImplementedError("cross not yet implemented for UnionArray")
+
+    def argcross(self, other, nested=False):
+        raise NotImplementedError("argcross not yet implemented for UnionArray")
+
     def flatten(self, axis=0):
         raise NotImplementedError("flatten not yet implemented for UnionArray")
 

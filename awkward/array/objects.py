@@ -222,6 +222,30 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def counts(self):
         return self._util_counts(self._content)
 
+    def choose(self, n):
+        raise TypeError("cannot call choose on ObjectArray")
+
+    def argchoose(self, n):
+        raise TypeError("cannot call argchoose on ObjectArray")
+
+    def distincts(self, nested=False):
+        raise TypeError("cannot call distincts on ObjectArray")
+
+    def argdistincts(self, nested=False):
+        raise TypeError("cannot call argdistincts on ObjectArray")
+
+    def pairs(self, nested=False):
+        raise TypeError("cannot call pairs on ObjectArray")
+
+    def argpairs(self, nested=False):
+        raise TypeError("cannot call argpairs on ObjectArray")
+
+    def cross(self, other, nested=False):
+        raise TypeError("cannot call cross on ObjectArray")
+
+    def argcross(self, other, nested=False):
+        raise TypeError("cannot call argcross on ObjectArray")
+
     def flatten(self, axis=0):
         return self.copy(content=self._util_flatten(self._content, axis))
 
@@ -232,16 +256,16 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         return self.numpy.array(self)
 
     def _reduce(self, ufunc, identity, dtype):
-        raise TypeError("cannot call reducer on object array")
+        raise TypeError("cannot call reducer on ObjectArray")
 
     def _prepare(self, ufunc, identity, dtype):
-        raise TypeError("cannot call reducer on object array")
+        raise TypeError("cannot call reducer on ObjectArray")
 
     def argmin(self):
-        raise TypeError("cannot call argmin on object array")
+        raise TypeError("cannot call argmin on ObjectArray")
 
     def argmax(self):
-        raise TypeError("cannot call argmax on object array")
+        raise TypeError("cannot call argmax on ObjectArray")
 
     @classmethod
     def _concatenate_axis0(cls, arrays):

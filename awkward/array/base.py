@@ -46,6 +46,13 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def __init__(self, *args, **kwds):
         raise TypeError("{0} is an abstract base class; do not instantiate".format(type(self)))
 
+    def __round__(self, n=0):
+        if n == 0:
+            return self.numpy.rint(self)
+        else:
+            factor = 10**n
+            return self.numpy.rint(self * factor) / factor
+
     def _checktonumpy(self):
         if not self.allow_tonumpy:
             raise RuntimeError("awkward.array.base.AwkwardArray.allow_tonumpy is False; refusing to convert to Numpy")
