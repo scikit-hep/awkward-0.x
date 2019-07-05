@@ -1883,11 +1883,50 @@ b
 # %%
 b.istuple
 
-# * ``i0`` through ``i9``
-# * ``flattentuple()``
+# * ``i0`` through ``i9``: one of the two conditions for a ``Table`` to be a ``tuple`` is that columns are named ``"0"``, ``"1"``, ``"2"``, etc. Columns like that could be selected with ``["0"]`` at the risk of being misread as ``[0]``, and they could not be selected with attribute dot-access because pure numbers are not valid Python attributes. However, ``i0`` through ``i9`` are provided as shortcuts (overriding any columns with these exact names) for the first 10 tuple slots.
+
+# %%
+a = awkward.Table([1, 2, 3],
+                  [1.1, 2.2, 3.3],
+                  awkward.fromiter(["one", "two", "three"]))
+a.tolist()
+
+# %%
+a.i0
+
+# %%
+a.i1
+
+# %%
+a.i2
+
+# * ``flattentuple()``: calling ``cross`` repeatedly can result in tuples nested within tuples; this flattens them at all levels, turning all ``(i, (j, k))`` into ``(i, j, k)``. Whereas ``array.flatten()`` removes one level of structure from the rows (losing information), ``array.flattentuple()`` removes all levels of structure from the columns (renaming them, but not losing information).
+
+# %%
+a = awkward.Table([1, 2, 3], [1, 2, 3], awkward.Table(awkward.Table([1, 2, 3], [1, 2, 3]), [1, 2, 3]))
+a.tolist()
+
+# %%
+a.flattentuple().tolist()
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+b = awkward.fromiter([[100, 200], [300], [400, 500, 600], [700]])
+c = awkward.fromiter([["a"], ["b", "c"], ["d"], ["e", "f"]])
+
+# %%markdown
+# The ``cross`` method internally calls ``flattentuples()`` if it detects that one of its arguments is the result of a ``cross``.
+
+# %%
+a.cross(b).cross(c).tolist()
 
 # %%markdown
 # ## Properties and methods for missing values
+
+# %%
+import awkward, numpy
+
+
 
 # * ``boolmask(maskedwhen=True)``
 # * ``ismasked``

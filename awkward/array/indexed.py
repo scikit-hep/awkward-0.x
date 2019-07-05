@@ -229,6 +229,10 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
         self._valid()
         return self._content[self._index].argcross(other, nested=nested)
 
+    def flattentuple(self):
+        self._valid()
+        return self.copy(content=self._util_flattentuple(self._content))
+
     def flatten(self, axis=0):
         self._valid()
         return self._util_flatten(self._content[self._index], axis)
@@ -674,6 +678,10 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             mask = self.boolmask(maskedwhen=True)
             out[mask] = content[self._inverse[mask]]
         return out
+
+    def flattentuple(self):
+        self._valid()
+        return self.copy(content=self._util_flattentuple(self._content))
 
     def flatten(self, axis=0):
         self._valid()

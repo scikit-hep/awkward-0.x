@@ -1314,6 +1314,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out.stops.shape = self._starts.shape  # intentional: self._stops can too long
             return out
 
+    def flattentuple(self):
+        return self.copy(content=self._util_flattentuple(self._content))
+
     def flatten(self, axis=0):
         if not self._util_isinteger(axis) or axis < 0:
             raise TypeError("axis must be a non-negative integer (can't count from the end)")

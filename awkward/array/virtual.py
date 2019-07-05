@@ -421,6 +421,9 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def argcross(self, other, nested=False):
         return self.array.argcross(other, nested=nested)
 
+    def flattentuple(self):
+        return self._util_flattentuple(self.array)
+
     def flatten(self, axis=0):
         return self._util_flatten(self.array, axis)
 

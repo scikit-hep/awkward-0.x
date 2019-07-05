@@ -246,6 +246,9 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def argcross(self, other, nested=False):
         raise TypeError("cannot call argcross on ObjectArray")
 
+    def flattentuple(self):
+        return self.copy(content=self._util_flattentuple(self._content))
+
     def flatten(self, axis=0):
         return self.copy(content=self._util_flatten(self._content, axis))
 

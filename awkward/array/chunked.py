@@ -611,6 +611,9 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         out.knowchunksizes()
         return out
 
+    def flattentuple(self):
+        return self.copy(chunks=[self._util_flattentuple(x) for x in self._chunks], chunksizes=self._chunksizes)
+
     def flatten(self, axis=0):
         out = self.copy(chunks=[self._util_flatten(x, axis) for x in self._chunks])
         out.knowchunksizes()

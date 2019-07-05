@@ -286,6 +286,9 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def argcross(self, other, nested=False):
         return self.copy(content=self._content.argcross(other, nested=nested))
 
+    def flattentuple(self):
+        return self.copy(content=self._util_flattentuple(self._content))
+
     def flatten(self, axis=0):
         return self._util_flatten(self._content[self.boolmask(maskedwhen=False)], axis)
 

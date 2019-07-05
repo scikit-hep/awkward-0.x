@@ -431,6 +431,13 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return cls.numpy.full(array.shape[0], array.shape[1], dtype=cls.INDEXTYPE)
 
     @classmethod
+    def _util_flattentuple(cls, array):
+        if isinstance(array, AwkwardArray):
+            return array.flattentuple()
+        else:
+            return array
+
+    @classmethod
     def _util_flatten(cls, array, axis):
         if isinstance(array, AwkwardArray):
             return array.flatten(axis=axis)

@@ -442,6 +442,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def argcross(self, other, nested=False):
         raise NotImplementedError("argcross not yet implemented for UnionArray")
 
+    def flattentuple(self):
+        return self.copy(contents=[self._util_flattentuple(x) for x in self._contents])
+
     def flatten(self, axis=0):
         raise NotImplementedError("flatten not yet implemented for UnionArray")
 
