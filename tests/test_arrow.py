@@ -143,7 +143,8 @@ class Test(unittest.TestCase):
         if pyarrow is None:
             pytest.skip("unable to import pyarrow")
         else:
-            a = pyarrow.chunked_array([pyarrow.array([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}]), pyarrow.array([], pyarrow.struct({"x": pyarrow.int64(), "y": pyarrow.float64()})), pyarrow.array([{"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])])
+            t = pyarrow.struct({"x": pyarrow.int64(), "y": pyarrow.float64()})
+            a = pyarrow.chunked_array([pyarrow.array([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}], t), pyarrow.array([], t), pyarrow.array([{"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}], t)])
             assert awkward.arrow.fromarrow(a).tolist() == [{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}, {"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}]
 
     def test_arrow_nested_struct(self):
