@@ -233,6 +233,14 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
         return tpe
 
+    def _util_layout(self, position, seen, lookup):
+        positions = []
+        for i, x in enumerate(self._chunks):
+            awkward.type.LayoutNode(x, position + (i,), seen, lookup)
+            positions.append(position + (i,))
+        return (awkward.type.LayoutArg("chunks", positions),
+                awkward.type.LayoutArg("chunksizes", list(self._chunksizes)))
+
     def _getnbytes(self, seen):
         if id(self) in seen:
             return 0
@@ -885,6 +893,15 @@ class AppendableArray(ChunkedArray):
 
     def _gettype(self, seen):
         return self._dtype
+
+    def _util_layout(self, position, seen, lookup):
+        positions = []
+        for i, x in enumerate(self._chunks):
+            awkward.type.LayoutNode(x, position + (i,), seen, lookup)
+            positions.append(position + (i,))
+        return (awkward.type.LayoutArg("chunkshape", self._chunkshape),
+                awkward.type.LayoutArg("dtype", self._dtype),
+                awkward.type.LayoutArg("chunks", positions))
 
     def __len__(self):
         return sum(self._chunksizes)

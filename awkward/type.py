@@ -5,6 +5,10 @@
 import math
 import numbers
 from collections import OrderedDict
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 import numpy
 
@@ -98,7 +102,7 @@ class Type(object):
                 out = ""
             seen.add(id(self))
             return out + self._substr(labeled, seen, indent + (" " * len(out)))
-        
+
     @staticmethod
     def _copy(x, seen):
         if id(x) in seen:
@@ -686,3 +690,91 @@ def _resolve(tpe, seen):
             seen[id(tpe)] = tpe
 
     return seen[id(tpe)]
+
+###############################################################################
+
+class Layout(Mapping):
+    def __init__(self, array):
+        self.lookup = {}
+        self.top = LayoutNode(array, Position(), {}, self.lookup)
+
+    @staticmethod
+    def keystr(x):
+        return "()" if len(x) == 0 else ", ".join(repr(i) for i in x)
+
+    @staticmethod
+    def valstr(x):
+        if isinstance(x, Position):
+            return "layout[" + ("()" if len(x) == 0 else ", ".join(repr(i) for i in x)) + "]"
+        elif isinstance(x, type):
+            return x.__name__
+        else:
+            return str(x)
+
+    def __repr__(self):
+        out = [" layout "]
+        longest = max(6, max([len(self.keystr(i)) for i in self.lookup]))
+        for i in sorted(self.lookup):
+            x = self.lookup[i]
+            indent = "  " * len(i)
+            if x.args is None:
+                out.append(("[{0:>%ds}] {1}-> {2}" % longest).format(self.keystr(i), indent, self.valstr(x.cls)))
+            else:
+                out.append(("[{0:>%ds}] {1}{2}({3})" % longest).format(self.keystr(i), indent, self.valstr(x.cls), ", ".join(str(y) for y in x.args)))
+        return "\n".join(out)
+
+    def __iter__(self):
+        for i in sorted(self.lookup):
+            yield self.lookup[i]
+
+    def __getitem__(self, where):
+        if not isinstance(where, tuple):
+            where = (where,)
+        return self.lookup[where]
+
+    def __len__(self):
+        return len(self.lookup)
+
+class LayoutNode(object):
+    def __init__(self, array, position, seen, lookup):
+        import awkward.array.base
+        self.array = array
+        self.position = position
+        lookup[position] = self
+        self.args = None
+        if id(array) in seen:
+            self.cls = seen[id(array)]
+        else:
+            self.cls = type(array)
+            seen[id(array)] = position
+            if isinstance(array, awkward.array.base.AwkwardArray):
+                self.args = array._util_layout(position, seen, lookup)
+            else:
+                self.args = (LayoutArg("shape", array.shape), LayoutArg("dtype", array.dtype))
+
+    def __repr__(self):
+        if self.args is None:
+            return "<LayoutNode [{0}] -> {1}>".format(Layout.keystr(self.position), Layout.valstr(self.cls))
+        return "<LayoutNode [{0}] {1}>".format(self.position, self.cls.__name__)
+
+class Position(tuple):
+    def __add__(self, other):
+        return Position(super(Position, self).__add__(other))
+
+class LayoutArg(object):
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return "LayoutArg({0}, {1})".format(repr(self.name), repr(self.value))
+
+    def __str__(self):
+        if isinstance(self.value, list):
+            return self.name + "=[" + ", ".join(Layout.valstr(x) for x in self.value) + "]"
+        elif self.name == "shape":
+            return "shape={0}".format(self.value[0] if len(self.value) == 1 else self.value)
+        elif self.name == "dtype":
+            return "dtype={0}".format(repr(self.value))
+        else:
+            return "{0}={1}".format(str(self.name), Layout.valstr(self.value))

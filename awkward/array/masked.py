@@ -137,6 +137,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def _gettype(self, seen):
         return awkward.type.OptionType(awkward.type._fromarray(self._content, seen))
 
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._mask, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._content, position + (1,), seen, lookup)
+        return (awkward.type.LayoutArg("mask", position + (0,)),
+                awkward.type.LayoutArg("content", position + (1,)),
+                awkward.type.LayoutArg("maskedwhen", self._maskedwhen))
+
     def _valid(self):
         if self.check_whole_valid:
             if not self._isvalid:
@@ -523,6 +530,14 @@ class BitMaskedArray(MaskedArray):
     def lsborder(self, value):
         self._lsborder = bool(value)
 
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._mask, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._content, position + (1,), seen, lookup)
+        return (awkward.type.LayoutArg("mask", position + (0,)),
+                awkward.type.LayoutArg("content", position + (1,)),
+                awkward.type.LayoutArg("maskedwhen", self._maskedwhen),
+                awkward.type.LayoutArg("lsborder", self._lsborder))
+
     def _valid(self):
         if self.check_whole_valid:
             if not self._isvalid:
@@ -732,6 +747,13 @@ class IndexedMaskedArray(MaskedArray):
             return self._mask == self._maskedwhen
         else:
             return self._mask != self._maskedwhen
+
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._mask, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._content, position + (1,), seen, lookup)
+        return (awkward.type.LayoutArg("mask", position + (0,)),
+                awkward.type.LayoutArg("content", position + (1,)),
+                awkward.type.LayoutArg("maskedwhen", self._maskedwhen))
 
     def _valid(self):
         if self.check_whole_valid:

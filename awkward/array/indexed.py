@@ -117,6 +117,12 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             out = awkward.type.ArrayType(x, out)
         return out
 
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._index, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._content, position + (1,), seen, lookup)
+        return (awkward.type.LayoutArg("index", position + (0,)),
+                awkward.type.LayoutArg("content", position + (1,)))
+
     def _valid(self):
         if self.check_whole_valid:
             if not self._isvalid:
@@ -448,6 +454,14 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _gettype(self, seen):
         return awkward.type._fromarray(self._content, seen)
+
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._index, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._content, position + (1,), seen, lookup)
+        return (awkward.type.LayoutArg("length", self._length),
+                awkward.type.LayoutArg("index", position + (0,)),
+                awkward.type.LayoutArg("content", position + (1,)),
+                awkward.type.LayoutArg("default", self._default))
 
     def _getnbytes(self, seen):
         if id(self) in seen:

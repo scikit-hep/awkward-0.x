@@ -160,6 +160,13 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def _gettype(self, seen):
         return self._generator
 
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._content, position + (0,), seen, lookup)
+        return (awkward.type.LayoutArg("content", position + (0,)),
+                awkward.type.LayoutArg("generator", self._generator),
+                awkward.type.LayoutArg("args", self._args),
+                awkward.type.LayoutArg("kwargs", self._kwargs))
+
     def _valid(self):
         if self.check_whole_valid:
             pass

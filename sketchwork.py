@@ -901,7 +901,9 @@ a.type
 # %%
 print(a.type)
 
-# * ``layout``: the low-level layout of the array. (See below for a detailed description of low-level layouts.) FIXME
+# * ``layout``: the low-level layout of the array. (See below for a detailed description of low-level layouts.)
+
+
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])

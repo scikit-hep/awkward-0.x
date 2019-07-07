@@ -215,6 +215,15 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         else:
             return self._type.to
 
+    def _util_layout(self, position, seen, lookup):
+        args = (awkward.type.LayoutArg("generator", self._generator),
+                awkward.type.LayoutArg("args", self._args),
+                awkward.type.LayoutArg("kwargs", dict(self._kwargs)))
+        if self.ismaterialized:
+            awkward.type.LayoutNode(self.array, position + (0,), seen, lookup)
+            args = args + (awkward.type.LayoutArg("array", position + (0,)))
+        return args
+
     @property
     def type(self):
         if self._type is None or self.ismaterialized:

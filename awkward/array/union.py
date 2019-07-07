@@ -244,6 +244,17 @@ class UnionArray(awkward.array.base.AwkwardArray):
             out = awkward.type.ArrayType(x, out)
         return out
 
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._tags, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._index, position + (1,), seen, lookup)
+        positions = []
+        for i, x in enumerate(self._contents):
+            awkward.type.LayoutNode(x, position + (2 + i,), seen, lookup)
+            positions.append(position + (2 + i,))
+        return (awkward.type.LayoutArg("tags", position + (0,)),
+                awkward.type.LayoutArg("index", position + (1,)),
+                awkward.type.LayoutArg("contents", positions))
+
     def _valid(self):
         if self.check_whole_valid:
             if not self._isvalid:

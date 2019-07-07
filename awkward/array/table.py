@@ -426,6 +426,13 @@ class Table(awkward.array.base.AwkwardArray):
             out[n] = awkward.type._fromarray(x, seen)
         return out
 
+    def _util_layout(self, position, seen, lookup):
+        args = ()
+        for i, (n, x) in enumerate(self._contents.items()):
+            awkward.type.LayoutNode(x, position + (i,), seen, lookup)
+            args = args + (awkward.type.LayoutArg(n, position + (i,)),)
+        return args
+
     def _length(self):
         if self._view is None:
             if len(self._contents) == 0:

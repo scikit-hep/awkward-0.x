@@ -438,6 +438,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def _gettype(self, seen):
         return awkward.type.ArrayType(*(self._starts.shape[1:] + (self.numpy.inf, awkward.type._fromarray(self._content, seen))))
 
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._starts, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._stops, position + (1,), seen, lookup)
+        awkward.type.LayoutNode(self._content, position + (2,), seen, lookup)
+        return (awkward.type.LayoutArg("starts", position + (0,)),
+                awkward.type.LayoutArg("stops", position + (1,)),
+                awkward.type.LayoutArg("content", position + (2,)))
+
     def _valid(self):
         if not self._isvalid:
             if self.offsetsaliased(self._starts, self._stops):
