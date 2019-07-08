@@ -275,10 +275,7 @@ class Serializer(object):
         self.seen = ObjRef(idgen=count())
 
     def store(self, name, obj):
-        schema = dict(
-            awkward=awkward.version.__version__,
-            schema=self(obj),
-        )
+        schema = {"awkward": awkward.version.__version__, "schema": self(obj)}
         if self.prefix != "":
             schema["prefix"] = self.prefix
 
@@ -290,25 +287,21 @@ class Serializer(object):
     def load(self, *args, **kwargs):
         return deserialize(*args, storage=self.storage, seen=self.seen, **kwargs)
 
-    # encoding helper
     def encode_call(self, *args, **kwargs):
         func, args = args[0], args[1:]
-        ret = dict(
-            call=self._obj2spec(func) if callable(func) else tuple(func),
-        )
+        out = {"call": self._obj2spec(func) if callable(func) else tuple(func)}
         if args:
-            ret["args"] = list(args)
+            out["args"] = list(args)
         if kwargs:
-            ret["kwargs"] = kwargs
-        return ret
+            out["kwargs"] = kwargs
+        return out
 
     def encode_json(self, obj):
-        return dict(json=jsonable(obj))
+        return {"json": jsonable(obj)}
 
     def encode_python(self, obj):
-        return dict(python=frompython(obj))
+        return {"python": frompython(obj)}
 
-    # internal encoding hooks
     @classmethod
     def _encode_primitive(cls, obj):
         if isinstance(obj, numpy.dtype):
@@ -330,37 +323,21 @@ class Serializer(object):
         return spec
 
     def _encode_complex(self, obj, context):
-        # TODO: get rid of this signature
         if callable(getattr(obj, "__awkward_serialize__", None)):
             return obj.__awkward_serialize__(self)
-        if callable(getattr(obj, "__awkward_persist__", None)):
-            return obj.__awkward_persist__(
-                ident=self.seen.get(obj, None),
-                fill=self.fill,
-                prefix=self.prefix,
-                suffix=self.suffix,
-                schemasuffix=self.schemasuffix,
-                storage=self.storage,
-                compression=self.compression,
-            )
 
         if hasattr(obj, "tojson") and hasattr(type(obj), "fromjson"):
             try:
-                return self.encode_call(
-                    self._obj2spec(type(obj).fromjson),
-                    self.encode_json(obj.tojson()),
-                )
+                return self.encode_call(self._obj2spec(type(obj).fromjson), self.encode_json(obj.tojson()))
             except:
                 pass
 
         if isinstance(obj, numpy.ndarray):
             return self._encode_numpy(obj, context)
 
-        if hasattr(obj, "__module__") and (
-            hasattr(obj, "__qualname__") or hasattr(obj, "__name__")
-        ) and obj.__module__ != "__main__":
+        if hasattr(obj, "__module__") and (hasattr(obj, "__qualname__") or hasattr(obj, "__name__")) and obj.__module__ != "__main__":
             try:
-                return dict(function=self._obj2spec(obj))
+                return {"function": self._obj2spec(obj)}
             except:
                 pass
 
@@ -377,7 +354,7 @@ class Serializer(object):
     def _encode_numpy(self, obj, context):
         key = str(self.seen[obj]) + self.suffix
         self.storage[self.prefix + key] = obj
-        return dict(read=key)
+        return {"read": key}
 
     def _encode_schema(self, schema):
         return json.dumps(schema).encode("ascii")
@@ -386,29 +363,29 @@ class Serializer(object):
         pass
 
     def __call__(self, obj, context=""):
-        ret = self._encode_primitive(obj)
+        out = self._encode_primitive(obj)
 
-        if ret is not None:
-            return ret
+        if out is not None:
+            return out
 
         if obj in self.seen:
-            return dict(ref=self.seen[obj])
+            return {"ref": self.seen[obj]}
         else:
             ident = self.seen[obj]
 
-        ret = self._encode_complex(obj, context)
-        if ret is None:
-            raise TypeError("failed to encode %r (type: %s)" % (obj, type(obj)))
+        out = self._encode_complex(obj, context)
+        if out is None:
+            raise TypeError("failed to encode {0} (type: {1})".format(repr(obj), type(obj)))
 
-        if "id" in ret:
-            if ret["id"] is False:
+        if "id" in out:
+            if out["id"] is False:
                 del self.seen[obj]
-            elif ret["id"] != self.seen[obj]:
+            elif out["id"] != self.seen[obj]:
                 raise RuntimeError("unexpected id change")
         else:
-            ret["id"] = ident
+            out["id"] = ident
 
-        return ret
+        return out
 
     def fill(self, obj, context, prefix, suffix, schemasuffix, storage, compression, **kwargs):
         assert self.prefix == prefix
@@ -418,9 +395,7 @@ class Serializer(object):
         assert self.compression == compression
         return self(obj, context=context)
 
-
 class BlobSerializer(Serializer):
-
     class CompressPolicy(object):
         enc2dec = {
             zlib.compress: ("zlib", "decompress"),
@@ -437,10 +412,10 @@ class BlobSerializer(Serializer):
             elif len(x) == 2 and callable(x[0]):
                 return cls(enc=x[0], dec=x[1])
             else:
-                raise TypeError("can't parse policy %r" % x)
+                raise TypeError("can't parse compression policy {0}".format(x))
 
         def __init__(self, pair=None, enc=None, dec=None, minsize=0, types=object, contexts="*"):
-            if pair:
+            if pair is not None:
                 enc, dec = pair
             if dec is None:
                 dec = self.enc2dec[enc]
@@ -466,25 +441,21 @@ class BlobSerializer(Serializer):
             return (self.enc, self.dec)
 
         def test(self, obj, context):
-            return (
-                obj.nbytes >= self.minsize and
-                issubclass(obj.dtype.type, tuple(self.types)) and
-                any(fnmatch.fnmatchcase(context, p) for p in self.contexts)
-            )
+            return (obj.nbytes >= self.minsize and issubclass(obj.dtype.type, tuple(self.types)) and any(fnmatch.fnmatchcase(context, p) for p in self.contexts))
 
     @classmethod
     def _parse_compression(cls, comp):
-        if comp is None:
+        if comp is None or comp is False:
             comp = []
+        elif comp is True:
+            comp = [{"minsize": 0, "types": object, "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))}]
         elif not isinstance(comp, (list, tuple)):
             comp = [comp]
 
         return list(map(cls.CompressPolicy.parse, comp))
 
     def __init__(self, *args, **kwargs):
-        self.compression = self._parse_compression(
-            kwargs.pop("compression", compression)
-        )
+        self.compression = self._parse_compression(kwargs.pop("compression", compression))
         super(BlobSerializer, self).__init__(*args, **kwargs)
 
     def _put_raw(self, data, ref=None):
@@ -503,20 +474,12 @@ class BlobSerializer(Serializer):
         buf = None
         for policy in self._parse_compression(self.compression):
             if policy.test(obj, context):
-                buf = self.encode_call(
-                    policy.dec,
-                    self._put_raw(policy.enc(obj.ravel()), ref=obj),
-                )
+                buf = self.encode_call(policy.dec, self._put_raw(policy.enc(obj.ravel()), ref=obj))
                 break
         else:
             buf = self._put_raw(obj.ravel(), ref=obj)
 
-        return self.encode_call(
-            ["awkward", "numpy", "frombuffer"],
-            buf,
-            self(dtype),
-            self(obj.shape[0]),
-        )
+        return self.encode_call(["awkward", "numpy", "frombuffer"], buf, self(dtype), self(obj.shape[0]))
 
 def serialize(obj, storage, name="", delimiter="-", **kwargs):
     if delimiter is None:

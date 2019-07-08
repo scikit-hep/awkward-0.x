@@ -2071,15 +2071,105 @@ b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
                      ])
 
 # %%
-awkward.save("single.awkd", a)
+awkward.save("single.awkd", a, mode="w")
 
 # %%
 awkward.load("single.awkd")
 
+# %%
+awkward.save("multi.awkd", {"a": a, "b": b}, mode="w")
 
+# %%
+multi = awkward.load("multi.awkd")
 
+# %%
+multi["a"]
 
-# * ``hdf5(group, awkwardlib=None, compression=awkward.persist.compression, whitelist=awkward.persist.whitelist, cache=None)``
+# %%
+multi["b"]
+
+# %%markdown
+# Only ``save`` has a ``compression`` parameter because only the writing process gets to decide how arrays are compressed. We don't use ZIP's built-in compression, but use Python compression functions and encode the choice in the metadata. If ``compression=True``, all arrays will be compressed with zlib; if ``compression=False``, ``None``, or ``[]``, none will. In general, ``compression`` is a list of rules; the first rule that is satisfied by a given array uses the specified compress/decompress pair of functions. Here's the default policy:
+
+# %%
+awkward.persist.compression
+
+# %%markdown
+# The default policy has only one rule. If any array has a minimum size (``minsize``) of 8 kB (``8192`` bytes), a numeric type (``array.dtype.type``) that is a subclass of ``numpy.bool_``, ``bool``, or ``numpy.integer``, and is in any awkward-array context (``JaggedArray.starts``, ``MaskedArray.mask``, etc.), then it will be compressed with ``zip.compress`` and decompressed with ``('zlib', 'decompress')``. The compression function is given as an object—the Python function that will be called to transform byte strings into compressed byte strings—but the decompression function is given as a location in Python's namespace: a tuple of nested objects, the first of which is a fully qualified module name (submodules separated by dots). This is because only the *location* of the decompression function needs to be written to the file.
+#
+# The saved awkward array consists of a collection of byte strings for Numpy arrays (2 for object ``a`` and 11 for object ``b``, above) and JSON-formatted metadata that reconstructs the nested hierarchy of awkward classes around those Numpy arrays. This metadata includes information such as which byte strings should be decompressed and how, but also which awkward constructors to call to fit everything together. As such, the JSON metadata is code, a limited language without looping or function definitions (i.e. not Turing complete) but with the ability to call any Python function.
+#
+# Using a mini-language as metadata gives us great capacity for backward and forward compatibility (new or old ways of encoding things are simply calling different functions), but it does raise the danger of malicious array files calling unwanted Python functions. For this reason, ``load`` refuses to call any functions not specified in a ``whitelist``. The default whitelist consists of functions known to be safe:
+
+# %%
+awkward.persist.whitelist
+
+# %%markdown
+# The format of each item in the whitelist is a list of nested objects, the first of which being a fully qualified module name (submodules separated by dots). For instance, in the ``awkward.arrow`` submodule, there is a class named ``_ParquetFile`` and it has a static method ``fromjson`` that is deemed to be safe. Patterns of safe names are can be wildcarded, such as ``['awkward', '*Array']`` and ``['uproot_methods.classes.*']``.
+#
+# You can add your own functions, and forward compatibility (using data made by a new version in an old version of awkward-array) often dictates that you must add a function manually. The error message explains how to do this.
+#
+# The same serialization format is used when you pickle an awkward array or save it in an HDF5 file. More detail on the metadata mini-language is given in `docs/serialization.adoc <https://github.com/scikit-hep/awkward-array/blob/master/docs/serialization.adoc>`__.
+
+# * ``hdf5(group, awkwardlib=None, compression=awkward.persist.compression, whitelist=awkward.persist.whitelist, cache=None)``: wrap a ``h5py.Group`` as an awkward-aware group, to save awkward arrays to HDF5 files and to read them back again. The options have the same meaning as ``load`` and ``save``.
+#
+# Unlike "awkd" (special ZIP) files, HDF5 files can be written and overwritten like a database, rather than write-once files.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
+                      [4.4, [5.5]],
+                      [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                     ])
+
+# %%
+import h5py
+f = h5py.File("awkward.hdf5", "w")
+f
+
+# %%
+g = awkward.hdf5(f)
+g
+
+# %%
+g["array"] = a
+
+# %%
+g["array"]
+
+# %%
+del g["array"]
+
+# %%
+g["array"] = b
+
+# %%
+g["array"]
+
+# %%markdown
+# The HDF5 format does not include columnar representations of arbitrary nested data, as awkward-array does, so what we're actually storing are plain Numpy arrays and the metadata necessary to reconstruct the awkward array.
+
+# %%
+# Reopen file, without wrapping it as awkward.hdf5 this time.
+f = h5py.File("awkward.hdf5", "r")
+f
+
+# %%
+f["array"]
+
+# %%
+f["array"].keys()
+
+# %%markdown
+# The "schema.json" array is the JSON metadata, containing directives like ``{"call": ["awkward", "JaggedArray", "fromcounts"]}`` and ``{"read": "1"}`` meaning the array named ``"1"``, etc.
+
+# %%
+import json
+json.loads(f["array"]["schema.json"][:].tostring())
+
+# %%markdown
+# Without awkward-array, these objects can't be meaningfully read from the HDF5 file.
+
 # * ``awkward.fromarrow(arrow, awkwardlib=None)``
 # * ``awkward.toarrow(array)``
 # * ``awkward.fromparquet(where, awkwardlib=None, schema=None)`` FIXME
