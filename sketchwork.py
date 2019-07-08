@@ -913,12 +913,14 @@ b.type
 # %%
 print(b.type)
 
+# %%markdown
 # * ``layout``: the low-level layout of the array. (See below for a detailed description of low-level layouts.)
 a.layout
 
 # %%
 b.layout
 
+# %%markdown
 # * ``dtype``: the `Numpy dtype <https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html>`__ that this array would have if cast as a Numpy array. Numpy dtypes cannot fully specify awkward arrays: use the ``type`` for an analyst-friendly description of the data type or ``layout`` for details about how the arrays are represented.
 
 # %%
@@ -928,6 +930,7 @@ a.dtype   # the closest Numpy dtype to a jagged array is dtype=object ('O')
 # %%
 numpy.array(a)
 
+# %%markdown
 # * ``shape``: the `Numpy shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.shape.html>`__ that this array would have if cast as a Numpy array. This only specifies the first regular dimensions, not any jagged dimensions or regular dimensions nested within awkward structures. The Python length (``__len__``) of the array is the first element of this ``shape``.
 
 # %%
@@ -964,6 +967,7 @@ b
 # %%
 b.shape
 
+# %%markdown
 # * ``size``: the product of ``shape``, as in Numpy.
 
 # %%
@@ -972,6 +976,7 @@ a.shape
 # %%
 a.size
 
+# %%markdown
 # * ``nbytes``: the total number of bytes in all memory buffers referenced by the array, not including bytes in Python objects (which are Python-implementation dependent, not even available in PyPy). Same as the Numpy property of the same name.
 
 # %%
@@ -981,6 +986,7 @@ a.nbytes
 # %%
 a.offsets.nbytes + a.content.nbytes
 
+# %%markdown
 # * ``tolist()``: converts the array into Python objects: ``lists`` for arrays, ``dicts`` for table rows, ``tuples`` for table rows with anonymous fields and a ``rowname`` of ``"tuple"``, ``None`` for missing data, and Python objects from ``ObjectArrays``. This is an approximate inverse of ``awkward.fromiter``.
 
 # %%
@@ -1008,6 +1014,7 @@ a
 # %%
 a.tolist()
 
+# %%markdown
 # * ``valid(exception=False, message=False)``: manually invoke the whole-array validity checks on the top-level array (not recursively). With the default options, this function returns ``True`` if valid and ``False`` if not. If ``exception=True``, it returns nothing on success and raises the appropriate exception on failure. If ``message=True``, it returns ``None`` on success and the error string on failure. (TODO: ``recursive=True``?)
 
 # %%
@@ -1023,12 +1030,14 @@ except Exception as err:
 # %%
 a.valid(message=True)
 
+# %%markdown
 # * ``astype(dtype)``: convert *nested Numpy arrays* into the given type while maintaining awkward structure.
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 a.astype(numpy.int32)
 
+# %%markdown
 # * ``regular()``: convert the awkward array into a Numpy array and (unlike ``numpy.array(awkward_array)``) raise an error if it cannot be faithfully represented.
 
 # %%
@@ -1050,6 +1059,7 @@ try:
 except Exception as err:
     print(type(err), str(err))
 
+# %%markdown
 # * ``copy(optional constructor arguments...)``: copy an awkward array object, non-recursively and without copying memory buffers, possibly replacing some of its parameters. If the class is an awkward subclass or has mix-in methods, they are propagated to the copy.
 
 # %%
@@ -1096,6 +1106,7 @@ c.get(1)
 # %%
 c.get(2)
 
+# %%markdown
 # * ``deepcopy(optional constructor arguments...)``: like ``copy``, except that it recursively copies all internal structure, including memory buffers associated with Numpy arrays.
 
 # %%
@@ -1111,6 +1122,7 @@ a
 # But b is not modified. (If it were, it would start with 200.)
 b
 
+# %%markdown
 # * ``empty_like(optional constructor arguments...)``
 # * ``zeros_like(optional constructor arguments...)``
 # * ``ones_like(optional constructor arguments...)``: recursively copies structure, replacing contents with new uninitialized buffers, new buffers full of zeros, or new buffers full of ones. Not usually used in analysis, but needed for implementation.
@@ -1397,7 +1409,7 @@ a.std(ddof=1)
 # ## Properties and methods for jaggedness
 #
 # All awkward arrays have these methods, but they provide information about the first nested ``JaggedArray`` within a structure. If, for instance, the ``JaggedArray`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``JaggedArray``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``MaskedArray``, then that's what they do. If, however, it reaches a ``Table``, which may have some jagged columns and some non-jagged columns, the propagation stops.
-
+#
 # * ``counts``: Numpy array of the number of elements in each inner array of the shallowest ``JaggedArray``. The ``counts`` may have rank > 1 if there are any fixed-size dimensions before the ``JaggedArray``.
 
 # %%
@@ -1445,6 +1457,7 @@ b
 # %%
 b.counts
 
+# %%markdown
 # * ``flatten(axis=0)``: removes one level of structure (losing information about boundaries between inner arrays) at a depth of jaggedness given by ``axis``.
 
 # %%
@@ -1511,6 +1524,7 @@ a
 # %%
 a.flatten(axis=1)
 
+# %%markdown
 # * ``pad(length, maskedwhen=True, clip=False)``: ensures that each inner array has at least ``length`` elements by filling in the empty spaces with ``None`` (i.e. by inserting a ``MaskedArray`` layer). The ``maskedwhen`` parameter determines whether ``mask[i] == True`` means the element is ``None`` (``maskedwhen=True``) or not ``None`` (``maskedwhen=False``). Setting ``maskedwhen`` doesn't change the logical meaning of the array. If ``clip=True``, then the inner arrays will have exactly ``length`` elements (by clipping the ones that are too long). Even though this results in regular sizes, they are still represented by a ``JaggedArray``.
 
 # %%
@@ -1620,6 +1634,7 @@ a.pad(4, maskedwhen=b".", clip=True)
 # %%
 a.pad(4, maskedwhen=b"\x00", clip=True)
 
+# %%markdown
 # * ``argmin()`` and ``argmax()``: returns the index of the minimum or maximum value in a non-jagged array or the indexes where each inner array is minimized or maximized. The jagged structure of the return value consists of empty arrays for each empty array and singleton arrays for non-empty ones, consisting of a single index in an inner array. This is the form needed to extract one element from each inner array using jagged indexing.
 
 # %%
@@ -1642,6 +1657,7 @@ absa[index]
 # %%
 a[index]
 
+# %%markdown
 # * ``cross(other, nested=False)`` and ``argcross(other, nested=False)``: returns jagged tuples representing the `cross-join <https://en.wikipedia.org/wiki/Join_(SQL)#Cross_join>`__ of `array[i]` and `other[i]` separately for each `i`. If `nested=True`, the result is doubly jagged so that each element of the output corresponds to exactly one element in the original `array`.
 
 # %%
@@ -1690,6 +1706,7 @@ distance.min()
 # %%
 round(a + distance.min(), 1)
 
+# %%markdown
 # * ``pairs(nested=False)`` and ``argpairs(nested=False)``: returns jagged tuples representing the `self-join <https://en.wikipedia.org/wiki/Join_(SQL)#Self-join>`__ removing duplicates but not same-object pairs (i.e. a self-join with ``i1 <= i2``) for each inner array separately.
 
 # %%
@@ -1711,6 +1728,7 @@ a.pairs(nested=True)
 # %%
 a.pairs().unzip()
 
+# %%markdown
 # * ``distincts(nested=False)`` and ``argdistincts(nested=False)``: returns jagged tuples representing the `self-join <https://en.wikipedia.org/wiki/Join_(SQL)#Self-join>`__ removing duplicates and same-object pairs (i.e. a self-join with ``i1 < i2``) for each inner array separately.
 
 # %%
@@ -1732,6 +1750,7 @@ a.distincts(nested=True)
 # %%
 a.distincts().unzip()
 
+# %%markdown
 # * ``choose(n)`` and ``argchoose(n)``: returns jagged tuples for distinct combinations of ``n`` elements from every inner array separately. ``array.choose(2)`` is the same as ``array.distincts()`` apart from order.
 
 # %%
@@ -1765,6 +1784,7 @@ a.choose(3).unzip()
 # %%
 a.choose(4).unzip()
 
+# %%markdown
 # * ``JaggedArray.zip(columns...)``: combines jagged arrays with the same structure into a single jagged array. The columns may be unnamed (resulting in a jagged array of tuples) or named with keyword arguments or dict keys (resulting in a jagged array of a table with named columns).
 
 # %%
@@ -1793,7 +1813,7 @@ awkward.JaggedArray.zip(a, 1000)
 # ## Properties and methods for tabular columns
 #
 # All awkward arrays have these methods, but they provide information about the first nested ``Table`` within a structure. If, for instance, the ``Table`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``Table``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``MaskedArray``, then that's what they do.
-
+#
 # * ``columns``: the names of the columns at the first tabular level of depth.
 
 # %%
@@ -1818,6 +1838,7 @@ a["z"].columns
 # %%
 a.z.columns
 
+# %%markdown
 # * ``unzip()``: returns a tuple of projections through each of the columns (in the same order as the ``columns`` property).
 
 # %%
@@ -1857,9 +1878,9 @@ b[0]["y"]
 # %%
 b["y"][0]
 
-# %%
+# %%markdown
 # So ``unzip`` turns a flat ``Table`` into a tuple of flat arrays (opposite of the ``Table`` constructor) and it turns a jagged ``Table`` into a tuple of jagged arrays (opposite of ``JaggedArray.zip``).
-
+#
 # * ``istuple``: an array of tuples is a special kind of ``Table``, one whose ``rowname`` is ``"tuple"`` and columns are ``"0"``, ``"1"``, ``"2"``, etc. If these conditions are met, ``istuple`` is ``True``; otherwise, ``False``.
 
 # %%
@@ -1892,6 +1913,7 @@ b
 # %%
 b.istuple
 
+# %%markdown
 # * ``i0`` through ``i9``: one of the two conditions for a ``Table`` to be a ``tuple`` is that columns are named ``"0"``, ``"1"``, ``"2"``, etc. Columns like that could be selected with ``["0"]`` at the risk of being misread as ``[0]``, and they could not be selected with attribute dot-access because pure numbers are not valid Python attributes. However, ``i0`` through ``i9`` are provided as shortcuts (overriding any columns with these exact names) for the first 10 tuple slots.
 
 # %%
@@ -1909,6 +1931,7 @@ a.i1
 # %%
 a.i2
 
+# %%markdown
 # * ``flattentuple()``: calling ``cross`` repeatedly can result in tuples nested within tuples; this flattens them at all levels, turning all ``(i, (j, k))`` into ``(i, j, k)``. Whereas ``array.flatten()`` removes one level of structure from the rows (losing information), ``array.flattentuple()`` removes all levels of structure from the columns (renaming them, but not losing information).
 
 # %%
@@ -1933,7 +1956,7 @@ a.cross(b).cross(c).tolist()
 # ## Properties and methods for missing values
 #
 # All awkward arrays have these methods, but they provide information about the first nested ``MaskedArray`` within a structure. If, for instance, the ``MaskedArray`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``MaskedArray``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``JaggedArray``, then that's what they do.
-
+#
 # * ``boolmask(maskedwhen=None)``: returns a Numpy array of booleans indicating which elements are missing ("masked") and which are not. If ``maskedwhen=True``, a ``True`` value in the Numpy array means missing/masked; if ``maskedwhen=False``, a ``False`` value in the Numpy array means missing/masked. If no value is passed (or ``None``), the ``MaskedArray``'s own ``maskedwhen`` property is used (which is by default ``True``). Non-``MaskedArrays`` are assumed to have a ``maskedwhen`` of ``True`` (the default).
 
 # %%
@@ -1963,6 +1986,7 @@ a.x.boolmask()
 # %%
 a.y.boolmask()
 
+# %%markdown
 # * ``ismasked`` and ``isunmasked``: shortcut for ``boolmask(maskedwhen=True)`` and ``boolmask(maskedwhen=False)`` as a property, which is more appropriate for analysis.
 
 # %%
@@ -1972,6 +1996,7 @@ a.ismasked
 # %%
 a.isunmasked
 
+# %%markdown
 # * ``fillna(value)``: turn a ``MaskedArray`` into a non-``MaskedArray`` by replacing ``None`` with ``value``. Applies to the outermost ``MaskedArray``, but it passes through ``JaggedArrays`` and into all ``Table`` columns.
 
 # %%
@@ -1990,7 +2015,7 @@ a.fillna(999).tolist()
 # ## Functions for structure manipulation
 #
 # Only one structure-manipulation function (for now) is defined at top-level in awkward-array: ``awkward.concatenate``.
-
+#
 # * ``awkward.concatenate(arrays, axis=0)``: concatenate two or more ``arrays``. If ``axis=0``, the arrays are concatenated lengthwise (the resulting length is the sum of the lengths of each of the ``arrays``). If ``axis=1``, each inner array is concatenated: the input ``arrays`` must all be jagged with the same outer array length. (Values of ``axis`` greater than ``1`` are not yet supported.)
 
 # %%
@@ -2032,7 +2057,7 @@ awkward.concatenate([a, b], axis=1)
 # # Functions for input/output and conversion
 #
 # Most of the functions defined at the top-level of the library are conversion functions.
-
+#
 # * ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False, maskedwhen=True)``: convert Python or JSON data into awkward arrays. Not a fast function: it necessarily involves a Python for loop. The ``awkwardlib`` determines which awkward module to use to make arrays (``awkward`` is the default, but ``awkward.numba`` and ``awkward.cpp`` are alternatives). If ``dictencoding`` is ``True``, bytes and strings will be "dictionary-encoded" in Arrow/Parquet terms—this is an ``IndexedArray`` in awkward. The ``maskedwhen`` parameter determines whether ``MaskedArrays`` have a mask that is ``True`` when data are missing or ``False`` when data are missing.
 
 # %%
@@ -2059,8 +2084,9 @@ for index, node in complicated.layout.items():
 #
 # More detail on the row-wise to columnar conversion process is given in `docs/fromiter.adoc <https://github.com/scikit-hep/awkward-array/blob/master/docs/fromiter.adoc>`__.
 
+# %%markdown
 # * ``load(file, awkwardlib=None, whitelist=awkward.persist.whitelist, cache=None, schemasuffix=".json")``: loads data from an "awkd" (special ZIP) file. This function is like ``numpy.load``, but for awkward arrays. If the file contains a single object, that object will be read immediately; if it has a collection of named arrays, it will return a loader that loads those arrays on demand. The ``awkwardlib`` determines the module to use to define arrays, the ``whitelist`` is where you can provide a list of functions that may be called in this process, ``cache`` is a global cache object assigned to ``VirtualArrays``, and ``schemasuffix`` determines the file name pattern to look for objects inside the ZIP file.
-
+#
 # * ``save(file, array, name=None, mode="a", compression=awkward.persist.compression, delimiter="-", suffix=".raw", schemasuffix=".json")``: saves data to an "awkd" (special ZIP) file. This function is like ``numpy.savez`` and is the reverse of ``load`` (above). The ``array`` may be a single object or a dict of named arrays, the ``name`` is a name to use inside the file, ``mode="a"`` means create or append to an existing file, refusing to overwrite data while ``mode="w"`` overwrites data, ``compression`` is a compression policy (set of rules determining which arrays to compress and how), and the rest of the arguments determine file names within the ZIP: ``delimiter`` between name components, ``suffix`` for array data, and ``schemasuffix`` for the schemas that tell ``load`` how to find all other data.
 
 # %%
@@ -2111,6 +2137,7 @@ awkward.persist.whitelist
 #
 # The same serialization format is used when you pickle an awkward array or save it in an HDF5 file. More detail on the metadata mini-language is given in `docs/serialization.adoc <https://github.com/scikit-hep/awkward-array/blob/master/docs/serialization.adoc>`__.
 
+# %%markdown
 # * ``hdf5(group, awkwardlib=None, compression=awkward.persist.compression, whitelist=awkward.persist.whitelist, cache=None)``: wrap a ``h5py.Group`` as an awkward-aware group, to save awkward arrays to HDF5 files and to read them back again. The options have the same meaning as ``load`` and ``save``.
 #
 # Unlike "awkd" (special ZIP) files, HDF5 files can be written and overwritten like a database, rather than write-once files.
@@ -2168,12 +2195,57 @@ import json
 json.loads(f["array"]["schema.json"][:].tostring())
 
 # %%markdown
-# Without awkward-array, these objects can't be meaningfully read from the HDF5 file.
+# Without awkward-array, these objects can't be meaningfully read back from the HDF5 file.
 
-# * ``awkward.fromarrow(arrow, awkwardlib=None)``
-# * ``awkward.toarrow(array)``
-# * ``awkward.fromparquet(where, awkwardlib=None, schema=None)`` FIXME
+# %%markdown
+# * ``awkward.fromarrow(arrow, awkwardlib=None)``: convert an `Apache Arrow <https://arrow.apache.org>`__ formatted buffer to an awkward array (zero-copy). The ``awkwardlib`` parameter has the same meaning as above.
+#
+# * ``awkward.toarrow(array)``: convert an awkward array to an Apache Arrow buffer, if possible (involving a data copy, but no Python loops).
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
+                      [4.4, [5.5]],
+                      [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                     ])
+
+# %%
+awkward.toarrow(a)
+
+# %%
+awkward.fromarrow(awkward.toarrow(a))
+
+# %%
+awkward.toarrow(b)
+
+# %%
+awkward.fromarrow(awkward.toarrow(b))
+
+# %%markdown
+# Unlike HDF5, Arrow is capable of columnar jagged arrays, nullable values, nested structures, etc. If you save an awkward array in Arrow format, someone else can read it without the awkward-array library. There are a few awkward array classes that don't have an Arrow equivalent, though. Below is a list of all translations.
+#
+# * Numpy array → Arrow `BooleanArray <https://arrow.apache.org/docs/python/generated/pyarrow.BooleanArray.html>`__, `IntegerArray <https://arrow.apache.org/docs/python/generated/pyarrow.IntegerArray.html>`__, or `FloatingPointArray <https://arrow.apache.org/docs/python/generated/pyarrow.FloatingPointArray.html>`__.
+# * ``JaggedArray`` → Arrow `ListArray <https://arrow.apache.org/docs/python/generated/pyarrow.ListArray.html>`__.
+# * ``StringArray`` → Arrow `StringArray <https://arrow.apache.org/docs/python/generated/pyarrow.StringArray.html>`__.
+# * ``Table`` → Arrow `Table <https://arrow.apache.org/docs/python/generated/pyarrow.Table.html>`__ at top-level, but an Arrow `StructArray <https://arrow.apache.org/docs/python/generated/pyarrow.StructArray.html>`__ if nested.
+# * ``MaskedArray`` → missing data mask (nullability in Arrow is an array attribute, rather than an array wrapper).
+# * ``IndexedMaskedArray`` → unfolded into a simple mask before the Arrow translation.
+# * ``IndexedArray`` → Arrow `DictionaryArray <https://arrow.apache.org/docs/python/generated/pyarrow.DictionaryArray.html>`__.
+# * ``SparseArray`` → converted to a dense array before the Arrow translation.
+# * ``ObjectArray`` → Pythonic interpretation is discarded before the Arrow translation.
+# * ``UnionArray`` → Arrow dense `UnionArray <https://arrow.apache.org/docs/python/generated/pyarrow.UnionArray.html>`__ if possible, sparse UnionArray if necessary.
+# * ``ChunkedArray`` (including ``AppendableArray``) → Arrow `RecordBatches <https://arrow.apache.org/docs/python/generated/pyarrow.RecordBatch.html>`__, but only at top-level: nested ``ChunkedArrays`` cannot be converted.
+# * ``VirtualArray`` → array gets materialized before the Arrow translation (i.e. the lazy-loading is not preserved).
+
+# %%markdown
+# Since Arrow is an in-memory format, both ``toarrow`` and ``fromarrow`` are side-effect-free functions with a return value. Functions that write to files have a side-effect (the state of your disk changing) and no return value. Once you've made your Arrow buffer, you have to figure out what to do with it. (You may want to `write it to a stream <https://arrow.apache.org/docs/python/ipc.html>`__ for interprocess communication.)
+
+# %%markdown
+# * ``awkward.fromparquet(where, awkwardlib=None)``
+#
 # * ``awkward.toparquet(where, array, schema=None)``
+
+# %%markdown
 # * ``awkward.topandas(array, flatten=False)``
 
 # %%markdown
