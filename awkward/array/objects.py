@@ -160,6 +160,13 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def _gettype(self, seen):
         return self._generator
 
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._content, position + (0,), seen, lookup)
+        return (awkward.type.LayoutArg("content", position + (0,)),
+                awkward.type.LayoutArg("generator", self._generator),
+                awkward.type.LayoutArg("args", self._args),
+                awkward.type.LayoutArg("kwargs", self._kwargs))
+
     def _valid(self):
         if self.check_whole_valid:
             pass
@@ -220,16 +227,58 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
 
     @property
     def counts(self):
-        raise TypeError("{0} has no 'counts' array".format(type(self).__name__))
+        return self._util_counts(self._content)
+
+    def boolmask(self, maskedwhen=True):
+        return self._util_boolmask(self._content, maskedwhen)
+
+    def choose(self, n):
+        raise TypeError("cannot call choose on ObjectArray")
+
+    def argchoose(self, n):
+        raise TypeError("cannot call argchoose on ObjectArray")
+
+    def distincts(self, nested=False):
+        raise TypeError("cannot call distincts on ObjectArray")
+
+    def argdistincts(self, nested=False):
+        raise TypeError("cannot call argdistincts on ObjectArray")
+
+    def pairs(self, nested=False):
+        raise TypeError("cannot call pairs on ObjectArray")
+
+    def argpairs(self, nested=False):
+        raise TypeError("cannot call argpairs on ObjectArray")
+
+    def cross(self, other, nested=False):
+        raise TypeError("cannot call cross on ObjectArray")
+
+    def argcross(self, other, nested=False):
+        raise TypeError("cannot call argcross on ObjectArray")
+
+    def flattentuple(self):
+        return self.copy(content=self._util_flattentuple(self._content))
+
+    def flatten(self, axis=0):
+        return self.copy(content=self._util_flatten(self._content, axis))
+
+    def pad(self, length, maskedwhen=True, clip=False):
+        return self.copy(content=self._util_pad(self._content, length, maskedwhen, clip))
 
     def regular(self):
         return self.numpy.array(self)
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
-        raise TypeError("cannot call reducer on object array")
+    def _reduce(self, ufunc, identity, dtype):
+        raise TypeError("cannot call reducer on ObjectArray")
 
-    def _prepare(self, identity, dtype):
-        raise TypeError("cannot call reducer on object array")
+    def _prepare(self, ufunc, identity, dtype):
+        raise TypeError("cannot call reducer on ObjectArray")
+
+    def argmin(self):
+        raise TypeError("cannot call argmin on ObjectArray")
+
+    def argmax(self):
+        raise TypeError("cannot call argmax on ObjectArray")
 
     @classmethod
     def _concatenate_axis0(cls, arrays):
@@ -237,15 +286,17 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
         out._content = arrays[0]._content.__class__.concatenate([a._content for a in arrays])
         return out
 
-    def _util_pandas(self, seen):
+    _topandas_name = "ObjectSeries"
+
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("ObjectSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             if isinstance(self._content, awkward.array.base.AwkwardArray):
-                out._content = out._content._util_pandas(seen)
+                out._content = out._content._topandas(seen)
             return out
 
 ####################################################################### strings
@@ -593,35 +644,74 @@ class StringArray(StringMethods, ObjectArray):
     def compact(self):
         return self.fromjagged(self._content.compact(), self.encoding)
 
-    def flatten(self):
-        return self.fromjagged(self._content.flatten(), self.encoding)
-
-    @awkward.util.bothmethod
-    def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
-        if isclassmethod:
-            cls = cls_or_self
-            if not all(isinstance(x, StringArray) for x in arrays):
-                raise TypeError("cannot concatenate non-StringArrays with StringArray.concatenate")
+    def flatten(self, axis=0):
+        import awkward.array.jagged
+        content = self._util_flatten(self._content, axis)
+        if isinstance(content, awkward.array.jagged.JaggedArray):
+            return self.fromjagged(content, self._encoding)
         else:
-            self = cls_or_self
-            cls = self.__class__
-            if not isinstance(self, StringArray) or not all(isinstance(x, StringArray) for x in arrays):
-                raise TypeError("cannot concatenate non-StringArrays with StringArrays.concatenate")
-            arrays = (self,) + tuple(arrays)
+            return self.fromjagged(self.JaggedArray.fromcounts([len(content)], content))
 
-        jagged = self.JaggedArray.concatenate([x._content for x in arrays], axis=axis)
-        return self.fromjagged(jagged, self.encoding)
+    def pad(self, length, maskedwhen=None, clip=False):
+        if maskedwhen is None:
+            maskedwhen = ord(b" ")
+        elif not isinstance(maskedwhen, bytes) or not len(maskedwhen) == 1:
+            raise TypeError("to pad a StringArray, set maskedwhen to a one-character bytestring, such as b' '")
+        else:
+            maskedwhen = ord(maskedwhen)
+        import awkward.array.jagged
+        import awkward.array.masked
+        padded = self._util_pad(self._content, length, True, clip)
+        assert isinstance(padded, awkward.array.jagged.JaggedArray)
+        assert isinstance(padded.content, awkward.array.masked.MaskedArray)
+        if padded.content.content is self._content.content:
+            chars = padded.content.content.copy()
+        else:
+            chars = padded.content.content
+        chars[padded.content.mask] = maskedwhen
+        padded.content = chars
+        return self.fromjagged(padded, self._encoding)
+
+    # @awkward.util.bothmethod
+    # def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
+    #     if isclassmethod:
+    #         cls = cls_or_self
+    #         if not all(isinstance(x, StringArray) for x in arrays):
+    #             raise TypeError("cannot concatenate non-StringArrays with StringArray.concatenate")
+    #     else:
+    #         self = cls_or_self
+    #         cls = self.__class__
+    #         if not isinstance(self, StringArray) or not all(isinstance(x, StringArray) for x in arrays):
+    #             raise TypeError("cannot concatenate non-StringArrays with StringArrays.concatenate")
+    #         arrays = (self,) + tuple(arrays)
+    #
+    #     jagged = self.JaggedArray.concatenate([x._content for x in arrays], axis=axis)
+    #     return self.fromjagged(jagged, self.encoding)
+
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, StringArray) for x in arrays)
+        return cls.fromjagged(cls.JaggedArray.fget(None)._concatenate_axis0([x._content for x in arrays]), encoding=arrays[0]._encoding)
+
+    @classmethod
+    def _concatenate_axis1(cls, arrays):
+        assert all(isinstance(x, StringArray) for x in arrays)
+        tmp = cls.JaggedArray.fget(None)._concatenate_axis1([x._content for x in arrays])
+        tmp._content = tmp._content.astype(cls.CHARTYPE)
+        return cls.fromjagged(tmp, encoding=arrays[0]._encoding)
 
     def fillna(self, value):
         return self
 
-    def _util_pandas(self, seen):
+    _topandas_name = "StringSeries"
+
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("StringSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             if isinstance(self._content, awkward.array.base.AwkwardArray):
-                out._content = out._content._util_pandas(seen)
+                out._content = out._content._topandas(seen)
             return out

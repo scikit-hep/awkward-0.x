@@ -43,6 +43,16 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     BITMASKTYPE = numpy.dtype(numpy.uint8)
     BOOLTYPE    = numpy.dtype(numpy.bool_)
 
+    def __init__(self, *args, **kwds):
+        raise TypeError("{0} is an abstract base class; do not instantiate".format(type(self)))
+
+    def __round__(self, n=0):
+        if n == 0:
+            return self.numpy.rint(self)
+        else:
+            factor = 10**n
+            return self.numpy.rint(self * factor) / factor
+
     def _checktonumpy(self):
         if not self.allow_tonumpy:
             raise RuntimeError("awkward.array.base.AwkwardArray.allow_tonumpy is False; refusing to convert to Numpy")
@@ -100,6 +110,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         return awkward.type.ArrayType(len(self), awkward.type._resolve(self._gettype({}), {}))
 
     @property
+    def layout(self):
+        return awkward.type.Layout(self)
+
+    @property
     def dtype(self):
         return self.type.dtype
 
@@ -120,7 +134,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     @property
     def size(self):
-        return len(self)
+        out = 1
+        for x in self.shape:
+            out *= x
+        return out
 
     @property
     def nbytes(self):
@@ -132,7 +149,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         for x in self:
             if isinstance(x, awkward.array.table.Table.Row):
                 if x._table.istuple:
-                    out.append(tuple(x[n].tolist() for n in x._table._contents))
+                    out.append(tuple(self._try_tolist(x[n]) for n in x._table._contents))
                 else:
                     out.append(dict((n, self._try_tolist(x[n])) for n in x._table._contents))
             elif isinstance(x, self.numpy.ma.core.MaskedConstant):
@@ -141,40 +158,84 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                 out.append(self._try_tolist(x))
         return out
 
-    def valid(self):
+    def valid(self, exception=False, message=False):
         try:
             self._valid()
-        except:
-            return False
+        except Exception as err:
+            if exception:
+                raise err
+            elif message:
+                return "{0}: {1}".format(type(err), str(err))
+            else:
+                return False
         else:
-            return True
+            if message:
+                return None
+            else:
+                return True
 
-    def any(self, regularaxis=None):
-        return self._reduce(self.numpy.bitwise_or, False, self.BOOLTYPE, regularaxis)
+    def reduce(self, ufunc, identity):
+        return self._reduce(ufunc, identity, None)
 
-    def all(self, regularaxis=None):
-        return self._reduce(self.numpy.bitwise_and, True, self.BOOLTYPE, regularaxis)
+    def any(self):
+        return self._reduce(self.numpy.bitwise_or, False, self.BOOLTYPE)
 
-    def count(self, regularaxis=None):
-        return self._reduce(None, 0, None, regularaxis)
+    def all(self):
+        return self._reduce(self.numpy.bitwise_and, True, self.BOOLTYPE)
 
-    def count_nonzero(self, regularaxis=None):
-        return self._reduce(self.numpy.count_nonzero, 0, None, regularaxis)
+    def count(self):
+        return self._reduce(None, 0, None)
 
-    def sum(self, regularaxis=None):
-        return self._reduce(self.numpy.add, 0, None, regularaxis)
+    def count_nonzero(self):
+        return self._reduce(self.numpy.count_nonzero, 0, None)
 
-    def prod(self, regularaxis=None):
-        return self._reduce(self.numpy.multiply, 1, None, regularaxis)
+    def sum(self):
+        return self._reduce(self.numpy.add, 0, None)
 
-    def min(self, regularaxis=None):
-        return self._reduce(self.numpy.minimum, self.numpy.inf, None, regularaxis)
+    def prod(self):
+        return self._reduce(self.numpy.multiply, 1, None)
 
-    def max(self, regularaxis=None):
-        return self._reduce(self.numpy.maximum, -self.numpy.inf, None, regularaxis)
+    def min(self):
+        return self._reduce(self.numpy.minimum, self.numpy.inf, None)
+
+    def max(self):
+        return self._reduce(self.numpy.maximum, -self.numpy.inf, None)
+
+    def moment(self, n, weight=None):
+        with self.numpy.errstate(invalid="ignore"):
+            if weight is None:
+                return self.numpy.true_divide((self**n).sum(), self.count())
+            else:
+                return self.numpy.true_divide(((self * weight)**n).sum(), (self * 0 + weight).sum())
+
+    def mean(self, weight=None):
+        with self.numpy.errstate(invalid="ignore"):
+            if weight is None:
+                return self.numpy.true_divide(self.sum(), self.count())
+            else:
+                return self.numpy.true_divide((self * weight).sum(), (self * 0 + weight).sum())
+
+    def var(self, weight=None, ddof=0):
+        with self.numpy.errstate(invalid="ignore"):
+            if weight is None:
+                denom = self.count()
+                one = self.numpy.true_divide(self.sum(), denom)
+                two = self.numpy.true_divide((self**2).sum(), denom)
+            else:
+                denom (self * 0 + weight).sum()
+                one = self.numpy.true_divide((self * weight).sum(), denom)
+                two = self.numpy.true_divide(((self * weight)**2).sum(), denom)
+            if ddof != 0:
+                return (two - one**2) * denom / (denom - ddof)
+            else:
+                return two - one**2
+
+    def std(self, weight=None, ddof=0):
+        with self.numpy.errstate(invalid="ignore"):
+            return self.numpy.sqrt(self.var(weight=weight, ddof=ddof))
 
     def __getattr__(self, where):
-        if where in super(AwkwardArray, self).__dir__():
+        if where in dir(super(AwkwardArray, self)):
             return super(AwkwardArray, self).__getattribute__(where)
         else:
             if where in self.columns:
@@ -184,9 +245,9 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
                     raise AttributeError("while trying to get column {0}, an exception occurred:\n{1}: {2}".format(repr(where), type(err), str(err)))
             else:
                 raise AttributeError("no column named {0}".format(repr(where)))
-    
+
     def __dir__(self):
-        return sorted(set(super(AwkwardArray, self).__dir__() + [x for x in self.columns if self._dir_pattern.match(x) and not keyword.iskeyword(x)]))
+        return sorted(set(dir(super(AwkwardArray, self)) + [x for x in self.columns if self._dir_pattern.match(x) and not keyword.iskeyword(x)]))
     _dir_pattern = re.compile(r"^[a-zA-Z_]\w*$")
 
     @property
@@ -368,8 +429,91 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def _util_counts(cls, array):
         if isinstance(array, AwkwardArray):
             return array.counts
+        elif len(array.shape) == 1:
+            return cls.numpy.full(array.shape[0], -1, dtype=cls.INDEXTYPE)
         else:
-            raise TypeError("{0} has no 'counts' array".format(cls.__name__))
+            return cls.numpy.full(array.shape[0], array.shape[1], dtype=cls.INDEXTYPE)
+
+    @classmethod
+    def _util_boolmask(cls, array, maskedwhen):
+        if isinstance(array, AwkwardArray):
+            return array.boolmask(maskedwhen=maskedwhen)
+        elif isinstance(array, cls.numpy.ma.MaskedArray) and array.mask is not False:
+            if maskedwhen:
+                return array.mask
+            else:
+                return ~array.mask
+        else:
+            if maskedwhen:
+                return cls.numpy.zeros(len(array), dtype=cls.MASKTYPE)
+            else:
+                return cls.numpy.ones(len(array), dtype=cls.MASKTYPE)
+
+    @property
+    def ismasked(self):
+        return self.boolmask(maskedwhen=True)
+
+    @property
+    def isunmasked(self):
+        return self.boolmask(maskedwhen=False)
+
+    @classmethod
+    def _util_flattentuple(cls, array):
+        if isinstance(array, AwkwardArray):
+            return array.flattentuple()
+        else:
+            return array
+
+    @classmethod
+    def _util_flatten(cls, array, axis):
+        if isinstance(array, AwkwardArray):
+            return array.flatten(axis=axis)
+        else:
+            axis = min(axis, len(array.shape) - 1)
+            return array.reshape(array.shape[:axis] + (-1,) + array.shape[axis + 2:])
+
+    @classmethod
+    def _util_pad(cls, array, length, maskedwhen, clip):
+        if isinstance(array, AwkwardArray):
+            return array.pad(length, maskedwhen=maskedwhen, clip=clip)
+
+        elif len(array.shape) == 1:
+            raise ValueError("pad cannot be applied to scalars")
+
+        elif length == 0 and clip:
+            if isinstance(maskedwhen, cls.numpy.ma.core.MaskedConstant):
+                return cls.JaggedArray.fget(None).fromoffsets([0], cls.numpy.ma.array([]))
+            else:
+                return cls.JaggedArray.fget(None).fromoffsets([0], cls.MaskedArray.fget(None)([], []))
+
+        elif array.shape[1] > length and clip:
+            offsets = cls.numpy.arange(0, length*(len(array) + 1), length, dtype=cls.INDEXTYPE)
+            content = array[(slice(None), slice(length)) + array.shape[2:]]
+            if isinstance(maskedwhen, cls.numpy.ma.core.MaskedConstant):
+                return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.numpy.ma.array(content.reshape((-1,) + array.shape[2:])))
+            else:
+                return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.MaskedArray.fget(None).fromcontent(content.reshape((-1,) + array.shape[2:]), maskedwhen=maskedwhen))
+
+        elif array.shape[1] >= length:
+            offsets = cls.numpy.arange(0, array.shape[1]*(len(array) + 1), array.shape[1], dtype=cls.INDEXTYPE)
+            if isinstance(maskedwhen, cls.numpy.ma.core.MaskedConstant):
+                return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.numpy.ma.array(array.reshape((-1,) + array.shape[2:])))
+            else:
+                return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.MaskedArray.fget(None).fromcontent(array.reshape((-1,) + array.shape[2:]), maskedwhen=maskedwhen))
+
+        else:
+            offsets = cls.numpy.arange(0, length*(len(array) + 1), length, dtype=cls.INDEXTYPE)
+            content = cls.numpy.empty(array.shape[:1] + (length,) + array.shape[2:], dtype=array.dtype)
+            content[:, :array.shape[1]] = array
+            if isinstance(maskedwhen, cls.numpy.ma.core.MaskedConstant):
+                mask = cls.numpy.ones(len(array), dtype=cls.MASKTYPE)
+                return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.numpy.ma.array(content.reshape((-1,) + array.shape[2:]), mask=mask))
+            if maskedwhen:
+                mask = cls.numpy.ones((len(array), length), dtype=cls.MASKTYPE)
+            else:
+                mask = cls.numpy.zeros((len(array), length), dtype=cls.MASKTYPE)
+            mask[:, :array.shape[1]] = not maskedwhen
+            return cls.JaggedArray.fget(None).fromoffsets(offsets, cls.MaskedArray.fget(None)(mask.reshape((-1,) + array.shape[2:]), content.reshape((-1,) + array.shape[2:]), maskedwhen=maskedwhen))
 
     @classmethod
     def _util_regular(cls, array):
@@ -379,14 +523,14 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return array
 
     @classmethod
-    def _util_reduce(cls, array, ufunc, identity, dtype, regularaxis):
+    def _util_reduce(cls, array, ufunc, identity, dtype):
         if isinstance(array, AwkwardArray):
-            return array._reduce(ufunc, identity, dtype, regularaxis)
+            return array._reduce(ufunc, identity, dtype)
 
         elif len(array) == 0:
             if dtype is None:
                 dtype = array.dtype
-            return ufunc.reduce(cls.numpy.full((1,) + array.shape[1:], identity, dtype=dtype), axis=regularaxis)
+            return ufunc.reduce(cls.numpy.full((1,) + array.shape[1:], identity, dtype=dtype), axis=-1)
 
         else:
             original = array
@@ -395,10 +539,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             if issubclass(array.dtype.type, (cls.numpy.floating, cls.numpy.complexfloating)):
                 mask = cls.numpy.isnan(array)
                 if mask.any():
-                    if array is original:
+                    if array is original or not array.flags.owndata:
                         array = array.copy()
                     array[mask] = identity
-            return ufunc.reduce(array, axis=regularaxis)
+            return ufunc.reduce(array, axis=None)
 
     @classmethod
     def _util_concatenate(cls, arrays):
@@ -409,23 +553,33 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
 
     @bothmethod
     def concatenate(isclassmethod, cls_or_self, arrays, axis=0):
-        if isclassmethod: 
+        if len(arrays) < 1:
+            raise ValueError("at least one array needed to concatenate")
+
+        if isclassmethod:
             cls = cls_or_self
         else:
             self = cls_or_self
-            cls = self.__class__
+            cls = type(self)
             arrays = (self,) + tuple(arrays)
 
+        if all(type(x) == cls.numpy.ndarray for x in arrays):
+            return cls.numpy.concatenate(arrays, axis=axis)
+
         if not all(type(x) == type(arrays[0]) for x in arrays):
-            raise TypeError("cannot concatenate arrays of different type with AwkwardArray.concatenate")
+            if axis == 0:
+                tags = cls.numpy.concatenate([cls.numpy.full(len(x), i, dtype=cls.TAGTYPE) for i, x in enumerate(arrays)])
+                return cls.UnionArray.fget(None).fromtags(tags, arrays)
+            else:
+                raise NotImplementedError("axis > 0 for different types")
 
         for x in arrays:
             x.valid()
 
         if axis == 0:
-            return cls._concatenate_axis0(arrays)
+            return type(arrays[0])._concatenate_axis0(arrays)
         elif axis == 1:
-            return cls._concatenate_axis1(arrays)
+            return type(arrays[0])._concatenate_axis1(arrays)
         else:
             raise NotImplementedError("axis > 1")
 
@@ -479,12 +633,41 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             return array.fillna(value)
 
-    def unzip(self):
-        return tuple(self[column_name] for column_name in self.columns)
+    @classmethod
+    def _util_columns_descend(cls, array, seen):
+        if isinstance(array, cls.numpy.ndarray):
+            if array.dtype.fields is None:
+                return []
+            else:
+                return list(array.dtype.fields)
+        else:
+            return array._util_columns(seen)
 
     @property
-    def pandas(self):
-        return self._util_pandas({})
+    def columns(self):
+        return self._util_columns(set())
+
+    @classmethod
+    def _util_rowname_descend(cls, array, seen):
+        if isinstance(array, cls.numpy.ndarray):
+            if array.dtype.fields is None:
+                raise TypeError("not a Table, so there is no rowname")
+            else:
+                return None
+        else:
+            return array._util_rowname(seen)
+
+    @property
+    def rowname(self):
+        return self._util_rowname(set())
+
+    @property
+    def istuple(self):
+        columns = self.columns
+        return self.rowname == "tuple" and columns == [str(x) for x in range(len(columns))]
+
+    def unzip(self):
+        return tuple(self[column_name] for column_name in self._util_columns(set()))
 
 class AwkwardArrayWithContent(AwkwardArray):
     """
@@ -496,6 +679,7 @@ class AwkwardArrayWithContent(AwkwardArray):
             self._content[where] = what
 
         elif self._util_isstringslice(where):
+            what = what.unzip()
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
@@ -516,12 +700,17 @@ class AwkwardArrayWithContent(AwkwardArray):
     def _hasjagged(self):
         return self._util_hasjagged(self._content)
 
-    @property
-    def columns(self):
-        if isinstance(self._content, self.numpy.ndarray):
+    def _util_columns(self, seen):
+        if id(self) in seen:
             return []
-        else:
-            return self._content.columns
+        seen.add(id(self))
+        return self._util_columns_descend(self._content, seen)
+
+    def _util_rowname(self, seen):
+        if id(self) in seen:
+            raise TypeError("not a Table, so there is no rowname")
+        seen.add(id(self))
+        return self._util_rowname_descend(self._content, seen)
 
     def astype(self, dtype):
         return self.copy(content=self._content.astype(dtype))

@@ -48,7 +48,7 @@ class Table(awkward.array.base.AwkwardArray):
 
         def tolist(self):
             if self._table.istuple:
-                return tuple(self[n].tolist() for n in self._table._contents)
+                return tuple(self._table._try_tolist(self[n]) for n in self._table._contents)
             else:
                 return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._contents.items())
 
@@ -138,6 +138,26 @@ class Table(awkward.array.base.AwkwardArray):
         def __ne__(self, other):
             return not self.__eq__(other)
 
+        def __getattr__(self, where):
+            if where in super(Table.Row, self).__dir__():
+                return super(Table.Row, self).__getattribute__(where)
+            else:
+                if where in self.columns:
+                    try:
+                        return self[where]
+                    except Exception as err:
+                        raise AttributeError("while trying to get column {0}, an exception occurred:\n{1}: {2}".format(repr(where), type(err), str(err)))
+                else:
+                    raise AttributeError("no column named {0}".format(repr(where)))
+
+        def __dir__(self):
+            return sorted(set(super(Table.Row, self).__dir__() + [x for x in self.columns if self._dir_pattern.match(x) and not keyword.iskeyword(x)]))
+        _dir_pattern = re.compile(r"^[a-zA-Z_]\w*$")
+
+        @property
+        def columns(self):
+            return self._table.columns
+
         @property
         def i0(self):
             return self["0"]
@@ -183,7 +203,7 @@ class Table(awkward.array.base.AwkwardArray):
     def __init__(self, columns1={}, *columns2, **columns3):
         self._view = None
         self._base = None
-        self.rowname = "Row"
+        self.rowname = "Row" if isinstance(columns1, dict) or len(columns3) > 0 else "tuple"
         self.rowstart = None
         self._contents = OrderedDict()
 
@@ -232,6 +252,9 @@ class Table(awkward.array.base.AwkwardArray):
             if not isinstance(value, awkward.util.string):
                 raise TypeError("rowname must be a string")
         self._rowname = value
+
+    def _util_rowname(self, seen):
+        return self._rowname
 
     @property
     def rowstart(self):
@@ -402,6 +425,13 @@ class Table(awkward.array.base.AwkwardArray):
         for n, x in self._contents.items():
             out[n] = awkward.type._fromarray(x, seen)
         return out
+
+    def _util_layout(self, position, seen, lookup):
+        args = ()
+        for i, (n, x) in enumerate(self._contents.items()):
+            awkward.type.LayoutNode(x, position + (i,), seen, lookup)
+            args = args + (awkward.type.LayoutArg(n, position + (i,)),)
+        return args
 
     def _length(self):
         if self._view is None:
@@ -603,6 +633,7 @@ class Table(awkward.array.base.AwkwardArray):
             self._contents[where] = self._util_toarray(what, self.DEFAULTTYPE)
 
         elif self._util_isstringslice(where):
+            what = what.unzip()
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
@@ -701,7 +732,46 @@ class Table(awkward.array.base.AwkwardArray):
 
     @property
     def counts(self):
-        raise TypeError("{0} has no 'counts' array".format(type(self).__name__))
+        return self.numpy.full(len(self), -1, dtype=self.INDEXTYPE)
+
+    def boolmask(self, maskedwhen=True):
+        if maskedwhen:
+            return self.numpy.zeros(len(self), dtype=self.MASKTYPE)
+        else:
+            return self.numpy.ones(len(self), dtype=self.MASKTYPE)
+
+    def choose(self, n):
+        raise TypeError("cannot call choose on a Table")
+
+    def argchoose(self, n):
+        raise TypeError("cannot call argchoose on a Table")
+
+    def distincts(self, nested=False):
+        raise TypeError("cannot call distincts on a Table")
+
+    def argdistincts(self, nested=False):
+        raise TypeError("cannot call argdistincts on a Table")
+
+    def pairs(self, nested=False):
+        raise TypeError("cannot call pairs on a Table")
+
+    def argpairs(self, nested=False):
+        raise TypeError("cannot call argpairs on a Table")
+
+    def cross(self, other, nested=False):
+        raise TypeError("cannot call cross on a Table")
+
+    def argcross(self, other, nested=False):
+        raise TypeError("cannot call argcross on a Table")
+
+    def flatten(self, axis=0):
+        raise ValueError("cannot flatten through a Table")
+
+    def pad(self, length, maskedwhen=True, clip=False):
+        out = self.copy(contents={})
+        for n, x in self._contents.items():
+            out[n] = self._util_pad(x, length, maskedwhen, clip)
+        return out
 
     def regular(self):
         self._valid()
@@ -710,10 +780,6 @@ class Table(awkward.array.base.AwkwardArray):
         for n, x in pairs:
             out[n] = x
         return out
-
-    @property
-    def istuple(self):
-        return self._rowname == "tuple" and list(self._contents) == [str(x) for x in range(len(self._contents))]
 
     def flattentuple(self):
         out = self.copy()
@@ -747,27 +813,61 @@ class Table(awkward.array.base.AwkwardArray):
         return out
 
     def _hasjagged(self):
-        return False
+        num = sum(1 if self._util_hasjagged(x) else 0 for x in self._contents.values())
+        if num == 0:
+            return False
+        elif num == len(self._contents):
+            return True
+        else:
+            raise ValueError("some Table columns are jagged and others are not")
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
-        out = self.Table.named({
-            self.numpy.bitwise_or: "Any",
-            self.numpy.bitwise_and: "All",
-            None: "Count",
-            self.numpy.count_nonzero: "CountNonzero",
-            self.numpy.add: "Sum",
-            self.numpy.multiply: "Prod",
-            self.numpy.minimum: "Min",
-            self.numpy.maximum: "Max"
-            }[ufunc])
-        out._showdict = True
-        for n in self._contents:
-            x = self._contents[n][self._index()]
-            out[n] = self.numpy.array([self._util_reduce(x, ufunc, identity, dtype, regularaxis)])
-        return out.Row(out, 0)
+    def _reduce(self, ufunc, identity, dtype):
+        if self._hasjagged():
+            out = self.copy(contents={})
+            for n, x in self._contents.items():
+                out[n] = self._util_reduce(x, ufunc, identity, dtype)
+            return out
 
-    @property
-    def columns(self):
+        else:
+            out = self.Table.named({
+                self.numpy.bitwise_or: "any",
+                self.numpy.bitwise_and: "all",
+                None: "count",
+                self.numpy.count_nonzero: "count_nonzero",
+                self.numpy.add: "sum",
+                self.numpy.multiply: "prod",
+                self.numpy.minimum: "min",
+                self.numpy.maximum: "max"
+                }[ufunc])
+            out._showdict = True
+            for n in self._contents:
+                x = self._contents[n][self._index()]
+                out[n] = self.numpy.array([self._util_reduce(x, ufunc, identity, dtype)])
+            return out.Row(out, 0)
+
+    def _prepare(self, ufunc, identity, dtype):
+        out = self.copy(contents={})
+        for n, x in self._contents.items():
+            if isinstance(x, self.numpy.ndarray):
+                if dtype is None and issubclass(x.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                    dtype = self.numpy.dtype(type(identity))
+                if dtype is not None:
+                    x = x.astype(dtype)
+            else:
+                x = x._prepare(ufunc, identity, dtype)
+            out[n] = x
+        return out
+
+    def argmin(self):
+        raise TypeError("cannot call argmin on Table")
+
+    def argmax(self):
+        raise TypeError("cannot call argmax on Table")
+
+    def _util_columns(self, seen):
+        if id(self) in seen:
+            return []
+        seen.add(id(self))
         return list(self._contents)
 
     def astype(self, dtype):
@@ -802,12 +902,14 @@ class Table(awkward.array.base.AwkwardArray):
         out._valid()
         return out
 
-    def _util_pandas(self, seen):
+    _topandas_name = "TableSeries"
+
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("TableSeries", self)
-            out._contents = OrderedDict((n, x._util_pandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x) for n, x in out._contents.items())
+            out.__class__ = awkward.pandas.mixin(type(self))
+            out._contents = OrderedDict((n, x._topandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x) for n, x in out._contents.items())
             return out

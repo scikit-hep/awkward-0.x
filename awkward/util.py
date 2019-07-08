@@ -49,6 +49,13 @@ class bothmethod(object):
         else:
             return lambda *args, **kwargs: self.fcn(False, ins, *args, **kwargs)
 
+# numpy on windows has some strange behavior with dtypes of certain functions
+# requiring us to cast down to int32 for (at least): ufunc.reduceat, repeat
+def windows_safe(array):
+    if os.name == "nt":
+        return array.astype(numpy.int32)
+    return array
+
 ################################################################ wrappers (used to be in uproot-methods)
 
 def _normalize_arrays(cls, arrays):
@@ -201,10 +208,164 @@ except AttributeError:
             __abs__ = _unary_method(um.absolute, 'abs')
             __invert__ = _unary_method(um.invert, 'invert')
 
+################################################################ conversion of arrays to Pandas
 
-# numpy on windows has some strange behavior with dtypes of certain functions
-# requiring us to cast down to int32 for (at least): ufunc.reduceat, repeat
-def windows_safe(array):
-    if os.name == "nt":
-        return array.astype(numpy.int32)
-    return array
+def topandas(array, flatten=False):
+    import pandas
+    import awkward.array.base
+
+    if isinstance(array, awkward.array.base.AwkwardArray):
+        if flatten:
+            return topandas_flatten(array)
+        else:
+            out = array._topandas({})
+            if len(out.columns) == 0:
+                return pandas.Series(out)
+            else:
+                return pandas.DataFrame({n: out[n] for n in out.columns}, columns=out.columns)
+    else:
+        out = numpy.array(array, copy=False)
+        if out.dtype.fields is None:
+            return pandas.Series(out)
+        else:
+            return pandas.DataFrame(out)
+
+def topandas_flatten(array):
+    import numpy
+    import pandas
+
+    import awkward.array.base
+    import awkward.array.chunked
+    import awkward.array.jagged
+    import awkward.array.objects
+    import awkward.array.table
+    import awkward.array.virtual
+    import awkward.type
+
+    if isinstance(array, awkward.array.base.AwkwardArray):
+        numpy = array.numpy
+        JaggedArray = array.JaggedArray
+        Table = array.Table
+    else:
+        JaggedArray = awkward.array.jagged.JaggedArray
+        Table = awkward.array.table.Table
+
+    def unwrap(a):
+        if isinstance(a, awkward.array.chunked.ChunkedArray):
+            chunks = [unwrap(x) for x in a.chunks]
+            if any(isinstance(x, awkward.array.jagged.JaggedArray) for x in chunks):
+                return awkward.array.jagged.JaggedArray.concatenate(chunks)
+            else:
+                return numpy.concatenate([x.regular() for x in chunks])
+        elif isinstance(a, awkward.array.virtual.VirtualArray):
+            return a.array
+        else:
+            return a
+
+    globalindex = [None]
+    localindex = []
+    columns = []
+    def recurse(array, tpe, cols, seriously):
+        if isinstance(tpe, awkward.type.TableType):
+            starts, stops = None, None
+            out, deferred, unflattened = None, {}, None
+
+            for n in tpe.columns:
+                if not isinstance(n, str):
+                    raise ValueError("column names must be strings")
+
+                arrayn = unwrap(array[n])
+                tpen = tpe[n]
+                colsn = cols + (n,) if seriously else cols
+
+                if isinstance(arrayn, awkward.array.objects.ObjectArray):
+                    arrayn = arrayn.content
+                if not isinstance(tpen, (numpy.dtype, str, bytes, awkward.type.Type)):
+                    tpen = awkward.type.fromarray(arrayn).to
+                if isinstance(tpen, numpy.dtype):
+                    columns.append(colsn)
+                    tmp = arrayn
+
+                elif isinstance(tpen, type) and issubclass(tpen, (str, bytes)):
+                    columns.append(colsn)
+                    tmp = arrayn
+
+                elif isinstance(tpen, awkward.type.ArrayType) and tpen.takes == numpy.inf:
+                    tmp = JaggedArray(arrayn.starts, arrayn.stops, recurse(arrayn.content, tpen.to, colsn, True))
+
+                elif isinstance(tpen, awkward.type.TableType):
+                    tmp = recurse(arrayn, tpen, colsn, True)
+
+                else:
+                    raise ValueError("this array has unflattenable substructure:\n\n{0}".format(str(tpen)))
+
+                if isinstance(tmp, awkward.array.jagged.JaggedArray):
+                    if isinstance(tmp.content, awkward.array.jagged.JaggedArray):
+                        unflattened = tmp
+                        tmp = tmp.flatten(axis=1)
+
+                    if starts is None:
+                        starts, stops = tmp.starts, tmp.stops
+                    elif not numpy.array_equal(starts, tmp.starts) or not numpy.array_equal(stops, tmp.stops):
+                        raise ValueError("this array has more than one jagged array structure")
+                    if out is None:
+                        out = JaggedArray(starts, stops, Table({n: tmp.content}))
+                    else:
+                        out[n] = tmp
+
+                else:
+                    deferred[n] = tmp
+
+            if out is None:
+                out = Table()
+
+            for n, x in deferred.items():
+                out[n] = x
+
+            m = ""
+            while m in tpe.columns:
+                m = m + " "
+            out[m] = numpy.arange(len(out))
+            globalindex[0] = out[m].flatten()
+
+            for n in tpe.columns:
+                arrayn = unwrap(array[n])
+                if isinstance(arrayn, awkward.array.jagged.JaggedArray):
+                    if unflattened is None:
+                        localindex.insert(0, out[n].localindex.flatten())
+                    else:
+                        oldloc = unflattened.content.localindex
+                        tab = JaggedArray(oldloc.starts, oldloc.stops, Table({"oldloc": oldloc.content}))
+                        tab["newloc"] = arrayn.localindex.flatten()
+                        localindex.insert(0, tab["newloc"].flatten())
+                    break
+
+            return out[tpe.columns]
+
+        else:
+            return recurse(Table({"": array}), awkward.type.TableType(**{"": tpe}), cols, False)[""]
+
+    tmp = recurse(array, awkward.type.fromarray(array).to, (), True)
+    if isinstance(tmp, awkward.array.jagged.JaggedArray):
+        tmp = tmp.flatten()
+
+    deepest = max(len(x) for x in columns)
+
+    out = {}
+    for i, col in enumerate(columns):
+        x = tmp
+        for c in col:
+            x = x[c]
+        columns[i] = col + ("",) * (deepest - len(col))
+        out[columns[i]] = x
+
+    index = globalindex + localindex
+    if len(index) == 1:
+        index = pandas.Index(index[0])
+    else:
+        index = pandas.MultiIndex.from_arrays(index)
+
+    if len(columns) == 1 and deepest == 0:
+        return pandas.Series(out[()], index=index)
+    else:
+        return pandas.DataFrame(data=out, index=index, columns=pandas.MultiIndex.from_tuples(columns))

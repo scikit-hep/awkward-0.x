@@ -4,6 +4,7 @@
 
 import numpy
 
+from awkward.cpp.array.base import CppMethods
 from awkward.cpp.array.jagged import JaggedArrayCpp as JaggedArray
 
-__all__ = ["JaggedArray"]
+__all__ = ["CppMethods", "JaggedArray"]
