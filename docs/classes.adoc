@@ -3,6 +3,7 @@
 :Email: pivarski@princeton.edu
 :Date: 2019-07-08
 :Revision: 0.x
+:toc:
 
 == Jaggedness
 
