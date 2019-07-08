@@ -2361,10 +2361,168 @@ df.b[0]
 # %%markdown
 # # High-level types
 #
-# TODO: copy this wholesale from the specification.adoc.
+# The high-level type of an array describes its characteristics in terms of what it *represents*, a *logical* view of the data. By contrast, the layouts (below) describe the nested arrays themselves, a *physical* view of the data.
+#
+# The logical view of Numpy arrays is described in terms of ``shape`` and ``dtype``. The awkward type of a Numpy array is presented a little differently.
+
+# %%
+a = numpy.array([[1.1, 2.2], [3.3, 4.4], [5.5, 6.6]])
+t = awkward.type.fromarray(a)
+t
+
+# %%markdown
+# Above is the object-form of the high-level type and object that ``takes`` arguments ``to`` return values.
+
+# %%
+t.takes
+
+# %%
+t.to
+
+# %%
+t.to.to
+
+# %%markdown
+# High-level type objects also have a printable form for human readability.
+
+# %%
+print(t)
+
+# %%markdown
+# The above should be read like a function's data type: ``argument type -> return type`` for the function that takes an index in square brackets and returns something else. For example, the first ``[0, 3)`` means that you could put any non-negative integer less than ``3`` in square brackets after the array, like this:
+
+# %%
+a[2]
+
+# %%markdown
+# The second ``[0, 2)`` means that the next argument can be any non-negative integer less than ``2``.
+
+# %%
+a[2][1]
+
+# %%markdown
+# And then you have a Numpy ``dtype``.
+#
+# The reason high-level types are expressed like this, instead of Numpy ``shape`` and ``dtype`` is to generalize to arbitrary objects.
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": []}, {"x": 2, "y": [1.1, 2.2]}, {"x": 3, "y": [1.1, 2.2, 3.3]}])
+print(a.type)
+
+# %%markdown
+# In the above, you could call ``a[2]["x"]`` to get ``3`` or ``a[2]["y"][1]`` to get ``2.2``, but the types and even number of allowed arguments depend on which path you take. Numpy's ``shape`` and ``dtype`` have no equivalent.
+#
+# Also in the above, the allowed argument for the jagged array is specified as ``[0, inf)``, which doesn't literally mean any value up to infinity is allowed—the constraint simply isn't specific because it depends on the details of the jagged array. Even specifying the maximum length of any sublist (``a["y"].counts.max()``) would require a calculation that scales with the size of the dataset, which can be infeasible in some cases. Instead, ``[0, inf)`` simply means "jagged."
+#
+# Fixed-length arrays inside of ``JaggedArrays`` or ``Tables`` are presented with known upper limits:
+
+# %%
+a = awkward.Table(x=[[1.1, 2.2], [3.3, 4.4], [5.5, 6.6]],
+                  y=awkward.fromiter([[1, 2, 3], [], [4, 5]]))
+print(a.type)
+
+# Whereas each value of a ``Table`` row (`product type <https://en.wikipedia.org/wiki/Product_type>`__) contains a member of every one of its fields, each value of a ``UnionArray`` item (`sum type <https://en.wikipedia.org/wiki/Tagged_union>`__) contains a member of exactly one of its possibilities. The distinction is drawn as the lack or presence of a vertical bar (meaning "or": ``|``).
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": "one"}, {"x": 2, "y": "two"}, {"x": 3, "y": "three"}])
+print(a.type)
+
+# %%
+a = awkward.fromiter([1, 2, 3, "four", "five", "six"])
+print(a.type)
+
+# %%markdown
+# The parenthesis is to keep ``Table`` fields from being mixed up with ``UnionArray`` possibilities.
+
+# %%
+a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": "three"}, {"x": 4, "y": "four"}])
+print(a.type)
+
+# %%markdown
+# As in mathematics, products and the adjacency operator take precedence over sums.
+
+# %%
+a = awkward.fromiter([1, 2, 3, {"x": 4.4, "y": "four"}, {"x": 5.5, "y": "five"}, {"x": 6.6, "y": "six"}])
+print(a.type)
+
+# %%markdown
+# Missing data, represented by ``MaskedArrays``, ``BitMaskedArrays``, or ``IndexedMaskedArrays``, are called "option types" in the high-level type language.
+
+# %%
+a = awkward.fromiter([1, 2, 3, None, None, 4, 5])
+print(a.type)
+
+# %%
+# Inner arrays could be missing values.
+a = awkward.fromiter([[1.1, 2.2, 3.3], None, [4.4, 5.5]])
+print(a.type)
+
+# %%
+# Numbers in those arrays could be missing values.
+a = awkward.fromiter([[1.1, 2.2, None], [], [4.4, 5.5]])
+print(a.type)
+
+# %%markdown
+# Cross-references and cyclic references are expressed in awkward type objects by creating the same graph structure among the type objects as the arrays. Thus,
+
+# %%
+tree = awkward.fromiter([
+    {"value": 1.23, "left":    1, "right":    2},     # node 0
+    {"value": 3.21, "left":    3, "right":    4},     # node 1
+    {"value": 9.99, "left":    5, "right":    6},     # node 2
+    {"value": 3.14, "left":    7, "right": None},     # node 3
+    {"value": 2.71, "left": None, "right":    8},     # node 4
+    {"value": 5.55, "left": None, "right": None},     # node 5
+    {"value": 8.00, "left": None, "right": None},     # node 6
+    {"value": 9.00, "left": None, "right": None},     # node 7
+    {"value": 0.00, "left": None, "right": None},     # node 8
+])
+left = tree.contents["left"].content
+right = tree.contents["right"].content
+left[(left < 0) | (left > 8)] = 0         # satisfy overzealous validity checks
+right[(right < 0) | (right > 8)] = 0
+tree.contents["left"].content = awkward.IndexedArray(left, tree)
+tree.contents["right"].content = awkward.IndexedArray(right, tree)
+
+tree[0].tolist()
+
+# %%markdown
+# In the print-out, labels (``T0 :=``, ``T1 :=``, ``T2 :=``) are inserted to indicate where cross-references begin and end.
+
+# %%
+print(tree.type)
+
+# %%markdown
+# The ``ObjectArray`` class turns awkward array structures into Python objects on demand. From an analysis point of view, the elements of the array *are* Python objects, and that is reflected in the type.
+
+# %%
+class Point:
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+    def __repr__(self):
+        return "Point({0}, {1})".format(self.x, self.y)
+
+a = awkward.fromiter([Point(0, 0), Point(3, 2), Point(1, 1), Point(2, 4), Point(0, 0)])
+a
+
+# %%
+print(a.type)
+
+# %%markdown
+# In summary,
+#
+# * each element of a Numpy ``shape`` like ``(i, j, k)`` becomes a functional argument: ``[0, i) -> [0, j) -> [0, k)``;
+# * high-level types terminate on Numpy ``dtypes`` or ``ObjectArray`` functions;
+# * columns of a ``Table`` are presented adjacent to one another: the type is field 1 *and* field 2 *and* field 3, etc.;
+# * possibilities of a ``UnionArray`` are separated by vertical bars ``|``: the type is possibility 1 *or* possibility 2 *or* possibility 3, etc.;
+# * nullable types are indicated by a question mark;
+# * cross-references and cyclic references are maintained in the type objects, printed with labels.
 
 # %%markdown
 # # Low-level layouts
+#
+# The layout of an array describes how it is constructed in terms of Numpy arrays and other parameters. It has more information than a high-level type (above), more that would typically be needed for data analysis, but very necessary for data engineering.
+
 
 # %%markdown
 # # Details of array representations
@@ -2403,23 +2561,19 @@ df.b[0]
 # ## VirtualArray: data on demand
 
 # %%markdown
-# # Details of serialization
+# # Applications
 
 # %%markdown
-# # Applications
+# ## Decision tree as an awkward array
 
 # %%markdown
 # ## Mixed-source data with persistvirtual
 
 # %%markdown
 # ## Using Pandas with awkward arrays
-#
-# **TODO**
 
 # %%markdown
 # ## Using Numba with awkward arrays
-#
-# *(Deprecated in favor of awkward 1.0 plans.)*
 
 # %%markdown
 # ## Flattening awkard arrays for machine learning
