@@ -1769,9 +1769,13 @@ class Point:
 
 a = awkward.fromiter([[Point(1, 1.1), Point(2, 2.2), Point(3, 3.3)], [], [Point(4, 4.4), Point(5, 5.5)]])
 a
+# <JaggedArray [[Point(1, 1.1) Point(2, 2.2) Point(3, 3.3)] [] [Point(4, 4.4) Point(5, 5.5)]] at 0x7811883bccf8>
 
 # %%
 a.tolist()
+# [[Point(1, 1.1), Point(2, 2.2), Point(3, 3.3)],
+#  [],
+#  [Point(4, 4.4), Point(5, 5.5)]]
 
 # %%markdown
 # * ``valid(exception=False, message=False)``: manually invoke the whole-array validity checks on the top-level array (not recursively). With the default options, this function returns ``True`` if valid and ``False`` if not. If ``exception=True``, it returns nothing on success and raises the appropriate exception on failure. If ``message=True``, it returns ``None`` on success and the error string on failure. (TODO: ``recursive=True``?)
@@ -1779,15 +1783,18 @@ a.tolist()
 # %%
 a = awkward.JaggedArray.fromcounts([3, 0, 2], [1.1, 2.2, 3.3, 4.4])  # content array is too short
 a.valid()
+# False
 
 # %%
 try:
     a.valid(exception=True)
 except Exception as err:
     print(type(err), str(err))
+# <class 'ValueError'> maximum offset 5 is beyond the length of the content (4)
 
 # %%
 a.valid(message=True)
+# "<class 'ValueError'>: maximum offset 5 is beyond the length of the content (4)"
 
 # %%markdown
 # * ``astype(dtype)``: convert *nested Numpy arrays* into the given type while maintaining awkward structure.
@@ -1795,6 +1802,7 @@ a.valid(message=True)
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 a.astype(numpy.int32)
+# <JaggedArray [[1 2 3] [] [4 5]] at 0x7811883b9898>
 
 # %%markdown
 # * ``regular()``: convert the awkward array into a Numpy array and (unlike ``numpy.array(awkward_array)``) raise an error if it cannot be faithfully represented.
@@ -1803,20 +1811,26 @@ a.astype(numpy.int32)
 # This JaggedArray happens to have equal-sized inner arrays.
 a = awkward.fromiter([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.9]])
 a
+# <JaggedArray [[1.1 2.2 3.3] [4.4 5.5 6.6] [7.7 8.8 9.9]] at 0x781188390240>
 
 # %%
 a.regular()
+# array([[1.1, 2.2, 3.3],
+#        [4.4, 5.5, 6.6],
+#        [7.7, 8.8, 9.9]])
 
 # %%
 # This one does not.
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 a
+# <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x7811883b9c18>
 
 # %%
 try:
     a.regular()
 except Exception as err:
     print(type(err), str(err))
+# <class 'ValueError'> jagged array is not regular: different elements have different counts
 
 # %%markdown
 # * ``copy(optional constructor arguments...)``: copy an awkward array object, non-recursively and without copying memory buffers, possibly replacing some of its parameters. If the class is an awkward subclass or has mix-in methods, they are propagated to the copy.
@@ -1835,9 +1849,11 @@ JaggedArrayMethods = awkward.Methods.mixin(Special, awkward.JaggedArray)
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 a.__class__ = JaggedArrayMethods
 a
+# <JaggedArrayMethods [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x7811883bc2b0>
 
 # %%
 a.get(2)
+# array([4.4, 5.5])
 
 # %%
 a.get(3)
@@ -1845,9 +1861,11 @@ a.get(3)
 # %%
 b = a.copy(content=[100, 200, 300, 400, 500])
 b
+# <JaggedArrayMethods [[100 200 300] [] [400 500]] at 0x7811883c5908>
 
 # %%
 b.get(2)
+# array([400, 500])
 
 # %%
 b.get(3)
@@ -1858,9 +1876,11 @@ b.get(3)
 # %%
 c = a[1:]
 c
+# <JaggedArrayMethods [[] [4.4 5.5]] at 0x7811883c5be0>
 
 # %%
 c.get(1)
+# array([4.4, 5.5])
 
 # %%
 c.get(2)
@@ -1871,15 +1891,18 @@ c.get(2)
 # %%
 b = a.deepcopy(content=[100, 200, 300, 400, 500])
 b
+# <JaggedArrayMethods [[100 200 300] [] [400 500]] at 0x781188355748>
 
 # %%
 # Modify the structure of a (not recommended; this is a demo).
 a.starts[0] = 1
 a
+# <JaggedArrayMethods [[2.2 3.3] [] [4.4 5.5]] at 0x7811883bc2b0>
 
 # %%
 # But b is not modified. (If it were, it would start with 200.)
 b
+# <JaggedArrayMethods [[100 200 300] [] [400 500]] at 0x781188355748>
 
 # %%markdown
 # * ``empty_like(optional constructor arguments...)``
@@ -1889,10 +1912,12 @@ b
 # %%
 d = a.zeros_like()
 d
+# <JaggedArrayMethods [[0.0 0.0] [] [0.0 0.0]] at 0x7811883c59b0>
 
 # %%
 e = a.ones_like()
 e
+# <JaggedArrayMethods [[1.0 1.0] [] [1.0 1.0]] at 0x78118847a2b0>
 
 # %%markdown
 # ## Reducers
@@ -1904,18 +1929,23 @@ e
 # %%
 a = awkward.fromiter([[[[1, 2], [3]], [[4, 5]]], [[[], [6, 7, 8, 9]]]])
 a
+# <JaggedArray [[[[1 2] [3]] [[4 5]]] [[[] [6 7 8 9]]]] at 0x7811883b9470>
 
 # %%
 a.sum()
+# <JaggedArray [[[3 3] [9]] [[0 30]]] at 0x7811883bc4a8>
 
 # %%
 a.sum().sum()
+# <JaggedArray [[6 9] [30]] at 0x7811883bc048>
 
 # %%
 a.sum().sum().sum()
+# array([15, 30])
 
 # %%
 a.sum().sum().sum().sum()
+# 45
 
 # %%markdown
 # In the following example, "the deepest axis" of different fields in the table are at different depths: singly jagged in ``"x"`` and doubly jagged array in ``"y"``. The ``sum`` reduces each depth by one, producing a flat array ``"x"`` and a singly jagged array in ``"y"``.
@@ -1923,9 +1953,13 @@ a.sum().sum().sum().sum()
 # %%
 a = awkward.fromiter([{"x": [], "y": [[0.1, 0.2], [], [0.3]]}, {"x": [1, 2, 3], "y": [[0.4], [], [0.5, 0.6]]}])
 a.tolist()
+# [{'x': [], 'y': [[0.1, 0.2], [], [0.3]]},
+#  {'x': [1, 2, 3], 'y': [[0.4], [], [0.5, 0.6]]}]
 
 # %%
 a.sum().tolist()
+[{'x': 0, 'y': [0.3, 0.0, 0.3]},
+ {'x': 6, 'y': [0.4, 0.0, 1.1]}]
 
 # %%markdown
 # This sum cannot be reduced again because ``"x"`` is not jagged (would reduce to a scalar) and ``"y"`` is (would reduce to an array). The result cannot be scalar in one field (a single row, not a collection) and an array in another field (a collection).
@@ -1935,6 +1969,7 @@ try:
     a.sum().sum()
 except Exception as err:
     print(type(err), str(err))
+# <class 'ValueError'> some Table columns are jagged and others are not
 
 # %%markdown
 # A table can be reduced if all of its fields are jagged or if all of its fields are not jagged; here's an example of the latter.
@@ -1942,15 +1977,18 @@ except Exception as err:
 # %%
 a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
 a.tolist()
+# [{'x': 1, 'y': 1.1}, {'x': 2, 'y': 2.2}, {'x': 3, 'y': 3.3}]
 
 # %%
 a.sum()
+# <sum {'x': 6, 'y': 6.6}>
 
 # %%markdown
 # The resulting object is a scalar row—for your convenience, it has been labeled with the reducer that produced it.
 
 # %%
 isinstance(a.sum(), awkward.Table.Row)
+# True
 
 # %%markdown
 # ``UnionArrays`` are even more constrained: they can only be reduced if they have primitive (Numpy) type.
@@ -1958,21 +1996,25 @@ isinstance(a.sum(), awkward.Table.Row)
 # %%
 a = awkward.fromiter([1, 2, 3, {"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}])
 a
+# <UnionArray [1 2 3 <Row 0> <Row 1>] at 0x781188355550>
 
 # %%
 try:
     a.sum()
 except Exception as err:
     print(type(err), str(err))
+# <class 'TypeError'> cannot reduce a UnionArray of non-primitive type
 
 # %%
 a = awkward.UnionArray.fromtags([0, 0, 0, 1, 1],
                                 [numpy.array([1, 2, 3], dtype=numpy.int32),
                                  numpy.array([4, 5], dtype=numpy.float64)])
 a
+# <UnionArray [1 2 3 4.0 5.0] at 0x781188355da0>
 
 # %%
 a.sum()
+# 15.0
 
 # %%markdown
 # In all reducers, ``NaN`` in floating-point arrays and ``None`` in ``MaskedArrays`` are skipped, so these reducers are more like ``numpy.nansum``, ``numpy.nanmax``, and ``numpy.nanmin``, but generalized to all nullable types.
@@ -1980,16 +2022,20 @@ a.sum()
 # %%
 a = awkward.fromiter([[[[1.1, numpy.nan], [2.2]], [[None, 3.3]]], [[[], [None, numpy.nan, None]]]])
 a
+# <JaggedArray [[[[1.1 nan] [2.2]] [[None 3.3]]] [[[] [None nan None]]]] at 0x78118835c7b8>
 
 # %%
 a.sum()
+# <JaggedArray [[[1.1 2.2] [3.3]] [[0.0 0.0]]] at 0x781188355a20>
 
 # %%
 a = awkward.fromiter([[{"x": 1, "y": 1.1}, None, {"x": 3, "y": 3.3}], [], [{"x": 4, "y": numpy.nan}]])
 a.tolist()
+# [[{'x': 1, 'y': 1.1}, None, {'x': 3, 'y': 3.3}], [], [{'x': 4, 'y': nan}]]
 
 # %%
 a.sum().tolist()
+# [{'x': 4, 'y': 4.4}, {'x': 0, 'y': 0.0}, {'x': 4, 'y': 0.0}]
 
 # %%markdown
 # The following reducers are defined as methods on all awkward arrays.
@@ -2007,14 +2053,17 @@ def sum_mod_10(x, y):
 # %%
 a = awkward.fromiter([[1, 2, 3], [], [4, 5, 6], [7, 8, 9, 10]])
 a.sum()
+# array([ 6,  0, 15, 34])
 
 # %%
 a.reduce(sum_mod_10, 0)
+# array([6, 0, 5, 4])
 
 # %%
 # Missing (None) values are ignored.
 a = awkward.fromiter([[1, 2, None, 3], [], [None, None, None], [7, 8, 9, 10]])
 a.reduce(sum_mod_10, 0)
+# array([6, 0, 0, 4])
 
 # %%markdown
 # * ``any()``: boolean reducer, returns ``True`` if any (logical or) of the elements of an array are ``True``, returns ``False`` for empty arrays.
@@ -2022,11 +2071,13 @@ a.reduce(sum_mod_10, 0)
 # %%
 a = awkward.fromiter([[False, False], [True, True], [True, False], []])
 a.any()
+# array([False,  True,  True, False])
 
 # %%
 # Missing (None) values are ignored.
 a = awkward.fromiter([[False, None], [True, None], [None]])
 a.any()
+# array([False,  True, False])
 
 # %%markdown
 # * ``all()``: boolean reducer, returns ``True`` if all (logical and) of the elements of an array are ``True``, returns ``True`` for empty arrays.
@@ -2034,11 +2085,13 @@ a.any()
 # %%
 a = awkward.fromiter([[False, False], [True, True], [True, False], []])
 a.all()
+# array([False,  True, False,  True])
 
 # %%
 # Missing (None) values are ignored.
 a = awkward.fromiter([[False, None], [True, None], [None]])
 a.all()
+# array([False,  True,  True])
 
 # %%markdown
 # * ``count()``: returns the (integer) number of elements in an array, skipping ``None`` and ``NaN``.
@@ -2046,6 +2099,7 @@ a.all()
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.count()
+# array([2, 0, 1])
 
 # %%markdown
 # * ``count_nonzero()``: returns the (integer) number of non-zero elements in an array, skipping ``None`` and ``NaN``.
@@ -2053,6 +2107,7 @@ a.count()
 # %%
 a = awkward.fromiter([[1.1, 2.2, None, 0], [], [3.3, numpy.nan, 0]])
 a.count_nonzero()
+# array([2, 0, 1])
 
 # %%markdown
 # * ``sum()``: returns the sum of each array, skipping ``None`` and ``NaN``, returning 0 for empty arrays.
@@ -2060,6 +2115,7 @@ a.count_nonzero()
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.sum()
+# array([3.3, 0. , 3.3])
 
 # %%markdown
 # * ``prod()``: returns the product (multiplication) of each array, skipping ``None`` and ``NaN``, returning 1 for empty arrays.
@@ -2067,6 +2123,7 @@ a.sum()
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.prod()
+# array([2.42, 1.  , 3.3 ])
 
 # %%markdown
 # * ``min()``: returns the minimum number in each array, skipping ``None`` and ``NaN``, returning infinity or the largest possible integer for empty arrays. (Note that Numpy raises errors for empty arrays.)
@@ -2074,10 +2131,12 @@ a.prod()
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.min()
+# array([1.1, inf, 3.3])
 
 # %%
 a = awkward.fromiter([[1, 2, None], [], [3]])
 a.min()
+# array([                  1, 9223372036854775807,                   3])
 
 # %%markdown
 # The identity of minimization is ``inf`` for floating-point values and ``9223372036854775807`` for ``int64`` because minimization with any other value would return the other value. This is more convenient for data analysts than raising an error because empty inner arrays are common.
@@ -2088,10 +2147,12 @@ a.min()
 # %%
 a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
 a.max()
+# array([ 2.2, -inf,  3.3])
 
 # %%
 a = awkward.fromiter([[1, 2, None], [], [3]])
 a.max()
+# array([                   2, -9223372036854775808,                    3])
 
 # %%markdown
 # The identity of maximization is ``-inf`` for floating-point values and ``-9223372036854775808`` for ``int64`` because maximization with any other value would return the other value. This is more convenient for data analysts than raising an error because empty inner arrays are common.
@@ -2101,9 +2162,11 @@ a.max()
 # %%
 a = awkward.JaggedArray.fromcounts([3, 0, 2], numpy.array([1.1, 2.2, 3.3, 4.4, 5.5], dtype=numpy.uint16))
 a
+# <JaggedArray [[1 2 3] [] [4 5]] at 0x78112c0e9a58>
 
 # %%
 a.max()
+# array([3, 0, 5], dtype=uint16)
 
 # %%markdown
 # Functions like mean and standard deviation aren't true reducers because they're not associative (``mean(mean(x1, x2, x3), mean(x4, x5))`` is not equal to ``mean(mean(x1, x2), mean(x3, x4, x5))``). However, they're useful methods that exist on all awkward arrays, defined in terms of reducers.
@@ -2116,27 +2179,33 @@ a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
 
 # %%
 a.moment(1)
+# array([2. , nan, 4.5])
 
 # %%
 a.moment(2)
+# array([ 4.66666667,         nan, 20.5       ])
 
 # %%markdown
 # Here is the first moment (mean) with a weight broadcasted from a scalar and from a non-jagged array, to show how it doesn't affect the result. The moment is calculated over an inner array, so if a constant value is broadcasted to all elements of that inner array, they all get the same weight.
 
 # %%
 a.moment(1)
+# array([2. , nan, 4.5])
 
 # %%
 a.moment(1, 100)
+# array([2. , nan, 4.5])
 
 # %%
 a.moment(1, numpy.array([100, 200, 300]))
+# array([2. , nan, 4.5])
 
 # %%markdown
 # Only when the weight varies across an inner array does it have an effect.
 
 # %%
 a.moment(1, awkward.fromiter([[1, 10, 100], [], [0, 100]]))
+# array([2.89189189,        nan, 5.        ])
 
 # %%markdown
 # * ``mean(weight=None)``: returns the mean of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays, using optional ``weight`` as above.
@@ -2144,6 +2213,7 @@ a.moment(1, awkward.fromiter([[1, 10, 100], [], [0, 100]]))
 # %%
 a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
 a.mean()
+# array([2. , nan, 4.5])
 
 # %%markdown
 # * ``var(weight=None, ddof=0)``: returns the variance of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays, using optional ``weight`` as above. The ``ddof`` or "Delta Degrees of Freedom" replaces a divisor of ``N`` (count or sum of weights) with a divisor of ``N - ddof``, following `numpy.var <https://docs.scipy.org/doc/numpy/reference/generated/numpy.var.html>`__.
@@ -2151,18 +2221,22 @@ a.mean()
 # %%
 a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
 a.var()
+# array([0.66666667,        nan, 0.25      ])
 
 # %%
 a.var(ddof=1)
+# array([1. , nan, 0.5])
 
 # %%markdown
 # * ``std(weight=None, ddof=0)``: returns the standard deviation of each array, the square root of the variance described above.
 
 # %%
 a.std()
+# array([0.81649658,        nan, 0.5       ])
 
 # %%
 a.std(ddof=1)
+# array([1.        ,        nan, 0.70710678])
 
 # %%markdown
 # ## Properties and methods for jaggedness
@@ -2174,30 +2248,36 @@ a.std(ddof=1)
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
 a.counts
+# array([3, 0, 2, 4])
 
 # %%
 # MaskedArrays return -1 for missing values.
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], None, [6.6, 7.7, 8.8, 9.9]])
 a.counts
+# array([ 3,  0, -1,  4])
 
 # %%markdown
 # A missing inner array (counts is ``-1``) is distinct from an empty inner array (counts is ``0``), but if you want to ensure that you're working with data that have at least ``N`` elements, ``counts >= N`` works.
 
 # %%
 a.counts >= 1
+# array([ True, False, False,  True])
 
 # %%
 a[a.counts >= 1]
+# <MaskedArray [[1.1 2.2 3.3] [6.6 7.7 8.8 9.9]] at 0x78112c0d54a8>
 
 # %%
 # UnionArrays return -1 for non-jagged arrays mixed with jagged arrays.
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], 999, [6.6, 7.7, 8.8, 9.9]])
 a.counts
+# array([ 3,  0, -1,  4])
 
 # %%
 # Same for tabular data, regardless of whether they contain nested jagged arrays.
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], {"x": 1, "y": [1.1, 1.2, 1.3]}, [6.6, 7.7, 8.8, 9.9]])
 a.counts
+# array([ 3,  0, -1,  4])
 
 # %%markdown
 # Note! This means that pure ``Tables`` will always return zeros for counts, regardless of what they contain.
@@ -2205,6 +2285,7 @@ a.counts
 # %%
 a = awkward.fromiter([{"x": [], "y": []}, {"x": [1], "y": [1.1]}, {"x": [1, 2], "y": [1.1, 2.2]}])
 a.counts
+# array([-1, -1, -1])
 
 # %%markdown
 # If all of the columns of a ``Table`` are ``JaggedArrays`` with the same structure, you probably want to zip them into a single ``JaggedArray``.
@@ -2212,9 +2293,11 @@ a.counts
 # %%
 b = awkward.JaggedArray.zip(x=a.x, y=a.y)
 b
+# <JaggedArray [[] [<Row 0>] [<Row 1> <Row 2>]] at 0x78112c0dc7f0>
 
 # %%
 b.counts
+# array([0, 1, 2])
 
 # %%markdown
 # * ``flatten(axis=0)``: removes one level of structure (losing information about boundaries between inner arrays) at a depth of jaggedness given by ``axis``.
@@ -2222,6 +2305,7 @@ b.counts
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
 a.flatten()
+# array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
 
 # %%markdown
 # Unlike a ``JaggedArray``'s ``content``, which is part of its low-level layout, ``flatten()`` performs a high-level logical operation. Here's an example of the distinction.
@@ -2231,12 +2315,16 @@ a.flatten()
 a = awkward.JaggedArray([3, 100, 0, 6], [6, 100, 2, 10],
                         [4.4, 5.5, 999, 1.1, 2.2, 3.3, 6.6, 7.7, 8.8, 9.9, 123])
 a
+# <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5] [6.6 7.7 8.8 9.9]] at 0x78112c127cf8>
 
 # %%
 a.flatten()   # gives you a logically flattened array
+# array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
 
 # %%
 a.content     # gives you an internal structure component of the array
+# array([  4.4,   5.5, 999. ,   1.1,   2.2,   3.3,   6.6,   7.7,   8.8,
+#          9.9, 123. ])
 
 # %%markdown
 # In many cases, the output of ``flatten()`` corresponds to the output of ``content``, but be aware of the difference and use the one you want.
@@ -2246,12 +2334,15 @@ a.content     # gives you an internal structure component of the array
 # %%
 a = awkward.fromiter([[[1.1, 2.2], [3.3]], [], [[4.4, 5.5]], [[6.6, 7.7, 8.8], [], [9.9]]])
 a
+# <JaggedArray [[[1.1 2.2] [3.3]] [] [[4.4 5.5]] [[6.6 7.7 8.8] [] [9.9]]] at 0x78112c127208>
 
 # %%
 a.flatten(axis=0)
+# <JaggedArray [[1.1 2.2] [3.3] [4.4 5.5] [6.6 7.7 8.8] [] [9.9]] at 0x78112c1276a0>
 
 # %%
 a.flatten(axis=1)
+# <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5] [6.6 7.7 8.8 9.9]] at 0x78112c127320>
 
 # %%markdown
 # Even if a ``JaggedArray``'s inner structure is due to a fixed-shape Numpy array, the ``axis`` parameter propagates down and does the right thing.
@@ -2260,12 +2351,15 @@ a.flatten(axis=1)
 a = awkward.JaggedArray.fromcounts(numpy.array([3, 0, 2]),
                                    numpy.array([[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]]))
 a
+# <JaggedArray [[[1 1] [2 2] [3 3]] [] [[4 4] [5 5]]] at 0x78112c0d5ac8>
 
 # %%
 type(a.content)
+# numpy.ndarray
 
 # %%
 a.flatten(axis=1)
+# <JaggedArray [[1 1 2 2 3 3] [] [4 4 5 5]] at 0x78112c0d5a20>
 
 # %%markdown
 # But, unlike Numpy, we can't ask for an ``axis`` starting from the other end (with a negative index). The "deepest array" is not a well-defined concept for awkward arrays.
@@ -2275,13 +2369,16 @@ try:
     a.flatten(axis=-1)
 except Exception as err:
     print(type(err), str(err))
+# <class 'TypeError'> axis must be a non-negative integer (can't count from the end)
 
 # %%
 a = awkward.fromiter([[[1.1, 2.2], [3.3]], [], None, [[6.6, 7.7, 8.8], [], [9.9]]])
 a
+# <MaskedArray [[[1.1 2.2] [3.3]] [] None [[6.6 7.7 8.8] [] [9.9]]] at 0x78112c0d51d0>
 
 # %%
 a.flatten(axis=1)
+# <JaggedArray [[1.1 2.2 3.3] [] [6.6 7.7 8.8 9.9]] at 0x78112c0dcfd0>
 
 # %%markdown
 # * ``pad(length, maskedwhen=True, clip=False)``: ensures that each inner array has at least ``length`` elements by filling in the empty spaces with ``None`` (i.e. by inserting a ``MaskedArray`` layer). The ``maskedwhen`` parameter determines whether ``mask[i] == True`` means the element is ``None`` (``maskedwhen=True``) or not ``None`` (``maskedwhen=False``). Setting ``maskedwhen`` doesn't change the logical meaning of the array. If ``clip=True``, then the inner arrays will have exactly ``length`` elements (by clipping the ones that are too long). Even though this results in regular sizes, they are still represented by a ``JaggedArray``.
@@ -2289,27 +2386,36 @@ a.flatten(axis=1)
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
 a
+# <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5] [6.6 7.7 8.8 9.9]] at 0x78112c127be0>
 
 # %%
 a.pad(3)
+# <JaggedArray [[1.1 2.2 3.3] [None None None] [4.4 5.5 None] [6.6 7.7 8.8 9.9]] at 0x78112c122588>
 
 # %%
 a.pad(3, maskedwhen=False)
+# <JaggedArray [[1.1 2.2 3.3] [None None None] [4.4 5.5 None] [6.6 7.7 8.8 9.9]] at 0x78112c122c18>
 
 # %%
 a.pad(3, clip=True)
+# <JaggedArray [[1.1 2.2 3.3] [None None None] [4.4 5.5 None] [6.6 7.7 8.8]] at 0x78112c127940>
 
 # %%markdown
 # If you want to get rid of the ``MaskedArray`` layer, replace ``None`` with some value.
 
 # %%
 a.pad(3).fillna(-999)
+# <JaggedArray [[1.1 2.2 3.3] [-999.0 -999.0 -999.0] [4.4 5.5 -999.0] [6.6 7.7 8.8 9.9]] at 0x78112c0dc0b8>
 
 # %%markdown
 # If you want to make an effectively regular array into a real Numpy array, use ``regular``.
 
 # %%
 a.pad(3, clip=True).fillna(0).regular()
+# array([[1.1, 2.2, 3.3],
+#        [0. , 0. , 0. ],
+#        [4.4, 5.5, 0. ],
+#        [6.6, 7.7, 8.8]])
 
 # %%markdown
 # If a ``JaggedArray`` is nested within some other type, ``pad`` will propagate down to it.
@@ -2317,20 +2423,34 @@ a.pad(3, clip=True).fillna(0).regular()
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], None, [4.4, 5.5], None])
 a
+# <MaskedArray [[1.1 2.2 3.3] [] None [4.4 5.5] None] at 0x78112c0d52b0>
 
 # %%
 a.pad(3)
+# <MaskedArray [[1.1 2.2 3.3] [None None None] None [4.4 5.5 None] None] at 0x78112c0e9908>
 
 # %%
 a = awkward.Table(x=[[1, 1], [2, 2], [3, 3], [4, 4]],
                   y=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]]))
 a.tolist()
+# [{'x': [1, 1], 'y': [1.1, 2.2, 3.3]},
+#  {'x': [2, 2], 'y': []},
+#  {'x': [3, 3], 'y': [4.4, 5.5]},
+#  {'x': [4, 4], 'y': [6.6, 7.7, 8.8, 9.9]}]
 
 # %%
 a.pad(3).tolist()
+# [{'x': [1, 1, None], 'y': [1.1, 2.2, 3.3]},
+#  {'x': [2, 2, None], 'y': [None, None, None]},
+#  {'x': [3, 3, None], 'y': [4.4, 5.5, None]},
+#  {'x': [4, 4, None], 'y': [6.6, 7.7, 8.8, 9.9]}]
 
 # %%
 a.pad(3, clip=True).tolist()
+# [{'x': [1, 1, None], 'y': [1.1, 2.2, 3.3]},
+#  {'x': [2, 2, None], 'y': [None, None, None]},
+#  {'x': [3, 3, None], 'y': [4.4, 5.5, None]},
+#  {'x': [4, 4, None], 'y': [6.6, 7.7, 8.8]}]
 
 # %%markdown
 # If you pass a ``pad`` through a ``Table``, be sure that every field in each record is a nested array (and therefore can be padded).
@@ -2339,12 +2459,17 @@ a.pad(3, clip=True).tolist()
 a = awkward.Table(x=[1, 2, 3, 4],
                   y=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]]))
 a.tolist()
+# [{'x': 1, 'y': [1.1, 2.2, 3.3]},
+#  {'x': 2, 'y': []},
+#  {'x': 3, 'y': [4.4, 5.5]},
+#  {'x': 4, 'y': [6.6, 7.7, 8.8, 9.9]}]
 
 # %%
 try:
     a.pad(3)
 except Exception as err:
     print(type(err), str(err))
+# <class 'ValueError'> pad cannot be applied to scalars
 
 # %%markdown
 # The same goes for ``UnionArrays``.
@@ -2352,30 +2477,36 @@ except Exception as err:
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3, [1, 2, 3]], [], [4.4, 5.5, [4, 5]]])
 a
+# <JaggedArray [[1.1 2.2 3.3 [1 2 3]] [] [4.4 5.5 [4 5]]] at 0x7811883c5d30>
 
 # %%
 a.pad(5)
+# <JaggedArray [[1.1 2.2 3.3 [1 2 3] None] [None None None None None] [4.4 5.5 [4 5] None None]] at 0x78112c0e9a20>
 
 # %%
 a = awkward.UnionArray.fromtags([0, 0, 0, 1, 1],
                                 [awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
                                  awkward.fromiter([[100, 101], [102]])])
 a
+# <UnionArray [[1.1 2.2 3.3] [] [4.4 5.5] [100 101] [102]] at 0x78112c0bed30>
 
 # %%
 a.pad(3)
+# <UnionArray [[1.1 2.2 3.3] [None None None] [4.4 5.5 None] [100 101 None] [102 None None]] at 0x78112c0bedd8>
 
 # %%
 a = awkward.UnionArray.fromtags([0, 0, 0, 1, 1],
                                 [awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
                                  awkward.fromiter([100, 200])])
 a
+# <UnionArray [[1.1 2.2 3.3] [] [4.4 5.5] 100 200] at 0x78112c0e9b00>
 
 # %%
 try:
     a.pad(3)
 except Exception as err:
     print(type(err), str(err))
+# <class 'ValueError'> pad cannot be applied to scalars
 
 # %%markdown
 # The general behavior of ``pad`` is to replace the shallowest ``JaggedArray`` with a ``JaggedArray`` containing a ``MaskedArray``. The one exception to this type signature is that ``StringArrays`` are padded with characters.
@@ -2383,15 +2514,19 @@ except Exception as err:
 # %%
 a = awkward.fromiter(["one", "two", "three"])
 a
+# <StringArray ['one' 'two' 'three'] at 0x78112c0dcb00>
 
 # %%
 a.pad(4, clip=True)
+# <StringArray ['one ' 'two ' 'thre'] at 0x78112c1222b0>
 
 # %%
 a.pad(4, maskedwhen=b".", clip=True)
+# <StringArray ['one.' 'two.' 'thre'] at 0x78112c122f98>
 
 # %%
 a.pad(4, maskedwhen=b"\x00", clip=True)
+# <StringArray ['one\x00' 'two\x00' 'thre'] at 0x78112c122be0>
 
 # %%markdown
 # * ``argmin()`` and ``argmax()``: returns the index of the minimum or maximum value in a non-jagged array or the indexes where each inner array is minimized or maximized. The jagged structure of the return value consists of empty arrays for each empty array and singleton arrays for non-empty ones, consisting of a single index in an inner array. This is the form needed to extract one element from each inner array using jagged indexing.
@@ -2402,19 +2537,24 @@ absa = abs(a)
 
 # %%
 a
+# <JaggedArray [[-3.3 5.5 -8.8] [] [-6.6 0.0 2.2 3.3] [] [2.2 -2.2 4.4]] at 0x78112c0beb70>
 
 # %%
 absa
+# <JaggedArray [[3.3 5.5 8.8] [] [6.6 0.0 2.2 3.3] [] [2.2 2.2 4.4]] at 0x78112c0bec18>
 
 # %%
 index = absa.argmax()
 index
+# <JaggedArray [[2] [] [0] [] [2]] at 0x78112c0d0128>
 
 # %%
 absa[index]
+# <JaggedArray [[8.8] [] [6.6] [] [4.4]] at 0x78112c122c50>
 
 # %%
 a[index]
+# <JaggedArray [[-8.8] [] [-6.6] [] [4.4]] at 0x78112c0d5eb8>
 
 # %%markdown
 # * ``cross(other, nested=False)`` and ``argcross(other, nested=False)``: returns jagged tuples representing the `cross-join <https://en.wikipedia.org/wiki/Join_(SQL)#Cross_join>`__ of `array[i]` and `other[i]` separately for each `i`. If `nested=True`, the result is doubly jagged so that each element of the output corresponds to exactly one element in the original `array`.
@@ -2423,18 +2563,22 @@ a[index]
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
 b = awkward.fromiter([["one", "two"], ["three"], ["four", "five", "six"], ["seven"]])
 a.cross(b)
+# <JaggedArray [[(1.1, one) (1.1, two) (2.2, one) (2.2, two) (3.3, one) (3.3, two)] [] [(4.4, four) (4.4, five) (4.4, six) (5.5, four) (5.5, five) (5.5, six)] [(6.6, seven) (7.7, seven) (8.8, seven) (9.9, seven)]] at 0x78112c0e9550>
 
 # %%
 a.cross(b, nested=True)
+# <JaggedArray [[[(1.1, one) (1.1, two)] [(2.2, one) (2.2, two)] [(3.3, one) (3.3, two)]] [] [[(4.4, four) (4.4, five) (4.4, six)] [(5.5, four) (5.5, five) (5.5, six)]] [[(6.6, seven)] [(7.7, seven)] [(8.8, seven)] [(9.9, seven)]]] at 0x78112c0be978>
 
 # %%markdown
 # The "arg" version returns indexes at which the appropriate objects may be found, as usual.
 
 # %%
 a.argcross(b)
+# <JaggedArray [[(0, 0) (0, 1) (1, 0) (1, 1) (2, 0) (2, 1)] [] [(0, 0) (0, 1) (0, 2) (1, 0) (1, 1) (1, 2)] [(0, 0) (1, 0) (2, 0) (3, 0)]] at 0x78112c122470>
 
 # %%
 a.argcross(b, nested=True)
+# <JaggedArray [[[(0, 0) (0, 1)] [(1, 0) (1, 1)] [(2, 0) (2, 1)]] [] [[(0, 0) (0, 1) (0, 2)] [(1, 0) (1, 1) (1, 2)]] [[(0, 0)] [(1, 0)] [(2, 0)] [(3, 0)]]] at 0x78112c122dd8>
 
 # %%markdown
 # This method is good to use with ``unzip``, which separates the ``Table`` of tuples into a left half and a right half.
@@ -2442,12 +2586,16 @@ a.argcross(b, nested=True)
 # %%
 left, right = a.cross(b).unzip()
 left, right
+# (<JaggedArray [[1.1 1.1 2.2 2.2 3.3 3.3] [] [4.4 4.4 4.4 5.5 5.5 5.5] [6.6 7.7 8.8 9.9]] at 0x78112c0be278>,
+#  <JaggedArray [['one' 'two' 'one' 'two' 'one' 'two'] [] ['four' 'five' 'six' 'four' 'five' 'six'] ['seven' 'seven' 'seven' 'seven']] at 0x78112c0d0470>)
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
 b = awkward.fromiter([[1, 2], [3], [4, 5, 6], [7]])
 left, right = a.cross(b, nested=True).unzip()
 left, right
+# (<JaggedArray [[[1.1 1.1] [2.2 2.2] [3.3 3.3]] [] [[4.4 4.4 4.4] [5.5 5.5 5.5]] [[6.6] [7.7] [8.8] [9.9]]] at 0x78112c127048>,
+#  <JaggedArray [[[1 2] [1 2] [1 2]] [] [[4 5 6] [4 5 6]] [[7] [7] [7] [7]]] at 0x78112c127630>)
 
 # %%markdown
 # This can be handy if a subsequent function takes two jagged arrays as arguments.
@@ -2455,15 +2603,18 @@ left, right
 # %%
 distance = round(abs(left - right), 1)
 distance
+# <JaggedArray [[[0.1 0.9] [1.2 0.2] [2.3 1.3]] [] [[0.4 0.6 1.6] [1.5 0.5 0.5]] [[0.4] [0.7] [1.8] [2.9]]] at 0x78112c0bec88>
 
 # %%markdown
 # Cross with ``nested=True``, followed by some calculation on the pairs and then some reducer, is a common pattern. Because of the ``nested=True`` and the reducer, the resulting array has the same structure as the original.
 
 # %%
 distance.min()
+# <JaggedArray [[0.1 0.2 1.3] [] [0.4 0.5] [0.4 0.7 1.8 2.9]] at 0x78112c0d50f0>
 
 # %%
 round(a + distance.min(), 1)
+# <JaggedArray [[1.2 2.4 4.6] [] [4.8 6.0] [7.0 8.4 10.6 12.8]] at 0x78112c122518>
 
 # %%markdown
 # * ``pairs(nested=False)`` and ``argpairs(nested=False)``: returns jagged tuples representing the `self-join <https://en.wikipedia.org/wiki/Join_(SQL)#Self-join>`__ removing duplicates but not same-object pairs (i.e. a self-join with ``i1 <= i2``) for each inner array separately.
@@ -2471,21 +2622,26 @@ round(a + distance.min(), 1)
 # %%
 a = awkward.fromiter([["a", "b", "c"], [], ["d", "e"]])
 a.pairs()
+# <JaggedArray [[(a, a) (a, b) (a, c) (b, b) (b, c) (c, c)] [] [(d, d) (d, e) (e, e)]] at 0x78112c127898>
 
 # %%markdown
 # The "arg" and ``nested=True`` versions have the same meanings as with ``cross`` (above).
 
 # %%
 a.argpairs()
+# <JaggedArray [[(0, 0) (0, 1) (0, 2) (1, 1) (1, 2) (2, 2)] [] [(0, 0) (0, 1) (1, 1)]] at 0x78112c0d0978>
 
 # %%
 a.pairs(nested=True)
+# <JaggedArray [[[(a, a) (a, b) (a, c)] [(b, b) (b, c)] [(c, c)]] [] [[(d, d) (d, e)] [(e, e)]]] at 0x78112c0be2b0>
 
 # %%markdown
 # Just as with ``cross`` (above), this is good to combine with ``unzip`` and maybe a reducer.
 
 # %%
 a.pairs().unzip()
+# (<JaggedArray [['a' 'a' 'a' 'b' 'b' 'c'] [] ['d' 'd' 'e']] at 0x78112c0d08d0>,
+#  <JaggedArray [['a' 'b' 'c' 'b' 'c' 'c'] [] ['d' 'e' 'e']] at 0x78112c0d0fd0>)
 
 # %%markdown
 # * ``distincts(nested=False)`` and ``argdistincts(nested=False)``: returns jagged tuples representing the `self-join <https://en.wikipedia.org/wiki/Join_(SQL)#Self-join>`__ removing duplicates and same-object pairs (i.e. a self-join with ``i1 < i2``) for each inner array separately.
@@ -2493,21 +2649,26 @@ a.pairs().unzip()
 # %%
 a = awkward.fromiter([["a", "b", "c"], [], ["d", "e"]])
 a.distincts()
+# <JaggedArray [[(a, b) (a, c) (b, c)] [] [(d, e)]] at 0x78112c127080>
 
 # %%markdown
 # The "arg" and ``nested=True`` versions have the same meanings as with ``cross`` (above).
 
 # %%
 a.argdistincts()
+# <JaggedArray [[(0, 1) (0, 2) (1, 2)] [] [(0, 1)]] at 0x78112c0d04e0>
 
 # %%
 a.distincts(nested=True)
+# <JaggedArray [[[(a, b) (a, c)] [(b, c)]] [] [[(d, e)]]] at 0x78112c0d0a58>
 
 # %%markdown
 # Just as with ``cross`` (above), this is good to combine with ``unzip`` and maybe a reducer.
 
 # %%
 a.distincts().unzip()
+# (<JaggedArray [['a' 'a' 'b'] [] ['d']] at 0x78112c11e908>,
+#  <JaggedArray [['b' 'c' 'c'] [] ['e']] at 0x78112c11e518>)
 
 # %%markdown
 # * ``choose(n)`` and ``argchoose(n)``: returns jagged tuples for distinct combinations of ``n`` elements from every inner array separately. ``array.choose(2)`` is the same as ``array.distincts()`` apart from order.
@@ -2515,33 +2676,47 @@ a.distincts().unzip()
 # %%
 a = awkward.fromiter([["a", "b", "c"], [], ["d", "e"], ["f", "g", "h", "i", "j"]])
 a
+# <JaggedArray [['a' 'b' 'c'] [] ['d' 'e'] ['f' 'g' 'h' 'i' 'j']] at 0x78112c0d0400>
 
 # %%
 a.choose(2)
+# <JaggedArray [[(a, b) (a, c) (b, c)] [] [(d, e)] [(f, g) (f, h) (g, h) ... (g, j) (h, j) (i, j)]] at 0x78112c11e0f0>
 
 # %%
 a.choose(3)
+# <JaggedArray [[(a, b, c)] [] [] [(f, g, h) (f, g, i) (f, h, i) ... (f, i, j) (g, i, j) (h, i, j)]] at 0x78114c6e46a0>
 
 # %%
 a.choose(4)
+# <JaggedArray [[] [] [] [(f, g, h, i) (f, g, h, j) (f, g, i, j) (f, h, i, j) (g, h, i, j)]] at 0x78112c0d0cc0>
 
 # %%markdown
 # The "arg" version has the same meaning as ``cross`` (above), but there is no ``nested=True`` because of the order.
 
 # %%
 a.argchoose(2)
+# <JaggedArray [[(0, 1) (0, 2) (1, 2)] [] [(0, 1)] [(0, 1) (0, 2) (1, 2) ... (1, 4) (2, 4) (3, 4)]] at 0x78112c11e2b0>
 
 # %%markdown
 # Just as with ``cross`` (above), this is good to combine with ``unzip`` and maybe a reducer.
 
 # %%
 a.choose(2).unzip()
+# (<JaggedArray [['a' 'a' 'b'] [] ['d'] ['f' 'f' 'g' ... 'g' 'h' 'i']] at 0x78112c11e5c0>,
+#  <JaggedArray [['b' 'c' 'c'] [] ['e'] ['g' 'h' 'h' ... 'j' 'j' 'j']] at 0x78112c0f7ac8>)
 
 # %%
 a.choose(3).unzip()
+# (<JaggedArray [['a'] [] [] ['f' 'f' 'f' ... 'f' 'g' 'h']] at 0x78112c0dc5f8>,
+#  <JaggedArray [['b'] [] [] ['g' 'g' 'h' ... 'i' 'i' 'i']] at 0x78112c0dc3c8>,
+#  <JaggedArray [['c'] [] [] ['h' 'i' 'i' ... 'j' 'j' 'j']] at 0x78112c0dc6d8>)
 
 # %%
 a.choose(4).unzip()
+# (<JaggedArray [[] [] [] ['f' 'f' 'f' 'f' 'g']] at 0x78112c0d0eb8>,
+#  <JaggedArray [[] [] [] ['g' 'g' 'g' 'h' 'h']] at 0x78112c11e550>,
+#  <JaggedArray [[] [] [] ['h' 'h' 'i' 'i' 'i']] at 0x78112c11e2e8>,
+#  <JaggedArray [[] [] [] ['i' 'j' 'j' 'j' 'j']] at 0x78112c11e4a8>)
 
 # %%markdown
 # * ``JaggedArray.zip(columns...)``: combines jagged arrays with the same structure into a single jagged array. The columns may be unnamed (resulting in a jagged array of tuples) or named with keyword arguments or dict keys (resulting in a jagged array of a table with named columns).
@@ -2550,12 +2725,19 @@ a.choose(4).unzip()
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 b = awkward.fromiter([[100, 200, 300], [], [400, 500]])
 awkward.JaggedArray.zip(a, b)
+# <JaggedArray [[(1.1, 100) (2.2, 200) (3.3, 300)] [] [(4.4, 400) (5.5, 500)]] at 0x78112c0f71d0>
 
 # %%
 awkward.JaggedArray.zip(x=a, y=b).tolist()
+# [[{'x': 1.1, 'y': 100}, {'x': 2.2, 'y': 200}, {'x': 3.3, 'y': 300}],
+#  [],
+#  [{'x': 4.4, 'y': 400}, {'x': 5.5, 'y': 500}]]
 
 # %%
 awkward.JaggedArray.zip({"x": a, "y": b}).tolist()
+# [[{'x': 1.1, 'y': 100}, {'x': 2.2, 'y': 200}, {'x': 3.3, 'y': 300}],
+#  [],
+#  [{'x': 4.4, 'y': 400}, {'x': 5.5, 'y': 500}]]
 
 # %%markdown
 # Not all of the arguments need to be jagged; those that aren't will be broadcasted to the right shape.
@@ -2564,9 +2746,11 @@ awkward.JaggedArray.zip({"x": a, "y": b}).tolist()
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 b = awkward.fromiter([100, 200, 300])
 awkward.JaggedArray.zip(a, b)
+# <JaggedArray [[(1.1, 100) (2.2, 100) (3.3, 100)] [] [(4.4, 300) (5.5, 300)]] at 0x78112c0f7c18>
 
 # %%
 awkward.JaggedArray.zip(a, 1000)
+# <JaggedArray [[(1.1, 1000) (2.2, 1000) (3.3, 1000)] [] [(4.4, 1000) (5.5, 1000)]] at 0x78112c0f72e8>
 
 # %%markdown
 # ## Properties and methods for tabular columns
@@ -2578,24 +2762,34 @@ awkward.JaggedArray.zip(a, 1000)
 # %%
 a = awkward.fromiter([{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}, {"x": 3, "y": 3.3, "z": "three"}])
 a.tolist()
+# [{'x': 1, 'y': 1.1, 'z': 'one'},
+#  {'x': 2, 'y': 2.2, 'z': 'two'},
+#  {'x': 3, 'y': 3.3, 'z': 'three'}]
 
 # %%
 a.columns
+# ['x', 'y', 'z']
 
 # %%
 a = awkward.Table(x=[1, 2, 3],
                   y=[1.1, 2.2, 3.3],
                   z=awkward.Table(a=[4, 5, 6], b=[4.4, 5.5, 6.6]))
 a.tolist()
+# [{'x': 1, 'y': 1.1, 'z': {'a': 4, 'b': 4.4}},
+#  {'x': 2, 'y': 2.2, 'z': {'a': 5, 'b': 5.5}},
+#  {'x': 3, 'y': 3.3, 'z': {'a': 6, 'b': 6.6}}]
 
 # %%
 a.columns
+# ['x', 'y', 'z']
 
 # %%
 a["z"].columns
+# ['a', 'b']
 
 # %%
 a.z.columns
+# ['a', 'b']
 
 # %%markdown
 # * ``unzip()``: returns a tuple of projections through each of the columns (in the same order as the ``columns`` property).
@@ -2603,6 +2797,9 @@ a.z.columns
 # %%
 a = awkward.fromiter([{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}, {"x": 3, "y": 3.3, "z": "three"}])
 a.unzip()
+# (array([1, 2, 3]),
+#  array([1.1, 2.2, 3.3]),
+#  <StringArray ['one' 'two' 'three'] at 0x78112c0d02b0>)
 
 # %%markdown
 # The ``unzip`` method is the opposite of the ``Table`` constructor,
@@ -2612,9 +2809,15 @@ a = awkward.Table(x=[1, 2, 3],
                   y=[1.1, 2.2, 3.3],
                   z=awkward.fromiter(["one", "two", "three"]))
 a.tolist()
+# [{'x': 1, 'y': 1.1, 'z': 'one'},
+#  {'x': 2, 'y': 2.2, 'z': 'two'},
+#  {'x': 3, 'y': 3.3, 'z': 'three'}]
 
 # %%
 a.unzip()
+# (array([1, 2, 3]),
+#  array([1.1, 2.2, 3.3]),
+#  <StringArray ['one' 'two' 'three'] at 0x78112c115a20>)
 
 # %%markdown
 # but it is also the opposite of ``JaggedArray.zip``.
@@ -2624,18 +2827,28 @@ b = awkward.JaggedArray.zip(x=awkward.fromiter([[1, 2, 3], [], [4, 5]]),
                             y=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
                             z=awkward.fromiter([["a", "b", "c"], [], ["d", "e"]]))
 b.tolist()
+# [[{'x': 1, 'y': 1.1, 'z': 'a'},
+#   {'x': 2, 'y': 2.2, 'z': 'b'},
+#   {'x': 3, 'y': 3.3, 'z': 'c'}],
+#  [],
+#  [{'x': 4, 'y': 4.4, 'z': 'd'}, {'x': 5, 'y': 5.5, 'z': 'e'}]]
 
 # %%
 b.unzip()
+# (<JaggedArray [[1 2 3] [] [4 5]] at 0x78112c14fe10>,
+#  <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78112c14f9b0>,
+#  <JaggedArray [['a' 'b' 'c'] [] ['d' 'e']] at 0x78112c14fa90>)
 
 # %%markdown
 # ``JaggedArray.zip`` produces a jagged array of ``Table`` whereas the ``Table`` constructor produces just a ``Table``, and these are distinct things, though they can both be inverted by the same function because row indexes and column indexes commute:
 
 # %%
 b[0]["y"]
+# array([1.1, 2.2, 3.3])
 
 # %%
 b["y"][0]
+# array([1.1, 2.2, 3.3])
 
 # %%markdown
 # So ``unzip`` turns a flat ``Table`` into a tuple of flat arrays (opposite of the ``Table`` constructor) and it turns a jagged ``Table`` into a tuple of jagged arrays (opposite of ``JaggedArray.zip``).
@@ -2647,18 +2860,24 @@ a = awkward.Table(x=[1, 2, 3],
                   y=[1.1, 2.2, 3.3],
                   z=awkward.fromiter(["one", "two", "three"]))
 a.tolist()
+# [{'x': 1, 'y': 1.1, 'z': 'one'},
+#  {'x': 2, 'y': 2.2, 'z': 'two'},
+#  {'x': 3, 'y': 3.3, 'z': 'three'}]
 
 # %%
 a.istuple
+# False
 
 # %%
 a = awkward.Table([1, 2, 3],
                   [1.1, 2.2, 3.3],
                   awkward.fromiter(["one", "two", "three"]))
 a.tolist()
+# [(1, 1.1, 'one'), (2, 2.2, 'two'), (3, 3.3, 'three')]
 
 # %%
 a.istuple
+# True
 
 # %%markdown
 # Even though the following tuples are inside of a jagged array, the first level of ``Table`` is a tuple, so ``istuple`` is ``True``.
@@ -2668,9 +2887,11 @@ b = awkward.JaggedArray.zip(awkward.fromiter([[1, 2, 3], [], [4, 5]]),
                             awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
                             awkward.fromiter([["a", "b", "c"], [], ["d", "e"]]))
 b
+# <JaggedArray [[(1, 1.1, a) (2, 2.2, b) (3, 3.3, c)] [] [(4, 4.4, d) (5, 5.5, e)]] at 0x78112c0d0e48>
 
 # %%
 b.istuple
+# True
 
 # %%markdown
 # * ``i0`` through ``i9``: one of the two conditions for a ``Table`` to be a ``tuple`` is that columns are named ``"0"``, ``"1"``, ``"2"``, etc. Columns like that could be selected with ``["0"]`` at the risk of being misread as ``[0]``, and they could not be selected with attribute dot-access because pure numbers are not valid Python attributes. However, ``i0`` through ``i9`` are provided as shortcuts (overriding any columns with these exact names) for the first 10 tuple slots.
@@ -2680,15 +2901,19 @@ a = awkward.Table([1, 2, 3],
                   [1.1, 2.2, 3.3],
                   awkward.fromiter(["one", "two", "three"]))
 a.tolist()
+# [(1, 1.1, 'one'), (2, 2.2, 'two'), (3, 3.3, 'three')]
 
 # %%
 a.i0
+# array([1, 2, 3])
 
 # %%
 a.i1
+# array([1.1, 2.2, 3.3])
 
 # %%
 a.i2
+# <StringArray ['one' 'two' 'three'] at 0x78112c14fe80>
 
 # %%markdown
 # * ``flattentuple()``: calling ``cross`` repeatedly can result in tuples nested within tuples; this flattens them at all levels, turning all ``(i, (j, k))`` into ``(i, j, k)``. Whereas ``array.flatten()`` removes one level of structure from the rows (losing information), ``array.flattentuple()`` removes all levels of structure from the columns (renaming them, but not losing information).
@@ -2696,9 +2921,11 @@ a.i2
 # %%
 a = awkward.Table([1, 2, 3], [1, 2, 3], awkward.Table(awkward.Table([1, 2, 3], [1, 2, 3]), [1, 2, 3]))
 a.tolist()
+# [(1, 1, ((1, 1), 1)), (2, 2, ((2, 2), 2)), (3, 3, ((3, 3), 3))]
 
 # %%
 a.flattentuple().tolist()
+# [(1, 1, 1, 1, 1), (2, 2, 2, 2, 2), (3, 3, 3, 3, 3)]
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
@@ -2710,6 +2937,27 @@ c = awkward.fromiter([["a"], ["b", "c"], ["d"], ["e", "f"]])
 
 # %%
 a.cross(b).cross(c).tolist()
+# [[(1.1, 100, 'a'),
+#   (1.1, 200, 'a'),
+#   (2.2, 100, 'a'),
+#   (2.2, 200, 'a'),
+#   (3.3, 100, 'a'),
+#   (3.3, 200, 'a')],
+#  [],
+#  [(4.4, 400, 'd'),
+#   (4.4, 500, 'd'),
+#   (4.4, 600, 'd'),
+#   (5.5, 400, 'd'),
+#   (5.5, 500, 'd'),
+#   (5.5, 600, 'd')],
+#  [(6.6, 700, 'e'),
+#   (6.6, 700, 'f'),
+#   (7.7, 700, 'e'),
+#   (7.7, 700, 'f'),
+#   (8.8, 700, 'e'),
+#   (8.8, 700, 'f'),
+#   (9.9, 700, 'e'),
+#   (9.9, 700, 'f')]]
 
 # %%markdown
 # ## Properties and methods for missing values
@@ -2721,9 +2969,11 @@ a.cross(b).cross(c).tolist()
 # %%
 a = awkward.fromiter([1, 2, None, 3, 4, None, None, 5])
 a.boolmask()
+# array([False, False,  True, False, False,  True,  True, False])
 
 # %%
 a.boolmask(maskedwhen=False)
+# array([ True,  True, False,  True,  True, False, False,  True])
 
 # %%markdown
 # ``MaskedArrays`` inside of ``JaggedArrays`` or ``Tables`` are hidden.
@@ -2731,19 +2981,24 @@ a.boolmask(maskedwhen=False)
 # %%
 a = awkward.fromiter([[1.1, None, 2.2], [], [3.3, 4.4, None, 5.5]])
 a.boolmask()
+# array([False, False, False])
 
 # %%
 a.flatten().boolmask()
+# array([False,  True, False, False, False,  True, False])
 
 # %%
 a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": None, "y": 2.2}, {"x": None, "y": 3.3}, {"x": 4, "y": None}])
 a.boolmask()
+# array([False, False, False, False])
 
 # %%
 a.x.boolmask()
+# array([False,  True,  True, False])
 
 # %%
 a.y.boolmask()
+# array([False, False, False,  True])
 
 # %%markdown
 # * ``ismasked`` and ``isunmasked``: shortcut for ``boolmask(maskedwhen=True)`` and ``boolmask(maskedwhen=False)`` as a property, which is more appropriate for analysis.
@@ -2751,9 +3006,11 @@ a.y.boolmask()
 # %%
 a = awkward.fromiter([1, 2, None, 3, 4, None, None, 5])
 a.ismasked
+# array([False, False,  True, False, False,  True,  True, False])
 
 # %%
 a.isunmasked
+# array([ True,  True, False,  True,  True, False, False,  True])
 
 # %%markdown
 # * ``fillna(value)``: turn a ``MaskedArray`` into a non-``MaskedArray`` by replacing ``None`` with ``value``. Applies to the outermost ``MaskedArray``, but it passes through ``JaggedArrays`` and into all ``Table`` columns.
@@ -2761,14 +3018,20 @@ a.isunmasked
 # %%
 a = awkward.fromiter([1, 2, None, 3, 4, None, None, 5])
 a.fillna(999)
+# array([  1,   2, 999,   3,   4, 999, 999,   5])
 
 # %%
 a = awkward.fromiter([[1.1, None, 2.2], [], [3.3, 4.4, None, 5.5]])
 a.fillna(999)
+# <JaggedArray [[1.1 999.0 2.2] [] [3.3 4.4 999.0 5.5]] at 0x78112c0859b0>
 
 # %%
 a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": None, "y": 2.2}, {"x": None, "y": 3.3}, {"x": 4, "y": None}])
 a.fillna(999).tolist()
+# [{'x': 1, 'y': 1.1},
+#  {'x': 999, 'y': 2.2},
+#  {'x': 999, 'y': 3.3},
+#  {'x': 4, 'y': 999.0}]
 
 # %%markdown
 # ## Functions for structure manipulation
@@ -2781,14 +3044,21 @@ a.fillna(999).tolist()
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 b = awkward.fromiter([[100, 200], [300], [400, 500, 600]])
 awkward.concatenate([a, b])
+# <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5] [100.0 200.0] [300.0] [400.0 500.0 600.0]] at 0x78112c122c88>
 
 # %%
 awkward.concatenate([a, b], axis=1)
+# <JaggedArray [[1.1 2.2 3.3 100.0 200.0] [300.0] [4.4 5.5 400.0 500.0 600.0]] at 0x78112c425978>
 
 # %%
 a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
 b = awkward.fromiter([{"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])
 awkward.concatenate([a, b]).tolist()
+# [{'x': 1, 'y': 1.1},
+#  {'x': 2, 'y': 2.2},
+#  {'x': 3, 'y': 3.3},
+#  {'x': 4, 'y': 4.4},
+#  {'x': 5, 'y': 5.5}]
 
 # %%markdown
 # If the arrays have different types, their concatenation is a ``UnionArray``.
@@ -2797,20 +3067,29 @@ awkward.concatenate([a, b]).tolist()
 a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
 b = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 awkward.concatenate([a, b]).tolist()
+# [{'x': 1, 'y': 1.1},
+#  {'x': 2, 'y': 2.2},
+#  {'x': 3, 'y': 3.3},
+#  [1.1, 2.2, 3.3],
+#  [],
+#  [4.4, 5.5]]
 
 # %%
 a = awkward.fromiter([1, None, 2])
 b = awkward.fromiter([None, 3, None])
 awkward.concatenate([a, b])
+# <MaskedArray [1 None 2 None 3 None] at 0x78112c085da0>
 
 # %%
 import awkward, numpy
 a = awkward.fromiter(["one", "two", "three"])
 b = awkward.fromiter(["four", "five", "six"])
 awkward.concatenate([a, b])
+# <StringArray ['one' 'two' 'three' 'four' 'five' 'six'] at 0x78112c14f7f0>
 
 # %%
 awkward.concatenate([a, b], axis=1)
+# <StringArray ['onefour' 'twofive' 'threesix'] at 0x78112c115518>
 
 # %%markdown
 # # Functions for input/output and conversion
@@ -2826,17 +3105,47 @@ complicated = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
                                 [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
                                ])
 complicated
+# <JaggedArray [[1.1 2.2 None 3.3 None] [4.4 [5.5]] [<Row 0> None <Row 1>]] at 0x78112c0ef438>
 
 # %%markdown
 # The fact that this nested, row-wise data have been converted into columnar arrays can be seen by inspecting its ``layout``.
 
 # %%
 complicated.layout
+#  layout
+# [           ()] JaggedArray(starts=layout[0], stops=layout[1], content=layout[2])
+# [            0]   ndarray(shape=3, dtype=dtype('int64'))
+# [            1]   ndarray(shape=3, dtype=dtype('int64'))
+# [            2]   IndexedMaskedArray(mask=layout[2, 0], content=layout[2, 1], maskedwhen=-1)
+# [         2, 0]     ndarray(shape=10, dtype=dtype('int64'))
+# [         2, 1]     UnionArray(tags=layout[2, 1, 0], index=layout[2, 1, 1], contents=[layout[2, 1, 2], layout[2, 1, 3], layout[2, 1, 4]])
+# [      2, 1, 0]       ndarray(shape=7, dtype=dtype('uint8'))
+# [      2, 1, 1]       ndarray(shape=7, dtype=dtype('int64'))
+# [      2, 1, 2]       ndarray(shape=4, dtype=dtype('float64'))
+# [      2, 1, 3]       JaggedArray(starts=layout[2, 1, 3, 0], stops=layout[2, 1, 3, 1], content=layout[2, 1, 3, 2])
+# [   2, 1, 3, 0]         ndarray(shape=1, dtype=dtype('int64'))
+# [   2, 1, 3, 1]         ndarray(shape=1, dtype=dtype('int64'))
+# [   2, 1, 3, 2]         ndarray(shape=1, dtype=dtype('float64'))
+# [      2, 1, 4]       Table(x=layout[2, 1, 4, 0], y=layout[2, 1, 4, 1])
+# [   2, 1, 4, 0]         ndarray(shape=2, dtype=dtype('int64'))
+# [   2, 1, 4, 1]         Table(z=layout[2, 1, 4, 1, 0])
+# [2, 1, 4, 1, 0]           ndarray(shape=2, dtype=dtype('int64'))
 
 # %%
 for index, node in complicated.layout.items():
     if node.cls == numpy.ndarray:
         print("[{0:>13s}] {1}".format(", ".join(repr(i) for i in index), repr(node.array)))
+# [            0] array([0, 5, 7])
+# [            1] array([ 5,  7, 10])
+# [         2, 0] array([ 0,  1, -1,  2, -1,  3,  4,  5, -1,  6])
+# [      2, 1, 0] array([0, 0, 0, 0, 1, 2, 2], dtype=uint8)
+# [      2, 1, 1] array([0, 1, 2, 3, 0, 0, 1])
+# [      2, 1, 2] array([1.1, 2.2, 3.3, 4.4])
+# [   2, 1, 3, 0] array([0])
+# [   2, 1, 3, 1] array([1])
+# [   2, 1, 3, 2] array([5.5])
+# [   2, 1, 4, 0] array([6, 8])
+# [2, 1, 4, 1, 0] array([7, 9])
 
 # %%markdown
 # The number of arrays in this object scales with the complexity of its data type, but not with the size of the dataset. If it were as complicated as it is now but billions of elements long, it would still contain 11 Numpy arrays, and operations on it would scale as Numpy scales. However, converting a billion Python objects to these 11 arrays would be a large up-front cost.
@@ -2860,6 +3169,7 @@ awkward.save("single.awkd", a, mode="w")
 
 # %%
 awkward.load("single.awkd")
+# <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78112c14ff98>
 
 # %%
 awkward.save("multi.awkd", {"a": a, "b": b}, mode="w")
@@ -2869,15 +3179,22 @@ multi = awkward.load("multi.awkd")
 
 # %%
 multi["a"]
+# <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78112c0906d8>
 
 # %%
 multi["b"]
+# <JaggedArray [[1.1 2.2 None 3.3 None] [4.4 [5.5]] [<Row 0> None <Row 1>]] at 0x78112c0906a0>
 
 # %%markdown
 # Only ``save`` has a ``compression`` parameter because only the writing process gets to decide how arrays are compressed. We don't use ZIP's built-in compression, but use Python compression functions and encode the choice in the metadata. If ``compression=True``, all arrays will be compressed with zlib; if ``compression=False``, ``None``, or ``[]``, none will. In general, ``compression`` is a list of rules; the first rule that is satisfied by a given array uses the specified compress/decompress pair of functions. Here's the default policy:
 
 # %%
 awkward.persist.compression
+# [{'minsize': 8192,
+#   'types': [numpy.bool_, bool, numpy.integer],
+#   'contexts': '*',
+#   'pair': (<function zlib.compress(data, /, level=-1)>,
+#    ('zlib', 'decompress'))}]
 
 # %%markdown
 # The default policy has only one rule. If any array has a minimum size (``minsize``) of 8 kB (``8192`` bytes), a numeric type (``array.dtype.type``) that is a subclass of ``numpy.bool_``, ``bool``, or ``numpy.integer``, and is in any awkward-array context (``JaggedArray.starts``, ``MaskedArray.mask``, etc.), then it will be compressed with ``zip.compress`` and decompressed with ``('zlib', 'decompress')``. The compression function is given as an object—the Python function that will be called to transform byte strings into compressed byte strings—but the decompression function is given as a location in Python's namespace: a tuple of nested objects, the first of which is a fully qualified module name (submodules separated by dots). This is because only the *location* of the decompression function needs to be written to the file.
@@ -2888,6 +3205,22 @@ awkward.persist.compression
 
 # %%
 awkward.persist.whitelist
+# [['numpy', 'frombuffer'],
+#  ['zlib', 'decompress'],
+#  ['lzma', 'decompress'],
+#  ['backports.lzma', 'decompress'],
+#  ['lz4.block', 'decompress'],
+#  ['awkward', '*Array'],
+#  ['awkward', 'Table'],
+#  ['awkward', 'numpy', 'frombuffer'],
+#  ['awkward.util', 'frombuffer'],
+#  ['awkward.persist'],
+#  ['awkward.arrow', '_ParquetFile', 'fromjson'],
+#  ['uproot_methods.classes.*'],
+#  ['uproot_methods.profiles.*'],
+#  ['uproot.tree', '_LazyFiles'],
+#  ['uproot.tree', '_LazyTree'],
+#  ['uproot.tree', '_LazyBranch']]
 
 # %%markdown
 # The format of each item in the whitelist is a list of nested objects, the first of which being a fully qualified module name (submodules separated by dots). For instance, in the ``awkward.arrow`` submodule, there is a class named ``_ParquetFile`` and it has a static method ``fromjson`` that is deemed to be safe. Patterns of safe names are can be wildcarded, such as ``['awkward', '*Array']`` and ``['uproot_methods.classes.*']``.
@@ -2912,16 +3245,19 @@ b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
 import h5py
 f = h5py.File("awkward.hdf5", "w")
 f
+# <HDF5 file "awkward.hdf5" (mode r+)>
 
 # %%
 g = awkward.hdf5(f)
 g
+# <awkward.hdf5 '/' (0 members)>
 
 # %%
 g["array"] = a
 
 # %%
 g["array"]
+# <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x781115141320>
 
 # %%
 del g["array"]
@@ -2931,6 +3267,7 @@ g["array"] = b
 
 # %%
 g["array"]
+# <JaggedArray [[1.1 2.2 None 3.3 None] [4.4 [5.5]] [<Row 0> None <Row 1>]] at 0x7811883b9198>
 
 # %%markdown
 # The HDF5 format does not include columnar representations of arbitrary nested data, as awkward-array does, so what we're actually storing are plain Numpy arrays and the metadata necessary to reconstruct the awkward array.
@@ -2939,12 +3276,15 @@ g["array"]
 # Reopen file, without wrapping it as awkward.hdf5 this time.
 f = h5py.File("awkward.hdf5", "r")
 f
+# <HDF5 file "awkward.hdf5" (mode r+)>
 
 # %%
 f["array"]
+# <HDF5 group "/array" (9 members)>
 
 # %%
 f["array"].keys()
+# <KeysViewHDF5 ['1', '12', '14', '16', '19', '4', '7', '9', 'schema.json']>
 
 # %%markdown
 # The "schema.json" array is the JSON metadata, containing directives like ``{"call": ["awkward", "JaggedArray", "fromcounts"]}`` and ``{"read": "1"}`` meaning the array named ``"1"``, etc.
@@ -2952,6 +3292,54 @@ f["array"].keys()
 # %%
 import json
 json.loads(f["array"]["schema.json"][:].tostring())
+# {'awkward': '0.12.0rc1',
+#  'schema': {'call': ['awkward', 'JaggedArray', 'fromcounts'],
+#   'args': [{'call': ['awkward', 'numpy', 'frombuffer'],
+#     'args': [{'read': '1'}, {'dtype': 'int64'}, {'json': 3, 'id': 2}],
+#     'id': 1},
+#    {'call': ['awkward', 'IndexedMaskedArray'],
+#     'args': [{'call': ['awkward', 'numpy', 'frombuffer'],
+#       'args': [{'read': '4'}, {'dtype': 'int64'}, {'json': 10, 'id': 5}],
+#       'id': 4},
+#      {'call': ['awkward', 'UnionArray', 'fromtags'],
+#       'args': [{'call': ['awkward', 'numpy', 'frombuffer'],
+#         'args': [{'read': '7'}, {'dtype': 'uint8'}, {'json': 7, 'id': 8}],
+#         'id': 7},
+#        {'list': [{'call': ['awkward', 'numpy', 'frombuffer'],
+#           'args': [{'read': '9'}, {'dtype': 'float64'}, {'json': 4, 'id': 10}],
+#           'id': 9},
+#          {'call': ['awkward', 'JaggedArray', 'fromcounts'],
+#           'args': [{'call': ['awkward', 'numpy', 'frombuffer'],
+#             'args': [{'read': '12'},
+#              {'dtype': 'int64'},
+#              {'json': 1, 'id': 13}],
+#             'id': 12},
+#            {'call': ['awkward', 'numpy', 'frombuffer'],
+#             'args': [{'read': '14'}, {'dtype': 'float64'}, {'ref': 13}],
+#             'id': 14}],
+#           'id': 11},
+#          {'call': ['awkward', 'Table', 'frompairs'],
+#           'args': [{'pairs': [['x',
+#               {'call': ['awkward', 'numpy', 'frombuffer'],
+#                'args': [{'read': '16'},
+#                 {'dtype': 'int64'},
+#                 {'json': 2, 'id': 17}],
+#                'id': 16}],
+#              ['y',
+#               {'call': ['awkward', 'Table', 'frompairs'],
+#                'args': [{'pairs': [['z',
+#                    {'call': ['awkward', 'numpy', 'frombuffer'],
+#                     'args': [{'read': '19'}, {'dtype': 'int64'}, {'ref': 17}],
+#                     'id': 19}]]},
+#                 {'json': 0}],
+#                'id': 18}]]},
+#            {'json': 0}],
+#           'id': 15}]}],
+#       'id': 6},
+#      {'json': -1}],
+#     'id': 3}],
+#   'id': 0},
+#  'prefix': 'array/'}
 
 # %%markdown
 # Without awkward-array, these objects can't be meaningfully read back from the HDF5 file.
@@ -2970,15 +3358,149 @@ b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
 
 # %%
 awkward.toarrow(a)
+# <pyarrow.lib.ListArray object at 0x78110846b1a8>
+# [
+#   [
+#     1.1,
+#     2.2,
+#     3.3
+#   ],
+#   [],
+#   [
+#     4.4,
+#     5.5
+#   ]
+# ]
 
 # %%
 awkward.fromarrow(awkward.toarrow(a))
+# <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78110846d550>
 
 # %%
 awkward.toarrow(b)
+# <pyarrow.lib.ListArray object at 0x78110846b6d0>
+# [
+#   -- is_valid: all not null
+#   -- type_ids:     [
+#       0,
+#       0,
+#       2,
+#       0,
+#       2
+#     ]
+#   -- value_offsets:     [
+#       0,
+#       1,
+#       1,
+#       2,
+#       1
+#     ]
+#   -- child 0 type: double
+#     [
+#       1.1,
+#       2.2,
+#       3.3,
+#       4.4
+#     ]
+#   -- child 1 type: list<item: double>
+#     [
+#       [
+#         5.5
+#       ]
+#     ]
+#   -- child 2 type: struct<x: int64, y: struct<z: int64>>
+#     -- is_valid: all not null
+#     -- child 0 type: int64
+#       [
+#         6,
+#         8
+#       ]
+#     -- child 1 type: struct<z: int64>
+#       -- is_valid: all not null
+#       -- child 0 type: int64
+#         [
+#           7,
+#           9
+#         ],
+#   -- is_valid: all not null
+#   -- type_ids:     [
+#       0,
+#       1
+#     ]
+#   -- value_offsets:     [
+#       3,
+#       0
+#     ]
+#   -- child 0 type: double
+#     [
+#       1.1,
+#       2.2,
+#       3.3,
+#       4.4
+#     ]
+#   -- child 1 type: list<item: double>
+#     [
+#       [
+#         5.5
+#       ]
+#     ]
+#   -- child 2 type: struct<x: int64, y: struct<z: int64>>
+#     -- is_valid: all not null
+#     -- child 0 type: int64
+#       [
+#         6,
+#         8
+#       ]
+#     -- child 1 type: struct<z: int64>
+#       -- is_valid: all not null
+#       -- child 0 type: int64
+#         [
+#           7,
+#           9
+#         ],
+#   -- is_valid: all not null
+#   -- type_ids:     [
+#       2,
+#       2,
+#       2
+#     ]
+#   -- value_offsets:     [
+#       0,
+#       1,
+#       1
+#     ]
+#   -- child 0 type: double
+#     [
+#       1.1,
+#       2.2,
+#       3.3,
+#       4.4
+#     ]
+#   -- child 1 type: list<item: double>
+#     [
+#       [
+#         5.5
+#       ]
+#     ]
+#   -- child 2 type: struct<x: int64, y: struct<z: int64>>
+#     -- is_valid: all not null
+#     -- child 0 type: int64
+#       [
+#         6,
+#         8
+#       ]
+#     -- child 1 type: struct<z: int64>
+#       -- is_valid: all not null
+#       -- child 0 type: int64
+#         [
+#           7,
+#           9
+#         ]
+# ]
 
 # %%
 awkward.fromarrow(awkward.toarrow(b))
+# <JaggedArray [[1.1 2.2 <Row 1> 3.3 <Row 1>] [4.4 [5.5]] [<Row 0> <Row 1> <Row 1>]] at 0x78110846de48>
 
 # %%markdown
 # Unlike HDF5, Arrow is capable of columnar jagged arrays, nullable values, nested structures, etc. If you save an awkward array in Arrow format, someone else can read it without the awkward-array library. There are a few awkward array classes that don't have an Arrow equivalent, though. Below is a list of all translations.
@@ -3019,24 +3541,39 @@ awkward.toparquet("dataset.parquet", a)
 # %%
 a2 = awkward.fromparquet("dataset.parquet")
 a2
+# <ChunkedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78110846dc50>
 
 # %%markdown
 # Notice that we get a ``ChunkedArray`` back. This is because ``awkward.fromparquet`` is lazy-loading the Parquet file, which might be very large (not in this case, obviously). It's actually a ``ChunkedArray`` (one `row group <https://parquet.apache.org/documentation/latest/#unit-of-parallelization>`__ per chunk) of ``VirtualArrays``, and each ``VirtualArray`` is read when it is accessed (for instance, to print it above).
 
 # %%
 a2.chunks
+# [<VirtualArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78110846dc18>]
 
 # %%
 a2.chunks[0].array
+# <BitMaskedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78110849aeb8>
 
 # %%markdown
 # The next layer of new structure is that the jagged array is bit-masked. Even though none of the values are nullable, this is an artifact of the way Parquet formats columnar data.
 
 # %%
 a2.chunks[0].array.content
+# <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78110849a518>
 
 # %%
 a2.layout
+#  layout
+# [           ()] ChunkedArray(chunks=[layout[0]], chunksizes=[3])
+# [            0]   VirtualArray(generator=<awkward.arrow._ParquetFile object at 0x78110846df98>, args=(0, ''), kwargs={}, array=layout[0, 0])
+# [         0, 0]     BitMaskedArray(mask=layout[0, 0, 0], content=layout[0, 0, 1], maskedwhen=False, lsborder=True)
+# [      0, 0, 0]       ndarray(shape=1, dtype=dtype('uint8'))
+# [      0, 0, 1]       JaggedArray(starts=layout[0, 0, 1, 0], stops=layout[0, 0, 1, 1], content=layout[0, 0, 1, 2])
+# [   0, 0, 1, 0]         ndarray(shape=3, dtype=dtype('int32'))
+# [   0, 0, 1, 1]         ndarray(shape=3, dtype=dtype('int32'))
+# [   0, 0, 1, 2]         BitMaskedArray(mask=layout[0, 0, 1, 2, 0], content=layout[0, 0, 1, 2, 1], maskedwhen=False, lsborder=True)
+# [0, 0, 1, 2, 0]           ndarray(shape=1, dtype=dtype('uint8'))
+# [0, 0, 1, 2, 1]           ndarray(shape=5, dtype=dtype('float64'))
 
 # %%markdown
 # Fewer types can be written to Parquet files than Arrow buffers, since pyarrow does not yet have a complete Arrow → Parquet transformation.
@@ -3046,6 +3583,7 @@ try:
     awkward.toparquet("dataset2.parquet", b)
 except Exception as err:
     print(type(err), str(err))
+# <class 'pyarrow.lib.ArrowNotImplementedError'> Unhandled type for Arrow to Parquet schema conversion: union[dense]<0: double=0, 1: list<item: double>=1, 2: struct<x: int64, y: struct<z: int64>>=2>
 
 # %%markdown
 # * ``awkward.topandas(array, flatten=False)``: convert the array into a Pandas DataFrame (if tabular) or a Pandas Series (otherwise). If ``flatten=False``, wrap the awkward arrays as a new Pandas extension type (not fully implemented). If ``flatten=True``, convert the jaggedness and nested tables into row and column ``pandas.MultiIndex`` without introducing any new types (not always possible).
@@ -3102,6 +3640,7 @@ df.x
 
 # %%
 df.x.values
+# <JaggedSeries [[1.1 2.2 3.3] [] [4.4 5.5] [6.6 7.7 8.8 9.9]] at 0x78110846d400>
 
 # %%markdown
 # (``JaggedSeries`` is a thin wrapper on ``JaggedArray``; they behave the same way.)
@@ -3574,36 +4113,43 @@ df.b[0]
 a = numpy.array([[1.1, 2.2], [3.3, 4.4], [5.5, 6.6]])
 t = awkward.type.fromarray(a)
 t
+# ArrayType(3, 2, dtype('float64'))
 
 # %%markdown
 # Above is the object-form of the high-level type and object that ``takes`` arguments ``to`` return values.
 
 # %%
 t.takes
+# 3
 
 # %%
 t.to
+# ArrayType(2, dtype('float64'))
 
 # %%
 t.to.to
+# dtype('float64')
 
 # %%markdown
 # High-level type objects also have a printable form for human readability.
 
 # %%
 print(t)
+# [0, 3) -> [0, 2) -> float64
 
 # %%markdown
 # The above should be read like a function's data type: ``argument type -> return type`` for the function that takes an index in square brackets and returns something else. For example, the first ``[0, 3)`` means that you could put any non-negative integer less than ``3`` in square brackets after the array, like this:
 
 # %%
 a[2]
+# array([5.5, 6.6])
 
 # %%markdown
 # The second ``[0, 2)`` means that the next argument can be any non-negative integer less than ``2``.
 
 # %%
 a[2][1]
+# 6.6
 
 # %%markdown
 # And then you have a Numpy ``dtype``.
@@ -3613,6 +4159,8 @@ a[2][1]
 # %%
 a = awkward.fromiter([{"x": 1, "y": []}, {"x": 2, "y": [1.1, 2.2]}, {"x": 3, "y": [1.1, 2.2, 3.3]}])
 print(a.type)
+# [0, 3) -> 'x' -> int64
+#           'y' -> [0, inf) -> float64
 
 # %%markdown
 # In the above, you could call ``a[2]["x"]`` to get ``3`` or ``a[2]["y"][1]`` to get ``2.2``, but the types and even number of allowed arguments depend on which path you take. Numpy's ``shape`` and ``dtype`` have no equivalent.
@@ -3625,6 +4173,8 @@ print(a.type)
 a = awkward.Table(x=[[1.1, 2.2], [3.3, 4.4], [5.5, 6.6]],
                   y=awkward.fromiter([[1, 2, 3], [], [4, 5]]))
 print(a.type)
+# [0, 3) -> 'x' -> [0, 2) -> float64
+#           'y' -> [0, inf) -> int64
 
 # %%markdown
 # Whereas each value of a ``Table`` row (`product type <https://en.wikipedia.org/wiki/Product_type>`__) contains a member of every one of its fields, each value of a ``UnionArray`` item (`sum type <https://en.wikipedia.org/wiki/Tagged_union>`__) contains a member of exactly one of its possibilities. The distinction is drawn as the lack or presence of a vertical bar (meaning "or": ``|``).
@@ -3632,10 +4182,14 @@ print(a.type)
 # %%
 a = awkward.fromiter([{"x": 1, "y": "one"}, {"x": 2, "y": "two"}, {"x": 3, "y": "three"}])
 print(a.type)
+# [0, 3) -> 'x' -> int64
+#           'y' -> <class 'str'>
 
 # %%
 a = awkward.fromiter([1, 2, 3, "four", "five", "six"])
 print(a.type)
+# [0, 6) -> (int64         |
+#            <class 'str'> )
 
 # %%markdown
 # The parenthesis is to keep ``Table`` fields from being mixed up with ``UnionArray`` possibilities.
@@ -3643,6 +4197,9 @@ print(a.type)
 # %%
 a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": "three"}, {"x": 4, "y": "four"}])
 print(a.type)
+# [0, 4) -> 'x' -> int64
+#           'y' -> (float64       |
+#                   <class 'str'> )
 
 # %%markdown
 # As in mathematics, products and the adjacency operator take precedence over sums.
@@ -3650,6 +4207,9 @@ print(a.type)
 # %%
 a = awkward.fromiter([1, 2, 3, {"x": 4.4, "y": "four"}, {"x": 5.5, "y": "five"}, {"x": 6.6, "y": "six"}])
 print(a.type)
+# [0, 6) -> (int64                |
+#            'x' -> float64
+#            'y' -> <class 'str'> )
 
 # %%markdown
 # Missing data, represented by ``MaskedArrays``, ``BitMaskedArrays``, or ``IndexedMaskedArrays``, are called "option types" in the high-level type language.
@@ -3657,16 +4217,19 @@ print(a.type)
 # %%
 a = awkward.fromiter([1, 2, 3, None, None, 4, 5])
 print(a.type)
+# [0, 7) -> ?(int64)
 
 # %%
 # Inner arrays could be missing values.
 a = awkward.fromiter([[1.1, 2.2, 3.3], None, [4.4, 5.5]])
 print(a.type)
+# [0, 3) -> ?([0, inf) -> float64)
 
 # %%
 # Numbers in those arrays could be missing values.
 a = awkward.fromiter([[1.1, 2.2, None], [], [4.4, 5.5]])
 print(a.type)
+# [0, 3) -> [0, inf) -> ?(float64)
 
 # %%markdown
 # Cross-references and cyclic references are expressed in awkward type objects by creating the same graph structure among the type objects as the arrays. Thus,
@@ -3691,12 +4254,28 @@ tree.contents["left"].content = awkward.IndexedArray(left, tree)
 tree.contents["right"].content = awkward.IndexedArray(right, tree)
 
 tree[0].tolist()
+# {'left': {'left': {'left': {'left': None, 'right': None, 'value': 9.0},
+#    'right': None,
+#    'value': 3.14},
+#   'right': {'left': None,
+#    'right': {'left': None, 'right': None, 'value': 0.0},
+#    'value': 2.71},
+#   'value': 3.21},
+#  'right': {'left': {'left': None, 'right': None, 'value': 5.55},
+#   'right': {'left': None, 'right': None, 'value': 8.0},
+#   'value': 9.99},
+#  'value': 1.23}
 
 # %%markdown
 # In the print-out, labels (``T0 :=``, ``T1 :=``, ``T2 :=``) are inserted to indicate where cross-references begin and end.
 
 # %%
 print(tree.type)
+[0, 9) -> 'left'  -> T0 := ?(T1 := 'left'  -> T0
+                                   'right' -> T2 := ?(T1)
+                                   'value' -> float64)
+          'right' -> T2
+          'value' -> float64
 
 # %%markdown
 # The ``ObjectArray`` class turns awkward array structures into Python objects on demand. From an analysis point of view, the elements of the array *are* Python objects, and that is reflected in the type.
@@ -3710,9 +4289,11 @@ class Point:
 
 a = awkward.fromiter([Point(0, 0), Point(3, 2), Point(1, 1), Point(2, 4), Point(0, 0)])
 a
+# <ObjectArray [Point(0, 0) Point(3, 2) Point(1, 1) Point(2, 4) Point(0, 0)] at 0x781106089390>
 
 # %%
 print(a.type)
+# [0, 5) -> <function ObjectFillable.finalize.<locals>.make at 0x781106085a60>
 
 # %%markdown
 # In summary,
@@ -3735,26 +4316,44 @@ print(a.type)
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 t = a.layout
 t
+#  layout
+# [    ()] JaggedArray(starts=layout[0], stops=layout[1], content=layout[2])
+# [     0]   ndarray(shape=3, dtype=dtype('int64'))
+# [     1]   ndarray(shape=3, dtype=dtype('int64'))
+# [     2]   ndarray(shape=5, dtype=dtype('float64'))
 
 # %%
 t[2]
+# <LayoutNode [(2,)] ndarray>
 
 # %%
 t[2].array
+# array([1.1, 2.2, 3.3, 4.4, 5.5])
 
 # %%
 a = awkward.fromiter([[[1.1, 2.2], [3.3]], [], [[4.4, 5.5]]])
 t = a.layout
 t
+#  layout
+# [    ()] JaggedArray(starts=layout[0], stops=layout[1], content=layout[2])
+# [     0]   ndarray(shape=3, dtype=dtype('int64'))
+# [     1]   ndarray(shape=3, dtype=dtype('int64'))
+# [     2]   JaggedArray(starts=layout[2, 0], stops=layout[2, 1], content=layout[2, 2])
+# [  2, 0]     ndarray(shape=3, dtype=dtype('int64'))
+# [  2, 1]     ndarray(shape=3, dtype=dtype('int64'))
+# [  2, 2]     ndarray(shape=5, dtype=dtype('float64'))
 
 # %%
 t[2]
+# <LayoutNode [(2,)] JaggedArray>
 
 # %%
 t[2].array
+# <JaggedArray [[1.1 2.2] [3.3] [4.4 5.5]] at 0x7811060a1208>
 
 # %%
 t[2, 2].array
+# array([1.1, 2.2, 3.3, 4.4, 5.5])
 
 # %%markdown
 # Classes like ``IndexedArray``, ``SparseArray``, ``ChunkedArray``, ``AppendableArray``, and ``VirtualArray`` don't change the high-level type of an array, but they do change the layout. Consider, for instance, an array made with ``awkward.fromiter`` and an array read by ``awkward.fromparquet``.
@@ -3773,36 +4372,75 @@ b = awkward.fromparquet("tmp.parquet")
 
 # %%
 b.layout
+#  layout
+# [    ()] ChunkedArray(chunks=[layout[0]], chunksizes=[4])
+# [     0]   VirtualArray(generator=<awkward.arrow._ParquetFile object at 0x781106089668>, args=(0, ''), kwargs={})
 
 # %%markdown
 # But after reading,
 
 # %%
 b
+# <ChunkedArray [[1.1 2.2 None 3.3] [] [] [4.4 5.5]] at 0x7811060890b8>
 
 # %%markdown
 # The layout shows that it has more structure than ``a``.
 
 # %%
 b.layout
+#  layout
+# [           ()] ChunkedArray(chunks=[layout[0]], chunksizes=[4])
+# [            0]   VirtualArray(generator=<awkward.arrow._ParquetFile object at 0x781106089668>, args=(0, ''), kwargs={}, array=layout[0, 0])
+# [         0, 0]     BitMaskedArray(mask=layout[0, 0, 0], content=layout[0, 0, 1], maskedwhen=False, lsborder=True)
+# [      0, 0, 0]       ndarray(shape=1, dtype=dtype('uint8'))
+# [      0, 0, 1]       JaggedArray(starts=layout[0, 0, 1, 0], stops=layout[0, 0, 1, 1], content=layout[0, 0, 1, 2])
+# [   0, 0, 1, 0]         ndarray(shape=4, dtype=dtype('int32'))
+# [   0, 0, 1, 1]         ndarray(shape=4, dtype=dtype('int32'))
+# [   0, 0, 1, 2]         BitMaskedArray(mask=layout[0, 0, 1, 2, 0], content=layout[0, 0, 1, 2, 1], maskedwhen=False, lsborder=True)
+# [0, 0, 1, 2, 0]           ndarray(shape=1, dtype=dtype('uint8'))
+# [0, 0, 1, 2, 1]           ndarray(shape=6, dtype=dtype('float64'))
 
 # %%
 a.layout
+#  layout
+# [     ()] MaskedArray(mask=layout[0], content=layout[1], maskedwhen=True)
+# [      0]   ndarray(shape=4, dtype=dtype('bool'))
+# [      1]   JaggedArray(starts=layout[1, 0], stops=layout[1, 1], content=layout[1, 2])
+# [   1, 0]     ndarray(shape=4, dtype=dtype('int64'))
+# [   1, 1]     ndarray(shape=4, dtype=dtype('int64'))
+# [   1, 2]     MaskedArray(mask=layout[1, 2, 0], content=layout[1, 2, 1], maskedwhen=True)
+# [1, 2, 0]       ndarray(shape=6, dtype=dtype('bool'))
+# [1, 2, 1]       ndarray(shape=6, dtype=dtype('float64'))
 
 # %%markdown
 # However, they have the same high-level type.
 
 # %%
 print(b.type)
+# [0, 4) -> ?([0, inf) -> ?(float64))
 
 # %%
 print(a.type)
+# [0, 4) -> ?([0, inf) -> ?(float64))
 
 # %%markdown
 # Cross-references and cyclic references are also encoded in the ``layout``, as references to previously seen indexes.
 
 # %%
 tree.layout
+#  layout
+# [     ()] Table(left=layout[0], right=layout[1], value=layout[2])
+# [      0]   MaskedArray(mask=layout[0, 0], content=layout[0, 1], maskedwhen=True)
+# [   0, 0]     ndarray(shape=9, dtype=dtype('bool'))
+# [   0, 1]     IndexedArray(index=layout[0, 1, 0], content=layout[0, 1, 1])
+# [0, 1, 0]       ndarray(shape=9, dtype=dtype('int64'))
+# [0, 1, 1]       -> layout[()]
+# [      1]   MaskedArray(mask=layout[1, 0], content=layout[1, 1], maskedwhen=True)
+# [   1, 0]     ndarray(shape=9, dtype=dtype('bool'))
+# [   1, 1]     IndexedArray(index=layout[1, 1, 0], content=layout[1, 1, 1])
+# [1, 1, 0]       ndarray(shape=9, dtype=dtype('int64'))
+# [1, 1, 1]       -> layout[()]
+# [      2]   ndarray(shape=9, dtype=dtype('float64'))
 
 # %%markdown
 # # Applications
