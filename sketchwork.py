@@ -2056,14 +2056,25 @@ for index, node in complicated.layout.items():
 
 # %%markdown
 # The number of arrays in this object scales with the complexity of its data type, but not with the size of the dataset. If it were as complicated as it is now but billions of elements long, it would still contain 11 Numpy arrays, and operations on it would scale as Numpy scales. However, converting a billion Python objects to these 11 arrays would be a large up-front cost.
+#
+# More detail on the row-wise to columnar conversion process is given in `docs/fromiter.adoc <https://github.com/scikit-hep/awkward-array/blob/master/docs/fromiter.adoc>`__.
 
 # * ``load(file, awkwardlib=None, whitelist=awkward.persist.whitelist, cache=None, schemasuffix=".json")``: loads data from an "awkd" (special ZIP) file. This function is like ``numpy.load``, but for awkward arrays. If the file contains a single object, that object will be read immediately; if it has a collection of named arrays, it will return a loader that loads those arrays on demand. The ``awkwardlib`` determines the module to use to define arrays, the ``whitelist`` is where you can provide a list of functions that may be called in this process, ``cache`` is a global cache object assigned to ``VirtualArrays``, and ``schemasuffix`` determines the file name pattern to look for objects inside the ZIP file.
 
 # * ``save(file, array, name=None, mode="a", compression=awkward.persist.compression, delimiter="-", suffix=".raw", schemasuffix=".json")``: saves data to an "awkd" (special ZIP) file. This function is like ``numpy.savez`` and is the reverse of ``load`` (above). The ``array`` may be a single object or a dict of named arrays, the ``name`` is a name to use inside the file, ``mode="a"`` means create or append to an existing file, refusing to overwrite data while ``mode="w"`` overwrites data, ``compression`` is a compression policy (set of rules determining which arrays to compress and how), and the rest of the arguments determine file names within the ZIP: ``delimiter`` between name components, ``suffix`` for array data, and ``schemasuffix`` for the schemas that tell ``load`` how to find all other data.
 
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
+                      [4.4, [5.5]],
+                      [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                     ])
 
+# %%
+awkward.save("single.awkd", a)
 
-
+# %%
+awkward.load("single.awkd")
 
 
 

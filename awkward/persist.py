@@ -717,6 +717,8 @@ def save(file, array, name=None, mode="a", **options):
         def __init__(self, f):
             self.f = f
         def __setitem__(self, where, what):
+            if isinstance(what, numpy.ndarray):
+                what = what.tostring()
             self.f.writestr(where, what, compress_type=zipfile.ZIP_STORED)
 
     with zipfile.ZipFile(file, mode=mode, compression=zipfile.ZIP_STORED) as f:
