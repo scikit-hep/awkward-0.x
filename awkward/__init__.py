@@ -21,7 +21,7 @@ from awkward.array.virtual import VirtualArray
 def concatenate(arrays, axis=0):
     return AwkwardArray.concatenate(arrays, axis=axis)
 
-from awkward.generate import fromiter, fromiterchunks
+from awkward.generate import fromiter
 
 from awkward.persist import serialize, deserialize, save, load, hdf5
 
@@ -31,6 +31,6 @@ from awkward.util import topandas
 # convenient access to the version number
 from awkward.version import __version__
 
-__all__ = ["numpy", "AwkwardArray", "ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "fromiterchunks", "serialize", "deserialize", "save", "load", "hdf5", "toarrow", "fromarrow", "toparquet", "fromparquet", "topandas", "__version__"]
+__all__ = ["numpy", "AwkwardArray", "ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "serialize", "deserialize", "save", "load", "hdf5", "toarrow", "fromarrow", "toparquet", "fromparquet", "topandas", "__version__"]
 
 __path__ = __import__("pkgutil").extend_path(__path__, __name__)

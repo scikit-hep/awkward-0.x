@@ -1,0 +1,29 @@
+= Row-wise to columnar conversion
+:Author: Jim Pivarski
+:Email: pivarski@princeton.edu
+:Date: 2019-07-08
+:Revision: 0.x
+
+Awkward-array provides a general facility for creating columnar arrays from row-wise data. This is often the first step before processing. In a statically typed language, the array structure can be fully determined before filling, but in a dynamically typed language, the array types and nesting structure would have to be discovered while iterating over the data.
+
+The interface has one entry point:
+
+   * `+fromiter(iterable, **options)+`: iterate over data and return an array representing all of the data in a columnar form. In a statically typed language, the type structure would have to be provided somehow, and this function would raise an error if the data do not conform to that type (if possible).
+
+The following `options` are recognized:
+
+   * `dictencoding`: boolean or a function returning boolean. If `True`, all arrays of bytes/strings are https://en.wikipedia.org/wiki/Dictionary_coder[dictionary encoded] as an `IndexedArray` of `StringArray`. If `False`, all arrays of bytes/strings are simply `StringArray`. If a function, this function is called on the list of bytes/strings to determine if it should be dictionary encoded.
+   * `maskedwhen`: boolean. If `True`, the `mask` of `MaskedArrays` use `True` to indicate missing values; if `False`, they use `False` to indicate missing values.
+
+Types derived from the data resolve ambiguities by satisfying the following rules.
+
+   . Boolean types are distinct from numbers, but mixed numeric types are resolved in favor of the most general number at a level of the hierarchy. (That is, a single floating point value will make all integers at the same nesting depth floating point.) Booleans and numbers at the same level of hierarchy would be represented by a `UnionArray`.
+   . In Python (which makes a distinction between raw bytes and strings with an encoding), bytes and strings are different types. Bytes and strings at the same level of hierarchy would be represented by a `UnionArray`.
+   . All lists are presumed to be variable-length (`JaggedArray`).
+   . A mapping type (Python dict) is represented as a `Table`, and mappings with different sets of field names are considered distinct. Mappings with the same field names but different field types are not distinct: they are `Tables` with some `UnionArray` columns. Missing fields are different from fields with `None` values. Mappings must have string-typed keys: other types are not supported.
+   . An empty mapping, `{}`, is considered identical to `None`.
+   . `Table` column names are sorted alphabetically.
+   . An object type may be represented as an `ObjectArray` or it may not be supported. The Numpy-only implementation generates `ObjectArrays` from Python class instances and from namedtuples.
+   . Optional and sum types are in canonical form: `MaskedArrays` are not nested directly within `MaskedArrays` and `UnionArrays` are not nested directly within `UnionArrays`. If a given level of hierarchy is both masked and heterogeneous, the `MaskArray` is outside the `UnionArray` and none of the union array's `contents` are masked.
+   . `Tables`, `ObjectArrays`, and `UnionArrays` are masked with `IndexedMaskedArray`, while all others are masked with `MaskedArray`.
+   . If a type at some level of hierarchy cannot be determined (all lists at that level are empty), then the type is taken to be `DEFAULTTYPE`.

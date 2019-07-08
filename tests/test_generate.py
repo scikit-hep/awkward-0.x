@@ -1693,9 +1693,3 @@ class Test(unittest.TestCase):
         assert awkward.fromiter(x).tolist() == x
         x.insert(0, None)
         assert awkward.fromiter(x).tolist() == x
-
-    def test_generate_chunks(self):
-        it = awkward.fromiterchunks([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], 4)
-        assert next(it).tolist() == [1.1, 2.2, 3.3, 4.4]
-        assert next(it).tolist() == [5.5, 6.6, 7.7, 8.8]
-        assert next(it).tolist() == [9.9]

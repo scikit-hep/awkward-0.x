@@ -896,21 +896,28 @@ a
 
 # %%
 a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
+                      [4.4, [5.5]],
+                      [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                     ])
+
+# %%
 a.type
 
 # %%
 print(a.type)
 
-# * ``layout``: the low-level layout of the array. (See below for a detailed description of low-level layouts.)
-
-
+# %%
+b.type
 
 # %%
-a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+print(b.type)
+
+# * ``layout``: the low-level layout of the array. (See below for a detailed description of low-level layouts.)
 a.layout
 
 # %%
-print(a.layout)
+b.layout
 
 # * ``dtype``: the `Numpy dtype <https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html>`__ that this array would have if cast as a Numpy array. Numpy dtypes cannot fully specify awkward arrays: use the ``type`` for an analyst-friendly description of the data type or ``layout`` for details about how the arrays are represented.
 
@@ -1982,7 +1989,7 @@ a.fillna(999).tolist()
 # %%markdown
 # ## Functions for structure manipulation
 #
-# Only one function (for now) is defined at top-level in awkward-array: ``awkward.concatenate``.
+# Only one structure-manipulation function (for now) is defined at top-level in awkward-array: ``awkward.concatenate``.
 
 # * ``awkward.concatenate(arrays, axis=0)``: concatenate two or more ``arrays``. If ``axis=0``, the arrays are concatenated lengthwise (the resulting length is the sum of the lengths of each of the ``arrays``). If ``axis=1``, each inner array is concatenated: the input ``arrays`` must all be jagged with the same outer array length. (Values of ``axis`` greater than ``1`` are not yet supported.)
 
@@ -2023,11 +2030,44 @@ awkward.concatenate([a, b], axis=1)
 
 # %%markdown
 # # Functions for input/output and conversion
+#
+# Most of the functions defined at the top-level of the library are conversion functions.
 
-# * ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False, maskedwhen=True)``
-# * ``awkward.fromiterchunks(iterable, chunksize, awkwardlib=None, dictencoding=False)``
-# * ``load(file, awkwardlib=None, whitelist=awkward.persist.whitelist, cache=None, schemasuffix=".json")``
-# * ``save(file, array, name=None, mode="a", compression=awkward.persist.compression, delimiter="-", suffix=".raw", schemasuffix=".json")``
+# * ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False, maskedwhen=True)``: convert Python or JSON data into awkward arrays. Not a fast function: it necessarily involves a Python for loop. The ``awkwardlib`` determines which awkward module to use to make arrays (``awkward`` is the default, but ``awkward.numba`` and ``awkward.cpp`` are alternatives). If ``dictencoding`` is ``True``, bytes and strings will be "dictionary-encoded" in Arrow/Parquet terms—this is an ``IndexedArray`` in awkward. The ``maskedwhen`` parameter determines whether ``MaskedArrays`` have a mask that is ``True`` when data are missing or ``False`` when data are missing.
+
+# %%
+# We have been using this function all along, but why not another example?
+complicated = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
+                                [4.4, [5.5]],
+                                [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                               ])
+complicated
+
+# %%markdown
+# The fact that this nested, row-wise data have been converted into columnar arrays can be seen by inspecting its ``layout``.
+
+# %%
+complicated.layout
+
+# %%
+for index, node in complicated.layout.items():
+    if node.cls == numpy.ndarray:
+        print("[{0:>13s}] {1}".format(", ".join(repr(i) for i in index), repr(node.array)))
+
+# %%markdown
+# The number of arrays in this object scales with the complexity of its data type, but not with the size of the dataset. If it were as complicated as it is now but billions of elements long, it would still contain 11 Numpy arrays, and operations on it would scale as Numpy scales. However, converting a billion Python objects to these 11 arrays would be a large up-front cost.
+
+# * ``load(file, awkwardlib=None, whitelist=awkward.persist.whitelist, cache=None, schemasuffix=".json")``: loads data from an "awkd" (special ZIP) file. This function is like ``numpy.load``, but for awkward arrays. If the file contains a single object, that object will be read immediately; if it has a collection of named arrays, it will return a loader that loads those arrays on demand. The ``awkwardlib`` determines the module to use to define arrays, the ``whitelist`` is where you can provide a list of functions that may be called in this process, ``cache`` is a global cache object assigned to ``VirtualArrays``, and ``schemasuffix`` determines the file name pattern to look for objects inside the ZIP file.
+
+# * ``save(file, array, name=None, mode="a", compression=awkward.persist.compression, delimiter="-", suffix=".raw", schemasuffix=".json")``: saves data to an "awkd" (special ZIP) file. This function is like ``numpy.savez`` and is the reverse of ``load`` (above). The ``array`` may be a single object or a dict of named arrays, the ``name`` is a name to use inside the file, ``mode="a"`` means create or append to an existing file, refusing to overwrite data while ``mode="w"`` overwrites data, ``compression`` is a compression policy (set of rules determining which arrays to compress and how), and the rest of the arguments determine file names within the ZIP: ``delimiter`` between name components, ``suffix`` for array data, and ``schemasuffix`` for the schemas that tell ``load`` how to find all other data.
+
+
+
+
+
+
+
+
 # * ``hdf5(group, awkwardlib=None, compression=awkward.persist.compression, whitelist=awkward.persist.whitelist, cache=None)``
 # * ``awkward.fromarrow(arrow, awkwardlib=None)``
 # * ``awkward.toarrow(array)``

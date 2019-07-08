@@ -26,12 +26,7 @@ def fromiter(iterable, awkwardlib=None, **options):
         awkwardlib = "awkward.numba"
     return awkward.generate.fromiter(iterable, awkwardlib=awkwardlib, **options)
 
-def fromiterchunks(iterable, chunksize, awkwardlib=None, **options):
-    if awkwardlib is None:
-        awkwardlib = "awkward.numba"
-    return awkward.generate.fromiterchunks(iterable, chunksize, awkwardlib=awkwardlib, **options)
-
 # convenient access to the version number
 from awkward.version import __version__
 
-__all__ = ["NumbaMethods", "ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "__version__"]
+__all__ = ["numpy", "AwkwardArray", "ChunkedArray", "AppendableArray", "IndexedArray", "SparseArray", "JaggedArray", "MaskedArray", "BitMaskedArray", "IndexedMaskedArray", "Methods", "ObjectArray", "Table", "UnionArray", "VirtualArray", "StringArray", "fromiter", "__version__"]

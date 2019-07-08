@@ -724,8 +724,7 @@ class Layout(Mapping):
         return "\n".join(out)
 
     def __iter__(self):
-        for i in sorted(self.lookup):
-            yield self.lookup[i]
+        return (i for i in sorted(self.lookup))
 
     def __getitem__(self, where):
         if not isinstance(where, tuple):

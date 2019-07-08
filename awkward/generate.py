@@ -429,39 +429,3 @@ def fromiter(iterable, awkwardlib=None, **options):
         fillable = fillable.append(obj, typeof(obj))
 
     return fillable.finalize(**options)
-
-def fromiterchunks(iterable, chunksize, awkwardlib=None, **options):
-    if not isinstance(chunksize, (numbers.Integral, numpy.integer)) or chunksize <= 0:
-        raise TypeError("chunksize must be a positive integer")
-
-    _checkoptions(options)
-
-    awkwardlib = awkward.util.awkwardlib(awkwardlib)
-    fillable = UnknownFillable(awkwardlib)
-    count = 0
-    tpe = None
-
-    for obj in iterable:
-        fillable = fillable.append(obj, typeof(obj))
-        count += 1
-
-        if count == chunksize:
-            out = fillable.finalize(**options)
-            outtpe = awkward.type.fromarray(out).to
-            if tpe is None:
-                tpe = outtpe
-            elif tpe != outtpe:
-                raise TypeError("data type has changed after the first chunk (first chunk is not large enough to see the full generality of the data):\n\n{0}\n\nversus\n\n{1}".format(awkward.type._str(tpe, indent="    "), awkward.type._str(outtpe, indent="    ")))
-            yield out
-
-            fillable.clear()
-            count = 0
-
-    if count != 0:
-        out = fillable.finalize(**options)
-        outtpe = awkward.type.fromarray(out).to
-        if tpe is None:
-            tpe = outtpe
-        elif tpe != outtpe:
-            raise TypeError("data type has changed after the first chunk (first chunk is not large enough to see the full generality of the data):\n\n{0}\n\nversus\n\n{1}".format(awkward.type._str(tpe, indent="    "), awkward.type._str(outtpe, indent="    ")))
-        yield out
