@@ -221,7 +221,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
                 awkward.type.LayoutArg("kwargs", dict(self._kwargs)))
         if self.ismaterialized:
             awkward.type.LayoutNode(self.array, position + (0,), seen, lookup)
-            args = args + (awkward.type.LayoutArg("array", position + (0,)))
+            args = args + (awkward.type.LayoutArg("array", position + (0,)),)
         return args
 
     @property

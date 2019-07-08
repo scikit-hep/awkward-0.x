@@ -2241,12 +2241,122 @@ awkward.fromarrow(awkward.toarrow(b))
 # Since Arrow is an in-memory format, both ``toarrow`` and ``fromarrow`` are side-effect-free functions with a return value. Functions that write to files have a side-effect (the state of your disk changing) and no return value. Once you've made your Arrow buffer, you have to figure out what to do with it. (You may want to `write it to a stream <https://arrow.apache.org/docs/python/ipc.html>`__ for interprocess communication.)
 
 # %%markdown
-# * ``awkward.fromparquet(where, awkwardlib=None)``
+# * ``awkward.fromparquet(where, awkwardlib=None)``: reads from a Parquet file (at filename/URI ``where``) into an awkward array, through pyarrow. The ``awkwardlib`` parameter has the same meaning as above.
 #
-# * ``awkward.toparquet(where, array, schema=None)``
+# * ``awkward.toparquet(where, array, schema=None)``: writes an awkward array to a Parquet file (at filename/URI ``where``), through pyarrow. The Parquet ``schema`` may be inferred from the awkward array or explicitly specified.
+#
+# Like Arrow and unlike HDF5, Parquet natively stores complex data structures in a columnar format and doesn't need to be wrapped by an interpretation layer like ``awkward.hdf5``. Like HDF5 and unlike Arrow, Parquet is a file format, intended for storage.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
+                      [4.4, [5.5]],
+                      [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                     ])
+
+# %%
+awkward.toparquet("dataset.parquet", a)
+
+# %%
+a2 = awkward.fromparquet("dataset.parquet")
+a2
 
 # %%markdown
-# * ``awkward.topandas(array, flatten=False)``
+# Notice that we get a ``ChunkedArray`` back. This is because ``awkward.fromparquet`` is lazy-loading the Parquet file, which might be very large (not in this case, obviously). It's actually a ``ChunkedArray`` (one `row group <https://parquet.apache.org/documentation/latest/#unit-of-parallelization>`__ per chunk) of ``VirtualArrays``, and each ``VirtualArray`` is read when it is accessed (for instance, to print it above).
+
+# %%
+a2.chunks
+
+# %%
+a2.chunks[0].array
+
+# %%markdown
+# The next layer of new structure is that the jagged array is bit-masked. Even though none of the values are nullable, this is an artifact of the way Parquet formats columnar data.
+
+# %%
+a2.chunks[0].array.content
+
+# %%
+a2.layout
+
+# %%markdown
+# Fewer types can be written to Parquet files than Arrow buffers, since pyarrow does not yet have a complete Arrow → Parquet transformation.
+
+# %%
+try:
+    awkward.toparquet("dataset2.parquet", b)
+except Exception as err:
+    print(type(err), str(err))
+
+# %%markdown
+# * ``awkward.topandas(array, flatten=False)``: convert the array into a Pandas DataFrame (if tabular) or a Pandas Series (otherwise). If ``flatten=False``, wrap the awkward arrays as a new Pandas extension type (not fully implemented). If ``flatten=True``, convert the jaggedness and nested tables into row and column ``pandas.MultiIndex`` without introducing any new types (not always possible).
+
+# %%
+a = awkward.Table(x=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]]),
+                  y=awkward.fromiter([100, 200, 300, 400]))
+df = awkward.topandas(a)
+df
+
+# %%
+df.x
+
+# %%markdown
+# Note that the ``dtype`` is ``awkward``. The array has not been converted into Numpy ``dtype=object`` (which would imply a performance loss); it has been wrapped as a container that Pandas recognizes. You can get the awkward array back the same way you would a Numpy array:
+
+# %%
+df.x.values
+
+# %%markdown
+# (``JaggedSeries`` is a thin wrapper on ``JaggedArray``; they behave the same way.)
+#
+# The value of this is that awkward slice semantics can be applied to data in Pandas.
+
+# %%
+df[1:]
+
+# %%
+df.x[df.x.values.counts > 0]
+
+# %%markdown
+# However, Pandas has a (limited) way of handling jaggedness and nested tables, with ``pandas.MultiIndex`` rows and columns, respectively.
+
+# %%
+# Nested tables become MultiIndex-valued column names.
+array = awkward.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
+                          {"a": {"b": 4, "c": {"d": [5, 5.1]}}, "e": 6},
+                          {"a": {"b": 7, "c": {"d": [8, 8.1, 8.2]}}, "e": 9}])
+df = awkward.topandas(array, flatten=True)
+df
+
+# %%
+# Jagged arrays become MultiIndex-valued rows (index).
+array = awkward.fromiter([{"a": 1, "b": [[2.2, 3.3, 4.4], [], [5.5, 6.6]]},
+                          {"a": 10, "b": [[1.1], [2.2, 3.3], [], [4.4]]},
+                          {"a": 100, "b": [[], [9.9]]}])
+df = awkward.topandas(array, flatten=True)
+df
+
+# %%markdown
+# The advantage of this is that no new column types are introduced, and Pandas already has functions for managing structure in its ``MultiIndex``. For instance, this structure can be unstacked into Pandas's columns.
+
+# %%
+df.unstack()
+
+# %%
+df.unstack().unstack()
+
+# %%markdown
+# It is also possible to get `Pandas Series and DataFrames through Arrow <https://arrow.apache.org/docs/python/pandas.html>`__, though this doesn't handle jagged arrays well: they get converted into Numpy ``dtype=object`` arrays.
+
+# %%
+df = awkward.toarrow(array).to_pandas()
+df
+
+# %%
+df.b
+
+# %%
+df.b[0]
 
 # %%markdown
 # # High-level types
@@ -2303,9 +2413,13 @@ awkward.fromarrow(awkward.toarrow(b))
 
 # %%markdown
 # ## Using Pandas with awkward arrays
+#
+# **TODO**
 
 # %%markdown
 # ## Using Numba with awkward arrays
+#
+# *(Deprecated in favor of awkward 1.0 plans.)*
 
 # %%markdown
 # ## Flattening awkard arrays for machine learning
