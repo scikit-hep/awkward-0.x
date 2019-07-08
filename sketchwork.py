@@ -2522,10 +2522,84 @@ print(a.type)
 # # Low-level layouts
 #
 # The layout of an array describes how it is constructed in terms of Numpy arrays and other parameters. It has more information than a high-level type (above), more that would typically be needed for data analysis, but very necessary for data engineering.
+#
+# A ``Layout`` object is a mapping from position tuples to ``LayoutNodes``. The screen representation is sufficient for reading.
 
+# %%
+a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+t = a.layout
+t
+
+# %%
+t[2]
+
+# %%
+t[2].array
+
+# %%
+a = awkward.fromiter([[[1.1, 2.2], [3.3]], [], [[4.4, 5.5]]])
+t = a.layout
+t
+
+# %%
+t[2]
+
+# %%
+t[2].array
+
+# %%
+t[2, 2].array
 
 # %%markdown
-# # Details of array representations
+# Classes like ``IndexedArray``, ``SparseArray``, ``ChunkedArray``, ``AppendableArray``, and ``VirtualArray`` don't change the high-level type of an array, but they do change the layout. Consider, for instance, an array made with ``awkward.fromiter`` and an array read by ``awkward.fromparquet``.
+
+# %%
+a = awkward.fromiter([[1.1, 2.2, None, 3.3], [], None, [4.4, 5.5]])
+
+# %%
+awkward.toparquet("tmp.parquet", a)
+
+# %%
+b = awkward.fromparquet("tmp.parquet")
+
+# %%markdown
+# At first, it terminates at ``VirtualArray`` because the data haven't been read—we don't know what arrays are associated with it.
+
+# %%
+b.layout
+
+# %%markdown
+# But after reading,
+
+# %%
+b
+
+# %%markdown
+# The layout shows that it has more structure than ``a``.
+
+# %%
+b.layout
+
+# %%
+a.layout
+
+# %%markdown
+# However, they have the same high-level type.
+
+# %%
+print(b.type)
+
+# %%
+print(a.type)
+
+# %%markdown
+# Cross-references and cyclic references are also encoded in the ``layout``, as references to previously seen indexes.
+
+# %%
+tree.layout
+
+# %%markdown
+# # Details of each array class
 
 # %%markdown
 # ## JaggedArray: variable-length lists

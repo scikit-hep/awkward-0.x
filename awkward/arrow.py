@@ -133,7 +133,7 @@ def toarrow(obj):
         elif isinstance(obj, awkward.array.masked.IndexedMaskedArray):
             thismask = obj.boolmask(maskedwhen=True)
             if mask is not None:
-                thismask = mask & thismask
+                thismask = mask | thismask
             if len(obj.content) == 0:
                 content = obj.numpy.empty(len(obj.mask), dtype=obj.DEFAULTTYPE)
             else:
@@ -143,7 +143,7 @@ def toarrow(obj):
         elif isinstance(obj, awkward.array.masked.MaskedArray):   # includes BitMaskedArray
             thismask = obj.boolmask(maskedwhen=True)
             if mask is not None:
-                thismask = mask & thismask
+                thismask = mask | thismask
             return recurse(obj.content, thismask)
 
         elif isinstance(obj, awkward.array.objects.StringArray):
