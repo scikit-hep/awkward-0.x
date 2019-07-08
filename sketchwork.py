@@ -461,6 +461,10 @@ events[0].tolist()
 # Another limitation of Numpy is that arrays cannot span multiple memory buffers. Awkward's ``ChunkedArray`` represents a single logical array made of physical ``chunks`` that may be anywhere in memory. A ``ChunkedArray``'s ``chunksizes`` may be known or unknown. One application of ``ChunkedArray`` is to append data to an array without allocating on every call: ``AppendableArray`` allocates memory in equal-sized chunks.
 #
 # Another application of ``ChunkedArray`` is to lazily load data in chunks. Awkward's ``VirtualArray`` calls its ``generator`` function to materialize an array when needed, and a ``ChunkedArray`` of ``VirtualArrays`` is a classic lazy-loading array, used to gradually read Parquet and ROOT files. In most libraries, lazy-loading is not a part of the data but a feature of the reading interface. Nesting virtualness makes it possible to load ``Tables`` within ``Tables``, where even the columns of the inner ``Tables`` are on-demand.
+#
+# For more details, see `array classes <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc>`__.
+
+
 
 # %%markdown
 # ## Mutability
@@ -2597,42 +2601,6 @@ print(a.type)
 
 # %%
 tree.layout
-
-# %%markdown
-# # Details of each array class
-
-# %%markdown
-# ## JaggedArray: variable-length lists
-
-# %%markdown
-# ## Table: nested records
-
-# %%markdown
-# ## MaskedArray: nullable data
-
-# %%markdown
-# ## UnionArray: heterogeneous lists
-
-# %%markdown
-# ## ObjectArray and Methods: interactivity in Python
-
-# %%markdown
-# ## StringArray: strings
-
-# %%markdown
-# ## IndexedArray: cross-references and circular references
-
-# %%markdown
-# ## SparseArray: sparse data
-
-# %%markdown
-# ## ChunkedArray: non-contiguous data
-
-# %%markdown
-# ## AppendableArray: efficiently add rows of data
-
-# %%markdown
-# ## VirtualArray: data on demand
 
 # %%markdown
 # # Applications

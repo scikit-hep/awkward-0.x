@@ -1,0 +1,1239 @@
+= Array classes
+:Author: Jim Pivarski
+:Email: pivarski@princeton.edu
+:Date: 2019-07-08
+:Revision: 0.x
+
+== Jaggedness
+
+https://en.wikipedia.org/wiki/Jagged_array[Jagged arrays] have a logical structure that is independent of how they are represented in memory, but since awkward-array defines this structure in terms of a basic array library (Numpy), the structure we choose is a visible part of the awkward-array specification. This section presents many ways to represent jagged arrays, their advantages and disadvantages, before specifying the `JaggedArray` class itself. The `JaggedArray` class uses the most general representation internally with conversions to and from the other forms.
+
+One natural way to represent a jagged array is to introduce markers in the serialized content where each variable-length nested list begins or ends, or to insert nested list sizes before each nested list (as in the https://avro.apache.org[Avro] protocol) to avoid having to distinguish content values from markers. However, this "`row-wise`" representation interrupts vectorized processing of the content. Another natural way is to create an array of pointers to nested lists, like Numpy's object array, but this is even worse because it additionally increases memory latency.
+
+Columnar representations keep the contents of the nested lists in a single, contiguous array (a "`column`"). The https://root.cern[ROOT] file format was probably the first columnar representation of jagged arrays (1995), though the intention was for efficient packing and compression on disk, rather than processing in memory. However, the columnar arrays of a ROOT file may be transplanted into memory for efficient computation as well. The https://parquet.apache.org[Parquet] file format (2013) has a different columnar representation of jagged arrays, though it modifies ("`https://github.com/julienledem/redelm/wiki/The-striping-and-assembly-algorithms-from-the-Dremel-paper[shreds]`") the data in a way that is hard to use without fully restructuring it. The https://arrow.apache.org[Arrow] format (2016) uses one of the methods described below to perform efficient calculations on data in memory.
+
+The simplest way to represent a jagged array with columnar arrays is to store flattened *content* in one array and *counts* of the number of elements in each interior list in another array. The starting and stopping index of one element -- an interior list -- can unambiguously be determined by summing counts up to the element of interest. This operation is _O(N)_ in array length _N_, unfortunately. It is, however, *composable*, in that nested lists of nested lists (and so on) can be constructed by setting one jagged array as the content of another. For example, to represent the following nested structure:
+
+[source, python]
+----
+[[], [[1.1, 2.2, 3.3], [], [4.4, 5.5]], [[6.6, 7.7], [8.8]]]
+----
+
+we note that the first level of depth contains lists of length `0`, length `3`, and length `2`. Inside that (and ignoring boundaries of the first level of depth), the second level of depth contains lists of length `3`, `0`, `2`, `2`, and `1`. Inside that, the content consists of floating point numbers. (The type for this doubly jagged array is `+[0, inf) -> [0, inf) -> float64+`.) It can be represented by three arrays:
+
+   * outer counts: `0, 3, 2`
+   * inner counts: `3, 0, 2, 2, 1`
+   * inner content: `1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8`
+
+The inner jagged array instance has inner counts and inner content as its counts and content, and the outer jagged array instance has outer counts as its counts and the whole inner jagged array as its content. Recursively, we can construct jaggedness of any depth from a single `JaggedArray` class.
+
+To address the random access problem, we can consider replacing counts with its integral, *offsets*. An offsets array is a cumulative sum of counts, which avoids the need to recompute the sum for each lookup. Given a counts array, we compute the offsets by allocating an array one larger than counts, filling its first element with `0`, and filling each subsequent element `i` with `offsets[i] = offsets[i - 1] + counts[i - 1]`. Inversely, counts is the derivative of offsets, and can be derived with a vectorized `counts = offsets[1:] - offsets[:-1]`. (There is a https://en.wikipedia.org/wiki/Prefix_sum#Algorithm_1:_Shorter_span,_more_parallel[vectorized algorithm] for computing the cumulative sum as well.) The nested list at index `i` is `content[offsets[i]:offsets[i + 1]]`. The Arrow in-memory format uses offset arrays to define arbitrary length lists.
+
+Like jagged arrays defined by counts, jagged arrays defined by offsets are composable, but unlike counts, any element may be accessed in _O(1)_ time. There are only a few situations in which counts may be preferable:
+
+   * counts are non-negative small integers, which can be packed more efficiently with https://en.wikipedia.org/wiki/Variable-length_quantity[variable width encoding] and/or lightweight compression (both of which destroy _O(1)_ lookup time anyway);
+   * counts are position-independent, allowing a large dataset to be processed in parallel without knowing the absolute positions of each parallel worker's chunks. This is particularly useful for _generating_ large sequences when the total size of each chunk is not known until fully generated.
+
+One shortcoming that counts and offsets share is that they can only describe dense content. The data for list `i + 1` must appear directly after the data for list `i`. If we wish to view the jagged array with any interior elements removed, we would have to make a new copy of the content with those lists removed, which could trigger a deep recursive copy. It would be more efficient to allow the content to contain unreachable elements, so that these selections can be zero-copy views.
+
+A jagged array based on counts can have unreachable elements: any content at indexes greater than or equal to `sum(counts)` are not in the logical view of the jagged array. A jagged array based on offsets can have uncreachable elements at indexes less than `offsets[0]` and greater than or equal to `offsets[-1]`, assuming that we allow `offsets[0]` to be greater than `0`. To allow interior elements to be unreachable, we have to generalize offsets into two arrays, *starts* and *stops*. These two arrays (nominally) have the same shape as each other and define the shape of the jagged array. The nested list at index `i` is `content[starts[i]:stops[i]]`. Given an offsets array, we can compute starts and stops by `starts = offsets[:-1]` and `stops = offsets[1:]`.
+
+A jagged array defined by starts and stops can skip any interior content, can repeat elements, can list elements in any order, and can even make nested lists partially overlap. Skipping elements is useful for masking, repeating elements is useful for gathering, and reordering elements is useful for optimizing data to minimize disk page-reads. (No use for partial overlaps is currently known.) A potential cost of separate starts and stops is that it can double memory use and time spent in validation tests. However, if the starts and stops happen to be dense and in order, they can be views of a single offsets array and if this case is detected, simplified calculations may be performed.
+
+These three arrays -- starts, stops, and content -- overrepresent the logical structure of a jagged array. Two jagged arrays constructed from different starts/stops/content may be compatible for elementwise operations and may even be equal. An easy way to see this is to consider the fact that the starts/stops scheme allows content to be reordered without affecting the data it represents. Another consideration is that unreachable content may differ in values or length. Only an array defined by offsets (and their starts/stops equivalent) in which `offsets[0] == 0` and `offsets[-1] == len(content)` have a one-to-one relationship between the logical elements of the jagged array and their underlying representation in terms of starts, stops, and content.
+
+The starts/stops scheme is a very general way to describe a jagged array from the outside in, for efficient extraction, slicing, masking, and gathering. It is a tree structure with pointers (indexes) from the root toward the leaves. For reduction operations, however, we need pointers from the leaves toward the root: an array with (nominally) the same length as the content, indicating where each nested list begins and ends. (This is similar to https://en.wikipedia.org/wiki/Database_normalization[database normalization], and the scheme used by https://parquet.apache.org[Parquet], though the latter is highly transformed and bit-packed.)
+
+The simplest inside-out scheme is to associate an integer with each content element, and distinct values of these integers indicate different nested lists. (This is closest to database normalization: aggregation over nested lists could then be performed by an SQL group-by.) For efficient access, especially if the jagged array is distributed and acted upon in parallel, we can stipulate that identical values must be contiguous, since content belonging to the same nested list must be contiguous in the starts/stops scheme. Such an array is called a *uniques* array. It underrepresents a jagged array in two ways:
+
+   * it doesn't specify an ordering of elements (though we can assume the content is in increasing order), and
+   * it can't express any empty lists (though we can assume that there are none).
+
+Because of this underrepresentation, a uniques array can be used to generate a jagged array but can't be used to represent one that is already defined by starts and stops. We can modify the definition of uniques to more fully specify a jagged array by requiring the unique values associated with every nested list to be the index of the corresponding starts element. This specialized uniques array is called *parents*.
+
+For example, with a jagged array logically defined as
+
+[source, python]
+----
+[[], [1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7], [8.8], []]
+----
+
+the starts, stops, and content are
+
+   * starts: `0, 0, 3, 3, 5, 7, 8`
+   * stops: `0, 3, 3, 5, 7, 8, 8`
+   * content: `1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8`
+
+and the parents array is
+
+   * parents: `1, 1, 1, 3, 3, 4, 4, 5`
+
+The first three elements of parents (`1, 1, 1`) associate the first three contents (`1.1, 2.2, 3.3`) with element `1` of starts and stops. The next two elements of parents (`3, 3`) associate the next two contents (`4.4, 5.5`) with element `3` of starts and stops. The fact that parents lacks `0` and `2` indicate that these are empty lists. Only empty lists at the end of the jagged array are unrepresented unless the total length of the jagged array is also given. Out of order elements can easily be expressed because parents does not need to be an increasing array. Unreachable elements can also be expressed by setting these parents elements to a negative value, such as `-1`. However, repeated elements cannot be expressed, so a parents array cannot represent the result of a gather operation. Likewise, partial overlaps cannot be expressed.
+
+Given a starts array and its corresponding parents, the following invariant holds for all `+0 <= i < len(starts)+`:
+
+[source, python]
+----
+parents[starts[i]] == i
+----
+
+and the following holds for all `+0 <= j < len(content)+` that are at the beginning of a nested list:
+
+[source, python]
+----
+starts[parents[j]] == j
+----
+
+Although parents is a highly expressive inside-out representation, another that is sometimes useful, called *index*, consists of integers that are zero at the start of each nested list and increase by one for each content element. For instance, the above example has the following index:
+
+   * index: `0, 1, 2, 0, 1, 0, 1, 0`
+
+These values are local indexes for elements within the nested lists. For all `+0 <= j < len(content)+`, the following invariant holds:
+
+[source, python]
+----
+starts[parents[j]] + index[j] == j
+----
+
+It is also useful to wrap the index array as a jagged array with the same jagged structure as the original jagged array, because then it can be used in gather operations.
+
+All of the above discussion has focused on jagged arrays and nested jagged arrays without any *regular* array dimensions -- that is, without dimensions whose sizes are known to be constant. Jagged arrays are more general, so a regular array may be emulated by a jagged array with constant counts, but this clearly less efficient than storing the regular dimension sizes only once. Regular dimensions that appear after (or "`inside`") a jagged dimension can be represented by simply including a multidimensional array as content in a jagged array. That is, to get an array of type
+
+[source]
+----
+[0, inf) -> [0, m) -> T
+----
+
+construct a jagged array whose content is an array of type `+[0, m) -> T+`. Regular dimensions that appear before (or "`outside`") a jagged dimension are harder: the starts and stops of the jagged array must both have the shape of these regular dimensions. That is, to get an array of type
+
+[source]
+----
+[0, n) -> [0, inf) -> T
+----
+
+the starts and stops must be arrays of type `+[0, n) -> INDEXTYPE+`. In a counts representation, the counts must be an array of this type. This cannot be expressed in an offsets representation because offsets elements do not have a one-to-one relationship with logical jagged array elements (another argument for starts and stops over offsets).
+
+Some applications of awkward-array may require data that is being filled while it is being accessed. This is possible if whole-array validity constraints on array shapes are not too strict. Assuming that basic arrays can be appended atomically, or at least their lengths can be increased atomically to reveal content filled before increasing their lengths, jagged arrays can atomically grow by
+
+   . appending content first,
+   . then appending stops,
+   . then appending starts.
+
+The length of the content is allowed to be greater than or equal to the maximum stop value, and the length of stops is allowed to be greater than or equal to the length of starts. The logical length of the jagged array is taken to be the length of starts. As described above, starts and stops must have the same shape, but only for dimensions other than the first dimension.
+
+Likewise, the length of the content may be greater than or equal to the length of the parents array. The parents array must have the same shape as the content in all dimensions other than the first.
+
+=== JaggedArray
+
+A `JaggedArray` is defined by three arrays, starts, stops, and content, which are the arguments of its constructor. Below are their single-property validity conditions. They may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `starts`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
+   * `stops`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+
+The whole-array validity conditions are:
+
+   * `starts` must have the same (or shorter) length than `stops`.
+   * `starts` and `stops` must have the same dimensionality (`shape[1:]`).
+   * `stops` must be greater than or equal to `starts`.
+   * The maximum of `starts` for non-empty elements must be less than the length of `content`.
+   * The maximum of `stops` for non-empty elements must be less than or equal to the length of `content`.
+
+The `starts`, `stops`, and `content` properties are read-write; setting them invokes the same single-property validity check as the constructor. In addition, a `JaggedArray` has the following read-write properties:
+
+   * `offsets`: basic array of integer dtype (default is `INDEXTYPE`) with exactly one dimension, at least one element, and all non-negative values. Getting it would raise an error if the `starts` and `stops` are not compatible with a dense sequence of offsets. Setting it overwrites `starts` and `stops`.
+   * `counts`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values. Setting it overwrites `starts` and `stops`.
+   * `parents`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension. Setting it overwrites `starts` and `stops`.
+
+`JaggedArray` has the following read-only properties and methods:
+
+   * `index`: index array with jagged structure.
+   * `regular()`: returns a basic _N_-dimensional array if this jagged array happens to have regular structure; raises an error if not.
+   * `flatten()`: returns the content without nested list boundaries. Equivalent to `content` in a special case: when the jagged structure is describable by an offsets array and `offsets[0] == 0` and `offsets[-1] == len(content)`. Use this method instead of `content` to ensure generality.
+
+==== Get-item behavior
+
+When a jagged array `myarray` is passed a `selection` in square brackets, it obeys the following rules.
+
+If `selection` is an integer, the element at that index is extracted (handling negative indexes, if applicable). If the provided index is beyond the array's range, an error is raised. For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+myarray[0]
+# returns array([1.1, 2.2, 3.3])
+myarray[1]
+# returns array([], dtype=float64)
+myarray[-1]
+# returns array([4.4, 5.5])
+----
+
+If `selection` is a slice, elements selected by the slice are returned as a new jagged array (handling negative indexes, if applicable). For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+myarray[1:]
+# returns <JaggedArray [[] [4.4 5.5]] at 7f02018afc18>
+myarray[100:]
+# returns <JaggedArray [] at 7f020c214438>
+----
+
+If `selection` is a non-jagged list or array of booleans, elements corresponding to `True` values in the mask are returned as a new jagged array. The mask must be 1-dimensional and the mask and jagged array must have the same length, or an error is raised. For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+mask = numpy.array([True, True, False])
+myarray[mask]
+# returns <JaggedArray [[1.1 2.2 3.3] []] at 7f020e8122b0>
+----
+
+If `selection` is a jagged array of booleans, sub-elements corresponding to `True` values in the jagged mask are returned as a new jagged array. If the jagged mask and the jagged array do not have the same jagged structure, an error is raised. For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+mask = awkward.JaggedArray.fromiter([[False, True, True], [], [True, False]])
+myarray[mask]
+# returns <JaggedArray [[2.2 3.3] [] [4.4]] at 7f02018af8d0>
+----
+
+If `selection` is a non-jagged list or array of integers, elements identified by the integer indexes are gathered as a new jagged array (handling negative indexes, if applicable). For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+myarray[[2, 0, 1, -1]]
+# returns <JaggedArray [[4.4 5.5] [1.1 2.2 3.3] [] [4.4 5.5]] at 7f020c214438>
+----
+
+If `selection` is a jagged array of integers, sub-elements identified by the integer local indexes are gathered as a new jagged array (handling negative indexes, if applicable). If the length of the indexes is not equal to the length of the jagged array, an error is raised. For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+indexes = awkward.JaggedArray.fromiter([[2, 2, 0], [], [1]])
+myarray[indexes]
+# returns <JaggedArray [[3.3 3.3 1.1] [] [5.5]] at 7f02018afa58>
+----
+
+If `selection` is a tuple, a multidimensional extract/slice/mask/gather operation (in any combination) is performed. Any errors encountered along the way are raised. For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromcounts([2, 0, 1], awkward.JaggedArray.fromiter(
+              [[1.1, 2.2, 3.3], [], [4.4, 5.5]]))
+myarray
+# returns <JaggedArray [[[1.1 2.2 3.3] []] [] [[4.4 5.5]]] at 7f02018afba8>
+myarray[2, 0, 1]
+# returns 5.5
+myarray[myarray.counts > 0, 0, -2:]
+# returns <JaggedArray [[2.2 3.3] [4.4 5.5]] at 7f020c214438>
+----
+
+If `selection` is a string or a list or array of strings, the jagged column of the nested table or jagged subtable, respectively, for that column or those columns is returned. If there are no `Table` instances nested within `content`, this raises an error. For example,
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromcounts([3, 0, 2], awkward.Table(
+              x=[1, 2, 3, 4, 5],
+              y=[1.1, 2.2, 3.3, 4.4, 5.5],
+              z=[True, False, True, False, False]))
+myarray["x"]
+# returns <JaggedArray [[1 2 3] [] [4 5]] at 7f020e8122b0>
+myarray[["x", "y"]]
+# returns <JaggedArray [[<Row 0> <Row 1> <Row 2>] [] [<Row 3> <Row 4>]] at 7f02018af860>
+myarray[["x", "y"]].columns
+# returns ['x', 'y']
+----
+
+A string or a list or array of strings is also the _only_ acceptable argument to set-item. Columns may be added to a jagged table, provided that the jagged structure of the new columns matches that of the table.
+
+==== Mapped kernel behavior
+
+If jagged arrays are passed into a Numpy ufunc (or equivalent mapped kernel), they are computed elementwise at the deepest level of jaggedness, adjusting for different starts/stops/content representations of the same logical structure, and broadcasting scalars and non-jagged values to the jagged structure. If not all jagged arrays have the same logical jagged structure or non-jagged arrays are not broadcastable to this structure (because they have different lengths), an error is raised.
+
+For example,
+
+[source, python]
+----
+a = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+b = awkward.JaggedArray([0, 3, 4], [3, 3, 6], [10, 20, 30, -9999, 40, 50])
+c = numpy.array([100, 200, 300])
+d = 1000
+----
+
+defines `a` as `[[1.1, 2.2, 3.3], [], [4.4, 5.5]]` and `b` as `[[10, 20, 30], [], [40, 50]]` (`-9999` is unreachable). These have the same logical strucutre, but a different physical structure.
+
+[source, python]
+----
+a.starts, a.stops
+# returns (array([0, 3, 3]), array([3, 3, 5]))
+b.starts, b.stops
+# returns (array([0, 3, 4]), array([3, 3, 6]))
+----
+
+Nevertheless, they can be combined in the same ufunc because they have the same logical structure, matching sub-element to sub-element before computing. Basic array `c` is (conceptually) promoted to a jagged array before operating as an instance of jagged broadcasting, and `d` is promoted as usual for scalar broadcasting.
+
+[source, python]
+----
+numpy.add(a, b)
+# returns <JaggedArray [[11.1 22.2 33.3] [] [44.4 55.5]] at 7f02018afc50>
+numpy.add(a, c)
+# returns <JaggedArray [[101.1 102.2 103.3] [] [304.4 305.5]] at 7f02018afba8>
+numpy.add(a, d)
+# returns <JaggedArray [[1001.1 1002.2 1003.3] [] [1004.4 1005.5]] at 7f02018afd30>
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus, the above could have been `a + b`, `a + c`, and `a + d`.
+
+==== Methods
+
+`JaggedArray` reducers differ from generic reducers in that they only reduce the innermost level of jaggedness: inner nested lists are replaced with scalars, but the total structure is still an array. Hence, a reduced singly-jagged array is a non-jagged array, and a reduced doulby-jagged array is a singly-jagged array. The reduced array has the same length as the unreduced jagged array.
+
+   * `any()`: returns an array of `BOOLTYPE`; each is `True` if the corresponding nested list has any non-masked, non-zero values and `False` if not or if the nested list has no non-masked values at all.
+   * `all()`: returns an array of `BOOLTYPE`; each is `True` if the corresponding nested list's only non-masked values are non-zero, including the case in which the nested list has no non-masked values at all; `False` otherwise.
+   * `count()`: returns an array of `INDEXTYPE`, the number of non-masked values in each nested list.
+   * `count_nonzero()`: returns an array of `INDEXTYPE`, the number of non-masked, non-zero values in each nested list.
+   * `sum()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the sum of non-masked values in each nested list. Lists with no non-masked values yield `0`.
+   * `prod()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the product of non-masked values in each nested list. Lists with no non-masked values yield `1`.
+   * `min()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the minimum of non-masked values in each nested list. Lists with no non-masked values yield `inf` for floating point types and the maximum integer value for integer types.
+   * `max()`: returns an array with the same dtype as the `content` (if `content` has a well-defined `dtype`), the maximum of non-masked values in each nested list. Lists with no non-masked values yield `-inf` for floating point types and the minimum integer value for integer types.
+
+The jagged `argmin()` and `argmax()` methods are not reducers: they return jagged arrays of the local index that minimizes or maximizes the non-masked values in each nested list. If a nested list has no non-masked values, the corresponding nested list in the output is empty. If an output nested list is not empty, it has exactly one value. Data in this form is usable in gather operations.
+
+`JaggedArray` has the following structure manipulation methods:
+
+   * `cross(other)`: creates a jagged table with columns `+"0"+`, `+"1"+`, `+"2"+`, etc. that is the https://en.wikipedia.org/wiki/Join_(SQL)#Cross_join[cross-join] of nested list in `self` and `other`. `self` and `other` must have the same length, and the resulting jagged table has the same length. This meethod can be chained: `a.cross(b).cross(c)`.
+   * `argcross(other)`: like `cross(other)`, except that the values in the table are not elements of `content` but their local indexes, usable in gather operations. Unlike `cross(other)`, chains of `argcross(other)` produce nested tables with only `+"0"+` and `"1"` columns.
+   * `pairs()` and `argpairs()`: like `cross(self)` and `argcross(self)` except that if the pair corresponding to local indexes `i` and `j` are included, the pair corresponding to local indexes `j` and `i` are not.
+   * `distincts()` and `argdistincts()`: like `pairs()` and `argpairs()` except that pairs corresponding to local indexes `i` and `i` are not included.
+   * `JaggedArray.concatenate(arrays)` and `instance.concatenate(arrays)`: concatenates the jagged arrays, including `instance` if called as an instance method. The `arrays` is must be a list of jagged arrays, like `numpy.concatenate`.
+   * `JaggedArray.zip(columns)` and `instance.zip(columns)`: builds a jagged table from a set of `columns` (same constructor specification as the `Table` class, <<Table,defined below>>). Includes `instance` if called as an instance method.
+
+A `JaggedArray` may be created from one of the following alternate constructors.
+
+==== `JaggedArray.fromiter(iterable)`
+
+   * `iterable`: a list of lists of a primitive type, corresponding to a jagged array of some fixed depth: `+[0, n) -> [0, inf) -> T+`, `+[0, n) -> [0, inf) -> [0, inf) -> T+`, etc.
+
+==== `JaggedArray.fromoffsets(offsets, content)`
+
+   * `offsets`: basic array of integer dtype (default is `INDEXTYPE`) with exactly one dimension, at least one element, and all non-negative values.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+
+==== `JaggedArray.fromcounts(counts, content)`
+
+   * `offsets`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+
+==== `JaggedArray.fromuniques(uniques, content)`
+
+   * `uniques`: basic array of integer dtype (default is `INDEXTYPE`) with exactly one dimension and the same length as `content`.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+
+==== `JaggedArray.fromparents(parents, content, length=None)`
+
+   * `parents`: basic array of integer dtype (default is `INDEXTYPE`) with exactly one dimension and the same length as `content`.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `length`: if not `None`, a non-negative integer setting the length of the resulting jagged array; useful for adding empty lists at the end or truncating.
+
+==== `JaggedArray.fromindex(index, content, validate=True)`
+
+   * `index`: basic array or jagged array of integer dtype (default is `INDEXTYPE`). If a jagged array, only a flattened version of the jagged array is considered. The basic or flattened `index` must have exactly one dimension and the same length as `content`.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `validate`: if `True`, raise an error if non-zero values are not exactly one greater than the previous and raise an error if `index` is jagged and the jagged structure of `index` differs from the jagged structure derived from its values.
+
+==== `JaggedArray.fromjagged(jagged)`
+
+   * `jagged`: jagged array to convert to the given class (without copying data, if possible).
+
+==== `JaggedArray.fromregular(regular)`
+
+   * `regular`: basic array (default has `DEFAULTTYPE`) with more than one dimension. The array's regular shape is replaced with the corresponding jagged structure.
+
+==== `JaggedArray.fromfolding(content, size)`
+
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `size`: number of elements to fold into each nested list of the resulting jagged array, and the maximum number of elements for the last nested list if `len(content) % size != 0`.
+
+=== Helper functions
+
+The `awkward.array.jagged` submodule may define helper functions, such as the following.
+
+   * `offsetsaliased(starts, stops)`: returns `True` if the starts and stops arrays overlap in memory and are consistent with a single offsets array at `starts.base` (or equivalently, `stops.base`); `False` otherwise.
+   * `counts2offsets(counts)`: convert a counts array to an offsets array.
+   * `offsets2parents(offsets)`: convert an offsets array to a parents array.
+   * `startsstops2parents(starts, stops)`: convert a general starts/stops pair to a parents array.
+   * `parents2startsstops(parents, length=None)`: convert a parents array to a starts/stops pair, optionally with a given `length`. This `length` may cause empty nested lists to be added at the end of the `starts` and `stops` representing a jagged structure or it may truncate the jagged structure, depending on whether it is greater or less than `parents.max()`.
+   * `uniques2offsetsparents(uniques)`: convert a uniques array to a 2-tuple of offsets and parents.
+   * `aligned(*jaggedarrays)`: return `True` if all `jaggedarrays` have the same jagged structure; `False` otherwise.
+
+== Product types
+
+Product types, or arrays of records with a fixed set of named, typed fields can be conceptually represented as tables. The "`row-wise`" vs. https://en.wikipedia.org/wiki/Column-oriented_DBMS[columnar] representations discussed in the <<Jaggedness>> section were first developed in the context of tables. The "`row`" and "`table`" terminology came from a discussion of tables: named, typed attributes are conventionally associated with columns of a data table, while anonymous data points fill the rows. A row-wise data representation can be replaced with a columnar representation by simply transposing it in memory, or at least writing each column of data to a separate, equal-length array. Columnar layouts have been used in tabular databases since TAXIR in 1969.
+
+Numpy has a product type called a https://docs.scipy.org/doc/numpy/user/basics.rec.html[structured array] or record array. This is a row-wise data representation, which would be hard to mix with columnar jagged arrays. Instead of using structured arrays from the base library directly, awkward-array defines a `Table` type with the same syntax.
+
+Like Numpy's structured arrays, `Table` columns are selected by strings in a get-item, these string get-items commute with extract/slice/mask/gather get-items, and they can't be used in the same multidimensional tuple with extract/slice/mask/gather get-items. (Despite the tabular metaphors, columns are not a dimension in the sense of _N_-dimensional arrays; they're a qualitatively different kind of accessor.) Unlike Numpy's structured arrays, `Table` columns have no constraints on where they reside in memory: they may be strides across a Numpy structured array, they may be fully columnar arrays in an https://arrow.apache.org[Arrow] buffer, or they may be Numpy arrays, scattered in memory.
+
+The `Table` interface hides the distinction between https://en.wikipedia.org/wiki/AOS_and_SOA[an array of structs and a struct of arrays], an important transformation for preparing data for vectorization. It is used to create objects whose attributes may be widely dispersed in memory, or (through a `VirtualArray`) not all loaded into memory. (To avoid materializing a `VirtualArray`, the string representation of `Table.Row` does not show internal data.)
+
+Regularly divided tables, such as
+
+[source]
+----
+[0, n) -> [0, m) -> "one"   -> bool
+                    "two"   -> int64
+                    "three" -> float64
+----
+
+can be expressed by giving all columns the same dimensionality (`shape[1:]`). This is because the above is equivalent to
+
+[source]
+----
+[0, n) -> "one"   -> [0, m) -> bool
+          "two"   -> [0, m) -> int64
+          "three" -> [0, m) -> float64
+----
+
+which is a `Table` whose column arrays all have shape `(n, m)`.
+
+=== Table
+
+A `Table` is defined by an arbitrary number of named arrays, which are columns of the table. A `Table` need not represent purely tabular data; if it is nested within a `JaggedArray`, it is a jagged table, and if it contains any `JaggedArray`, it is a stringy table. Columns may be generated from any basic array, awkward-array, or Python iterable, with `DEFAULTTYPE` as the default type of empty iterables.
+
+The `Table` constructor permits the following argument patterns:
+
+   . `+Table(column1, column2, ...)+`: initialize with unnamed column arrays. Column names are strings of integers starting with zero (`"0"`, `"1"`, `"2"`, etc.).
+   . `+Table({"column1": column1, "column2": column2, ...})+`: initialize with a single dict (may be an ordered dict). Column names are keys of the dict.
+   . `+Table(column1=column1, column2=column2)+`: initialize with keywords. Column names are the keywords.
+
+Pattern 1 and pattern 2 are incompatible; the first argument is either a subclass of dict or not. More than one positional argument in pattern 2 is not allowed. Both of the first two patterns are compatible with pattern 3: they may be freely mixed, as long as column names are never repeated (impossible with pattern 1).
+
+After construction, columns can be added, overwritten, and removed using `Table's` set-item and del-item methods. The fact that `Tables` may be nested is the only reason awkward-arrays have set-item and del-item methods: to pass a new column to a nested `Table` or request that one of its columns be deleted. Columns maintain their order (following Python's ordered dict semantics).
+
+`Table` has no whole-array validity conditions. The columns might have different lengths, but the total length of the `Table` is given by the minimum length of all contained columns (zero if there are no columns).
+
+A `Table` applies slices, masks, and gather indexes lazily: rather than immediately applying these selections, they are stored as an internal view and applied when a single column is selected. Thus, if any columns are `VirtualArrays`, they won't be materialized unless that particular column is requested. Internal views must therefore be composed.
+
+`Table` has the following read-write properties:
+
+   * `rowname`: defaults to `"Row"`, but may be any string. Can also be set by the `Table.named` alternate constructor. <<`+Table.named(rowname, ...)+`,See below>> for an explanation.
+   * `contents`: the columns as an ordered dict. (This is an assignable view, not a copy.)
+
+`Table` has the following read-only properties and methods:
+
+   * `base`: if this `Table` is a view, `base` is the original table. If not, `base` is `None`.
+
+==== Get-item behavior
+
+When a table `myarray` is passed a `selection` in square brackets, it obeys the following rules.
+
+If `selection` is a string, one column is pulled from the table. If the column lengths do not match, its length is truncated to the table length -- the minimum of all column lengths. For example,
+
+[source, python]
+----
+myarray = awkward.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8],
+                        y=[100, 101, 102, 103, 104, 105, 106],
+                        n=[0, 1, 2, 3, 4])
+myarray
+# returns <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 72afb63cba90>
+myarray["x"]
+# returns array([0. , 1.1, 2.2, 3.3, 4.4])
+myarray["y"]
+# returns array([100, 101, 102, 103, 104])
+myarray["n"]
+# returns array([0, 1, 2, 3, 4])
+myarray[["x", "y"]]
+# returns <Table [<Row 0> <Row 1> <Row 2> ... <Row 4> <Row 5> <Row 6>] at 7005965b6400>
+myarray[["x", "y"]].columns
+# returns ['x', 'y']
+myarray[["x", "y"]].tolist()
+# returns [{'x': 0.0, 'y': 100}, {'x': 1.1, 'y': 101}, {'x': 2.2, 'y': 102},
+           {'x': 3.3, 'y': 103}, {'x': 4.4, 'y': 104}, {'x': 5.5, 'y': 105},
+           {'x': 6.6, 'y': 106}]
+----
+
+If `selection` is any integer, slice, list or array of booleans, or list or array of integers, the extraction/slicing/masking/gathering operation is applied to the rows, as though it were any other array. For example,
+
+[source, python]
+----
+myarray = awkward.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8],
+                        n=[0, 1, 2, 3, 4])
+myarray
+# returns <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 70e1687f9a58>
+myarray[3]
+# returns <Row 3>
+>>> myarray[3:]
+# returns <Table [<Row 3> <Row 4>] at 7e55fe51a278>
+----
+
+The subset of rows have persistent numbers (e.g. "`Row 3`" in the sliced output is the same object as "`Row 3`" in the base) because `Table` views remember their internal viewing state.
+
+Column-projection and extraction/slicing/masking/gathering is order-independent: get-item operations applied in either order return the same output (they commute). For example,
+
+[source, python]
+----
+myarray["x"][-3:]
+# returns array([2.2, 3.3, 4.4])
+myarray[-3:]["x"]
+# returns array([2.2, 3.3, 4.4])
+----
+
+This is because a single row of a table is represented by a `Table.Row`, which has a get-item method for its place in a `Table`. If a `Table.Row` is iterated over, its length and iteration correspond to the fields named as consecutive integer strings, starting from zero: `"0"`, `"1"`, `"2"`, etc.
+
+Column-projection and extraction/slicing/masking/gathering cannot be performed in the same tuple, and column-projection of nested tables cannot be performed in the same tuple. Nor do column-projections of nested tables commute. Attempting to do so would raise an erorr. For example,
+
+[source, python]
+----
+points = awkward.Table(x=[0.0, 1.1, 2.2, 3.3], y=[0, 100, 101, 102, 103])
+myarray = awkward.Table(points=points, n=[0, 1, 2, 3])'
+myarray["points"]["x"]
+# returns array([0. , 1.1, 2.2, 3.3])
+myarray["points"]["y"]
+# returns array([  0, 100, 101, 102])
+myarray["n"]
+# returnsarray([0, 1, 2, 3])
+----
+
+Tables inside of other awkward-array components may not be strictly rectangular. For example, a `JaggedArray` of `Table` is a jagged table:
+
+[source, python]
+----
+myarray = awkward.JaggedArray.fromcounts([3, 0, 2], awkward.Table(
+              x=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8],
+              n=[0, 1, 2, 3, 4]))
+myarray
+# returns <JaggedArray [[<Row 0> <Row 1> <Row 2>] [] [<Row 3> <Row 4>]] at 7e33f10569e8>
+myarray["x"]
+# returns <JaggedArray [[0.  1.1 2.2] [] [3.3 4.4]] at 7e33e188c438>
+myarray["n"]
+# returns <JaggedArray [[0 1 2] [] [3 4]] at 7e33e188c470>
+----
+
+Other awkward-array components inside of tables may not be strictly rectangular. For example, a `Table` containing a `JaggedArray` is a stringy table:
+
+[source, python]
+----
+myarray = awkward.Table(
+              x=awkward.JaggedArray.fromcounts(
+                  [4, 0, 2, 2, 1],
+                  [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8]),
+              n=[0, 1, 2, 3, 4])
+myarray
+# returns <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 73ab6e406a20>
+myarray["x"]
+# returns <JaggedArray [[0.  1.1 2.2 3.3] [] [4.4 5.5] [6.6 7.7] [8.8]] at 73ab6a1a3e48>
+myarray["n"]
+# returns array([0, 1, 2, 3, 4])
+----
+
+TODO: multidimensional indexes through a `Table`.
+
+==== Mapped kernel behavior
+
+If tables are passed into a Numpy ufunc (or equivalent mapped kernel), the ufunc is applied separately to each column. If multiple tables are passed into the same ufunc with different sets of columns, an error is raised, and if they have different lengths, an error is raised. For example,
+
+[source, python]
+----
+a = awkward.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4], n=[0, 1, 2, 3, 4])
+b = awkward.Table(x=[0, 100, 200, 300, 400], n=[0, 100, 200, 300, 400])'
+numpy.add(a, b)
+# returns <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 74ce37c32320>
+numpy.add(a, b).tolist()
+# returns [{'x': 0.0, 'n': 0}, {'x': 101.1, 'n': 101}, {'x': 202.2, 'n': 202},
+           {'x': 303.3, 'n': 303}, {'x': 404.4, 'n': 404}]
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus, the above could have been `a + b`.
+
+==== Methods
+
+A `Table` may be created from one of the following alternate constructors.
+
+==== `+Table.named(rowname, ...)+`
+
+   * `rowname`: a string to label `Table.Row` objects.
+
+The row name is used for display purposes (so that "`rows`" have a more meaningful name in a science domain) and may be used by methods to distinguish types that are structurally identical. For instance, "`positions`" and "`directions`" in a 3-dimensional space may both contain columns named `"x"`, `"y"`, and `"z"`, but they should be transformed differently when a coordinate system is rotated.
+
+The existence of a label allows what would usually be a https://en.wikipedia.org/wiki/Structural_type_system[structural type system] (tables are identified by the fields they contain) to be treated as a https://en.wikipedia.org/wiki/Nominal_type_system[nominative type system] (tables are identified by their type name).
+
+==== `Table.fromrec(recarray)`
+
+   * `recarray`: Numpy recarray
+
+==== `Table.frompairs(pairs)`
+
+   * `pairs`: list of 2-tuples of name (string) and array
+
+==== `Table.fromview(view, base)`
+
+   * `view`: `None` or 3-tuple of `start`, `step`, `length` (integers) or base array of gather indexes
+   * `base`: another `Table`
+
+Constructs a view into an existing `Table`, using a representation of views. `None` means no view (the new `Table` is identical to the `base`). The 3-tuple represents a slice in a basis that is independent of table length and is easier to compose: `start` is the starting element, same as a slice but strictly non-negative, `step` is a step size, same as a slice (cannot be zero), and `length` is the number of steps to take, rather than truncating by a `stop`. Gather indexes are the same as indexes that would be passed to get-item. A boolean mask can be converted into gather indexes with `numpy.nonzero`.
+
+== Sum types
+
+Sum types, or tagged unions, allow us to build heterogeneous arrays. As a data type, tagged unions are needed to express a collection that mixes data of incompatible types, but our use of tagged unions is broader: we may want to mix data that reside in different columnar arrays, regardless of whether they're different types. This allows us to express the result of a blend (in the SIMD sense) without copying data. For example, `SparseArray` needs to blend data from a sparse lookup table with zeros from a different source when it is sliced; it uses a `UnionArray` to represent that result.
+
+The general structure of a `UnionArray` is a collection of arrays with a *tags* array to specify which is active in each element. If `tags[i]` is `3`, then the array value at `i` is drawn from array `3`. In https://github.com/apache/arrow/blob/master/format/Layout.md[Arrow terminology], the tags array is the "`types buffer.`"
+
+If we always draw element `i` from the array at `tags[i]`, then all other arrays would have to be padded with unreachable elements at `i`, what Arrow calls a "`sparse union.`" Instead, we add another array, an *index* to identify the elements to draw from the selected arrays; we use what Arrow calls a "`dense union.`" (Arrow calls this index the "`offsets,`" but it is more similar to the index of our `IndexedArray` than the offsets of our `JaggedArray`.)
+
+Given a set of arrays `contents`, a tags array `tags`, and an index array `index`, the element at `i` is:
+
+[source]
+----
+contents[tags[i]][index[i]]
+----
+
+It is possible to emulate an Arrow sparse union by setting the index to a simple numeric range (`numpy.arange(len(tags))`). It is possible to generate an index for a union whose contents are in order and have no padding:
+
+[source, python]
+----
+index = numpy.full(tags.shape, -1)
+for tag, content in enumerate(contents):
+    mask = (tags == tag)
+    index[mask] = numpy.arange(numpy.count_nonzero(mask))
+----
+
+In circumstances where the index can be derived, it does not need to be stored.
+
+Regularly divided unions, such as
+
+[source]
+----
+[0, n) -> [0, m) -> (int64 |
+                     complex128)
+----
+
+can be expressed by giving the tags and index arrays a multidimensional shape. The length of the tags must be less than or equal to the length of the index, but all dimension sizes after the first must be identical.
+
+=== UnionArray
+
+A `UnionArray` is defined by two arrays and an ordered sequence of arrays. Below are their single-property validity conditions. Arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `tags`: basic array of integer dtype (default is `TAGTYPE`) with at least one dimension and all non-negative values.
+   * `index`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension and all non-negative values.
+   * `contents` (note plural): non-empty Python iterable of any arrays (default are basic arrays of `DEFAULTTYPE`).
+
+The whole-array validity conditions are:
+
+   * `tags` length must be less than or equal to `index` length.
+   * `tags` and `index` must have the same dimensionality (`shape[1:]`).
+   * The maximum of `tags` must be less than the number of arrays in `contents`.
+   * The maximum of `index` must be less than the minimum length of `contents` arrays.
+
+The `tags`, `index` and `contents` properties are read-write; setting them invokes the same single-property validity check as the constructor. In addition, a `UnionArray` has the following read-only properties:
+
+   * `issequential`: is `True` if all `contents` are in order with no padding; in which case, the `index` is redundant and could be generated by `UnionArray.fromtags`.
+
+==== Get-item behavior
+
+When a union array `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an integer performs extraction, a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
+
+For example,
+
+[source, python]
+----
+myarray = awkward.UnionArray.fromtags([0, 1, 1, 0, 0, 1], [
+              numpy.array([1.1, 2.2, 3.3]),
+              awkward.JaggedArray.fromiter([[100, 200, 300], [], [400, 500]])])
+myarray
+# returns <UnionArray [1.1 [100 200 300] [] 2.2 3.3 [400 500]] at 7f5e1aceb7b8>
+myarray[1:5]
+# returns <UnionArray [[100 200 300] [] 2.2 3.3] at 7f5e1acf0f98>
+myarray[1, 2]
+# returns 300
+----
+
+Some of these `selections` may not be valid for all `contents`. Whether their application raises an error depends on which `contents` are touched by the `selection`. That is, a user can avoid an indexing error by applying an appropriate mask to avoid selecting rows or columns from nested content where those rows or columns do not exist. For example,
+
+[source, python]
+----
+myarray = awkward.UnionArray.fromtags([0, 1, 0, 0, 1], [
+              numpy.array([1.1, 2.2, 3.3]),
+              awkward.JaggedArray.fromiter([[100, 200, 300], [400, 500]])])
+myarray
+# returns <UnionArray [1.1 [100 200 300] 2.2 3.3 [400 500]] at 7f5e1aceb630>
+myarray[myarray.tags == 1, :2]
+# returns <JaggedArray [[100 200] [400 500]] at 7f5e1aceb7b8>
+----
+
+A second dimensional index would be wrong for `contents[0]`, a basic 1-dimensional array of floating point numbers. By masking with `myarray.tags == 1`, we ensure that this index is not applied where it shouldn't be.
+
+==== Mapped kernel behavior
+
+If union arrays are passed into a Numpy ufunc (or equivalent mapped kernel), they are computed separately for each of the `contents` (if possible) and those results are combined into a new union array as output. They do not need to have the same set of tags, but they need to have the same lengths.
+
+For example,
+
+[source, python]
+----
+a = awkward.UnionArray.fromtags([0, 1, 1, 0, 0, 1], [
+        numpy.array([1.1, 2.2, 3.3]),
+        awkward.JaggedArray.fromiter([[100, 200, 300], [], [400, 500]])])
+a
+# returns <UnionArray [1.1 [100 200 300] [] 2.2 3.3 [400 500]] at 7f5e1aceb710>
+numpy.add(a, 10)
+# returns <UnionArray [11.1 [110 210 310] [] 12.2 13.3 [410 510]] at 7f5e1aceb6d8>
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus, the above could have been `a + 10`.
+
+==== Methods
+
+A `UnionArray` may be created from one of the following alternate constructors.
+
+==== `UnionArray.fromtags(tags, contents)`
+
+   * `tags`: same as primary constructor.
+   * `contents`: same as primary constructor.
+
+This methods generates an `index` assuming that all `contents` are in order with no padding. Union arrays generated this way would always have `issequential == True`.
+
+== Option types
+
+In type theory, option types may be considered a special case of sum types: `?T` is the sum of `T` with a unit type; a unit type has only one possible value, null. As described above, we do not wish to introduce an array type whose only information content is the shape of the array.
+
+Additionally, we implement option types in a different way from unions: as boolean masks. With the exception of `IndexedMaskedArray`, Each missing value in a masked array has only one bit of information, the fact that it is missing. A single boolean mask array suffices. An awkward-array library has three masked array types:
+
+   * `MaskedArray` (superclass): the mask array has one boolean per byte.
+   * `BitMaskedArray`: the mask array has one boolean per bit, with padding to fill a whole number of bytes.
+   * `IndexedMaskedArray`: the mask array functions both as a mask, with a negative value like `-1` indicating that an element is missing, and as an index, so that the content does not need to have unreachable elements. This can be important if content values are large, such as a wide `Table`.
+
+Numpy has a `numpy.ma.MaskedArray` type that uses one boolean per byte to indicate missing values. Arrow defines all types as potentially masked with one boolean per bit to indicate missing values. Neither have an equivalent for `IndexedMaskedArray`.
+
+With `MaskedArray` and `BitMaskedArray`, there is a two-fold ambiguity: should `True` mean that a value is missing or that a value is present? Both classes have a `maskedwhen` argument indicating which boolean value is a masked value (default is `True`, values of `True` in the mask array mean data are missing). Numpy's `numpy.ma.MaskedArray` has `maskedwhen = True`, and Arrow's bitmasks have `maskedwhen = False`.
+
+With `BitMaskedArray`, there is another two-fold ambiguity: should bits read from most significant to least significant or least significant to most significant in each byte? This is a bit-level equivalent of the endianness ambiguity, but it is not decided by hardware because most CPU instruction sets don't operate on individual bits. `BitMaskedArray` has an `lsborder` that is `True` for https://en.wikipedia.org/wiki/Bit_numbering#Least_significant_bit[Least Significant Bit] (LSB) ordering and `False` for https://en.wikipedia.org/wiki/Bit_numbering#Most_significant_bit[Most Significant Bit] (MSB) ordering. Arrow's bitmasks have `lsborder = True`.
+
+`IndexedMaskedArray` has an integer-typed mask array, so it has no `maskedwhen`. Any negative value corresponds to being masked.
+
+Regularly divided optional types, such as
+
+[source]
+----
+[0, n) -> [0, m) -> ?T
+----
+
+can be expressed by giving the mask arrays a multidimensional shape. This is not possible for `BitMaskedArray`, since bits cannot be shaped, nor can an exact length be prescribed, since bits must pack into bytes and therefore pad up to seven values. Therefore, `BitMaskedArray` additionally has a `maskshape` to define the sizes of all dimensions, including the first (length).
+
+The value returned for missing data is `MaskedArray.mask`, which is by default `None`. `BitMaskedArray` and `IndexedMaskedArray` inherit from `MaskedArray`, so setting `MaskedArray.mask` changes the return value for missing data globally.
+
+=== MaskedArray
+
+A `MaskedArray` is defined by two arrays and a boolean `maskedwhen`. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `mask`: basic array of boolean dtype (default is `MASKTYPE`) with at least one dimension.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `maskedwhen`: boolean; element `i` is considered missing if `mask[i] == maskedwhen` (default is `True`).
+
+The whole-array validity conditions are:
+
+   * flattened `mask` length must be less than or equal to the `content` length.
+
+The length of the `MaskedArray` is determined by the length of the `mask` array.
+
+Masked arrays (all types) have the following read-only properties:
+
+   * `masked`: boolean per byte array with the length of the array; `True` where values are masked, `False` where they are not (independent of `maskedwhen`).
+   * `unmasked`: negation of `masked`.
+
+==== Get-item behavior
+
+When a masked array (any type) `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an integer performs extraction, a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
+
+For example,
+
+[content, python]
+----
+myarray = awkward.MaskedArray([False, True, True, False],
+              awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [999], [4.4, 5.5]]))
+myarray
+# returns <MaskedArray [[1.1 2.2 3.3] None None [4.4 5.5]] at 7f5e1aceb7b8>
+myarray[0]
+# returns array([1.1, 2.2, 3.3])
+myarray[1]
+# returns None
+myarray[myarray.isunmasked, 1:]
+# returns <MaskedArray [[2.2 3.3] [5.5]] at 7f5e1acf0f60>
+----
+
+==== Mapped kernel behavior
+
+If masked arrays (any type) are passed into a Numpy ufunc (or equivalent mapped kernel), values that are not masked in all inputs (including any non-masked arrays) are converted into `IndexedMaskedArrays` without padding before applying the ufunc. Unnecessary values do not enter the calculation.
+
+For example,
+
+[source, python]
+----
+a = awkward.MaskedArray([False, False, True, False, True], [1.1, 2.2, 3.3, 4.4, 5.5])
+b = awkward.MaskedArray([False, True, True, False, False], [100, 200, 300, 400, 500])
+a
+# returns <MaskedArray [1.1 2.2 None 4.4 None] at 7f5e1aceb6d8>
+b
+# returns <MaskedArray [100 None None 400 500] at 7f5e1aceb710>
+numpy.add(a, b)
+# returns <IndexedMaskedArray [101.1 None None 404.4 None] at 7f5e1acf0f98>
+numpy.add(a, b).content
+# returns array([101.1, 404.4])
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus, the above could have been `a + b`.
+
+==== Methods
+
+`MaskedArray` and its subclasses (`BitMaskedArray` and `IndexedMaskedArray`) have the following methods:
+
+   * `boolmask(maskedwhen=None)`: return the `mask` as boolean bytes. If `maskedwhen` is `None`, use the instance's `maskedwhen`. Otherwise, override it. (`IndexedMaskedArray.boolmask` has a default `maskedwhen` of `True`.)
+   * `indexed()`: convert to an `IndexedMaskedArray`.
+
+=== BitMaskedArray
+
+A `BitMaskedArray` is defined by two arrays, a boolean `maskedwhen`, a boolean `lsborder`, and a shape parameter `maskshape`. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `mask`: basic array with exactly one dimension; will be viewed as `BITMASKTYPE`.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `maskedwhen`: boolean; same meaning as in `MaskedArray`.
+   * `lsborder`: boolean; if `True`, bits in `mask` are interpreted in LSB (least significant bit) order; if `False`, bits in `mask` are interpreted in MSB (most significant bit) order.
+   * `maskshape`: `None`, a non-negative integer, or a tuple of positive integers (first may be zero); the sizes of the logical mask dimensions. If an integer, `maskshape` will be converted to `(maskshape,)`. If `None` (the default), the `maskshape` will be assumed to be `(len(content),)`. A value of `None` is persistent, so an unspecified `maskshape` scales with changes in `content`.
+
+The whole-array validity conditions are:
+
+   * The length of the `BitMaskedArray` must be less than or equal to the `content` length.
+   * The length of the `mask` must be greater than or equal to `8` times the length of the `BitMaskArray`.
+
+The length of the `BitMaskedArray` depends on `maskshape`: if `None`, the length is the `content` length. Otherwise, the length is `maskshape[0]`.
+
+==== Methods
+
+In addition to methods defined in `MaskedArray`, a `BitMaskedArray` has the following static methods:
+
+   * `BitMaskedArray.bit2bool(bitmask, lsborder=False)`: converts one boolean per bit into one boolean per byte with a specified `lsborder`.
+   * `BitMaskedArray.bool2bit(boolmask, lsborder=False)`: converts one boolean per byte into one boolean per bit with a specified `lsborder`.
+
+A `BitMaskedArray` may be created from one of the following alternate constructors.
+
+==== `BitMaskedArray.fromboolmask(mask, content, maskedwhen=True, lsborder=True, maskshape=None)`
+
+   * `mask`: one boolean per byte array; converted to one boolean per bit with `BitMaskedArray.bool2bit(mask, lsborder=lsborder)`.
+   * `content`: same as primary constructor.
+   * `maskedwhen`: same as primary constructor.
+   * `lsborder`: same as primary constructor.
+   * `maskshape`: same as primary constructor.
+
+=== IndexedMaskedArray
+
+An `IndexedMaskedArray` is defined by two arrays. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `mask`: a basic array of integer dtype (default is `INDEXTYPE`) with at least one dimension.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+
+The whole-array validity conditions are:
+
+   * maximum of `mask` (if non-negative) must be less than the `content` length.
+
+The length of the `IndexedMaskedArray` is the length of the `mask`.
+
+== Indirection
+
+Most programming environments have a concept of a "`pointer`" or "`reference`" that allows one object to be logically nested within another without being nested in the memory layout. The referenced object may be anywhere in memory and might not conform to the structure required of its type (depending on how strictly the language maintains type-safety). Completely general pointers cannot be emulated with arrays unless the entirety of a program's memory were put into a single array. However, a limited form of indirection can be implemented through arrays of indexes.
+
+As described in the <<Cross-references and cyclic references,types section>>, awkward-array allows the same data to appear in multiple parts of the data structure or even to contain themselves. In Python, awkward-arrays are Python instances whose members can be reassigned after construction, so nothing prevents an array from appearing in multiple parts of a structure or from containing itself.
+
+To facilitate this kind of indirection, the `IndexedArray` class represents a delayed gather operation: it contains an array of indexes and a content array: extraction, slicing, masking, and gathering are filtered through the indexes before selecting contents. Its content could be itself, allowing the creation of graphs, though a `JaggedArray` or `UnionArray` in between would be needed to keep the graph finite.
+
+`IndexedArray` acts as a bound for bounded pointers: part of a data structure with `IndexedArray` type can point to any element of the `IndexedArray's` content. To bind pointers to more than one pool, combine them with `UnionArray`.
+
+In a sense, a `SparseArray` is the opposite of an `IndexedArray`. A `SparseArray` contains logical indexes where the contents are not zero (or some other default) and content for each of those indexes, known as https://en.wikipedia.org/wiki/Sparse_matrix#Coordinate_list_(COO)[coordinate format] (COO). Whereas logical element `i` of an `IndexedArray` is at content index `index[i]`, content element `j` of a `SparseArray` is at logical index `index[j]`. An `IndexedArray` _applies_ its index array as a function to obtain elements, a `SparseArray` _inverts_ its index array as a function to obtain elements.
+
+Since `SparseArray` must invert its index with every extraction, the index should be monatonically increasing (sorted). If a set of (index, content) pairs are known, they could be loaded into a `SparseArray` like this:
+
+[source, python]
+----
+index, content     # coordinates as two equal-length arrays
+order = numpy.argsort(index)
+awkward.SparseArray(length, index[order], content[order])
+----
+
+`IndexedArray` and `SparseArray` both have the data type of their content -- they are invisible at the type level, providing low-level features.
+
+=== IndexedArray
+
+An `IndexedArray` is defined by two arrays. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `index`: basic array of integer dtype (default is `INDEXTYPE`) with at least one dimensions and all non-negative values.
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `dictencoding`: boolean (default is `False`). If `True`, equality tests (`==` and `!=` or `numpy.equal` and `numpy.not_equal`) do not propagate through to the content, but apply at the `IndexedArray` level and check for equality of the indexes. This makes `IndexedArray` usable as a dictionary encoding for categorical data.
+
+The whole-array validity conditions are:
+
+   * The maximum of `index` must be less than the length of `content`.
+
+The length of an `IndexedArray` is the length of the `index` array.
+
+==== Get-item behavior
+
+When an indexed array `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an integer performs extraction, a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
+
+For example,
+
+[source, python]
+----
+myarray = awkward.IndexedArray([2, 2, 1, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5])
+myarray
+# returns <IndexedArray [2.2 2.2 1.1 4.4] at 772e306077f0>
+myarray[2]
+# returns 1.1
+myarray[2:]
+# returns array([1.1, 4.4])
+----
+
+Here is another example, this one using a cyclic reference to build arbitrary depth trees.
+
+[source, python]
+----
+myarray = awkward.IndexedArray([0],
+              awkward.UnionArray.fromtags([1, 0, 1, 0, 1, 0, 0, 1], [
+                  numpy.array([1.1, 2.2, 3.3, 4.4]),
+                  awkward.JaggedArray([1, 3, 5, 8], [3, 5, 8, 8], [])]))   # the [] will be replaced
+myarray.content.contents[1].content = myarray.content
+myarray
+# returns <IndexedArray [[1.1 [2.2 [3.3 4.4 []]]]] at 746bf6c422b0>
+myarray[0, 1]
+# returns <UnionArray [2.2 [3.3 4.4 []]] at 746bf6c422e8>
+myarray[0, 1, 1]
+# returns <UnionArray [3.3 4.4 []] at 746bf6c42390>
+myarray[0, 1, 1, 2]
+# returns array([], dtype=float64)
+----
+
+The depth of this tree is not a function of the depth of the `IndexedArray` of `UnionArray` of basic and `JaggedArray` that built it. The depth of this tree is a function of the _values_ of the `index` array, the `tags` array, and the `starts`/`stops` arrays. This construction is a purely columnar tree of numbers and sub-trees.
+
+If `dictencoding` is `True`, the equality tests (`==` and `!=` or `numpy.equal` and `numpy.not_equal`) do not propagate through to the content, but apply at the `IndexedArray` level and check for equality of the indexes.
+
+==== Mapped kernel behavior
+
+If indexed arrays are passed into a Numpy ufunc (or equivalent mapped kernel), the delayed gather is applied before computing the result. This even works in arbitrarily nested cases, like the last examples in the previous section.
+
+[source, python]
+----
+numpy.sum(myarray, 10)
+# returns <JaggedArray [[11.1 [12.2 [13.3 14.4 []]]]] at 746bf6c42400>
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus the above could have been `myarray + 10`.
+
+=== SparseArray
+
+A `SparseArray` is defined by a shape, two arrays, and a default element. Below are their single-property validity conditions. The arrays may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `indexshape`: non-negative integer or a tuple of positive integers (first may be zero); the sizes of the logical dimensions. If an integer, `indexshape` will be converted to `(indexshape,)`.
+   * `index`: basic array of integer dtype (default is `INDEXTYPE`) with exactly one dimension and all non-negative values. This array must be monatonically increasing (sorted).
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `default`: `None` or any value. If `None`, an appropriate zero will be generated:
+   ** `content.dtype.type(0)` if `content` is a 1-dimensional basic array;
+   ** `numpy.zeros(content.shape[1:], content.dtype)` if `content` is a multidimensional basic array;
+   ** empty jagged array if `content` is a jagged array;
+   ** the masked value if `content` is a masked array;
+   ** `None` if `content` is an object array;
+   ** an empty string if `content` is a string array;
+   ** the first basic array zero if `content` is a union array; the first other type if the union has no basic arrays;
+   ** a `Table.Row` of defaults if `content` is a table;
+   ** a decision based on the content of any other type.
+
+The whole-array validity conditions are:
+
+   * flattened `index` length must be less than or equal to the `content` length.
+
+The length of the `SparseArray` is determined purely by the `indexshape`.
+
+==== Get-item behavior
+
+When a sparse array `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an integer performs extraction, a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
+
+For example,
+
+[source, python]
+----
+myarray = awkward.SparseArray(1000, [101, 102, 105, 800], [1.1, 2.2, 3.3, 4.4])
+myarray
+# returns <SparseArray [0.0 0.0 0.0 ... 0.0 0.0 0.0] at 7131e4b9a438>
+myarray[100:106]
+# returns <SparseArray [0.0 1.1 2.2 0.0 0.0 3.3] at 7131e4b9a518>
+myarray[798:803]
+# returns <SparseArray [0.0 0.0 4.4 0.0 0.0] at 7131e4b9a550>
+----
+
+==== Mapped kernel behavior
+
+If sparse arrays are passed into a Numpy ufunc (or equivalent mapped kernel), the ufunc is computed for all non-default values and separately for the default value, blending the results as a `UnionArray`.
+
+For example (reusing `myarray` from the previous section),
+
+[source, python]
+----
+numpy.add(myarray, 10)[100:106]
+# returns <UnionArray [10.0 11.1 12.2, 10.0 10.0 13.3] at 746bf6c41800>
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus the above could have been `(myarray + 10)[100:106]`.
+
+=== Helper functions
+
+The `awkward.array.indexed` submodule may define helper functions, such as the following.
+
+   * `invert(permutation)`: returns `inverse` such that `inverse[permutation] == numpy.arange(len(permutation))` is the identity. (If `permutation` contains all values from `0` to `len(permutation) - 1`, it is also the case that `permutation[inverse] == numpy.arange(len(permutation))`.) If not all values in `permutation` are distinct, this function raises an error.
+
+== Opaque objects
+
+The array types defined above are sufficient to create rich data types -- most of the types expected in a general programming environment. With columnar layouts in memory, they take a minimum of space and regular operations can be applied on them very quickly. However, all of these are awkward-array types: only Numpy ufuncs and Python get-item know how to operate on them. Situations will arise in which types must satisfy third-party constraints.
+
+Data structures built by combining awkward-arrays are *constructive* (built by construction), instances of other types are *opaque* (not known to the awkward-array library). To emulate an array of opaque objects, we wrap it in an `ObjectArray` that applies a function to an element `i` to generate the object at `i`. The object must be a pure function of the data at element `i` and not maintain long-lived state.
+
+Get-item selections and mapped kernels perform vectorized operations across all or much of the array, and if the object type has methods, users may want to apply the methods as vectorized operations as well. Instantiating all elements in the array and invoking the method on all of them misses the point (one might as well use a Python list or a Numpy object array), so there is an alternate way to apply them: as vectorized operations on the data used to generate the objects.
+
+Here is a motivating example: a `Table` of floating point `"x"` and `"y"` columns is wrapped in an `ObjectArray` with a `Point` constructor to effectively make an array of user-defined `Point` objects. `Point` instances have an `angle` method the computes `math.atan2(self.y, self.x)`. Users want to compute the `angle` of all values in the array without constructing `Point` for each. We therefore add a method `angle` to `ObjectArray` that computes `numpy.arctan2(self["x"], self["y"])`.
+
+These methods are added with a mix-in facility that accepts any class containing pure-function methods (no persistent state) and has no `__init__` method. This is where different languages  will put the most constraint on what can be done. Mix-ins are equivalent to Java's Interfaces, but in a statically compiled language, methods can't be added at runtime. In Java in particular, classes can be created from mix-ins in a nested `ClassContext`, but methods from these runtime types can't be used in the main `ClassContext` code because it has already been type-checked. Code that uses the new methods must be compiled after the mix-ins, which means that it must be compiled on the fly. In C++, a just-in-time compiler like https://root.cern.ch/cling[Cling] would be needed.
+
+A library may be called compliant with awkward-array if it lacks the ability to add mix-in methods.
+
+An important use of `ObjectArray` and mix-in methods is `StringArray`, which implements an array of strings as a `JaggedArray` of `CHARTYPE`, generating `str` or `bytes` objects upon extraction. It is important (for users) that the objects drawn from this array have the native string type of whichever language they're using. It's also important to have some vectorized methods, like dropping the last character of all strings (which can actually be a shift to the `JaggedArray's` stops array). `StringArray` has its mix-in methods built-in, so it does not suffer the dynamic vs. static issue described above.
+
+Although Numpy can store strings in arrays, its rectangular model requires strings to be padded to the length of the longest string in an array. `StringArray` takes advantage of `JaggedArray's` efficient encoding of variable-length contents to store variable-length strings.
+
+=== Mix-in Methods
+
+For a class to be eligible as a mix-in, it must not have an `__init__` method and must not modify `self` in any of its methods. Mix-ins can be added to a class by inheritance or to an instance (in Python) by changing an object's `__class__` attribute. Convenience functions are provided in `Methods`, which is a container of static methods:
+
+   * `mixin(methods, awkwardtype)`: given a `methods` class (the mix-ins) and an `awkwardtype` (the awkward-array class object, like `JaggedArray` or `ObjectArray`), this returns an array class object with the methods added. This class object can be constructed like the corresponding awkward-array, or it may be assigned to an existing instance's `__class__` attribute.
+   * `maybemixin(samples, awkwardtype)`: given a `samples` object (an array that might have mix-ins) or list (arrays that might have mix-ins) and an `awkwardtype` (the awkward-array class object, like `JaggedArray` or `ObjectArray`), this returns an array class object with any mix-ins any of the `samples` might have (union of all mix-in methods, in Python subclassing order). It is used to transfer mix-in methods from one array to another.
+
+Mix-in methods are automatically transferred in the following situations:
+
+   . When processing a Numpy ufunc (or equivalent mapped kernel), which includes unary and binary operations like `+` and `-`, all mix-in methods of the arguments are transferred to the output.
+   . When selecting a column from a `Table`, including selections through a nested contents (e.g. `jaggedtable["x"]`), the mix-in methods of the table column apply to the output, but the mix-in methods of the original container (e.g. `jaggedtable`) do not apply.
+   . When slicing, masking, or gathering through an array's get-item (but not extracting!), the array's mix-ins are retained in the output.
+
+In all other operations, such as reductions and other methods, mix-ins are not carried through.
+
+=== ObjectArray
+
+An `ObjectArray` is defined by an array and a generator function with arguments. Below are their single-property validity conditions. The array may be generated from any Python iterable, with the default type chosen in the case of an empty iterable.
+
+   * `content`: any array (default is a basic array of `DEFAULTTYPE`).
+   * `generator`: function that produces object `i` from `content[i]`.
+   * `args`: a tuple of constant positional arguments to pass to `generator`. If not a tuple, it will be converted to `(args,)`.
+   * `kwargs`: a dict of constant keyword arguments to pass to `generator`. If not a dict, an error will be raised. The given dict is shallowly copied to avoid referencing issues.
+   * `dims`: a positive integer (default is `1`); the number of dimensions in the `ObjectArray`.
+
+The whole-array validity conditions are:
+
+   * `dims` must be less than or equal to `len(content.shape)`.
+
+The length of the `ObjectArray` is the length of `content`, and the shape of the `ObjectArray` is `content.shape[:dims]`.
+
+==== Get-item behavior
+
+When an object array `myarray` is passed a `selection` in square brackets, it obeys the usual rules for all operations except extraction: a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. An integer, however, extracts from `content` and calls
+
+[source, python]
+----
+generator(content[i], *args, **kwargs)
+----
+
+on the result to return an output. If `dims > 1`, the first `dims - 1` elements of a given tuple are passed through `content` (so that an `ObjectArray` may be multidimensional) and then element `dims - 1` of the tuple is run through the `generator` function. Any remaining elements of a given tuple are applied to the output of that `generator`.
+
+For example,
+
+[source, python]
+----
+class Point(object):
+    def __init__(self, row):
+        self.x, self.y = row["x"], row["y"]
+    def __repr__(self):
+        return "<Point {0} {1}>".format(self.x, self.y)
+
+myarray = awkward.ObjectArray(awkward.Table(x=[1.1, 2.2, 3.3], y=[10, 20, 30]), Point)
+myarray
+# returns <ObjectArray [<Point 1.1 10> <Point 2.2 20> <Point 3.3 30>] at 7779705f4860>
+myarray[1:]
+# returns <ObjectArray [<Point 2.2 20> <Point 3.3 30>] at 7779705f49b0>
+myarray[1]
+# returns <Point 2.2 20>
+myarray[1].y
+# returns 20
+----
+
+==== Mapped kernel behavior
+
+If object arrays are passed into a Numpy ufunc (or equivalent mapped kernel), the ufunc is computed on the contents and the output is re-wrapped as object arrays. This might not be the intended semantics for the objects; if so, overload them with mix-in methods. (The mix-in should define `__array_ufunc__`, described https://docs.scipy.org/doc/numpy/reference/arrays.classes.html#numpy.class.__array_ufunc__[in the Numpy docs] and https://docs.scipy.org/doc/numpy-1.13.0/neps/ufunc-overrides.html[as a NEP].)
+
+Using the class from the previous example,
+
+[source, python]
+----
+a = awkward.ObjectArray(awkward.Table(x=[1.1, 2.2, 3.3], y=[10, 20, 30]), Point)
+b = awkward.ObjectArray(awkward.Table(x=[10, 20, 30], y=[100, 100, 100]), Point)
+numpy.add(a, b)
+# returns <ObjectArray [<Point 11.1 110> <Point 22.2 120> <Point 33.3 130>] at 7aea8ce5a358>
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus the above could have been `a + b`.
+
+=== StringArray
+
+A `StringArray` is an `ObjectArray` with `awkward.array.objects.StringMethods` mix-ins. Its `content` is an internal `JaggedArray` and it accepts `JaggedArray` constructors. Its primary constructor parameters are:
+
+   * `starts`: same as `JaggedArray.starts` except that it will apply to byte positions in `content.
+   * `stops`: same as `JaggedArray.stops` except that it will apply to byte positions in
+   * `content`: same as `JaggedArray.content` except that it will be viewed as `CHARTYPE`.
+   * `encoding`: `None` (for `bytes`) or an encoding name (for `str`). Default is `"utf-8"`. This property must be assigned with `None` or an encoding name but its value is `None` or a decoder function from `codecs.getdecoder`. (If the encoding name is not recognized, an error is raised.)
+
+A `StringArray` has the same whole-array validity conditions as `JaggedArray`.
+
+The length and shape of `StringArray` are the length and shape of `starts`.
+
+`StringArray` has the same alternate constructors as `JaggedArray`: `fromiter`, `fromoffsets`, `fromcounts`, `fromparents`, `fromuniques`, and `fromjagged`, except that the content is always required to be or interpreted as `CHARTYPE`. `StringArray` additionally has the following constructors:
+
+   * `StringArray.fromstr(shape, string)`: duplicates a single `str` or `bytes` object to fill an array with a given `shape` (may be a non-negative integer).
+   * `StringArray.fromnumpy(array)`: converts a Numpy string array into a `StringArray`.
+
+As an `ObjectArray` with an implicit `generator` of `awkward.array.objects.tostring` an implicit `args` of `(encoding,)`, and an implicit `dims` of `len(starts.shape)`, a `StringArray` returns a `bytes` or `str` for each item.
+
+All Numpy ufuncs (or equivalent mapped functions) apply mathematical operations on the characters of the strings as though they were `uint8` integers, except for equality tests (`==` and `!=` or `numpy.equal` and `numpy.not_equal`), which are overloaded in `awkward.array.objects.StringMethods` to compute string equality.
+
+== Non-contiguousness
+
+Many array sources are non-contiguous, usually so that they can be read in releatively small, memory-friendly chunks (e.g. ROOT baskets or Parquet pages). However, a basic array library like Numpy expects its arrays to be fully contiguous in memory, and that can usually only be achieved by copying data.
+
+However, just as we wrap arrays in classes to give them new logical structure, we can wrap a sequence of arrays as a `ChunkedArray` to view it as though it were a concatenated version of those arrays. The arrays in the sequence all need to have the same high-level type, but they don't all need to have the same low-level structure. Some may be basic arrays and others `IndexedArrays` to correspond to pages that alternate between a simple encoding and a dictionary encoding. The high-level type of the `ChunkedArray` is the same as the high-level type of its chunks.
+
+To extract an element at index `i`, it is necessary to know the length of all chunks up to and including the one in which index `i` resides, but getting this information might be an expensive operation. Therefore, `ChunkedArray` does not require this information up-front, but requests it and retains it as higher indexes are requested. Its string representations (`str` and `repr` in Python) only show the first few elements and not the last if not all of the counts are known.
+
+A non-contiguous array interface makes it possible to efficiently append rows to an array. Instead of copying a whole array into a larger allocation with each append, we can allocate a chunk, fill it by writing to it and increasing its "`end`" pointer, then allocate a new chunk when it is full. Since we can address non-contiguous data as a single array, we never have to copy partial results to concatenate. `AppendableArray` is an array with appendable rows, and is one of the only two mutable array types in awkward-arrays: `AppendableArray` can add new rows and `Table` can add, overwrite, and remove columns.
+
+=== ChunkedArray
+
+A `ChunkedArray` is defined by a list of `chunks` (arrays) and a list of `counts` (non-negative integers). Below are their single-property validity conditions. The arrays in `chunks` may be generated from any Python iterable, with default types chosen in the case of empty iterables.
+
+   * `chunks`: a Python list of any array (defaults are basic arrays of `DEFAULTTYPE`).
+   * `counts`: a Python list of non-negative integers. Default is `[]`.
+
+The whole-array validity conditions are:
+
+   * `chunks` length must be greater than or equal to `counts` length.
+   * Each count (non-negative integer in `counts`) must be equal to the length of the corresponding chunk (item in `chunks`).
+   * All non-empty `chunks` must have the same high-level type as the first non-empty chunk.
+
+`ChunkedArray` fills its `counts` as they become known, strictly from first to last. As a public property, these are visible to the user. `ChunkedArray` may also internally cache types as they become known (in any order), to avoid repeated queries.
+
+A `ChunkedArray` has the following read-only properties and methods:
+
+   * `countsknown`: `True` if `counts` has the same length as `chunks`; `False` otherwise.
+   * `typesknown`: `True` if all types are internally cached; `False` otherwise. If a `ChunkedArray` does not cache types, this property may be omitted.
+   * `knowcounts(until=None)`: request and cache the lengths of `chunks` up to and not including `until`, or up to the end if `until` is `None`.
+   * `knowtype(at)`: request and cache the type of chunk `at`. If a `ChunkedArray` does not cache types, this property may be omitted.
+   * `global2chunkid(index, return_normalized=False)`: convert a `ChunkedArray` index to the chunk id in which it resides. (`chunks[i]` is the chunk at id `i`, etc.) The `index` may be an integer or a 1-dimensional array of integers for a gather operation. Negative indexes are normalized to count from the end of the `ChunkedArray`. If `return_normalized` is `True`, the output is a 2-tuple: the chunk id and the `index` normalized to count from the end of the `ChunkedArray`.
+   * `global2local(index)`: convert a `ChunkedArray` index to the corresponding chunk and its local index in the chunk. The `index` may be an integer or a 1-dimensional array of integers for a gather operation. If so, then the chunk output is a Numpy object array of chunks.
+   * `local2global(index, chunkid)`: convert a local chunk index and its chunk id to a global `ChunkArray` index. The `index` may be an integer or a 1-dimensional array of integers for a gather operation.
+
+==== Get-item behavior
+
+When a chunked array `myarray` is passed a `selection` in square brackets, it obeys the usual rules: an integer performs extraction, a slice performs slicing, a 1-dimensional list or array of booleans with the same length as `myarray` performs masking, and a 1-dimensional list or array of integers performs a gather operation. Tuples perform these operations in multiple dimensions. String `selections` are passed down to a nested `Table`, if it exists.
+
+Touching elements can affect which `counts` are known and therefore the string representation of the array. For example,
+
+[source, python]
+----
+myarray = awkward.ChunkedArray([[0, 1, 2], [], [3, 4], [5, 6, 7, 8], [9]])
+myarray
+# returns <ChunkedArray [0 1 2 3 4 5 6 ...] at 7f778daed7f0>
+myarray[-1]
+# returns 9
+myarray
+# returns <ChunkedArray [0 1 2 ... 7 8 9] at 7f778daed7f0>
+----
+
+==== Mapped kernel behavior
+
+If chunked arrays are passed into a Numpy ufunc (or equivalent mapped kernel), the ufunc is computed iteratively on chunk sizes determined by the first chunked array argument, and the return value is a `ChunkedArray` with that structure.
+
+For example (reusing `myarray` from the previous section),
+
+[source, python]
+----
+numpy.add(myarray, 0.1)
+# returns <ChunkedArray [0.1 1.1 2.1 3.1 4.1 5.1 6.1 ...] at 7f778daeda20>
+numpy.add(myarray, 0.1).chunks
+# returns [array([0.1, 1.1, 2.1]), array([], dtype=float64), array([3.1, 4.1]),
+#          array([5.1, 6.1, 7.1, 8.1]), array([9.1])]
+----
+
+Unary and binary operators corresponding to mapped kernels should have the same behavior. Thus the above could have been `myarray + 0.1`.
+
+=== AppendableArray
+
+An `AppendableArray` is a `ChunkedArray` of primitive type that can be efficiently appended. Below are the single-property validity conditions. The arrays may be generated from any Python iterable, with dfault types chosen in the case of empty iterables.
+
+   * `chunkshape`: positive integer or a tuple of positive integers defining the allocated shape of each chunk.
+   * `dtype`: Numpy dtype of the content.
+   * `chunks`: a Python list of basic arrays (default type `DEFAULTTYPE`).
+
+The `counts` parameter is read-only and internally managed. In `ChunkedArray`, the `counts` must be exactly equal to the length of each chunk, but in `AppendableArray`, the last count is less than or equal to the length of the last chunk because not all of the allocated chunk may be filled with valid data. Uninitialized data may be visible to the user through `chunks[-1]`, but not through get-item and mapped kernels on the `AppendableArray` itself.
+
+The whole-array validity conditions are the same as for `ChunkedArray`, except that `counts` is not required to be equal to the length of each chunk.
+
+`AppendableArray` has the following special methods:
+
+   * `append(value)`: add one value at the end of the array.
+   * `extend(values)`: add multiple values to the end of the array.
+
+== Laziness
+
+Often, datasets are too large to entirely load into memory or too large to load up-front. Many data-loading libraries offer the ability to load parts of a file or dataset as needed. However, the decisions about when to load data, how much to load, and what to cache are system-dependent, and we might instead want them to be encoded in the array structure itself, so awkward-array has a `VirtualArray` class to represent an array that might or might not be in memory, but will be when asked.
+
+Laziness and non-contiguousness are closely related. If a `Table` is too big to load but its columns of interest are not, then we may want a `Table` of `VirtualArrays`, so that each entire column is loaded when touched. However, if a single column is too big to load, then delaying that operation with a `VirtualArray` is not enough: we need a `ChunkedArray` of `VirtualArrays` to load chunks of rows at a time.
+
+Laziness and caching are closely related. If all the data needed for a process is too large to hold in memory, then lazily loading each section and keeping it forever is not enough: we need the loaded data to be evicted when we're done with it. If the `VirtualArray` instance goes out of scope, then Python's garbage collector does that automatically. If not, then the `VirtualArray` must let its loaded data be managed by a cache with explicit eviction rules.
+
+Most cache implementations in Python have a dict-like interface. If it is process-bound, then transient keys based on the Python `id` of the `VirtualArrays`. If it is not, then permanent identifiers must be assigned somehow.
+
+If absolutely no caching is desired, then a Python MutableMapping with a do-nothing `__setitem__` would act as an immediately forgetful cache (with transient keys).
+
+A https://pandas.pydata.org[Dask] delayed array is the equivalent of a `ChunkedArray` of `VirtualArrays`, for which all of the chunked array's `counts` are known.
+
+=== VirtualArray
+
+A `VirtualArray` is defined by a generating function, not any arrays. Below are the single-property validity conditions for all of its primary constructor arguments.
+
+   * `generator`: a callable that produces the array. It must accept arguments as given by `args` and `kwargs` as `generator(*args, **kwargs)`.
+   * `args` (default `()`): a tuple of arguments for the `generator`. If not a tuple, it will be converted to `(args,)`.
+   * `kwargs` (default `{}`): a dict of keyword arguments for the `generator`. If not a dict, an error will be raised. The given dict is shallowly copied to avoid referencing issues.
+   * `cache` (default `None`): `None` for no cache or a dict-like object to use as a cache.
+   * `persistentkey` (default `None`): `None` to use transient keys in a cache or a string to use as a key in a persistent cache.
+   * `type` (default `None`): `None` or high-level type of the array to use before materializing it. If `None`, any query that requires type knowledge, such as asking for the length of the array, would cause the array to be materialized.
+   * `persistvirtual` (default `True`): if `True`, persist this object as a virtual array, meaning that its data are _not_ stored in the serialized form. If the `VirtualArray` depends on the existence of a file at a given path, for instance, the serialized form can't be deserialized on a system without that file at that path. If `False`, persist this object as a concrete array, so that everything needed to reconstruct the data is stored in the serialized form.
+
+There are no whole-array validity conditions in the normal sense, but if the `type` parameter is not `None` and the materialized array has a different type, an error is raised at that time.
+
+`VirtualArray` has the following read-only properties and methods:
+
+   * `ismaterialized`: `True` if the array has been loaded and `False` if it has not.
+   * `materialize()`: cause the array to be loaded.
+
+If `type` is `None`, then attempts to get the `VirtualArray` length, type, dtype, shape, etc. will cause the array to be materialized. In any case, an attempt to get-item or use the array in a Numpy ufunc (or equivalent mapped kernel) will cause the array to be materialized.
+
+If `cache` is `None`, then the materialized array is internally cached in the `VirtualArray` object itself. To delete the array, it would be necessary to delete the `VirtualArray`.
+
+If `cache` is not `None` and `persistentkey` is `None`, then the array is placed in the `cache` and a `VirtualArray.TransientKey` is used as the key. The transient key is guaranteed to be globally unique in the Python process as long as the `VirtualArray` exists. If the `VirtualArray` is deleted, its `__del__` method attempts to delete its transient key from the `cache` because its global uniqueness can no longer be guaranteed. However, this is fragile because the `cache` might have been changed for another `cache`, the `__del__` method might not be called before another Python object uses the `VirtualArray's` Python `id`, etc. Generally, transient keys should be used when the `VirtualArray` objects are known to be long-lived. (If they are short-lived, setting `cache` to `None` and letting the Python garbage collector manage eviction would be a better policy.) If the `cache` only accepts strings as keys, the `VirtualArray.TransientKey` has a unique `__str__` representation.
+
+If `cache` is not `None` and `persistentkey` is not `None`, then `persistentkey` will be used as the key for the cache. The burden of ensuring uniqueness is on the user, and the user will have to decide whether the key needs to be process-unique, machine-unique, or unique in some distributed sense.
+
+`VirtualArray` maintains an internal list of columns added, overwritten, or deleted to or from any internal `Tables`. If the generated array is ever lost due to cache eviction and needs to be regenerated, these modifications will be replayed so that the apparent content maintains its state. Also, if `persistvirtual` is `True` and the generated array is not written to a serialized form, the modifications are written to the serialized form, and will be replayed when reconstructed from that serialized form.
