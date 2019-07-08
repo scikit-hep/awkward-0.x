@@ -78,8 +78,31 @@ Tutorial
 
 **Table of contents:**
 
-- TODO
-
+* `Introduction <#introduction>`__
+* `Overview with sample datasets <#overview-with-sample-datasets>`__
+  * `NASA exoplanets from a Parquet file <#nasa-exoplanets-from-a-parquet-file>`__
+  * `NASA exoplanets from an Arrow buffer <#nasa-exoplanets-from-an-arrow-buffer>`__
+  * `Relationship to Pandas <#relationship-to-pandas>`__
+  * `LHC data from a ROOT file <#lhc-data-from-a-root-file>`__
+* `Awkward-array data model <#awkward-array-data-model>`__
+  * `Mutability <#mutability>`__
+  * `Relationship to Arrow <#relationship-to-arrow>`__
+* `High-level operations common to all classes <#high-level-operations-common-to-all-classes>`__
+  * `Slicing with square brackets <#slicing-with-square-brackets>`__
+  * `Assigning with square brackets <#assigning-with-square-brackets>`__
+  * `Numpy-like broadcasting <#numpy-like-broadcasting>`__
+  * `Support for Numpy universal functions (ufuncs) <#support-for-numpy-universal-functions-ufuncs>`__
+  * `Global switches <#global-switches>`__
+  * `Generic properties and methods <#generic-properties-and-methods>`__
+  * `Reducers <#reducers>`__
+  * `Properties and methods for jaggedness <#properties-and-methods-for-jaggedness>`__
+  * `Properties and methods for tabular columns <#properties-and-methods-for-tabular-columns>`__
+  * `Properties and methods for missing values <#properties-and-methods-for-missing-values>`__
+  * `Functions for structure manipulation <#functions-for-structure-manipulation>`__
+* `Functions for input/output and conversion <#functions-for-inputoutput-and-conversion>`__
+* `High-level types <#high-level-types>`__
+* `Low-level layouts <#low-level-layouts>`__
+    
 Introduction
 ------------
 
