@@ -73,19 +73,14 @@ Recommended packages:
 Tutorial
 ========
 
-Run this tutorial on Binder (TODO).
+.. image:: https://mybinder.org/badge_logo.svg
+   :target: https://gke.mybinder.org/v2/gh/scikit-hep/awkward-array.git/better-documentation?urlpath=lab/tree/binder%2Ftutorial.ipynb
 
 **Table of contents:**
 
 - TODO
 
-Reference
-=========
-
-For a list of all functions, classes, methods, and their parameters, click below.
-
-
-TODO: insert sketchwork.py here, converted to REsT.
+HERE
 
 
 Acknowledgements

@@ -19,6 +19,8 @@
 import numpy
 nested = numpy.array([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}, {"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])
 nested
+# array([{'x': 1, 'y': 1.1}, {'x': 2, 'y': 2.2}, {'x': 3, 'y': 3.3},
+#        {'x': 4, 'y': 4.4}, {'x': 5, 'y': 5.5}], dtype=object)
 
 # %%markdown
 # Numpy gives up and returns a ``dtype=object`` array, which means Python objects and pure Python processing. You don't get the columnar operations or the performance boost.
@@ -30,6 +32,7 @@ try:
     nested + 100
 except Exception as err:
     print(type(err), str(err))
+# <class 'TypeError'> unsupported operand type(s) for +: 'dict' and 'int'
 
 # %%markdown
 # but there is no vectorized addition for an array of dicts because there is no addition for dicts defined in pure Python. Numpy is not using its vectorized routines—it's calling Python code on each element.
@@ -39,6 +42,8 @@ except Exception as err:
 # %%
 varlen = numpy.array([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6], [7.7, 8.8, 9.9]])
 varlen
+# array([list([1.1, 2.2, 3.3]), list([]), list([4.4, 5.5]), list([6.6]),
+#        list([7.7, 8.8, 9.9])], dtype=object)
 
 # %%markdown
 # As before, we get a ``dtype=object`` without vectorized methods.
@@ -48,6 +53,7 @@ try:
     varlen + 100
 except Exception as err:
     print(type(err), str(err))
+# <class 'TypeError'> can only concatenate list (not "int") to list
 
 # %%markdown
 # What's worse, this array looks purely numerical and could have been made by a process that was *supposed* to create equal-length inner lists.
@@ -58,30 +64,48 @@ except Exception as err:
 import awkward
 nested = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}, {"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])
 nested
+# <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 0x7f25e80a01d0>
 
 # %%markdown
 # This ``Table`` is a columnar data structure with the same meaning as the Python data we built it with. To undo ``awkward.fromiter``, call ``.tolist()``.
 
 # %%
 nested.tolist()
+# [{'x': 1, 'y': 1.1},
+#  {'x': 2, 'y': 2.2},
+#  {'x': 3, 'y': 3.3},
+#  {'x': 4, 'y': 4.4},
+#  {'x': 5, 'y': 5.5}]
 
 # %%markdown
 # Values at the same position of the tree structure are contiguous in memory: this is a struct of arrays.
 
 # %%
 nested.contents["x"]
+# array([1, 2, 3, 4, 5])
 
 # %%
 nested.contents["y"]
+# array([1.1, 2.2, 3.3, 4.4, 5.5])
 
 # %%markdown
 # Having a structure like this means that we can perform vectorized operations on the whole structure with relatively few Python instructions (number of Python instructions scales with the complexity of the data type, not with the number of values in the dataset).
 
 # %%
 (nested + 100).tolist()
+# [{'x': 101, 'y': 101.1},
+#  {'x': 102, 'y': 102.2},
+#  {'x': 103, 'y': 103.3},
+#  {'x': 104, 'y': 104.4},
+#  {'x': 105, 'y': 105.5}]
 
 # %%
 (nested + numpy.arange(100, 600, 100)).tolist()
+# [{'x': 101, 'y': 101.1},
+#  {'x': 202, 'y': 202.2},
+#  {'x': 303, 'y': 303.3},
+#  {'x': 404, 'y': 404.4},
+#  {'x': 505, 'y': 505.5}]
 
 # %%markdown
 # It's less obvious that variable-length data can be represented in a columnar format, but it can.
@@ -89,12 +113,14 @@ nested.contents["y"]
 # %%
 varlen = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6], [7.7, 8.8, 9.9]])
 varlen
+# <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5] [6.6] [7.7 8.8 9.9]] at 0x7f25bc7b1438>
 
 # %%markdown
 # Unlike Numpy's ``dtype=object`` array, the inner lists are *not* Python lists and the numerical values *are* contiguous in memory. This is made possible by representing the structure (where each inner list starts and stops) in one array and the values in another.
 
 # %%
 varlen.counts, varlen.content
+# (array([3, 0, 2, 1, 3]), array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
 
 # %%markdown
 # (For fast random access, the more basic representation is ``varlen.offsets``, which is in turn a special case of a ``varlen.starts, varlen.stops`` pair. These details are discussed below.)
@@ -103,9 +129,11 @@ varlen.counts, varlen.content
 
 # %%
 varlen + 100
+# <JaggedArray [[101.1 102.2 103.3] [] [104.4 105.5] [106.6] [107.7 108.8 109.9]] at 0x7f25bc7b1400>
 
 # %%
 varlen + numpy.arange(100, 600, 100)
+# <JaggedArray [[101.1 102.2 103.3] [] [304.4 305.5] [406.6] [507.7 508.8 509.9]] at 0x7f25bc7b1da0>
 
 # %%markdown
 # You can even slice this object as though it were multidimensional (each element is a tensor of the same rank, but with different numbers of dimensions).
@@ -113,6 +141,7 @@ varlen + numpy.arange(100, 600, 100)
 # %%
 # Skip the first two inner lists; skip the last value in each inner list that remains.
 varlen[2:, :-1]
+# <JaggedArray [[4.4] [] [7.7 8.8]] at 0x7f25bc755588>
 
 # %%markdown
 # The data are not rectangular, so some inner lists might have as many elements as your selection. Don't worry—you'll get error messages.
@@ -122,12 +151,14 @@ try:
     varlen[:, 1]
 except Exception as err:
     print(type(err), str(err))
+# <class 'IndexError'> index 1 is out of bounds for jagged min size 0
 
 # %%markdown
 # Masking with the ``.counts`` is handy because all the Numpy advanced indexing rules apply (in an extended sense) to jagged arrays.
 
 # %%
 varlen[varlen.counts > 1, 1]
+# array([2.2, 5.5, 8.8])
 
 # %%markdown
 # I've only presented the two most important awkward classes, ``Table`` and ``JaggedArray`` (and not how they combine). Each class is presented in more detail below. For now, I'd just like to point out that you can make crazy complicated data structures
@@ -143,6 +174,9 @@ crazy = awkward.fromiter([[1.21, 4.84, None, 10.89, None],
 
 # %%
 numpy.sqrt(crazy).tolist()
+# [[1.1, 2.2, None, 3.3000000000000003, None],
+#  [4.4, [5.5]],
+#  [{'x': 6.0, 'y': {'z': 7.0}}, None, {'x': 8.0, 'y': {'z': 9.0}}]]
 
 # %%markdown
 # This is because any awkward array can be the content of any other awkward array. Like Numpy, the features of awkward-array are simple, yet compose nicely to let you build what you need.
@@ -164,6 +198,7 @@ numpy.sqrt(crazy).tolist()
 # %%
 stars = awkward.fromparquet("tests/samples/exoplanets.parquet")
 stars
+# <ChunkedArray [<Row 0> <Row 1> <Row 2> ... <Row 2932> <Row 2933> <Row 2934>] at 0x7f25b9c67780>
 
 # %%markdown
 # (There is also an ``awkward.toparquet`` that takes the file name and array as arguments.)
@@ -172,21 +207,27 @@ stars
 
 # %%
 stars["name"]
+# <ChunkedArray ['11 Com' '11 UMi' '14 And' ... 'tau Gem' 'ups And' 'xi Aql'] at 0x7f25b9c67dd8>
 
 # %%markdown
 # or by dot-attribute (if the name doesn't have weird characters and doesn't conflict with a method or property name).
 
 # %%
 stars.ra, stars.dec
+# (<ChunkedArray [185.179276 229.27453599999998 352.822571 ... 107.78488200000001 24.199345 298.56201200000004] at 0x7f25b94ccf28>,
+#  <ChunkedArray [17.792868 71.823898 39.236198 ... 30.245163 41.40546 8.461452] at 0x7f25b94cca90>)
 
 # %%markdown
 # This file contains data about extrasolar planets and their host stars. As such, it's a ``Table`` full of Numpy arrays and ``JaggedArrays``. The star attributes (`"name"`, `"ra"` or right ascension in degrees, `"dec"` or declination in degrees, `"dist"` or distance in parsecs, `"mass"` in multiples of the sun's mass, and `"radius"` in multiples of the sun's radius) are plain Numpy arrays and the planet attributes (`"name"`, `"orbit"` or orbital distance in AU, `"eccen"` or eccentricity, `"period"` or periodicity in days, `"mass"` in multiples of Jupyter's mass, and `"radius"` in multiples of Jupiter's radius) are jagged because each star may have a different number of planets.
 
 # %%
 stars.planet_name
+# <ChunkedArray [['b'] ['b'] ['b'] ... ['b'] ['b' 'c' 'd'] ['b']] at 0x7f25b94dc550>
 
 # %%
 stars.planet_period, stars.planet_orbit
+# (<ChunkedArray [[326.03] [516.21997] [185.84] ... [305.5] [4.617033 241.258 1276.46] [136.75]] at 0x7f25b94cccc0>,
+#  <ChunkedArray [[1.29] [1.53] [0.83] ... [1.17] [0.059222000000000004 0.827774 2.51329] [0.68]] at 0x7f25b94cc978>)
 
 # %%markdown
 # For large arrays, only the first and last values are printed: the second-to-last star has three planets; all the other stars shown here have one planet.
@@ -198,10 +239,12 @@ stars.planet_period, stars.planet_orbit
 # %%
 # distance in parsecs → distance in light years
 stars.dist * 3.26156
+# <ChunkedArray [304.5318572 410.0433232 246.5413204 ... 367.38211839999997 43.7375196 183.5279812] at 0x7f25b94cce80>
 
 # %%
 # for all stars, drop the first planet
 stars.planet_mass[:, 1:]
+# <ChunkedArray [[] [] [] ... [] [1.981 4.132] []] at 0x7f25b94ccf60>
 
 # %%markdown
 # ## NASA exoplanets from an Arrow buffer
@@ -215,6 +258,7 @@ import pyarrow
 arrow_buffer = pyarrow.ipc.open_file(open("tests/samples/exoplanets.arrow", "rb")).get_batch(0)
 stars = awkward.fromarrow(arrow_buffer)
 stars
+# <Table [<Row 0> <Row 1> <Row 2> ... <Row 2932> <Row 2933> <Row 2934>] at 0x7f25b94f2518>
 
 # %%markdown
 # (There is also an ``uproot.toarrow`` that takes an awkward array as its only argument, returning the relevant Arrow structure.)
@@ -223,6 +267,7 @@ stars
 
 # %%
 stars["planets"]
+# <JaggedArray [[<Row 0>] [<Row 1>] [<Row 2>] ... [<Row 3928>] [<Row 3929> <Row 3930> <Row 3931>] [<Row 3932>]] at 0x7f25b94fb080>
 
 # %%markdown
 # Notice that the square brackets are nested, but the contents are ``<Row>`` objects. The second-to-last star has three planets, as before.
@@ -231,60 +276,111 @@ stars["planets"]
 
 # %%
 stars["planets"].content
+# <Table [<Row 0> <Row 1> <Row 2> ... <Row 3930> <Row 3931> <Row 3932>] at 0x7f25b94f2d68>
 
 # %%markdown
 # When viewed as Python lists and dicts, the ``'planets'`` field is a list of planet dicts, each with its own fields.
 
 # %%
 stars[:2].tolist()
+# [{'dec': 17.792868,
+#   'dist': 93.37,
+#   'mass': 2.7,
+#   'name': '11 Com',
+#   'planets': [{'eccen': 0.231,
+#     'mass': 19.4,
+#     'name': 'b',
+#     'orbit': 1.29,
+#     'period': 326.03,
+#     'radius': nan}],
+#   'ra': 185.179276,
+#   'radius': 19.0},
+#  {'dec': 71.823898,
+#   'dist': 125.72,
+#   'mass': 2.78,
+#   'name': '11 UMi',
+#   'planets': [{'eccen': 0.08,
+#     'mass': 14.74,
+#     'name': 'b',
+#     'orbit': 1.53,
+#     'period': 516.21997,
+#     'radius': nan}],
+#   'ra': 229.27453599999998,
+#   'radius': 29.79}]
 
 # %%markdown
 # Despite being packaged in an arguably more intuitive way, we can still get jagged arrays of numbers by requesting ``"planets"`` and a planet attribute (two column selections) without specifying which star or which parent.
 
 # %%
 stars.planets.name
+# <JaggedArray [['b'] ['b'] ['b'] ... ['b'] ['b' 'c' 'd'] ['b']] at 0x7f25b94dc780>
 
 # %%
 stars.planets.mass
+# <JaggedArray [[19.4] [14.74] [4.8] ... [20.6] [0.6876 1.981 4.132] [2.8]] at 0x7f25b94fb240>
 
 # %%markdown
 # Even though the ``Table`` is hidden inside the ``JaggedArray``, its ``columns`` pass through to the top.
 
 # %%
 stars.columns
+# ['dec', 'dist', 'mass', 'name', 'planets', 'ra', 'radius']
 
 # %%
 stars.planets.columns
+# ['eccen', 'mass', 'name', 'orbit', 'period', 'radius']
 
 # %%markdown
 # For a more global view of the structures contained within one of these arrays, print out its high-level type. ("High-level" because it presents logical distinctions, like jaggedness and tables, but not physical distinctions, like chunking and virtualness.)
 
 # %%
 print(stars.type)
+# [0, 2935) -> 'dec'     -> float64
+#              'dist'    -> float64
+#              'mass'    -> float64
+#              'name'    -> <class 'str'>
+#              'planets' -> [0, inf) -> 'eccen'  -> float64
+#                                       'mass'   -> float64
+#                                       'name'   -> <class 'str'>
+#                                       'orbit'  -> float64
+#                                       'period' -> float64
+#                                       'radius' -> float64
+#              'ra'      -> float64
+#              'radius'  -> float64
 
 # %%markdown
 # The above should be read like a function's data type: ``argument type -> return type`` for the function that takes an index in square brackets and returns something else. For example, the first ``[0, 2935)`` means that you could put any non-negative integer less than ``2935`` in square brackets after ``stars``, like this:
 
 # %%
 stars[1734]
+# <Row 1734>
 
 # %%markdown
 # and get an object that would take ``'dec'``, ``'dist'``, ``'mass'``, ``'name'``, ``'planets'``, ``'ra'``, or ``'radius'`` in its square brackets. The return type depends on which of those strings you provide.
 
 # %%
 stars[1734]["mass"]   # type is float64
+# 0.54
 
 # %%
 stars[1734]["name"]   # type is <class 'str'>
+# 'Kepler-186'
 
 # %%
 stars[1734]["planets"]
+# <Table [<Row 2192> <Row 2193> <Row 2194> <Row 2195> <Row 2196>] at 0x7f25b94dc438>
 
 # %%markdown
 # The planets have their own table structure:
 
 # %%
 print(stars[1734]["planets"].type)
+# [0, 5) -> 'eccen'  -> float64
+#           'mass'   -> float64
+#           'name'   -> <class 'str'>
+#           'orbit'  -> float64
+#           'period' -> float64
+#           'radius' -> float64
 
 # %%markdown
 # Notice that within the context of ``stars``, the ``planets`` could take any non-negative integer ``[0, inf)``, but for a particular star, the allowed domain is known with more precision: ``[0, 5)``. This is because ``stars["planets"]`` is a jagged array—a different number of planets for each star—but one ``stars[1734]["planets"]`` is a simple array—five planets for *this* star.
@@ -293,33 +389,45 @@ print(stars[1734]["planets"].type)
 
 # %%
 stars[1734]["planets"][4]
+# <Row 2196>
 
 # %%markdown
 # and the return type of these depends on which string you provide.
 
 # %%
 stars[1734]["planets"][4]["period"]   # type is float
+# 129.9441
 
 # %%
 stars[1734]["planets"][4]["name"]   # type is <class 'str'>
+# 'f'
 
 # %%
 stars[1734]["planets"][4].tolist()
+# {'eccen': 0.04,
+#  'mass': nan,
+#  'name': 'f',
+#  'orbit': 0.432,
+#  'period': 129.9441,
+#  'radius': 0.10400000000000001}
 
 # %%markdown
 # (Incidentally, this is a `potentially habitable exoplanet <https://www.nasa.gov/ames/kepler/kepler-186f-the-first-earth-size-planet-in-the-habitable-zone>`__`, the first ever discovered.)
 
 # %%
 stars[1734]["name"], stars[1734]["planets"][4]["name"]
+# ('Kepler-186', 'f')
 
 # %%markdown
 # Some of these arguments "commute" and others don't. Dimensional axes have a particular order, so you can't request a planet by its row number before selecting a star, but you can swap a column-selection (string) and a row-selection (integer). For a rectangular table, it's easy to see how you can slice column-first or row-first, but it even works when the table is jagged.
 
 # %%
 stars["planets"]["name"][1734][4]
+# 'f'
 
 # %%
 stars[1734]["planets"][4]["name"]
+# 'f'
 
 # %%markdown
 # None of these intermediate slices actually process data, so you can slice in any order that is logically correct without worrying about performance. Projections, even multi-column projections
@@ -327,6 +435,30 @@ stars[1734]["planets"][4]["name"]
 # %%
 orbits = stars["planets"][["name", "eccen", "orbit", "period"]]
 orbits[1734].tolist()
+In this representation, each star's attributes must be duplicated for all of its planets, and it is not possible to show stars that have no planets (not present in this dataset), but the information is preserved in a way that Pandas can recognize and operate on. (For instance, .unstack() would widen each planet attribute into a separate column per planet and simplify the index to strictly one row per star.)
+
+The limitation is that only a single jagged structure can be represented by a DataFrame. The structure can be arbitrarily deep in Tables (which add depth to the column names),
+
+
+# %%
+array = awkward.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
+
+# %%
+stars[1734]["planets"][4]["name"]
+# 'f'
+
+# %%markdown
+# None of these intermediate slices actually process data, so you can slice in any order that is logically correct without worrying about performance. Projections,
+even multi-column projections
+
+# %%
+orbits = stars["planets"][["name", "eccen", "orbit", "period"]]
+orbits[1734].tolist()
+# [{'name': 'b', 'eccen': nan, 'orbit': 0.0343, 'period': 3.8867907},
+#  {'name': 'c', 'eccen': nan, 'orbit': 0.0451, 'period': 7.267302},
+#  {'name': 'd', 'eccen': nan, 'orbit': 0.0781, 'period': 13.342996},
+#  {'name': 'e', 'eccen': nan, 'orbit': 0.11, 'period': 22.407704},
+#  {'name': 'f', 'eccen': 0.04, 'orbit': 0.432, 'period': 129.9441}]
 
 # %%markdown
 # are a useful way to restructure data without incurring a runtime cost.
@@ -339,6 +471,180 @@ orbits[1734].tolist()
 # %%
 awkward.topandas(stars, flatten=True)[-9:]
 
+if False:
+      ["<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th>dec</th>\n",
+       "      <th>dist</th>\n",
+       "      <th>mass</th>\n",
+       "      <th>name</th>\n",
+       "      <th colspan=\"6\" halign=\"left\">planets</th>\n",
+       "      <th>ra</th>\n",
+       "      <th>radius</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th>eccen</th>\n",
+       "      <th>mass</th>\n",
+       "      <th>name</th>\n",
+       "      <th>orbit</th>\n",
+       "      <th>period</th>\n",
+       "      <th>radius</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"4\" valign=\"top\">2931</th>\n",
+       "      <th>0</th>\n",
+       "      <td>-15.937480</td>\n",
+       "      <td>3.60</td>\n",
+       "      <td>0.78</td>\n",
+       "      <td>49</td>\n",
+       "      <td>0.1800</td>\n",
+       "      <td>0.01237</td>\n",
+       "      <td>101</td>\n",
+       "      <td>0.538000</td>\n",
+       "      <td>162.870000</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>26.017012</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>-15.937480</td>\n",
+       "      <td>3.60</td>\n",
+       "      <td>0.78</td>\n",
+       "      <td>49</td>\n",
+       "      <td>0.1600</td>\n",
+       "      <td>0.01237</td>\n",
+       "      <td>102</td>\n",
+       "      <td>1.334000</td>\n",
+       "      <td>636.130000</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>26.017012</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>-15.937480</td>\n",
+       "      <td>3.60</td>\n",
+       "      <td>0.78</td>\n",
+       "      <td>49</td>\n",
+       "      <td>0.0600</td>\n",
+       "      <td>0.00551</td>\n",
+       "      <td>103</td>\n",
+       "      <td>0.133000</td>\n",
+       "      <td>20.000000</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>26.017012</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>-15.937480</td>\n",
+       "      <td>3.60</td>\n",
+       "      <td>0.78</td>\n",
+       "      <td>49</td>\n",
+       "      <td>0.2300</td>\n",
+       "      <td>0.00576</td>\n",
+       "      <td>104</td>\n",
+       "      <td>0.243000</td>\n",
+       "      <td>49.410000</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>26.017012</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2932</th>\n",
+       "      <th>0</th>\n",
+       "      <td>30.245163</td>\n",
+       "      <td>112.64</td>\n",
+       "      <td>2.30</td>\n",
+       "      <td>53</td>\n",
+       "      <td>0.0310</td>\n",
+       "      <td>20.60000</td>\n",
+       "      <td>98</td>\n",
+       "      <td>1.170000</td>\n",
+       "      <td>305.500000</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>107.784882</td>\n",
+       "      <td>26.80</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"3\" valign=\"top\">2933</th>\n",
+       "      <th>0</th>\n",
+       "      <td>41.405460</td>\n",
+       "      <td>13.41</td>\n",
+       "      <td>1.30</td>\n",
+       "      <td>48</td>\n",
+       "      <td>0.0215</td>\n",
+       "      <td>0.68760</td>\n",
+       "      <td>98</td>\n",
+       "      <td>0.059222</td>\n",
+       "      <td>4.617033</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>24.199345</td>\n",
+       "      <td>1.56</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>41.405460</td>\n",
+       "      <td>13.41</td>\n",
+       "      <td>1.30</td>\n",
+       "      <td>48</td>\n",
+       "      <td>0.2596</td>\n",
+       "      <td>1.98100</td>\n",
+       "      <td>99</td>\n",
+       "      <td>0.827774</td>\n",
+       "      <td>241.258000</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>24.199345</td>\n",
+       "      <td>1.56</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>41.405460</td>\n",
+       "      <td>13.41</td>\n",
+       "      <td>1.30</td>\n",
+       "      <td>48</td>\n",
+       "      <td>0.2987</td>\n",
+       "      <td>4.13200</td>\n",
+       "      <td>100</td>\n",
+       "      <td>2.513290</td>\n",
+       "      <td>1276.460000</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>24.199345</td>\n",
+       "      <td>1.56</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2934</th>\n",
+       "      <th>0</th>\n",
+       "      <td>8.461452</td>\n",
+       "      <td>56.27</td>\n",
+       "      <td>2.20</td>\n",
+       "      <td>55</td>\n",
+       "      <td>0.0000</td>\n",
+       "      <td>2.80000</td>\n",
+       "      <td>98</td>\n",
+       "      <td>0.680000</td>\n",
+       "      <td>136.750000</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>298.562012</td>\n",
+       "      <td>12.00</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n"]
+
 # %%markdown
 # In this representation, each star's attributes must be duplicated for all of its planets, and it is not possible to show stars that have no planets (not present in this dataset), but the information is preserved in a way that Pandas can recognize and operate on. (For instance, ``.unstack()`` would widen each planet attribute into a separate column per planet and simplify the index to strictly one row per star.)
 #
@@ -350,6 +656,73 @@ array = awkward.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
                           {"a": {"b": 7, "c": {"d": [8, 8.1, 8.2]}}, "e": 9}])
 awkward.topandas(array, flatten=True)
 
+if False:
+      ["<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th colspan=\"2\" halign=\"left\">a</th>\n",
+       "      <th>e</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th>b</th>\n",
+       "      <th>c</th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th>d</th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>1</td>\n",
+       "      <td>2.0</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"2\" valign=\"top\">1</th>\n",
+       "      <th>0</th>\n",
+       "      <td>4</td>\n",
+       "      <td>5.0</td>\n",
+       "      <td>6</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>4</td>\n",
+       "      <td>5.1</td>\n",
+       "      <td>6</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"3\" valign=\"top\">2</th>\n",
+       "      <th>0</th>\n",
+       "      <td>7</td>\n",
+       "      <td>8.0</td>\n",
+       "      <td>9</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>7</td>\n",
+       "      <td>8.1</td>\n",
+       "      <td>9</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>7</td>\n",
+       "      <td>8.2</td>\n",
+       "      <td>9</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n"]
+
 # %%markdown
 # and arbitrarily deep in ``JaggedArrays`` (which add depth to the row names),
 
@@ -359,6 +732,80 @@ array = awkward.fromiter([{"a": 1, "b": [[2.2, 3.3, 4.4], [], [5.5, 6.6]]},
                           {"a": 100, "b": [[], [9.9]]}])
 awkward.topandas(array, flatten=True)
 
+if False:
+      ["<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th>a</th>\n",
+       "      <th>b</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"5\" valign=\"top\">0</th>\n",
+       "      <th rowspan=\"3\" valign=\"top\">0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>1</td>\n",
+       "      <td>2.2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>1</td>\n",
+       "      <td>3.3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>1</td>\n",
+       "      <td>4.4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"2\" valign=\"top\">2</th>\n",
+       "      <th>0</th>\n",
+       "      <td>1</td>\n",
+       "      <td>5.5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>1</td>\n",
+       "      <td>6.6</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"4\" valign=\"top\">1</th>\n",
+       "      <th>0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>10</td>\n",
+       "      <td>1.1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"2\" valign=\"top\">1</th>\n",
+       "      <th>0</th>\n",
+       "      <td>10</td>\n",
+       "      <td>2.2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>10</td>\n",
+       "      <td>3.3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <th>0</th>\n",
+       "      <td>10</td>\n",
+       "      <td>4.4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <th>1</th>\n",
+       "      <th>0</th>\n",
+       "      <td>100</td>\n",
+       "      <td>9.9</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n"]
+
 # %%markdown
 # and they can even have two ``JaggedArrays`` at the same level if their number of elements is the same (at all levels of depth).
 
@@ -367,6 +814,91 @@ array = awkward.fromiter([{"a": [[1.1, 2.2, 3.3], [], [4.4, 5.5]], "b": [[1, 2, 
                           {"a": [[1.1], [2.2, 3.3], [], [4.4]],    "b": [[1], [2, 3], [], [4]]},
                           {"a": [[], [9.9]],                       "b": [[], [9]]}])
 awkward.topandas(array, flatten=True)
+
+if False:
+      ["<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th>a</th>\n",
+       "      <th>b</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"5\" valign=\"top\">0</th>\n",
+       "      <th rowspan=\"3\" valign=\"top\">0</th>\n",
+       "      <th>0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>1.1</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <th>1</th>\n",
+       "      <td>2.2</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <th>2</th>\n",
+       "      <td>3.3</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"2\" valign=\"top\">2</th>\n",
+       "      <th>0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>4.4</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <th>1</th>\n",
+       "      <td>5.5</td>\n",
+       "      <td>5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"4\" valign=\"top\">1</th>\n",
+       "      <th>0</th>\n",
+       "      <th>0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>1.1</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"2\" valign=\"top\">1</th>\n",
+       "      <th>0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>2.2</td>\n",
+       "      <td>2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <th>1</th>\n",
+       "      <td>3.3</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <th>0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>4.4</td>\n",
+       "      <td>4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <th>1</th>\n",
+       "      <th>0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>9.9</td>\n",
+       "      <td>9</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n"]
 
 # %%markdown
 # But if there are two ``JaggedArrays`` with *different* structure at the same level, a single DataFrame cannot represent them.
@@ -379,6 +911,7 @@ try:
     awkward.topandas(array, flatten=True)
 except Exception as err:
     print(type(err), str(err))
+# <class 'ValueError'> this array has more than one jagged array structure
 
 # %%markdown
 # To describe data like these, you'd need two DataFrames, and any calculations involving both ``"a"`` and ``"b"`` would have to include a join on those DataFrames. Awkward arrays are not limited in this way: the last ``array`` above is a valid awkward array and is useful for calculations that mix ``"a"`` and ``"b"``.
@@ -501,7 +1034,7 @@ events[0].tolist()
 #    * `AppendableArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#appendablearray>`__
 #
 # * `Laziness <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#laziness>`__
-# 
+#
 #    * `VirtualArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#virtualarray>`__
 
 # %%markdown
@@ -2339,8 +2872,46 @@ a = awkward.Table(x=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7
 df = awkward.topandas(a)
 df
 
+if False:
+      [<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>x</th>\n",
+       "      <th>y</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>[1.1 2.2 3.3]</td>\n",
+       "      <td>100</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>[]</td>\n",
+       "      <td>200</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>[4.4 5.5]</td>\n",
+       "      <td>300</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>[6.6 7.7 8.8 9.9]</td>\n",
+       "      <td>400</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n"]
+
 # %%
 df.x
+# 0        [1.1 2.2 3.3]
+# 1                   []
+# 2            [4.4 5.5]
+# 3    [6.6 7.7 8.8 9.9]
+# Name: x, dtype: awkward
 
 # %%markdown
 # Note that the ``dtype`` is ``awkward``. The array has not been converted into Numpy ``dtype=object`` (which would imply a performance loss); it has been wrapped as a container that Pandas recognizes. You can get the awkward array back the same way you would a Numpy array:
@@ -2356,8 +2927,40 @@ df.x.values
 # %%
 df[1:]
 
+if False:
+      [<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>x</th>\n",
+       "      <th>y</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>[]</td>\n",
+       "      <td>200</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>[4.4 5.5]</td>\n",
+       "      <td>300</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>[6.6 7.7 8.8 9.9]</td>\n",
+       "      <td>400</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n"]
+
 # %%
 df.x[df.x.values.counts > 0]
+# 0        [1.1 2.2 3.3]
+# 2            [4.4 5.5]
+# 3    [6.6 7.7 8.8 9.9]
+# Name: x, dtype: awkward
 
 # %%markdown
 # However, Pandas has a (limited) way of handling jaggedness and nested tables, with ``pandas.MultiIndex`` rows and columns, respectively.
@@ -2370,6 +2973,73 @@ array = awkward.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
 df = awkward.topandas(array, flatten=True)
 df
 
+if False:
+      ["<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th colspan=\"2\" halign=\"left\">a</th>\n",
+       "      <th>e</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th>b</th>\n",
+       "      <th>c</th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th>d</th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>1</td>\n",
+       "      <td>2.0</td>\n",
+       "      <td>3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"2\" valign=\"top\">1</th>\n",
+       "      <th>0</th>\n",
+       "      <td>4</td>\n",
+       "      <td>5.0</td>\n",
+       "      <td>6</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>4</td>\n",
+       "      <td>5.1</td>\n",
+       "      <td>6</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"3\" valign=\"top\">2</th>\n",
+       "      <th>0</th>\n",
+       "      <td>7</td>\n",
+       "      <td>8.0</td>\n",
+       "      <td>9</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>7</td>\n",
+       "      <td>8.1</td>\n",
+       "      <td>9</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>7</td>\n",
+       "      <td>8.2</td>\n",
+       "      <td>9</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n"]
+
 # %%
 # Jagged arrays become MultiIndex-valued rows (index).
 array = awkward.fromiter([{"a": 1, "b": [[2.2, 3.3, 4.4], [], [5.5, 6.6]]},
@@ -2378,14 +3048,289 @@ array = awkward.fromiter([{"a": 1, "b": [[2.2, 3.3, 4.4], [], [5.5, 6.6]]},
 df = awkward.topandas(array, flatten=True)
 df
 
+if False:
+      ["<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th>a</th>\n",
+       "      <th>b</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"5\" valign=\"top\">0</th>\n",
+       "      <th rowspan=\"3\" valign=\"top\">0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>1</td>\n",
+       "      <td>2.2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>1</td>\n",
+       "      <td>3.3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>1</td>\n",
+       "      <td>4.4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"2\" valign=\"top\">2</th>\n",
+       "      <th>0</th>\n",
+       "      <td>1</td>\n",
+       "      <td>5.5</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>1</td>\n",
+       "      <td>6.6</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"4\" valign=\"top\">1</th>\n",
+       "      <th>0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>10</td>\n",
+       "      <td>1.1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"2\" valign=\"top\">1</th>\n",
+       "      <th>0</th>\n",
+       "      <td>10</td>\n",
+       "      <td>2.2</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>10</td>\n",
+       "      <td>3.3</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <th>0</th>\n",
+       "      <td>10</td>\n",
+       "      <td>4.4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <th>1</th>\n",
+       "      <th>0</th>\n",
+       "      <td>100</td>\n",
+       "      <td>9.9</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n"]
+
 # %%markdown
 # The advantage of this is that no new column types are introduced, and Pandas already has functions for managing structure in its ``MultiIndex``. For instance, this structure can be unstacked into Pandas's columns.
 
 # %%
 df.unstack()
 
+if False:
+      ["<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th colspan=\"3\" halign=\"left\">a</th>\n",
+       "      <th colspan=\"3\" halign=\"left\">b</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th>0</th>\n",
+       "      <th>1</th>\n",
+       "      <th>2</th>\n",
+       "      <th>0</th>\n",
+       "      <th>1</th>\n",
+       "      <th>2</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"2\" valign=\"top\">0</th>\n",
+       "      <th>0</th>\n",
+       "      <td>1.0</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>2.2</td>\n",
+       "      <td>3.3</td>\n",
+       "      <td>4.4</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>1.0</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>5.5</td>\n",
+       "      <td>6.6</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th rowspan=\"3\" valign=\"top\">1</th>\n",
+       "      <th>0</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1.1</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>10.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>2.2</td>\n",
+       "      <td>3.3</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>4.4</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <th>1</th>\n",
+       "      <td>100.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>9.9</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n"]
+
 # %%
 df.unstack().unstack()
+
+if False:
+      ["<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th colspan=\"10\" halign=\"left\">a</th>\n",
+       "      <th>...</th>\n",
+       "      <th colspan=\"10\" halign=\"left\">b</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th colspan=\"4\" halign=\"left\">0</th>\n",
+       "      <th colspan=\"4\" halign=\"left\">1</th>\n",
+       "      <th colspan=\"2\" halign=\"left\">2</th>\n",
+       "      <th>...</th>\n",
+       "      <th colspan=\"2\" halign=\"left\">0</th>\n",
+       "      <th colspan=\"4\" halign=\"left\">1</th>\n",
+       "      <th colspan=\"4\" halign=\"left\">2</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th></th>\n",
+       "      <th>0</th>\n",
+       "      <th>1</th>\n",
+       "      <th>2</th>\n",
+       "      <th>3</th>\n",
+       "      <th>0</th>\n",
+       "      <th>1</th>\n",
+       "      <th>2</th>\n",
+       "      <th>3</th>\n",
+       "      <th>0</th>\n",
+       "      <th>1</th>\n",
+       "      <th>...</th>\n",
+       "      <th>2</th>\n",
+       "      <th>3</th>\n",
+       "      <th>0</th>\n",
+       "      <th>1</th>\n",
+       "      <th>2</th>\n",
+       "      <th>3</th>\n",
+       "      <th>0</th>\n",
+       "      <th>1</th>\n",
+       "      <th>2</th>\n",
+       "      <th>3</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>1.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>...</td>\n",
+       "      <td>5.5</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>3.3</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>6.6</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>4.4</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>10.0</td>\n",
+       "      <td>10.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>10.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>10.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>...</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>4.4</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>3.3</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>NaN</td>\n",
+       "      <td>100.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>...</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n"]
 
 # %%markdown
 # It is also possible to get `Pandas Series and DataFrames through Arrow <https://arrow.apache.org/docs/python/pandas.html>`__, though this doesn't handle jagged arrays well: they get converted into Numpy ``dtype=object`` arrays.
@@ -2394,11 +3339,45 @@ df.unstack().unstack()
 df = awkward.toarrow(array).to_pandas()
 df
 
+if False:
+      ["<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>a</th>\n",
+       "      <th>b</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>1</td>\n",
+       "      <td>[[2.2, 3.3, 4.4], [], [5.5, 6.6]]</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>10</td>\n",
+       "      <td>[[1.1], [2.2, 3.3], [], [4.4]]</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>100</td>\n",
+       "      <td>[[], [9.9]]</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n"]
+
 # %%
 df.b
+# 0    [[2.2, 3.3, 4.4], [], [5.5, 6.6]]
+# 1       [[1.1], [2.2, 3.3], [], [4.4]]
+# 2                          [[], [9.9]]
+# Name: b, dtype: object
 
 # %%
 df.b[0]
+# array([array([2.2, 3.3, 4.4]), array([], dtype=float64),
+#        array([5.5, 6.6])], dtype=object)
 
 # %%markdown
 # # High-level types
