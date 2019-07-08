@@ -546,7 +546,7 @@ Arguably, this kind of dataset could be manipulated as a `Pandas DataFrame <http
 
 .. raw:: html
 
-      <table border="1" class="dataframe">
+      <table border="0" class="dataframe">
         <thead>
           <tr>
             <th></th>
@@ -732,7 +732,7 @@ The limitation is that only a single jagged structure can be represented by a Da
 
 .. raw:: html    
 
-      <table border="1" class="dataframe">
+      <table border="0" class="dataframe">
         <thead>
           <tr>
             <th></th>
@@ -809,7 +809,7 @@ and arbitrarily deep in ``JaggedArrays`` (which add depth to the row names),
 
 .. raw:: html
     
-      <table border="1" class="dataframe">
+      <table border="0" class="dataframe">
         <thead>
           <tr>
             <th></th>
@@ -893,7 +893,7 @@ and they can even have two ``JaggedArrays`` at the same level if their number of
 
 .. raw:: html
 
-      <table border="1" class="dataframe">
+      <table border="0" class="dataframe">
         <thead>
           <tr>
             <th></th>
@@ -3490,7 +3490,7 @@ Fewer types can be written to Parquet files than Arrow buffers, since pyarrow do
 
 .. raw:: html
 
-      <table border="1" class="dataframe">
+      <table border="0" class="dataframe">
         <thead>
           <tr style="text-align: right;">
             <th></th>
@@ -3548,7 +3548,7 @@ The value of this is that awkward slice semantics can be applied to data in Pand
 
 .. raw:: html
 
-       <table border="1" class="dataframe">
+       <table border="0" class="dataframe">
          <thead>
            <tr style="text-align: right;">
              <th></th>
@@ -3596,7 +3596,7 @@ However, Pandas has a (limited) way of handling jaggedness and nested tables, wi
 
 .. raw:: html
 
-      <table border="1" class="dataframe">
+      <table border="0" class="dataframe">
         <thead>
           <tr>
             <th></th>
@@ -3673,7 +3673,7 @@ However, Pandas has a (limited) way of handling jaggedness and nested tables, wi
 
 .. raw:: html
 
-      <table border="1" class="dataframe">
+      <table border="0" class="dataframe">
         <thead>
           <tr>
             <th></th>
@@ -3754,7 +3754,7 @@ The advantage of this is that no new column types are introduced, and Pandas alr
 
 .. raw:: html
 
-      <table border="1" class="dataframe">
+      <table border="0" class="dataframe">
         <thead>
           <tr>
             <th></th>
@@ -3840,7 +3840,7 @@ The advantage of this is that no new column types are introduced, and Pandas alr
 
 .. raw:: html
 
-      <table border="1" class="dataframe">
+      <table border="0" class="dataframe">
         <thead>
           <tr>
             <th></th>
@@ -3968,7 +3968,7 @@ It is also possible to get `Pandas Series and DataFrames through Arrow <https://
 
 .. raw:: html
 
-      <table border="1" class="dataframe">
+      <table border="0" class="dataframe">
         <thead>
           <tr style="text-align: right;">
             <th></th>
