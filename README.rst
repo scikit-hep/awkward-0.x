@@ -544,179 +544,180 @@ Arguably, this kind of dataset could be manipulated as a `Pandas DataFrame <http
 
     awkward.topandas(stars, flatten=True)[-9:]
 
-if False:
-      ["<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th>dec</th>\n",
-       "      <th>dist</th>\n",
-       "      <th>mass</th>\n",
-       "      <th>name</th>\n",
-       "      <th colspan=\"6\" halign=\"left\">planets</th>\n",
-       "      <th>ra</th>\n",
-       "      <th>radius</th>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th>eccen</th>\n",
-       "      <th>mass</th>\n",
-       "      <th>name</th>\n",
-       "      <th>orbit</th>\n",
-       "      <th>period</th>\n",
-       "      <th>radius</th>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"4\" valign=\"top\">2931</th>\n",
-       "      <th>0</th>\n",
-       "      <td>-15.937480</td>\n",
-       "      <td>3.60</td>\n",
-       "      <td>0.78</td>\n",
-       "      <td>49</td>\n",
-       "      <td>0.1800</td>\n",
-       "      <td>0.01237</td>\n",
-       "      <td>101</td>\n",
-       "      <td>0.538000</td>\n",
-       "      <td>162.870000</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>26.017012</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>-15.937480</td>\n",
-       "      <td>3.60</td>\n",
-       "      <td>0.78</td>\n",
-       "      <td>49</td>\n",
-       "      <td>0.1600</td>\n",
-       "      <td>0.01237</td>\n",
-       "      <td>102</td>\n",
-       "      <td>1.334000</td>\n",
-       "      <td>636.130000</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>26.017012</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>-15.937480</td>\n",
-       "      <td>3.60</td>\n",
-       "      <td>0.78</td>\n",
-       "      <td>49</td>\n",
-       "      <td>0.0600</td>\n",
-       "      <td>0.00551</td>\n",
-       "      <td>103</td>\n",
-       "      <td>0.133000</td>\n",
-       "      <td>20.000000</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>26.017012</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>3</th>\n",
-       "      <td>-15.937480</td>\n",
-       "      <td>3.60</td>\n",
-       "      <td>0.78</td>\n",
-       "      <td>49</td>\n",
-       "      <td>0.2300</td>\n",
-       "      <td>0.00576</td>\n",
-       "      <td>104</td>\n",
-       "      <td>0.243000</td>\n",
-       "      <td>49.410000</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>26.017012</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2932</th>\n",
-       "      <th>0</th>\n",
-       "      <td>30.245163</td>\n",
-       "      <td>112.64</td>\n",
-       "      <td>2.30</td>\n",
-       "      <td>53</td>\n",
-       "      <td>0.0310</td>\n",
-       "      <td>20.60000</td>\n",
-       "      <td>98</td>\n",
-       "      <td>1.170000</td>\n",
-       "      <td>305.500000</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>107.784882</td>\n",
-       "      <td>26.80</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"3\" valign=\"top\">2933</th>\n",
-       "      <th>0</th>\n",
-       "      <td>41.405460</td>\n",
-       "      <td>13.41</td>\n",
-       "      <td>1.30</td>\n",
-       "      <td>48</td>\n",
-       "      <td>0.0215</td>\n",
-       "      <td>0.68760</td>\n",
-       "      <td>98</td>\n",
-       "      <td>0.059222</td>\n",
-       "      <td>4.617033</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>24.199345</td>\n",
-       "      <td>1.56</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>41.405460</td>\n",
-       "      <td>13.41</td>\n",
-       "      <td>1.30</td>\n",
-       "      <td>48</td>\n",
-       "      <td>0.2596</td>\n",
-       "      <td>1.98100</td>\n",
-       "      <td>99</td>\n",
-       "      <td>0.827774</td>\n",
-       "      <td>241.258000</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>24.199345</td>\n",
-       "      <td>1.56</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>41.405460</td>\n",
-       "      <td>13.41</td>\n",
-       "      <td>1.30</td>\n",
-       "      <td>48</td>\n",
-       "      <td>0.2987</td>\n",
-       "      <td>4.13200</td>\n",
-       "      <td>100</td>\n",
-       "      <td>2.513290</td>\n",
-       "      <td>1276.460000</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>24.199345</td>\n",
-       "      <td>1.56</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2934</th>\n",
-       "      <th>0</th>\n",
-       "      <td>8.461452</td>\n",
-       "      <td>56.27</td>\n",
-       "      <td>2.20</td>\n",
-       "      <td>55</td>\n",
-       "      <td>0.0000</td>\n",
-       "      <td>2.80000</td>\n",
-       "      <td>98</td>\n",
-       "      <td>0.680000</td>\n",
-       "      <td>136.750000</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>298.562012</td>\n",
-       "      <td>12.00</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n"]
+.. raw:: html
+
+      <table border="1" class="dataframe">
+        <thead>
+          <tr>
+            <th></th>
+            <th></th>
+            <th>dec</th>
+            <th>dist</th>
+            <th>mass</th>
+            <th>name</th>
+            <th colspan="6" halign="left">planets</th>
+            <th>ra</th>
+            <th>radius</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th>eccen</th>
+            <th>mass</th>
+            <th>name</th>
+            <th>orbit</th>
+            <th>period</th>
+            <th>radius</th>
+            <th></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th rowspan="4" valign="top">2931</th>
+            <th>0</th>
+            <td>-15.937480</td>
+            <td>3.60</td>
+            <td>0.78</td>
+            <td>49</td>
+            <td>0.1800</td>
+            <td>0.01237</td>
+            <td>101</td>
+            <td>0.538000</td>
+            <td>162.870000</td>
+            <td>NaN</td>
+            <td>26.017012</td>
+            <td>NaN</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>-15.937480</td>
+            <td>3.60</td>
+            <td>0.78</td>
+            <td>49</td>
+            <td>0.1600</td>
+            <td>0.01237</td>
+            <td>102</td>
+            <td>1.334000</td>
+            <td>636.130000</td>
+            <td>NaN</td>
+            <td>26.017012</td>
+            <td>NaN</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <td>-15.937480</td>
+            <td>3.60</td>
+            <td>0.78</td>
+            <td>49</td>
+            <td>0.0600</td>
+            <td>0.00551</td>
+            <td>103</td>
+            <td>0.133000</td>
+            <td>20.000000</td>
+            <td>NaN</td>
+            <td>26.017012</td>
+            <td>NaN</td>
+          </tr>
+          <tr>
+            <th>3</th>
+            <td>-15.937480</td>
+            <td>3.60</td>
+            <td>0.78</td>
+            <td>49</td>
+            <td>0.2300</td>
+            <td>0.00576</td>
+            <td>104</td>
+            <td>0.243000</td>
+            <td>49.410000</td>
+            <td>NaN</td>
+            <td>26.017012</td>
+            <td>NaN</td>
+          </tr>
+          <tr>
+            <th>2932</th>
+            <th>0</th>
+            <td>30.245163</td>
+            <td>112.64</td>
+            <td>2.30</td>
+            <td>53</td>
+            <td>0.0310</td>
+            <td>20.60000</td>
+            <td>98</td>
+            <td>1.170000</td>
+            <td>305.500000</td>
+            <td>NaN</td>
+            <td>107.784882</td>
+            <td>26.80</td>
+          </tr>
+          <tr>
+            <th rowspan="3" valign="top">2933</th>
+            <th>0</th>
+            <td>41.405460</td>
+            <td>13.41</td>
+            <td>1.30</td>
+            <td>48</td>
+            <td>0.0215</td>
+            <td>0.68760</td>
+            <td>98</td>
+            <td>0.059222</td>
+            <td>4.617033</td>
+            <td>NaN</td>
+            <td>24.199345</td>
+            <td>1.56</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>41.405460</td>
+            <td>13.41</td>
+            <td>1.30</td>
+            <td>48</td>
+            <td>0.2596</td>
+            <td>1.98100</td>
+            <td>99</td>
+            <td>0.827774</td>
+            <td>241.258000</td>
+            <td>NaN</td>
+            <td>24.199345</td>
+            <td>1.56</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <td>41.405460</td>
+            <td>13.41</td>
+            <td>1.30</td>
+            <td>48</td>
+            <td>0.2987</td>
+            <td>4.13200</td>
+            <td>100</td>
+            <td>2.513290</td>
+            <td>1276.460000</td>
+            <td>NaN</td>
+            <td>24.199345</td>
+            <td>1.56</td>
+          </tr>
+          <tr>
+            <th>2934</th>
+            <th>0</th>
+            <td>8.461452</td>
+            <td>56.27</td>
+            <td>2.20</td>
+            <td>55</td>
+            <td>0.0000</td>
+            <td>2.80000</td>
+            <td>98</td>
+            <td>0.680000</td>
+            <td>136.750000</td>
+            <td>NaN</td>
+            <td>298.562012</td>
+            <td>12.00</td>
+          </tr>
+        </tbody>
+      </table>
 
 In this representation, each star's attributes must be duplicated for all of its planets, and it is not possible to show stars that have no planets (not present in this dataset), but the information is preserved in a way that Pandas can recognize and operate on. (For instance, ``.unstack()`` would widen each planet attribute into a separate column per planet and simplify the index to strictly one row per star.)
 
@@ -729,72 +730,73 @@ The limitation is that only a single jagged structure can be represented by a Da
                               {"a": {"b": 7, "c": {"d": [8, 8.1, 8.2]}}, "e": 9}])
     awkward.topandas(array, flatten=True)
 
-if False:
-      ["<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th colspan=\"2\" halign=\"left\">a</th>\n",
-       "      <th>e</th>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th>b</th>\n",
-       "      <th>c</th>\n",
-       "      <th></th>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th>d</th>\n",
-       "      <th></th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th>0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>1</td>\n",
-       "      <td>2.0</td>\n",
-       "      <td>3</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"2\" valign=\"top\">1</th>\n",
-       "      <th>0</th>\n",
-       "      <td>4</td>\n",
-       "      <td>5.0</td>\n",
-       "      <td>6</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>4</td>\n",
-       "      <td>5.1</td>\n",
-       "      <td>6</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"3\" valign=\"top\">2</th>\n",
-       "      <th>0</th>\n",
-       "      <td>7</td>\n",
-       "      <td>8.0</td>\n",
-       "      <td>9</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>7</td>\n",
-       "      <td>8.1</td>\n",
-       "      <td>9</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>7</td>\n",
-       "      <td>8.2</td>\n",
-       "      <td>9</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n"]
+.. raw:: html    
+
+      <table border="1" class="dataframe">
+        <thead>
+          <tr>
+            <th></th>
+            <th></th>
+            <th colspan="2" halign="left">a</th>
+            <th>e</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th></th>
+            <th>b</th>
+            <th>c</th>
+            <th></th>
+          </tr>
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th>d</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>0</th>
+            <th>0</th>
+            <td>1</td>
+            <td>2.0</td>
+            <td>3</td>
+          </tr>
+          <tr>
+            <th rowspan="2" valign="top">1</th>
+            <th>0</th>
+            <td>4</td>
+            <td>5.0</td>
+            <td>6</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>4</td>
+            <td>5.1</td>
+            <td>6</td>
+          </tr>
+          <tr>
+            <th rowspan="3" valign="top">2</th>
+            <th>0</th>
+            <td>7</td>
+            <td>8.0</td>
+            <td>9</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>7</td>
+            <td>8.1</td>
+            <td>9</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <td>7</td>
+            <td>8.2</td>
+            <td>9</td>
+          </tr>
+        </tbody>
+      </table>
 
 and arbitrarily deep in ``JaggedArrays`` (which add depth to the row names),
 
@@ -805,79 +807,80 @@ and arbitrarily deep in ``JaggedArrays`` (which add depth to the row names),
                               {"a": 100, "b": [[], [9.9]]}])
     awkward.topandas(array, flatten=True)
 
-if False:
-      ["<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th>a</th>\n",
-       "      <th>b</th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"5\" valign=\"top\">0</th>\n",
-       "      <th rowspan=\"3\" valign=\"top\">0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>1</td>\n",
-       "      <td>2.2</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>1</td>\n",
-       "      <td>3.3</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>1</td>\n",
-       "      <td>4.4</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"2\" valign=\"top\">2</th>\n",
-       "      <th>0</th>\n",
-       "      <td>1</td>\n",
-       "      <td>5.5</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>1</td>\n",
-       "      <td>6.6</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"4\" valign=\"top\">1</th>\n",
-       "      <th>0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>10</td>\n",
-       "      <td>1.1</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"2\" valign=\"top\">1</th>\n",
-       "      <th>0</th>\n",
-       "      <td>10</td>\n",
-       "      <td>2.2</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>10</td>\n",
-       "      <td>3.3</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>3</th>\n",
-       "      <th>0</th>\n",
-       "      <td>10</td>\n",
-       "      <td>4.4</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <th>1</th>\n",
-       "      <th>0</th>\n",
-       "      <td>100</td>\n",
-       "      <td>9.9</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n"]
+.. raw:: html
+    
+      <table border="1" class="dataframe">
+        <thead>
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th>a</th>
+            <th>b</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th rowspan="5" valign="top">0</th>
+            <th rowspan="3" valign="top">0</th>
+            <th>0</th>
+            <td>1</td>
+            <td>2.2</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>1</td>
+            <td>3.3</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <td>1</td>
+            <td>4.4</td>
+          </tr>
+          <tr>
+            <th rowspan="2" valign="top">2</th>
+            <th>0</th>
+            <td>1</td>
+            <td>5.5</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>1</td>
+            <td>6.6</td>
+          </tr>
+          <tr>
+            <th rowspan="4" valign="top">1</th>
+            <th>0</th>
+            <th>0</th>
+            <td>10</td>
+            <td>1.1</td>
+          </tr>
+          <tr>
+            <th rowspan="2" valign="top">1</th>
+            <th>0</th>
+            <td>10</td>
+            <td>2.2</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>10</td>
+            <td>3.3</td>
+          </tr>
+          <tr>
+            <th>3</th>
+            <th>0</th>
+            <td>10</td>
+            <td>4.4</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <th>1</th>
+            <th>0</th>
+            <td>100</td>
+            <td>9.9</td>
+          </tr>
+        </tbody>
+      </table>
 
 and they can even have two ``JaggedArrays`` at the same level if their number of elements is the same (at all levels of depth).
 
@@ -888,90 +891,91 @@ and they can even have two ``JaggedArrays`` at the same level if their number of
                               {"a": [[], [9.9]],                       "b": [[], [9]]}])
     awkward.topandas(array, flatten=True)
 
-if False:
-      ["<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th>a</th>\n",
-       "      <th>b</th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"5\" valign=\"top\">0</th>\n",
-       "      <th rowspan=\"3\" valign=\"top\">0</th>\n",
-       "      <th>0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>1.1</td>\n",
-       "      <td>1</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <th>1</th>\n",
-       "      <td>2.2</td>\n",
-       "      <td>2</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <th>2</th>\n",
-       "      <td>3.3</td>\n",
-       "      <td>3</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"2\" valign=\"top\">2</th>\n",
-       "      <th>0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>4.4</td>\n",
-       "      <td>4</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <th>1</th>\n",
-       "      <td>5.5</td>\n",
-       "      <td>5</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"4\" valign=\"top\">1</th>\n",
-       "      <th>0</th>\n",
-       "      <th>0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>1.1</td>\n",
-       "      <td>1</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"2\" valign=\"top\">1</th>\n",
-       "      <th>0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>2.2</td>\n",
-       "      <td>2</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <th>1</th>\n",
-       "      <td>3.3</td>\n",
-       "      <td>3</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>3</th>\n",
-       "      <th>0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>4.4</td>\n",
-       "      <td>4</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <th>1</th>\n",
-       "      <th>0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>9.9</td>\n",
-       "      <td>9</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n"]
+.. raw:: html
+
+      <table border="1" class="dataframe">
+        <thead>
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th>a</th>
+            <th>b</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th rowspan="5" valign="top">0</th>
+            <th rowspan="3" valign="top">0</th>
+            <th>0</th>
+            <th>0</th>
+            <td>1.1</td>
+            <td>1</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <th>1</th>
+            <td>2.2</td>
+            <td>2</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <th>2</th>
+            <td>3.3</td>
+            <td>3</td>
+          </tr>
+          <tr>
+            <th rowspan="2" valign="top">2</th>
+            <th>0</th>
+            <th>0</th>
+            <td>4.4</td>
+            <td>4</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <th>1</th>
+            <td>5.5</td>
+            <td>5</td>
+          </tr>
+          <tr>
+            <th rowspan="4" valign="top">1</th>
+            <th>0</th>
+            <th>0</th>
+            <th>0</th>
+            <td>1.1</td>
+            <td>1</td>
+          </tr>
+          <tr>
+            <th rowspan="2" valign="top">1</th>
+            <th>0</th>
+            <th>0</th>
+            <td>2.2</td>
+            <td>2</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <th>1</th>
+            <td>3.3</td>
+            <td>3</td>
+          </tr>
+          <tr>
+            <th>3</th>
+            <th>0</th>
+            <th>0</th>
+            <td>4.4</td>
+            <td>4</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <th>1</th>
+            <th>0</th>
+            <th>0</th>
+            <td>9.9</td>
+            <td>9</td>
+          </tr>
+        </tbody>
+      </table>
 
 But if there are two ``JaggedArrays`` with *different* structure at the same level, a single DataFrame cannot represent them.
 
@@ -1874,9 +1878,7 @@ Also, a dimension can effectively be fixed-size, but represented by a ``JaggedAr
             except IndexError:
                 return None
 
-JaggedArrayMethods = awkward.Methods.mixin(Special, awkward.JaggedArray)
-
-.. code-block:: python3
+    JaggedArrayMethods = awkward.Methods.mixin(Special, awkward.JaggedArray)
 
     a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     a.__class__ = JaggedArrayMethods
@@ -3486,38 +3488,39 @@ Fewer types can be written to Parquet files than Arrow buffers, since pyarrow do
     df = awkward.topandas(a)
     df
 
-if False:
-      [<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr style=\"text-align: right;\">\n",
-       "      <th></th>\n",
-       "      <th>x</th>\n",
-       "      <th>y</th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th>0</th>\n",
-       "      <td>[1.1 2.2 3.3]</td>\n",
-       "      <td>100</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>[]</td>\n",
-       "      <td>200</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>[4.4 5.5]</td>\n",
-       "      <td>300</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>3</th>\n",
-       "      <td>[6.6 7.7 8.8 9.9]</td>\n",
-       "      <td>400</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n"]
+.. raw:: html
+
+      <table border="1" class="dataframe">
+        <thead>
+          <tr style="text-align: right;">
+            <th></th>
+            <th>x</th>
+            <th>y</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>0</th>
+            <td>[1.1 2.2 3.3]</td>
+            <td>100</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>[]</td>
+            <td>200</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <td>[4.4 5.5]</td>
+            <td>300</td>
+          </tr>
+          <tr>
+            <th>3</th>
+            <td>[6.6 7.7 8.8 9.9]</td>
+            <td>400</td>
+          </tr>
+        </tbody>
+      </table>
 
 .. code-block:: python3
 
@@ -3543,33 +3546,34 @@ The value of this is that awkward slice semantics can be applied to data in Pand
 
     df[1:]
 
-if False:
-      [<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr style=\"text-align: right;\">\n",
-       "      <th></th>\n",
-       "      <th>x</th>\n",
-       "      <th>y</th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>[]</td>\n",
-       "      <td>200</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>[4.4 5.5]</td>\n",
-       "      <td>300</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>3</th>\n",
-       "      <td>[6.6 7.7 8.8 9.9]</td>\n",
-       "      <td>400</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n"]
+.. raw:: html
+
+       <table border="1" class="dataframe">
+         <thead>
+           <tr style="text-align: right;">
+             <th></th>
+             <th>x</th>
+             <th>y</th>
+           </tr>
+         </thead>
+         <tbody>
+           <tr>
+             <th>1</th>
+             <td>[]</td>
+             <td>200</td>
+           </tr>
+           <tr>
+             <th>2</th>
+             <td>[4.4 5.5]</td>
+             <td>300</td>
+           </tr>
+           <tr>
+             <th>3</th>
+             <td>[6.6 7.7 8.8 9.9]</td>
+             <td>400</td>
+           </tr>
+         </tbody>
+       </table>
 
 .. code-block:: python3
 
@@ -3590,72 +3594,73 @@ However, Pandas has a (limited) way of handling jaggedness and nested tables, wi
     df = awkward.topandas(array, flatten=True)
     df
 
-if False:
-      ["<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th colspan=\"2\" halign=\"left\">a</th>\n",
-       "      <th>e</th>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th>b</th>\n",
-       "      <th>c</th>\n",
-       "      <th></th>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th>d</th>\n",
-       "      <th></th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th>0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>1</td>\n",
-       "      <td>2.0</td>\n",
-       "      <td>3</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"2\" valign=\"top\">1</th>\n",
-       "      <th>0</th>\n",
-       "      <td>4</td>\n",
-       "      <td>5.0</td>\n",
-       "      <td>6</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>4</td>\n",
-       "      <td>5.1</td>\n",
-       "      <td>6</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"3\" valign=\"top\">2</th>\n",
-       "      <th>0</th>\n",
-       "      <td>7</td>\n",
-       "      <td>8.0</td>\n",
-       "      <td>9</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>7</td>\n",
-       "      <td>8.1</td>\n",
-       "      <td>9</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>7</td>\n",
-       "      <td>8.2</td>\n",
-       "      <td>9</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n"]
+.. raw:: html
+
+      <table border="1" class="dataframe">
+        <thead>
+          <tr>
+            <th></th>
+            <th></th>
+            <th colspan="2" halign="left">a</th>
+            <th>e</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th></th>
+            <th>b</th>
+            <th>c</th>
+            <th></th>
+          </tr>
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th>d</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>0</th>
+            <th>0</th>
+            <td>1</td>
+            <td>2.0</td>
+            <td>3</td>
+          </tr>
+          <tr>
+            <th rowspan="2" valign="top">1</th>
+            <th>0</th>
+            <td>4</td>
+            <td>5.0</td>
+            <td>6</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>4</td>
+            <td>5.1</td>
+            <td>6</td>
+          </tr>
+          <tr>
+            <th rowspan="3" valign="top">2</th>
+            <th>0</th>
+            <td>7</td>
+            <td>8.0</td>
+            <td>9</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>7</td>
+            <td>8.1</td>
+            <td>9</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <td>7</td>
+            <td>8.2</td>
+            <td>9</td>
+          </tr>
+        </tbody>
+      </table>
 
 .. code-block:: python3
 
@@ -3666,79 +3671,80 @@ if False:
     df = awkward.topandas(array, flatten=True)
     df
 
-if False:
-      ["<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th>a</th>\n",
-       "      <th>b</th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"5\" valign=\"top\">0</th>\n",
-       "      <th rowspan=\"3\" valign=\"top\">0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>1</td>\n",
-       "      <td>2.2</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>1</td>\n",
-       "      <td>3.3</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>1</td>\n",
-       "      <td>4.4</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"2\" valign=\"top\">2</th>\n",
-       "      <th>0</th>\n",
-       "      <td>1</td>\n",
-       "      <td>5.5</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>1</td>\n",
-       "      <td>6.6</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"4\" valign=\"top\">1</th>\n",
-       "      <th>0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>10</td>\n",
-       "      <td>1.1</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"2\" valign=\"top\">1</th>\n",
-       "      <th>0</th>\n",
-       "      <td>10</td>\n",
-       "      <td>2.2</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>10</td>\n",
-       "      <td>3.3</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>3</th>\n",
-       "      <th>0</th>\n",
-       "      <td>10</td>\n",
-       "      <td>4.4</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <th>1</th>\n",
-       "      <th>0</th>\n",
-       "      <td>100</td>\n",
-       "      <td>9.9</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n"]
+.. raw:: html
+
+      <table border="1" class="dataframe">
+        <thead>
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th>a</th>
+            <th>b</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th rowspan="5" valign="top">0</th>
+            <th rowspan="3" valign="top">0</th>
+            <th>0</th>
+            <td>1</td>
+            <td>2.2</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>1</td>
+            <td>3.3</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <td>1</td>
+            <td>4.4</td>
+          </tr>
+          <tr>
+            <th rowspan="2" valign="top">2</th>
+            <th>0</th>
+            <td>1</td>
+            <td>5.5</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>1</td>
+            <td>6.6</td>
+          </tr>
+          <tr>
+            <th rowspan="4" valign="top">1</th>
+            <th>0</th>
+            <th>0</th>
+            <td>10</td>
+            <td>1.1</td>
+          </tr>
+          <tr>
+            <th rowspan="2" valign="top">1</th>
+            <th>0</th>
+            <td>10</td>
+            <td>2.2</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>10</td>
+            <td>3.3</td>
+          </tr>
+          <tr>
+            <th>3</th>
+            <th>0</th>
+            <td>10</td>
+            <td>4.4</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <th>1</th>
+            <th>0</th>
+            <td>100</td>
+            <td>9.9</td>
+          </tr>
+        </tbody>
+      </table>
 
 The advantage of this is that no new column types are introduced, and Pandas already has functions for managing structure in its ``MultiIndex``. For instance, this structure can be unstacked into Pandas's columns.
 
@@ -3746,210 +3752,212 @@ The advantage of this is that no new column types are introduced, and Pandas alr
 
     df.unstack()
 
-if False:
-      ["<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th colspan=\"3\" halign=\"left\">a</th>\n",
-       "      <th colspan=\"3\" halign=\"left\">b</th>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th></th>\n",
-       "      <th>0</th>\n",
-       "      <th>1</th>\n",
-       "      <th>2</th>\n",
-       "      <th>0</th>\n",
-       "      <th>1</th>\n",
-       "      <th>2</th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"2\" valign=\"top\">0</th>\n",
-       "      <th>0</th>\n",
-       "      <td>1.0</td>\n",
-       "      <td>1.0</td>\n",
-       "      <td>1.0</td>\n",
-       "      <td>2.2</td>\n",
-       "      <td>3.3</td>\n",
-       "      <td>4.4</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>1.0</td>\n",
-       "      <td>1.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>5.5</td>\n",
-       "      <td>6.6</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th rowspan=\"3\" valign=\"top\">1</th>\n",
-       "      <th>0</th>\n",
-       "      <td>10.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>1.1</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>10.0</td>\n",
-       "      <td>10.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>2.2</td>\n",
-       "      <td>3.3</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>3</th>\n",
-       "      <td>10.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>4.4</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <th>1</th>\n",
-       "      <td>100.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>9.9</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n"]
+.. raw:: html
+
+      <table border="1" class="dataframe">
+        <thead>
+          <tr>
+            <th></th>
+            <th></th>
+            <th colspan="3" halign="left">a</th>
+            <th colspan="3" halign="left">b</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th></th>
+            <th>0</th>
+            <th>1</th>
+            <th>2</th>
+            <th>0</th>
+            <th>1</th>
+            <th>2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th rowspan="2" valign="top">0</th>
+            <th>0</th>
+            <td>1.0</td>
+            <td>1.0</td>
+            <td>1.0</td>
+            <td>2.2</td>
+            <td>3.3</td>
+            <td>4.4</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <td>1.0</td>
+            <td>1.0</td>
+            <td>NaN</td>
+            <td>5.5</td>
+            <td>6.6</td>
+            <td>NaN</td>
+          </tr>
+          <tr>
+            <th rowspan="3" valign="top">1</th>
+            <th>0</th>
+            <td>10.0</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>1.1</td>
+            <td>NaN</td>
+            <td>NaN</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>10.0</td>
+            <td>10.0</td>
+            <td>NaN</td>
+            <td>2.2</td>
+            <td>3.3</td>
+            <td>NaN</td>
+          </tr>
+          <tr>
+            <th>3</th>
+            <td>10.0</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>4.4</td>
+            <td>NaN</td>
+            <td>NaN</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <th>1</th>
+            <td>100.0</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>9.9</td>
+            <td>NaN</td>
+            <td>NaN</td>
+          </tr>
+        </tbody>
+      </table>
 
 .. code-block:: python3
 
     df.unstack().unstack()
 
-if False:
-      ["<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th colspan=\"10\" halign=\"left\">a</th>\n",
-       "      <th>...</th>\n",
-       "      <th colspan=\"10\" halign=\"left\">b</th>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th colspan=\"4\" halign=\"left\">0</th>\n",
-       "      <th colspan=\"4\" halign=\"left\">1</th>\n",
-       "      <th colspan=\"2\" halign=\"left\">2</th>\n",
-       "      <th>...</th>\n",
-       "      <th colspan=\"2\" halign=\"left\">0</th>\n",
-       "      <th colspan=\"4\" halign=\"left\">1</th>\n",
-       "      <th colspan=\"4\" halign=\"left\">2</th>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th></th>\n",
-       "      <th>0</th>\n",
-       "      <th>1</th>\n",
-       "      <th>2</th>\n",
-       "      <th>3</th>\n",
-       "      <th>0</th>\n",
-       "      <th>1</th>\n",
-       "      <th>2</th>\n",
-       "      <th>3</th>\n",
-       "      <th>0</th>\n",
-       "      <th>1</th>\n",
-       "      <th>...</th>\n",
-       "      <th>2</th>\n",
-       "      <th>3</th>\n",
-       "      <th>0</th>\n",
-       "      <th>1</th>\n",
-       "      <th>2</th>\n",
-       "      <th>3</th>\n",
-       "      <th>0</th>\n",
-       "      <th>1</th>\n",
-       "      <th>2</th>\n",
-       "      <th>3</th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th>0</th>\n",
-       "      <td>1.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>1.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>1.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>1.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>1.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>...</td>\n",
-       "      <td>5.5</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>3.3</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>6.6</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>4.4</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>10.0</td>\n",
-       "      <td>10.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>10.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>10.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>...</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>4.4</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>3.3</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>NaN</td>\n",
-       "      <td>100.0</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>...</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "      <td>NaN</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n"]
+.. raw:: html
+
+      <table border="1" class="dataframe">
+        <thead>
+          <tr>
+            <th></th>
+            <th colspan="10" halign="left">a</th>
+            <th>...</th>
+            <th colspan="10" halign="left">b</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th colspan="4" halign="left">0</th>
+            <th colspan="4" halign="left">1</th>
+            <th colspan="2" halign="left">2</th>
+            <th>...</th>
+            <th colspan="2" halign="left">0</th>
+            <th colspan="4" halign="left">1</th>
+            <th colspan="4" halign="left">2</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th>0</th>
+            <th>1</th>
+            <th>2</th>
+            <th>3</th>
+            <th>0</th>
+            <th>1</th>
+            <th>2</th>
+            <th>3</th>
+            <th>0</th>
+            <th>1</th>
+            <th>...</th>
+            <th>2</th>
+            <th>3</th>
+            <th>0</th>
+            <th>1</th>
+            <th>2</th>
+            <th>3</th>
+            <th>0</th>
+            <th>1</th>
+            <th>2</th>
+            <th>3</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>0</th>
+            <td>1.0</td>
+            <td>NaN</td>
+            <td>1.0</td>
+            <td>NaN</td>
+            <td>1.0</td>
+            <td>NaN</td>
+            <td>1.0</td>
+            <td>NaN</td>
+            <td>1.0</td>
+            <td>NaN</td>
+            <td>...</td>
+            <td>5.5</td>
+            <td>NaN</td>
+            <td>3.3</td>
+            <td>NaN</td>
+            <td>6.6</td>
+            <td>NaN</td>
+            <td>4.4</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>10.0</td>
+            <td>10.0</td>
+            <td>NaN</td>
+            <td>10.0</td>
+            <td>NaN</td>
+            <td>10.0</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>...</td>
+            <td>NaN</td>
+            <td>4.4</td>
+            <td>NaN</td>
+            <td>3.3</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <td>NaN</td>
+            <td>100.0</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>...</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+            <td>NaN</td>
+          </tr>
+        </tbody>
+      </table>
 
 It is also possible to get `Pandas Series and DataFrames through Arrow <https://arrow.apache.org/docs/python/pandas.html>`__, though this doesn't handle jagged arrays well: they get converted into Numpy ``dtype=object`` arrays.
 
@@ -3958,33 +3966,34 @@ It is also possible to get `Pandas Series and DataFrames through Arrow <https://
     df = awkward.toarrow(array).to_pandas()
     df
 
-if False:
-      ["<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr style=\"text-align: right;\">\n",
-       "      <th></th>\n",
-       "      <th>a</th>\n",
-       "      <th>b</th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th>0</th>\n",
-       "      <td>1</td>\n",
-       "      <td>[[2.2, 3.3, 4.4], [], [5.5, 6.6]]</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>10</td>\n",
-       "      <td>[[1.1], [2.2, 3.3], [], [4.4]]</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>100</td>\n",
-       "      <td>[[], [9.9]]</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n"]
+.. raw:: html
+
+      <table border="1" class="dataframe">
+        <thead>
+          <tr style="text-align: right;">
+            <th></th>
+            <th>a</th>
+            <th>b</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>0</th>
+            <td>1</td>
+            <td>[[2.2, 3.3, 4.4], [], [5.5, 6.6]]</td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td>10</td>
+            <td>[[1.1], [2.2, 3.3], [], [4.4]]</td>
+          </tr>
+          <tr>
+            <th>2</th>
+            <td>100</td>
+            <td>[[], [9.9]]</td>
+          </tr>
+        </tbody>
+      </table>
 
 .. code-block:: python3
 
@@ -4163,11 +4172,11 @@ In the print-out, labels (``T0 :=``, ``T1 :=``, ``T2 :=``) are inserted to indic
 .. code-block:: python3
 
     print(tree.type)
-    [0, 9) -> 'left'  -> T0 := ?(T1 := 'left'  -> T0
-                                       'right' -> T2 := ?(T1)
-                                       'value' -> float64)
-              'right' -> T2
-              'value' -> float64
+    # [0, 9) -> 'left'  -> T0 := ?(T1 := 'left'  -> T0
+    #                                    'right' -> T2 := ?(T1)
+    #                                    'value' -> float64)
+    #           'right' -> T2
+    #           'value' -> float64
 
 The ``ObjectArray`` class turns awkward array structures into Python objects on demand. From an analysis point of view, the elements of the array *are* Python objects, and that is reflected in the type.
 
