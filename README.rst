@@ -486,7 +486,7 @@ and the return type of these depends on which string you provide.
     #  'period': 129.9441,
     #  'radius': 0.10400000000000001}
 
-(Incidentally, this is a `potentially habitable exoplanet <https://www.nasa.gov/ames/kepler/kepler-186f-the-first-earth-size-planet-in-the-habitable-zone>`__`, the first ever discovered.)
+(Incidentally, this is a `potentially habitable exoplanet <https://www.nasa.gov/ames/kepler/kepler-186f-the-first-earth-size-planet-in-the-habitable-zone>`__, the first ever discovered.)
 
 .. code-block:: python3
 
@@ -1024,7 +1024,7 @@ Particle physicsts need structures like these—in fact, they have been a staple
     #  'trigger_isomu24',
     #  'eventweight']
 
-This is a typical particle physics dataset (though small!) in that it represents the momentum and energy (``"p4"`` for `Lorentz 4-momentum <https://en.wikipedia.org/wiki/Four-vector`__) of several different species of particles: ``"jet"``, ``"muon"``, ``"electron"``, and ``"photon"``. Each collision can produce a different number of particles in each species. Other variables, such as missing transverse energy or ``"MET"``, have one value per collision event. Events with zero particles in a species are valuable for the event-level data.
+This is a typical particle physics dataset (though small!) in that it represents the momentum and energy (``"p4"`` for `Lorentz 4-momentum <https://en.wikipedia.org/wiki/Four-vector>`__) of several different species of particles: ``"jet"``, ``"muon"``, ``"electron"``, and ``"photon"``. Each collision can produce a different number of particles in each species. Other variables, such as missing transverse energy or ``"MET"``, have one value per collision event. Events with zero particles in a species are valuable for the event-level data.
 
 .. code-block:: python3
 
@@ -1117,43 +1117,43 @@ For more details, see `array classes <https://github.com/scikit-hep/awkward-arra
 
 * `Jaggedness <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#jaggedness>`__
 
-   * `JaggedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#jaggedarray>`__
-   * `Helper functions <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#helper-functions>`__
+   - `JaggedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#jaggedarray>`__
+   - `Helper functions <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#helper-functions>`__
 
 * `Product types <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#product-types>`__
 
-   * `Table <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#table>`__
+   - `Table <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#table>`__
 
 * `Sum types <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#sum-types>`__
 
-   * `UnionArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#unionarray>`__
+   - `UnionArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#unionarray>`__
 
 * `Option types <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#option-types>`__
 
-   * `MaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#maskedarray>`__
-   * `BitMaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#bitmaskedarray>`__
-   * `IndexedMaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indexedmaskedarray>`__
+   - `MaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#maskedarray>`__
+   - `BitMaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#bitmaskedarray>`__
+   - `IndexedMaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indexedmaskedarray>`__
 
 * `Indirection <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indirection>`__
 
-   * `IndexedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indexedarray>`__
-   * `SparseArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#sparsearray>`__
-   * `Helper functions <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#helper-functions-1>`__
+   - `IndexedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indexedarray>`__
+   - `SparseArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#sparsearray>`__
+   - `Helper functions <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#helper-functions-1>`__
 
 * `Opaque objects <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#opaque-objects>`__
 
-   * `Mix-in Methods <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#mix-in-methods>`__
-   * `ObjectArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#objectarray>`__
-   * `StringArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#stringarray>`__
+   - `Mix-in Methods <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#mix-in-methods>`__
+   - `ObjectArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#objectarray>`__
+   - `StringArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#stringarray>`__
 
 * `Non-contiguousness <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#non-contiguousness>`__
 
-   * `ChunkedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#chunkedarray>`__
-   * `AppendableArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#appendablearray>`__
+   - `ChunkedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#chunkedarray>`__
+   - `AppendableArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#appendablearray>`__
 
 * `Laziness <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#laziness>`__
 
-   * `VirtualArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#virtualarray>`__
+   - `VirtualArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#virtualarray>`__
 
 Mutability
 """"""""""
