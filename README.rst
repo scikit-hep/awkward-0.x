@@ -1116,29 +1116,29 @@ Another application of ``ChunkedArray`` is to lazily load data in chunks. Awkwar
 For more details, see `array classes <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc>`__.
 
 * `Jaggedness <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#jaggedness>`__
-   - `JaggedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#jaggedarray>`__
-   - `Helper functions <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#helper-functions>`__
+  - `JaggedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#jaggedarray>`__
+  - `Helper functions <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#helper-functions>`__
 * `Product types <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#product-types>`__
-   - `Table <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#table>`__
+  - `Table <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#table>`__
 * `Sum types <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#sum-types>`__
-   - `UnionArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#unionarray>`__
+  - `UnionArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#unionarray>`__
 * `Option types <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#option-types>`__
-   - `MaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#maskedarray>`__
-   - `BitMaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#bitmaskedarray>`__
-   - `IndexedMaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indexedmaskedarray>`__
+  - `MaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#maskedarray>`__
+  - `BitMaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#bitmaskedarray>`__
+  - `IndexedMaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indexedmaskedarray>`__
 * `Indirection <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indirection>`__
-   - `IndexedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indexedarray>`__
-   - `SparseArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#sparsearray>`__
-   - `Helper functions <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#helper-functions-1>`__
+  - `IndexedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indexedarray>`__
+  - `SparseArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#sparsearray>`__
+  - `Helper functions <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#helper-functions-1>`__
 * `Opaque objects <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#opaque-objects>`__
-   - `Mix-in Methods <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#mix-in-methods>`__
-   - `ObjectArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#objectarray>`__
-   - `StringArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#stringarray>`__
+  - `Mix-in Methods <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#mix-in-methods>`__
+  - `ObjectArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#objectarray>`__
+  - `StringArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#stringarray>`__
 * `Non-contiguousness <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#non-contiguousness>`__
-   - `ChunkedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#chunkedarray>`__
-   - `AppendableArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#appendablearray>`__
+  - `ChunkedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#chunkedarray>`__
+  - `AppendableArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#appendablearray>`__
 * `Laziness <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#laziness>`__
-   - `VirtualArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#virtualarray>`__
+  - `VirtualArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#virtualarray>`__
 
 Mutability
 """"""""""
