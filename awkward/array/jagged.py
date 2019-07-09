@@ -810,6 +810,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         elif isinstance(data, Iterable):
             return self.tojagged(self.numpy.array(data))
 
+        else:
+            return self.tojagged(self.numpy.array([data]))
+
     def _tojagged(self, starts=None, stops=None, copy=True):
         if starts is None and stops is None:
             if copy:
