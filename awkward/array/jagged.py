@@ -1513,6 +1513,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if len(self._content.shape) != 1:
             raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
 
+        if len(self._content) == 0:
+            return self.copy(content=self.numpy.array([], dtype=self.INDEXTYPE))
+
         contentmax = self._content.max()
         shiftval = self.numpy.ceil(contentmax) + 1
         if math.isnan(shiftval) or math.isinf(shiftval) or shiftval != contentmax:
