@@ -133,7 +133,7 @@ Numpy is great for exploratory data analysis because it encourages the analyst t
 
 .. raw:: html
 
-    <p style="text-align: center"><img src="https://latex.codecogs.com/svg.latex?m%3D%5Csqrt%7B(E_1%2BE_2)%5E2-(p_%7Bx1%7D%2Bp_%7Bx2%7D)%5E2-(p_%7By1%7D%2Bp_%7By2%7D)%5E2-(p_%7Bz1%7D%2Bp_%7Bz2%7D)%5E2%7D" title="m=\sqrt{(E_1+E_2)^2-(p_{x1}+p_{x2})^2-(p_{y1}+p_{y2})^2-(p_{z1}+p_{z2})^2}" /></p>
+    <img src="https://latex.codecogs.com/svg.latex?m%3D%5Csqrt%7B(E_1%2BE_2)%5E2-(p_%7Bx1%7D%2Bp_%7Bx2%7D)%5E2-(p_%7By1%7D%2Bp_%7By2%7D)%5E2-(p_%7Bz1%7D%2Bp_%7Bz2%7D)%5E2%7D" title="m=\sqrt{(E_1+E_2)^2-(p_{x1}+p_{x2})^2-(p_{y1}+p_{y2})^2-(p_{z1}+p_{z2})^2}" style="margin: 0 auto" />
 
 .. role:: raw-html(raw)
     :format: html
