@@ -3,6 +3,15 @@
 awkward-array
 =============
 
+.. image:: https://travis-ci.org/scikit-hep/awkward-array.svg?branch=master
+   :target: https://travis-ci.org/scikit-hep/awkward-array
+
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3275017.svg
+   :target: https://doi.org/10.5281/zenodo.3275017
+
+.. image:: https://mybinder.org/badge_logo.svg
+   :target: https://mybinder.org/v2/gh/scikit-hep/awkward-array/master?urlpath=lab/tree/binder%2Ftutorial.ipynb
+
 .. inclusion-marker-1-do-not-remove
 
 Manipulate arrays of complex data structures as easily as Numpy.
@@ -74,7 +83,7 @@ Tutorial
 ========
 
 .. image:: https://mybinder.org/badge_logo.svg
-   :target: https://gke.mybinder.org/v2/gh/scikit-hep/awkward-array.git/master?urlpath=lab/tree/binder%2Ftutorial.ipynb
+   :target: https://mybinder.org/v2/gh/scikit-hep/awkward-array/master?urlpath=lab/tree/binder%2Ftutorial.ipynb
 
 **Table of contents:**
 
