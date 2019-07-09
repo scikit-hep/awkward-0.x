@@ -74,7 +74,7 @@ Tutorial
 ========
 
 .. image:: https://mybinder.org/badge_logo.svg
-   :target: https://gke.mybinder.org/v2/gh/scikit-hep/awkward-array.git/better-documentation?urlpath=lab/tree/binder%2Ftutorial.ipynb
+   :target: https://gke.mybinder.org/v2/gh/scikit-hep/awkward-array.git/master?urlpath=lab/tree/binder%2Ftutorial.ipynb
 
 **Table of contents:**
 
