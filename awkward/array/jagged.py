@@ -1626,7 +1626,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         # find most general type with a tentative sum which implements the right type-promotion,
         # except for booleans which would get promoted to integers when summing
         def get_dtype(arrays):
-            dtype = np.dtype(sum([x[0] for x in arrays if len(x) != 0]), False)
+            ick = [x[0] for x in arrays if len(x) != 0]
+            if len(ick) == 0:
+                dtype = np.dtype(arrays[0].dtype)
+            else:
+                dtype = np.dtype(sum(ick), False)
             allbools = not np.any([a.dtype != np.dtype(bool) for a in arrays])
             dtype = np.dtype(bool) if allbools else dtype
             return dtype
