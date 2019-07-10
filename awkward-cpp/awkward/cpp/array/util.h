@@ -7,6 +7,7 @@
 #include <complex>
 #include <sstream>
 #include <iomanip>
+#include "CPU_methods.h"
 
 namespace py = pybind11;
 
@@ -48,31 +49,22 @@ std::int64_t byteswap(std::int64_t val) {
     return (val << 32) | ((val >> 32) & 0xFFFFFFFFULL);
 }
 
-bool isNative(py::array input) {
-    char ch = input.request().format.at(0);
-    union {
-        uint32_t i;
-        char c[4];
-    } bint = { 0x01020304 };
-    return ((bint.c[0] == 1 && ch != '<') || (bint.c[0] != 1 && ch != '>'));
-}
-
 bool isNativeInt(py::array input) {
     std::string intList = "qQlLhHbB";
     if (intList.find(input.request().format.at(0)) == std::string::npos) {
         throw std::invalid_argument("argument must be of type int");
     }
-    return isNative(input);
+    return isNative(input.request().format.at(0));
 }
 
 template <typename T>
 void makeNative(py::array_t<T> input) {
-    if (isNative(input)) {
+    if (isNative(input.request().format.at(0))) {
         return;
     }
     py::buffer_info array_info = input.request();
     auto array_ptr = (T*)array_info.ptr;
-    int N = array_info.shape[0] / array_info.itemsize;
+    int N = array_info.strides[0] / array_info.itemsize;
 
     for (ssize_t i = 0; i < array_info.size; i++) {
         array_ptr[i * N] = byteswap(array_ptr[i * N]);

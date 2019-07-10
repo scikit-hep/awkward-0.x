@@ -18,6 +18,7 @@ TODO:
 #include "util.h"
 #include "any.h"
 #include "numpytypes.h"
+#include "CPU_methods.h"
 
 namespace py = pybind11;
 
@@ -308,9 +309,20 @@ public:
         return (JaggedArray*)deepcopy();
     }
 
+    // THIS IS NOW AN EXPERIMENTAL ENVIRONMENT
+    static C_array_64 numpy_to_c64(py::array input) {
+        input = input.cast<py::array_t<std::int64_t>>();
+        struct C_array_64 temp = {
+            (std::int64_t*)input.request().ptr,
+            8,
+            input.request().size,
+            input.request().format.at(0),
+            input.request().strides[0]
+        };
+        return temp;
+    }
+
     static py::array_t<std::int64_t> offsets2parents(py::array offsets) {
-        makeIntNative(offsets);
-        offsets = offsets.cast<py::array_t<std::int64_t>>();
         py::buffer_info offsets_info = offsets.request();
         if (offsets_info.size <= 0) {
             throw std::invalid_argument("offsets must have at least one element");
@@ -318,20 +330,11 @@ public:
         auto offsets_ptr = (std::int64_t*)offsets_info.ptr;
         int N = offsets_info.strides[0] / offsets_info.itemsize;
 
-        ssize_t parents_length = (ssize_t)offsets_ptr[offsets_info.size - 1];
+        ssize_t parents_length = (ssize_t)offsets_ptr[(offsets_info.size - 1) * N];
         auto parents = py::array_t<std::int64_t>(parents_length);
-        py::buffer_info parents_info = parents.request();
 
-        auto parents_ptr = (std::int64_t*)parents_info.ptr;
-
-        ssize_t j = 0;
-        ssize_t k = -1;
-        for (ssize_t i = 0; i < offsets_info.size; i++) {
-            while (j < (ssize_t)offsets_ptr[i * N]) {
-                parents_ptr[j] = (std::int64_t)k;
-                j += 1;
-            }
-            k += 1;
+        if (!offsets2parents_int64(&numpy_to_c64(offsets), &numpy_to_c64(parents))) {
+            throw std::exception("Error in: CPU_methods.h::offsets2parents_int64()");
         }
 
         return parents;
@@ -688,6 +691,43 @@ public:
     }
 
     py::object python_getitem(py::array input) {
+        return getitem(input)->unwrap();
+    }
+
+    /*AnyArray* getitem(py::tuple input) {
+        if (py::len(input) == 0) {
+            throw std::invalid_argument("getitem requires at least one argument");
+        }
+        if (py::len(input) == 1) {
+            try {
+                ssize_t temp = input[0].cast<ssize_t>();
+                return getitem(temp);
+            }
+            catch (py::cast_error e) { }
+            try {
+                py::slice temp = input[0].cast<py::slice>();
+                return getitem(temp);
+            }
+            catch (py::cast_error e) { }
+            try {
+                JaggedArray* temp = input[0].cast<JaggedArray*>();
+                throw std::invalid_argument("JaggedArray* argument support not yet implemented"); // TODO
+            }
+            catch (py::cast_error e) { }
+            try {
+                py::array temp = input[0].cast<py::array>();
+                return getitem(temp);
+            }
+            catch (py::cast_error e) {
+                throw std::invalid_argument("argument type not supported for __getitem__");
+            }
+        }
+        if (py::len(input) == 2) {
+
+        }
+    }*/
+
+    py::object python_getitem(py::tuple input) {
         return getitem(input)->unwrap();
     }
 
