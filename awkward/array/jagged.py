@@ -1516,60 +1516,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         if len(self._content) == 0:
             return self.copy(content=self.numpy.array([], dtype=self.INDEXTYPE))
 
-        contentmax = self._content.max()
-        shiftval = self.numpy.ceil(contentmax) + 1
-        if math.isnan(shiftval) or math.isinf(shiftval) or shiftval <= contentmax:
-            return self._argminmax_general(ismin)
-
-        flatstarts = self._starts.reshape(-1)
-        flatstops = self._stops.reshape(-1)
-
-        nonempty = (flatstarts != flatstops)
-        nonterminal = (flatstarts < len(self._content))
-        flatstarts = flatstarts[nonterminal]
-        flatstops = flatstops[nonterminal]
-
-        shift = self.numpy.zeros(self._content.shape, dtype=self.INDEXTYPE)
-        shift[flatstarts] = shiftval
-        self.numpy.cumsum(shift, out=shift)
-
-        sortedindex = (self._content + shift).argsort()
-
         if ismin:
-            flatout = sortedindex[flatstarts] - flatstarts
+            return self.localindex[self.min() == self][:,:1]
         else:
-            flatout = sortedindex[flatstops - 1] - flatstarts
-
-        newstarts = self.numpy.arange(len(nonempty), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-        newstops = self.numpy.array(newstarts)
-        newstops.reshape(-1)[nonempty] += 1
-        return self.copy(starts=newstarts, stops=newstops, content=flatout)
-
-    def _argminmax_general(self, ismin):
-        if len(self._content.shape) != 1:
-            raise ValueError("cannot compute arg{0} because content is not one-dimensional".format("min" if ismin else "max"))
-
-        if ismin:
-            optimum = self.numpy.argmin
-        else:
-            optimum = self.numpy.argmax
-
-        out = self.numpy.empty(self._starts.shape + self._content.shape[1:], dtype=self.INDEXTYPE)
-
-        flatout = out.reshape((-1,) + self._content.shape[1:])
-        flatstarts = self._starts.reshape(-1)
-        flatstops = self._stops.reshape(-1)
-
-        content = self._content
-        for i, flatstart in enumerate(flatstarts):
-            flatstop = flatstops[i]
-            if flatstart != flatstop:
-                flatout[i] = optimum(content[flatstart:flatstop], axis=0)
-
-        newstarts = self.numpy.arange(len(flatstarts), dtype=self.INDEXTYPE).reshape(self._starts.shape)
-        newstops = self.numpy.array(newstarts)
-        newstops.reshape(-1)[flatstarts != flatstops] += 1
-        return self.copy(starts=newstarts, stops=newstops, content=flatout)
+            return self.localindex[self.max() == self][:,:1]
 
     @classmethod
     def _concatenate_axis0(cls, arrays):
