@@ -82,7 +82,8 @@ public:
     py::buffer_info request() { return thisArray.request(); }
 };
 
-NumpyArray* getNumpyArray_t(py::array input) {
+NumpyArray* getNumpyArray_t(py::object iter) {
+    py::array input = iter.cast<py::array>();
     std::string format = input.request().format;
     if (format.find("q") != std::string::npos)
         return new NumpyArray_t<std::int64_t>(input.cast<py::array_t<std::int64_t>>());

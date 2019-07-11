@@ -5,8 +5,8 @@ namespace py = pybind11;
 PYBIND11_MODULE(array_impl, m) {
     py::class_<JaggedArray>(m, "JaggedArray")
         .def(py::init<py::object, py::object, py::object>())
-        .def_property("starts", &JaggedArray::get_starts, &JaggedArray::python_set_starts)
-        .def_property("stops", &JaggedArray::get_stops, &JaggedArray::python_set_stops)
+        .def_property("starts", &JaggedArray::python_get_starts, &JaggedArray::python_set_starts)
+        .def_property("stops", &JaggedArray::python_get_stops, &JaggedArray::python_set_stops)
         .def_property("content", &JaggedArray::python_get_content, &JaggedArray::python_set_content)
         .def_static("offsets2parents", &JaggedArray::python_offsets2parents)
         .def_static("counts2offsets", &JaggedArray::python_counts2offsets)
