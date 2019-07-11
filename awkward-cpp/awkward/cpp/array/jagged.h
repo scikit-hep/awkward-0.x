@@ -19,15 +19,14 @@ TODO:
 #include "any.h"
 #include "numpytypes.h"
 #include "CPU_methods.h"
-#include "CPU_pybind11.h"
 
 namespace py = pybind11;
 
 class JaggedArray : public AwkwardArray {
 public:
-    NumpyArray* starts,
-                stops;
-    AnyArray*   content;
+    py::array_t<std::int64_t> starts,
+                              stops;
+    AnyArray*                 content;
 
     py::object unwrap() {
         return py::cast(this);
@@ -58,57 +57,56 @@ public:
         }
     }
 
-    NumpyArray* get_starts() { return starts; }
+    py::array_t<std::int64_t> get_starts() { return starts; }
 
-    py::object python_get_starts() {
-        return starts->unwrap();
-    }
-
-    void set_starts(NumpyArray* starts_) {
-        makeIntNative_CPU(starts_);
+    void set_starts(py::array starts_) {
+        makeIntNative(starts_);
+        starts_ = starts_.cast<py::array_t<std::int64_t>>();
         py::buffer_info starts_info = starts_.request();
         if (starts_info.ndim < 1) {
             throw std::domain_error("starts must have at least 1 dimension");
         }
-        if (!checkPos_CPU(starts_)) {
-            throw std::invalid_argument("starts must have all non-negative values");
+        int N = starts_info.strides[0] / starts_info.itemsize;
+        auto starts_ptr = (std::int64_t*)starts_info.ptr;
+        for (ssize_t i = 0; i < starts_info.size; i++) {
+            if (starts_ptr[i * N] < 0) {
+                throw std::invalid_argument("starts must have all non-negative values: see index [" + std::to_string(i * N) + "]");
+            }
         }
         starts = starts_;
     }
 
     void python_set_starts(py::object input) {
-        NumpyArray* starts_ = getNumpyArray_t(input);
+        py::array starts_ = input.cast<py::array>();
         set_starts(starts_);
     }
 
-    NumpyArray* get_stops() { return stops; }
+    py::array_t<std::int64_t> get_stops() { return stops; }
 
-    py::object python_get_stops() {
-        return stops->unwrap();
-    }
-
-    void set_stops(NumpyArray* stops_) {
-        makeIntNative_CPU(stops_);
+    void set_stops(py::array stops_) {
+        makeIntNative(stops_);
+        stops_ = stops_.cast<py::array_t<std::int64_t>>();
         py::buffer_info stops_info = stops_.request();
         if (stops_info.ndim < 1) {
             throw std::domain_error("stops must have at least 1 dimension");
         }
-        if (!checkPos_CPU(stops_)) {
-            throw std::invalid_argument("stops must have all non-negative values");
+        int N = stops_info.strides[0] / stops_info.itemsize;
+        auto stops_ptr = (std::int64_t*)stops_info.ptr;
+        for (ssize_t i = 0; i < stops_info.size; i++) {
+            if (stops_ptr[i * N] < 0) {
+                throw std::invalid_argument("stops must have all non-negative values: see index [" + std::to_string(i * N) + "]");
+            }
         }
         stops = stops_;
     }
-
     void python_set_stops(py::object input) {
-        NumpyArray* stops_ = getNumpyArray_t(input);
+        py::array stops_ = input.cast<py::array>();
         set_stops(stops_);
     }
 
-    // ---------------- everything above this line is updated ---------------------
-
     bool check_validity() {
-        py::buffer_info starts_info = starts->request();
-        py::buffer_info stops_info = stops->request();
+        py::buffer_info starts_info = starts.request();
+        py::buffer_info stops_info = stops.request();
         if (starts_info.size > stops_info.size) {
             throw std::invalid_argument("starts must have the same (or shorter) length than stops");
         }
@@ -150,7 +148,7 @@ public:
         check_validity();
     }
 
-    JaggedArray(NumpyArray* starts_, NumpyArray* stops_, AnyArray* content_) {
+    JaggedArray(py::array starts_, py::array stops_, AnyArray* content_) {
         set_starts(starts_);
         set_stops(stops_);
         set_content(content_);
@@ -311,21 +309,34 @@ public:
         return (JaggedArray*)deepcopy();
     }
 
-    template <typename T> // should only be available in int32 and int64
-    static NumpyArray_t<T> offsets2parents(NumpyArray_t<T> offsets) {
+    // THIS IS NOW AN EXPERIMENTAL ENVIRONMENT
+    static C_array_64 numpy_to_c64(py::array input) {
+        input = input.cast<py::array_t<std::int64_t>>();
+        struct C_array_64 temp = {
+            (std::int64_t*)input.request().ptr,
+            8,
+            input.request().size,
+            input.request().format.at(0),
+            input.request().strides[0]
+        };
+        return temp;
+    }
+
+    static py::array_t<std::int64_t> offsets2parents(py::array offsets) {
         py::buffer_info offsets_info = offsets.request();
         if (offsets_info.size <= 0) {
             throw std::invalid_argument("offsets must have at least one element");
         }
-        auto offsets_ptr = (T*)offsets_info.ptr;
+        auto offsets_ptr = (std::int64_t*)offsets_info.ptr;
         int N = offsets_info.strides[0] / offsets_info.itemsize;
 
         ssize_t parents_length = (ssize_t)offsets_ptr[(offsets_info.size - 1) * N];
-        auto parents = py::array_t<T>(parents_length);
+        auto parents = py::array_t<std::int64_t>(parents_length);
 
-        if (!offsets2parents_CPU(&numpy_to_c(offsets), &numpy_to_c(parents))) {
-            throw std::exception("Error in: CPU_methods.h::offsets2parents_CPU()");
+        if (!offsets2parents_int64(&numpy_to_c64(offsets), &numpy_to_c64(parents))) {
+            throw std::exception("Error in: CPU_methods.h::offsets2parents_int64()");
         }
+
         return parents;
     }
 
@@ -422,11 +433,11 @@ public:
         }
 
         auto starts = py::array_t<std::int64_t>((ssize_t)length);
-        py::buffer_info starts_info = starts->request();
+        py::buffer_info starts_info = starts.request();
         auto starts_ptr = (std::int64_t*)starts_info.ptr;
 
         auto stops = py::array_t<std::int64_t>((ssize_t)length);
-        py::buffer_info stops_info = stops->request();
+        py::buffer_info stops_info = stops.request();
         auto stops_ptr = (std::int64_t*)stops_info.ptr;
 
         for (ssize_t i = 0; i < (ssize_t)length; i++) {
@@ -537,7 +548,7 @@ public:
     }
 
     ssize_t len() {
-        return starts->request().size;
+        return starts.request().size;
     }
 
     AnyArray* getitem(ssize_t start, ssize_t length, ssize_t step = 1) {
@@ -556,7 +567,7 @@ public:
         py::buffer_info newStarts_info = newStarts.request();
         auto newStarts_ptr = (std::int64_t*)newStarts_info.ptr;
 
-        py::buffer_info starts_info = starts->request();
+        py::buffer_info starts_info = starts.request();
         auto starts_ptr = (std::int64_t*)starts_info.ptr;
         int N_starts = starts_info.strides[0] / starts_info.itemsize;
 
@@ -564,7 +575,7 @@ public:
         py::buffer_info newStops_info = newStops.request();
         auto newStops_ptr = (std::int64_t*)newStops_info.ptr;
 
-        py::buffer_info stops_info = stops->request();
+        py::buffer_info stops_info = stops.request();
         auto stops_ptr = (std::int64_t*)stops_info.ptr;
         int N_stops = stops_info.strides[0] / stops_info.itemsize;
 
@@ -586,8 +597,8 @@ public:
     }
 
     AnyArray* getitem(ssize_t index) {
-        py::buffer_info starts_info = starts->request();
-        py::buffer_info stops_info = stops->request();
+        py::buffer_info starts_info = starts.request();
+        py::buffer_info stops_info = stops.request();
         if (starts_info.size > stops_info.size) {
             throw std::out_of_range("starts must have the same or shorter length than stops");
         }
@@ -607,7 +618,7 @@ public:
 
     py::object python_getitem(ssize_t index) {
         if (index < 0) {
-            index += starts->request().size;
+            index += starts.request().size;
         }
         return getitem(index)->unwrap();
     }
@@ -622,11 +633,11 @@ public:
         py::list tempStarts;
         py::list tempStops;
 
-        py::buffer_info starts_info = starts->request();
+        py::buffer_info starts_info = starts.request();
         auto starts_ptr = (std::int64_t*)starts_info.ptr;
         int N_starts = starts_info.strides[0] / starts_info.itemsize;
 
-        py::buffer_info stops_info = stops->request();
+        py::buffer_info stops_info = stops.request();
         auto stops_ptr = (std::int64_t*)stops_info.ptr;
         int N_stops = stops_info.strides[0] / stops_info.itemsize;
 
@@ -650,14 +661,14 @@ public:
         auto newStarts = py::array_t<std::int64_t>(array_info.size);
         auto newStarts_ptr = (std::int64_t*)newStarts.request().ptr;
 
-        py::buffer_info starts_info = starts->request();
+        py::buffer_info starts_info = starts.request();
         auto starts_ptr = (std::int64_t*)starts_info.ptr;
         int N_starts = starts_info.strides[0] / starts_info.itemsize;
 
         auto newStops = py::array_t<std::int64_t>(array_info.size);
         auto newStops_ptr = (std::int64_t*)newStops.request().ptr;
 
-        py::buffer_info stops_info = stops->request();
+        py::buffer_info stops_info = stops.request();
         auto stops_ptr = (std::int64_t*)stops_info.ptr;
         int N_stops = stops_info.strides[0] / stops_info.itemsize;
 
@@ -731,10 +742,10 @@ public:
     std::string str() {
         std::string out;
 
-        py::buffer_info starts_info = starts->request();
+        py::buffer_info starts_info = starts.request();
         auto starts_ptr = (std::int64_t*)starts_info.ptr;
 
-        py::buffer_info stops_info = stops->request();
+        py::buffer_info stops_info = stops.request();
         auto stops_ptr = (std::int64_t*)stops_info.ptr;
 
         out.reserve(starts_info.size * 20);
