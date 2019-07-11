@@ -1518,7 +1518,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         contentmax = self._content.max()
         shiftval = self.numpy.ceil(contentmax) + 1
-        if math.isnan(shiftval) or math.isinf(shiftval) or shiftval != contentmax:
+        if math.isnan(shiftval) or math.isinf(shiftval) or shiftval <= contentmax:
             return self._argminmax_general(ismin)
 
         flatstarts = self._starts.reshape(-1)
