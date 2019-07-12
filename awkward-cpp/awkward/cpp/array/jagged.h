@@ -310,10 +310,10 @@ public:
         auto offsets_ptr = (std::int64_t*)offsets_info.ptr;
         int N = offsets_info.strides[0] / offsets_info.itemsize;
 
-        ssize_t parents_length = (ssize_t)offsets_ptr[offsets_info.size - 1];
+        ssize_t parents_length = (ssize_t)offsets_ptr[(offsets_info.size - 1) * N];
         auto parents = py::array_t<std::int64_t>(parents_length);
 
-        if (!offsets2parents_CPU(&py2c(offsets), &py2c(parents))) {
+        if (!offsets2parents_CPU(py2c(offsets), py2c(parents))) {
             throw std::exception("Error in cpu_methods.h::offsets2parents_CPU");
         }
         return parents;
@@ -328,7 +328,7 @@ public:
         makeIntNative_CPU(counts);
         counts = counts.cast<py::array_t<std::int64_t>>();
         auto offsets = py::array_t<std::int64_t>(counts.request().size + 1);
-        if (!counts2offsets_CPU(&py2c(counts), &py2c(offsets))) {
+        if (!counts2offsets_CPU(py2c(counts), py2c(offsets))) {
             throw std::exception("Error in cpu_methods.h::counts2offsets_CPU");
         }
         return offsets;
