@@ -344,39 +344,14 @@ public:
         makeIntNative_CPU(stops_);
         starts_ = starts_.cast<py::array_t<std::int64_t>>();
         stops_ = stops_.cast<py::array_t<std::int64_t>>();
-        py::buffer_info starts_info = starts_.request();
-        auto starts_ptr = (std::int64_t*)starts_info.ptr;
-        int N_starts = starts_info.strides[0] / starts_info.itemsize;
 
-        py::buffer_info stops_info = stops_.request();
-        auto stops_ptr = (std::int64_t*)stops_info.ptr;
-        int N_stops = stops_info.strides[0] / stops_info.itemsize;
+        std::int64_t max = 0;
+        getMax_CPU(stops_, &max);
+        auto parents = py::array_t<std::int64_t>((ssize_t)max);
 
-        ssize_t max;
-        if (stops_info.size < 1) {
-            max = 0;
+        if (!startsstops2parents_CPU(py2c(starts_), py2c(stops_), py2c(parents))) {
+            throw std::exception("Error in cpu_methods.h::startsstops2parents_CPU");
         }
-        else {
-            max = (ssize_t)stops_ptr[0];
-            for (ssize_t i = 1; i < stops_info.size; i++) {
-                if ((ssize_t)stops_ptr[i * N_stops] > max) {
-                    max = (ssize_t)stops_ptr[i * N_stops];
-                }
-            }
-        }
-        auto parents = py::array_t<std::int64_t>(max);
-        py::buffer_info parents_info = parents.request();
-        auto parents_ptr = (std::int64_t*)parents_info.ptr;
-        for (ssize_t i = 0; i < max; i++) {
-            parents_ptr[i] = -1;
-        }
-
-        for (ssize_t i = 0; i < starts_info.size; i++) {
-            for (ssize_t j = (ssize_t)starts_ptr[i * N_starts]; j < (ssize_t)stops_ptr[i * N_stops]; j++) {
-                parents_ptr[j] = (std::int64_t)i;
-            }
-        }
-
         return parents;
     }
 

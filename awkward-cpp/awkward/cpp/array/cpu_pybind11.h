@@ -32,3 +32,31 @@ int makeIntNative_CPU(py::array input) {
     }
     return 1;
 }
+
+int getMax_CPU(py::array input, std::int8_t* max) {
+    if (!getMax_8bit(py2c(input), 0, 0, max)) {
+        throw std::exception("Error in cpu_methods.h::getMax_8bit");
+    }
+    return 1;
+}
+
+int getMax_CPU(py::array input, std::int16_t* max) {
+    if (!getMax_16bit(py2c(input), 0, 0, max)) {
+        throw std::exception("Error in cpu_methods.h::getMax_16bit");
+    }
+    return 1;
+}
+
+int getMax_CPU(py::array input, std::int32_t* max) {
+    if (!getMax_32bit(py2c(input), 0, 0, max)) {
+        throw std::exception("Error in cpu_methods.h::getMax_32bit");
+    }
+    return 1;
+}
+
+int getMax_CPU(py::array input, std::int64_t* max) {
+    if (!getMax_64bit(py2c(input), 0, 0, max)) {
+        throw std::exception("Error in cpu_methods.h::getMax_64bit");
+    }
+    return 1;
+}
