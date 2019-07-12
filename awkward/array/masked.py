@@ -291,8 +291,8 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def flatten(self, axis=0):
         return self._util_flatten(self._content[self.boolmask(maskedwhen=False)], axis)
 
-    def pad(self, length, maskedwhen=True, clip=False):
-        return self.copy(content=self._util_pad(self._content, length, maskedwhen, clip))
+    def pad(self, length, maskedwhen=True, clip=False, axis=0):
+        return self.copy(content=self._util_pad(self._content, length, maskedwhen, clip, axis))
 
     def regular(self):
         self._valid()

@@ -262,8 +262,8 @@ class ObjectArray(awkward.array.base.AwkwardArrayWithContent):
     def flatten(self, axis=0):
         return self.copy(content=self._util_flatten(self._content, axis))
 
-    def pad(self, length, maskedwhen=True, clip=False):
-        return self.copy(content=self._util_pad(self._content, length, maskedwhen, clip))
+    def pad(self, length, maskedwhen=True, clip=False, axis=0):
+        return self.copy(content=self._util_pad(self._content, length, maskedwhen, clip, axis))
 
     def regular(self):
         return self.numpy.array(self)
@@ -652,7 +652,13 @@ class StringArray(StringMethods, ObjectArray):
         else:
             return self.fromjagged(self.JaggedArray.fromcounts([len(content)], content))
 
-    def pad(self, length, maskedwhen=None, clip=False):
+    def pad(self, length, maskedwhen=None, clip=False, axis=0):
+        if not self._util_isinteger(axis) or axis < 0:
+            raise TypeError("axis must be a non-negative integer (can't count from the end)")
+
+        if axis > 0:
+            raise ValueError("axis too deep for StringArray")
+
         if maskedwhen is None:
             maskedwhen = ord(b" ")
         elif not isinstance(maskedwhen, bytes) or not len(maskedwhen) == 1:
