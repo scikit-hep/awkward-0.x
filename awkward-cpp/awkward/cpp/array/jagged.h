@@ -1,23 +1,15 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-TODO:
-= Expand array types
-    - std::string
-    - py::object
-    - zero-terminated bytes
-    - raw data
-= Add more getitem functions
-= Deal with more array characteristics
-    - Multidimensional arrays
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #pragma once
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
 #include <cinttypes>
 #include <stdexcept>
 #include <sstream>
 #include "util.h"
 #include "any.h"
 #include "numpytypes.h"
+#include "cpu_methods.h"
+#include "cpu_pybind11.h"
 
 namespace py = pybind11;
 
@@ -59,7 +51,7 @@ public:
     py::array_t<std::int64_t> get_starts() { return starts; }
 
     void set_starts(py::array starts_) {
-        makeIntNative(starts_);
+        makeIntNative_CPU(starts_);
         starts_ = starts_.cast<py::array_t<std::int64_t>>();
         py::buffer_info starts_info = starts_.request();
         if (starts_info.ndim < 1) {
@@ -83,7 +75,7 @@ public:
     py::array_t<std::int64_t> get_stops() { return stops; }
 
     void set_stops(py::array stops_) {
-        makeIntNative(stops_);
+        makeIntNative_CPU(stops_);
         stops_ = stops_.cast<py::array_t<std::int64_t>>();
         py::buffer_info stops_info = stops_.request();
         if (stops_info.ndim < 1) {
@@ -155,7 +147,7 @@ public:
     }
 
     static JaggedArray* fromoffsets(py::array offsets, AnyArray* content_) {
-        makeIntNative(offsets);
+        makeIntNative_CPU(offsets);
         py::array_t<std::int64_t> temp = offsets.cast<py::array_t<std::int64_t>>();
         ssize_t length = temp.request().size;
         if (length < 1) {
@@ -309,7 +301,7 @@ public:
     }
 
     static py::array_t<std::int64_t> offsets2parents(py::array offsets) {
-        makeIntNative(offsets);
+        makeIntNative_CPU(offsets);
         offsets = offsets.cast<py::array_t<std::int64_t>>();
         py::buffer_info offsets_info = offsets.request();
         if (offsets_info.size <= 0) {
@@ -320,20 +312,10 @@ public:
 
         ssize_t parents_length = (ssize_t)offsets_ptr[offsets_info.size - 1];
         auto parents = py::array_t<std::int64_t>(parents_length);
-        py::buffer_info parents_info = parents.request();
 
-        auto parents_ptr = (std::int64_t*)parents_info.ptr;
-
-        ssize_t j = 0;
-        ssize_t k = -1;
-        for (ssize_t i = 0; i < offsets_info.size; i++) {
-            while (j < (ssize_t)offsets_ptr[i * N]) {
-                parents_ptr[j] = (std::int64_t)k;
-                j += 1;
-            }
-            k += 1;
+        if (!offsets2parents_CPU(&py2c(offsets), &py2c(parents))) {
+            throw std::exception("Error in cpu_methods.h::offsets2parents_CPU");
         }
-
         return parents;
     }
 
@@ -343,31 +325,23 @@ public:
     }
 
     static py::array_t<std::int64_t> counts2offsets(py::array counts) {
-        makeIntNative(counts);
+        makeIntNative_CPU(counts);
         counts = counts.cast<py::array_t<std::int64_t>>();
-        py::buffer_info counts_info = counts.request();
-        auto counts_ptr = (std::int64_t*)counts_info.ptr;
-        int N = counts_info.strides[0] / counts_info.itemsize;
-
-        ssize_t offsets_length = counts_info.size + 1;
-        auto offsets = py::array_t<std::int64_t>(offsets_length);
-        py::buffer_info offsets_info = offsets.request();
-        auto offsets_ptr = (std::int64_t*)offsets_info.ptr;
-
-        offsets_ptr[0] = 0;
-        for (ssize_t i = 0; i < counts_info.size; i++) {
-            offsets_ptr[i + 1] = offsets_ptr[i] + (std::int64_t)counts_ptr[i * N];
+        auto offsets = py::array_t<std::int64_t>(counts.request().size + 1);
+        if (!counts2offsets_CPU(&py2c(counts), &py2c(offsets))) {
+            throw std::exception("Error in cpu_methods.h::counts2offsets_CPU");
         }
         return offsets;
     }
+
     static py::array_t<std::int64_t> python_counts2offsets(py::object countsIter) {
         py::array counts = countsIter.cast<py::array>();
         return counts2offsets(counts);
     }
 
     static py::array_t<std::int64_t> startsstops2parents(py::array starts_, py::array stops_) {
-        makeIntNative(starts_);
-        makeIntNative(stops_);
+        makeIntNative_CPU(starts_);
+        makeIntNative_CPU(stops_);
         starts_ = starts_.cast<py::array_t<std::int64_t>>();
         stops_ = stops_.cast<py::array_t<std::int64_t>>();
         py::buffer_info starts_info = starts_.request();
@@ -413,7 +387,7 @@ public:
     }
 
     static py::tuple parents2startsstops(py::array parents, std::int64_t length = -1) {
-        makeIntNative(parents);
+        makeIntNative_CPU(parents);
         parents = parents.cast<py::array_t<std::int64_t>>();
         py::buffer_info parents_info = parents.request();
         auto parents_ptr = (std::int64_t*)parents_info.ptr;
@@ -473,7 +447,7 @@ public:
     }
 
     static py::tuple uniques2offsetsparents(py::array uniques) {
-        makeIntNative(uniques);
+        makeIntNative_CPU(uniques);
         uniques = uniques.cast<py::array_t<std::int64_t>>();
         py::buffer_info uniques_info = uniques.request();
         auto uniques_ptr = (std::int64_t*)uniques_info.ptr;
@@ -650,7 +624,7 @@ public:
     }
 
     JaggedArray* intarray_getitem(py::array input) {
-        makeIntNative(input);
+        makeIntNative_CPU(input);
         input = input.cast<py::array_t<std::int64_t>>();
         py::buffer_info array_info = input.request();
         auto array_ptr = (std::int64_t*)array_info.ptr;
