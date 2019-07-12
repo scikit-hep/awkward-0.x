@@ -1786,10 +1786,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             raise TypeError("axis must be a non-negative integer (can't count from the end)")
 
         if axis > 0:
-            if not self._util_hasjagged(self._content):
-                raise ValueError("pad axis is too deep for this degree of jaggedness")
-            else:
-                return type(self).fromcounts(self.counts, self._content.pad(length, maskedwhen=maskedwhen, clip=clip, axis=(axis - 1)))
+            return type(self).fromcounts(self.counts, self._util_pad(self._content, length, maskedwhen, clip, axis - 1))
 
         flatstarts = self._starts.reshape(-1)
 
