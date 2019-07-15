@@ -1535,6 +1535,33 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         out.stops[nonempty] = out.starts[nonempty] + 1
         return out
 
+    def argsort(self, ascending=False):
+        self._valid()
+        if self._util_hasjagged(self._content):
+            return self.copy(content=self._content.argsort(ascending))
+        else:
+            return self._argsort(ascending)
+
+    def _argsort(self, ascending=False):
+        reducer = self.JaggedArray.min if ascending else self.JaggedArray.max
+        localindex = self.localindex
+        out = localindex.empty_like()
+        next_start = self.numpy.zeros_like(out.starts)
+        tmp = self.copy()
+        while tmp.content.size > 0:
+            best = reducer(tmp) == tmp
+            if self.numpy.isnan(tmp.content).all():
+                # put NaN last always
+                best = self.numpy.isnan(tmp)
+            argbest = localindex[best]
+            idx = out.starts + next_start + argbest.localindex
+            out._content[idx.flatten()] = argbest.content
+            next_start += argbest.counts
+            tmp = tmp[~best]
+            localindex = localindex[~best]
+
+        return out
+
     @classmethod
     def _concatenate_axis0(cls, arrays):
         starts = cls.numpy.concatenate([x._starts for x in arrays])

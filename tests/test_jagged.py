@@ -594,3 +594,8 @@ class Test(unittest.TestCase):
         assert a.parents.tolist() == [0, 0, 0, 0, 0, 2, 2, 2, 3]
         b = a[[False, True, False, True]]
         assert b.parents.tolist() == [-1, -1, -1, -1, -1, -1, -1, -1, 1]
+
+    def test_jagged_sort(self):
+        a = awkward.fromiter([[2.,3.,1.], [4., -numpy.inf, 5.], [numpy.inf, 4., numpy.nan, -numpy.inf], [numpy.nan]])
+        assert a.argsort().tolist() == [[1, 0, 2], [2, 0, 1], [0, 1, 3, 2], [0]]
+        assert a.argsort(True).tolist() == [[2, 0, 1], [1, 0, 2], [3, 1, 0, 2], [0]]
