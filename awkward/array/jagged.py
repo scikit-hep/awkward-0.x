@@ -47,6 +47,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def startsstops2parents(cls, starts, stops):
+        assert starts.shape == stops.shape
+        starts = starts.reshape(-1)  # flatten in case multi-d jagged
+        stops = stops.reshape(-1)
         dtype = cls.JaggedArray.fget(None).INDEXTYPE
         out = cls.numpy.full(stops.max(), -1, dtype=dtype)
         indices = cls.numpy.arange(len(starts), dtype=dtype)
@@ -390,9 +393,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     def parents(self):
         if self._parents is None:
             self._valid()
-            try:
+            if self._canuseoffset():
                 self._parents = self.offsets2parents(self.offsets)
-            except ValueError:
+            else:
                 self._parents = self.startsstops2parents(self._starts, self._stops)
         return self._parents
 
@@ -417,10 +420,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out -= self.offsets[self.parents[self.parents >= 0]]
             return self.JaggedArray.fromoffsets(self.offsets - self.offsets[0], out)
         else:
-            offsets = self.counts2offsets(self.counts)
+            counts = self.counts.reshape(-1)  # flatten in case multi-d jagged
+            offsets = self.counts2offsets(counts)
             out = self.numpy.arange(offsets[-1], dtype=self.INDEXTYPE)
-            out -= self.numpy.repeat(offsets[:-1], awkward.util.windows_safe(self.counts))
-            return self.JaggedArray.fromoffsets(offsets, out)
+            out -= self.numpy.repeat(offsets[:-1], awkward.util.windows_safe(counts))
+            return self.JaggedArray(offsets[:-1].reshape(self.shape), offsets[1:].reshape(self.shape), out)
 
     def _getnbytes(self, seen):
         if id(self) in seen:
@@ -566,6 +570,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 headcontent[original_headcontent_length:] = False
 
                 return self.copy(starts=offsets[:-1].reshape(intheadsum.shape), stops=offsets[1:].reshape(intheadsum.shape), content=thyself._content[headcontent])
+
+            elif head.shape == self.shape and issubclass(head._content.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+                index = self.localindex + self.starts
+                flatindex = index.flatten()[head.flatten()]
+                return self.JaggedArray.fromcounts(head.sum(), self._content[flatindex])
 
             else:
                 raise TypeError("jagged index must be boolean (mask) or integer (fancy indexing)")
@@ -954,7 +963,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                         if len(x.shape) == 0:
                             content = self.numpy.full(len(parents), x, dtype=x.dtype)
                         else:
-                            content = x[parents]
+                            content = x.reshape(-1)[parents]
                         return content
 
                     else:
@@ -962,7 +971,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                         if len(x.shape) == 0:
                             content[good] = x
                         else:
-                            content[good] = x[parents[good]]
+                            content[good] = x.reshape(-1)[parents[good]]
                         return content
 
                 content = recurse(data)
@@ -1517,9 +1526,14 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=self.numpy.array([], dtype=self.INDEXTYPE))
 
         if ismin:
-            return self.localindex[self.min() == self][:,:1]
+            out = self.localindex[self.min() == self]
         else:
-            return self.localindex[self.max() == self][:,:1]
+            out = self.localindex[self.max() == self]
+
+        # workaround for lack of general out[...,:1] support
+        nonempty = out.counts > 0
+        out.stops[nonempty] = out.starts[nonempty] + 1
+        return out
 
     @classmethod
     def _concatenate_axis0(cls, arrays):
