@@ -8,63 +8,54 @@
 
 namespace py = pybind11;
 
-int py2c(py::array py, struct c_array *c) {
-    py::buffer_info info = py.request();
+struct c_array py2c(py::array input) {
     char format[8];
-    strcpy(format, info.format.c_str());
-    c->ptr = info.ptr;
-    c->itemsize = info.itemsize;
-    c->size = info.size;
-    c->format = format;
-    c->ndim = info.ndim;
-    c->shape = &info.shape[0];
-    c->strides = &info.strides[0];
-    return 1;
+    strcpy(format, input.request().format.c_str());
+    struct c_array out = {
+        input.request().ptr,
+        input.request().itemsize,
+        input.request().size,
+        format,
+        input.request().ndim,
+        &input.request().shape[0],
+        &input.request().strides[0]
+    };
+    return out;
 }
 
 int makeIntNative_CPU(py::array input) {
-    struct c_array array_struct;
-    py2c(input, &array_struct);
-    if (!checkInt_CPU(&array_struct)) {
+    if (!checkInt_CPU(py2c(input))) {
         throw std::invalid_argument("Argument must be an int array");
     }
-    if (!makeNative_CPU(&array_struct)) {
+    if (!makeNative_CPU(py2c(input))) {
         throw std::invalid_argument("Error in cpu_methods.h::makeNative_CPU");
     }
     return 1;
 }
 
 int getMax_CPU(py::array input, std::int8_t* max) {
-    struct c_array array_struct;
-    py2c(input, &array_struct);
-    if (!getMax_8bit(&array_struct, 0, 0, max)) {
+    if (!getMax_8bit(py2c(input), 0, 0, max)) {
         throw std::invalid_argument("Error in cpu_methods.h::getMax_8bit");
     }
     return 1;
 }
 
 int getMax_CPU(py::array input, std::int16_t* max) {
-    struct c_array array_struct;
-    py2c(input, &array_struct);
-    if (!getMax_16bit(&array_struct, 0, 0, max)) {
+    if (!getMax_16bit(py2c(input), 0, 0, max)) {
         throw std::invalid_argument("Error in cpu_methods.h::getMax_16bit");
     }
     return 1;
 }
 
 int getMax_CPU(py::array input, std::int32_t* max) {
-    struct c_array array_struct;
-    py2c(input, &array_struct);
-    if (!getMax_32bit(&array_struct, 0, 0, max)) {
+    if (!getMax_32bit(py2c(input), 0, 0, max)) {
         throw std::invalid_argument("Error in cpu_methods.h::getMax_32bit");
     }
     return 1;
 }
 
 int getMax_CPU(py::array input, std::int64_t* max) {
-    struct c_array array_struct;
-    py2c(input, &array_struct);
-    if (!getMax_64bit(&array_struct, 0, 0, max)) {
+    if (!getMax_64bit(py2c(input), 0, 0, max)) {
         throw std::invalid_argument("Error in cpu_methods.h::getMax_64bit");
     }
     return 1;
