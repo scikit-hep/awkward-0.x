@@ -1560,6 +1560,9 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             tmp = tmp[~best]
             localindex = localindex[~best]
 
+        # If masked entries were present, they would be dropped by the __getitem__
+        # So we need to trim the size of the output array correspondingly
+        out.stops = out.starts + next_start
         return out
 
     @classmethod
