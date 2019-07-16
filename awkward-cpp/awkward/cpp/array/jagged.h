@@ -313,7 +313,12 @@ public:
         ssize_t parents_length = (ssize_t)offsets_ptr[(offsets_info.size - 1) * N];
         auto parents = py::array_t<std::int64_t>(parents_length);
 
-        if (!offsets2parents_CPU(py2c(offsets), py2c(parents))) {
+        struct c_array offsets_struct;
+        py2c(offsets, &offsets_struct);
+        struct c_array parents_struct;
+        py2c(parents, &parents_struct);
+
+        if (!offsets2parents_CPU(&offsets_struct, &parents_struct)) {
             throw std::invalid_argument("Error in cpu_methods.h::offsets2parents_CPU");
         }
         return parents;
@@ -328,7 +333,13 @@ public:
         makeIntNative_CPU(counts);
         counts = counts.cast<py::array_t<std::int64_t>>();
         auto offsets = py::array_t<std::int64_t>(counts.request().size + 1);
-        if (!counts2offsets_CPU(py2c(counts), py2c(offsets))) {
+
+        struct c_array counts_struct;
+        py2c(counts, &counts_struct);
+        struct c_array offsets_struct;
+        py2c(offsets, &offsets_struct);
+
+        if (!counts2offsets_CPU(&counts_struct, &offsets_struct)) {
             throw std::invalid_argument("Error in cpu_methods.h::counts2offsets_CPU");
         }
         return offsets;
@@ -349,7 +360,14 @@ public:
         getMax_CPU(stops_, &max);
         auto parents = py::array_t<std::int64_t>((ssize_t)max);
 
-        if (!startsstops2parents_CPU(py2c(starts_), py2c(stops_), py2c(parents))) {
+        struct c_array starts_struct;
+        py2c(starts_, &starts_struct);
+        struct c_array stops_struct;
+        py2c(stops_, &stops_struct);
+        struct c_array parents_struct;
+        py2c(parents, &parents_struct);
+
+        if (!startsstops2parents_CPU(&starts_struct, &stops_struct, &parents_struct)) {
             throw std::invalid_argument("Error in cpu_methods.h::startsstops2parents_CPU");
         }
         return parents;
