@@ -11,6 +11,8 @@
 #include "cpu_methods.h"
 #include "cpu_pybind11.h"
 
+#include <stdio.h> // for debugging purposes
+
 namespace py = pybind11;
 
 class JaggedArray : public AwkwardArray {
@@ -313,7 +315,7 @@ public:
         ssize_t parents_length = (ssize_t)offsets_ptr[(offsets_info.size - 1) * N];
         auto parents = py::array_t<std::int64_t>(parents_length);
 
-        if (!offsets2parents_CPU(py2c(offsets), py2c(parents))) {
+        if (!offsets2parents_CPU(py2c(offsets.request()), py2c(parents.request()))) {
             throw std::invalid_argument("Error in cpu_methods.h::offsets2parents_CPU");
         }
         return parents;
@@ -328,7 +330,7 @@ public:
         makeIntNative_CPU(counts);
         counts = counts.cast<py::array_t<std::int64_t>>();
         auto offsets = py::array_t<std::int64_t>(counts.request().size + 1);
-        if (!counts2offsets_CPU(py2c(counts), py2c(offsets))) {
+        if (!counts2offsets_CPU(py2c(counts.request()), py2c(offsets.request()))) {
             throw std::invalid_argument("Error in cpu_methods.h::counts2offsets_CPU");
         }
         return offsets;
@@ -349,7 +351,7 @@ public:
         getMax_CPU(stops_, &max);
         auto parents = py::array_t<std::int64_t>((ssize_t)max);
 
-        if (!startsstops2parents_CPU(py2c(starts_), py2c(stops_), py2c(parents))) {
+        if (!startsstops2parents_CPU(py2c(starts_.request()), py2c(stops_.request()), py2c(parents.request()))) {
             throw std::invalid_argument("Error in cpu_methods.h::startsstops2parents_CPU");
         }
         return parents;
@@ -364,54 +366,25 @@ public:
     static py::tuple parents2startsstops(py::array parents, std::int64_t length = -1) {
         makeIntNative_CPU(parents);
         parents = parents.cast<py::array_t<std::int64_t>>();
-        py::buffer_info parents_info = parents.request();
-        auto parents_ptr = (std::int64_t*)parents_info.ptr;
-        int N = parents_info.strides[0] / parents_info.itemsize;
 
         if (length < 0) {
             length = 0;
-            for (ssize_t i = 0; i < parents_info.size; i++) {
-                if (parents_ptr[i] > length) {
-                    length = parents_ptr[i * N];
-                }
-            }
+            getMax_CPU(parents, &length);
             length++;
         }
+        auto starts_ = py::array_t<std::int64_t>((ssize_t)length);
+        auto stops_ = py::array_t<std::int64_t>((ssize_t)length);
 
-        auto starts = py::array_t<std::int64_t>((ssize_t)length);
-        py::buffer_info starts_info = starts.request();
-        auto starts_ptr = (std::int64_t*)starts_info.ptr;
+        /*std::stringstream stream;
+        stream << parents2startsstops_CPU(py2c(parents), py2c(starts_), py2c(stops_));
+        throw std::invalid_argument("Step = " + stream.str());*/
 
-        auto stops = py::array_t<std::int64_t>((ssize_t)length);
-        py::buffer_info stops_info = stops.request();
-        auto stops_ptr = (std::int64_t*)stops_info.ptr;
-
-        for (ssize_t i = 0; i < (ssize_t)length; i++) {
-            starts_ptr[i] = 0;
-            stops_ptr[i] = 0;
+        if (!parents2startsstops_CPU(py2c(parents.request()), py2c(starts_.request()), py2c(stops_.request()))) {
+            throw std::invalid_argument("Error in cpu_methods.h::parents2startsstops_CPU");
         }
-
-        std::int64_t last = -1;
-        for (ssize_t k = 0; k < parents_info.size; k++) {
-            auto thisOne = parents_ptr[k * N];
-            if (last != thisOne) {
-                if (last >= 0 && last < length) {
-                    stops_ptr[last] = (std::int64_t)k;
-                }
-                if (thisOne >= 0 && thisOne < length) {
-                    starts_ptr[thisOne] = (std::int64_t)k;
-                }
-            }
-            last = thisOne;
-        }
-
-        if (last != -1) {
-            stops_ptr[last] = (std::int64_t)parents_info.size;
-        }
-
         py::list temp;
-        temp.append(starts);
-        temp.append(stops);
+        temp.append(starts_);
+        temp.append(stops_);
         py::tuple out(temp);
         return out;
     }

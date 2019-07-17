@@ -388,6 +388,112 @@ int startsstops2parents_CPU(struct c_array starts, struct c_array stops, struct 
     return 0;
 }
 
+int parents2startsstops_8bit(struct c_array parents, struct c_array starts, struct c_array stops) {
+    for (ssize_t i = 0; i < starts.size; i++) {
+        ((int8_t*)starts.ptr)[i] = 0;
+        ((int8_t*)stops.ptr)[i] = 0;
+    }
+    ssize_t N = parents.strides[0] / parents.itemsize;
+    int8_t last = -1;
+    for (ssize_t i = 0; i < parents.size; i++) {
+        int8_t thisOne = ((int8_t*)parents.ptr)[i * N];
+        if (last != thisOne) {
+            if (last >= 0 && last < starts.size)
+                ((int8_t*)stops.ptr)[(ssize_t)last] = (int8_t)i;
+            if (thisOne >= 0 && thisOne < starts.size)
+                ((int8_t*)starts.ptr)[(ssize_t)thisOne] = (int8_t)i;
+        }
+        last = thisOne;
+    }
+    if (last != -1)
+        ((int8_t*)stops.ptr)[(ssize_t)last] = (int8_t)parents.size;
+    return 1;
+}
+
+int parents2startsstops_16bit(struct c_array parents, struct c_array starts, struct c_array stops) {
+    for (ssize_t i = 0; i < starts.size; i++) {
+        ((int16_t*)starts.ptr)[i] = 0;
+        ((int16_t*)stops.ptr)[i] = 0;
+    }
+    ssize_t N = parents.strides[0] / parents.itemsize;
+    int16_t last = -1;
+    for (ssize_t i = 0; i < parents.size; i++) {
+        int16_t thisOne = ((int16_t*)parents.ptr)[i * N];
+        if (last != thisOne) {
+            if (last >= 0 && last < starts.size)
+                ((int16_t*)stops.ptr)[(ssize_t)last] = (int16_t)i;
+            if (thisOne >= 0 && thisOne < starts.size)
+                ((int16_t*)starts.ptr)[(ssize_t)thisOne] = (int16_t)i;
+        }
+        last = thisOne;
+    }
+    if (last != -1)
+        ((int16_t*)stops.ptr)[(ssize_t)last] = (int16_t)parents.size;
+    return 1;
+}
+
+int parents2startsstops_32bit(struct c_array parents, struct c_array starts, struct c_array stops) {
+    for (ssize_t i = 0; i < starts.size; i++) {
+        ((int32_t*)starts.ptr)[i] = 0;
+        ((int32_t*)stops.ptr)[i] = 0;
+    }
+    ssize_t N = parents.strides[0] / parents.itemsize;
+    int32_t last = -1;
+    for (ssize_t i = 0; i < parents.size; i++) {
+        int32_t thisOne = ((int32_t*)parents.ptr)[i * N];
+        if (last != thisOne) {
+            if (last >= 0 && last < starts.size)
+                ((int32_t*)stops.ptr)[(ssize_t)last] = (int32_t)i;
+            if (thisOne >= 0 && thisOne < starts.size)
+                ((int32_t*)starts.ptr)[(ssize_t)thisOne] = (int32_t)i;
+        }
+        last = thisOne;
+    }
+    if (last != -1)
+        ((int32_t*)stops.ptr)[(ssize_t)last] = (int32_t)parents.size;
+    return 1;
+}
+
+int parents2startsstops_64bit(struct c_array parents, struct c_array starts, struct c_array stops) {
+    for (ssize_t i = 0; i < starts.size; i++) {
+        ((int64_t*)starts.ptr)[i] = 0;
+        ((int64_t*)stops.ptr)[i] = 0;
+    }
+    ssize_t N = parents.strides[0] / parents.itemsize;
+    int64_t last = -1;
+    for (ssize_t i = 0; i < parents.size; i++) {
+        int64_t thisOne = ((int64_t*)parents.ptr)[i * N];
+        if (last != thisOne) {
+            if (last >= 0 && last < starts.size)
+                ((int64_t*)stops.ptr)[(ssize_t)last] = (int64_t)i;
+            if (thisOne >= 0 && thisOne < starts.size)
+                ((int64_t*)starts.ptr)[(ssize_t)thisOne] = (int64_t)i;
+        }
+        last = thisOne;
+    }
+    if (last != -1)
+        ((int64_t*)stops.ptr)[(ssize_t)last] = (int64_t)parents.size;
+    return 1;
+}
+
+int parents2startsstops_CPU(struct c_array parents, struct c_array starts, struct c_array stops) {
+    /* PURPOSE:
+        - converts parents to starts and stops
+    PREREQUISITES:
+        - TODO: fill this list w/ requirements
+        - NOTE: must be 1d
+    */
+    if (parents.itemsize == 1)
+        return parents2startsstops_8bit(parents, starts, stops);
+    if (parents.itemsize == 2)
+        return parents2startsstops_16bit(parents, starts, stops);
+    if (parents.itemsize == 4)
+        return parents2startsstops_32bit(parents, starts, stops);
+    if (parents.itemsize == 8)
+        return parents2startsstops_64bit(parents, starts, stops);
+    return 0;
+}
+
 #endif                       // end include guard
 
 #ifdef __cplusplus           // end C compiler instruction
