@@ -390,7 +390,7 @@ class JaggedArrayNumba(NumbaMethods, awkward.array.jagged.JaggedArray):
     # def _hasjagged(self):
     ### base implementation is fine
 
-    # def _reduce(self, ufunc, identity, dtype, regularaxis):
+    # def _reduce(self, ufunc, identity, dtype):
 
     @numba.njit
     def argmin(self):

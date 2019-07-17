@@ -233,6 +233,14 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
         return tpe
 
+    def _util_layout(self, position, seen, lookup):
+        positions = []
+        for i, x in enumerate(self._chunks):
+            awkward.type.LayoutNode(x, position + (i,), seen, lookup)
+            positions.append(position + (i,))
+        return (awkward.type.LayoutArg("chunks", positions),
+                awkward.type.LayoutArg("chunksizes", list(self._chunksizes)))
+
     def _getnbytes(self, seen):
         if id(self) in seen:
             return 0
@@ -571,6 +579,60 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
     def counts(self):
         return self.numpy.concatenate([self._util_counts(x) for x in self._chunks])
 
+    def boolmask(self, maskedwhen=True):
+        return self.numpy.concatenate([self._util_boolmask(x, maskedwhen) for x in self._chunks])
+
+    def choose(self, n):
+        out = self.copy(chunks=[x.choose(n) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def argchoose(self, n):
+        out = self.copy(chunks=[x.argchoose(n) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def distincts(self, nested=False):
+        out = self.copy(chunks=[x.distincts(nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def argdistincts(self, nested=False):
+        out = self.copy(chunks=[x.argdistincts(nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def pairs(self, nested=False):
+        out = self.copy(chunks=[x.pairs(nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def argpairs(self, nested=False):
+        out = self.copy(chunks=[x.argpairs(nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def cross(self, other, nested=False):
+        out = self.copy(chunks=[x.cross(other, nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def argcross(self, other, nested=False):
+        out = self.copy(chunks=[x.argcross(other, nested=nested) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def flattentuple(self):
+        return self.copy(chunks=[self._util_flattentuple(x) for x in self._chunks], chunksizes=self._chunksizes)
+
+    def flatten(self, axis=0):
+        out = self.copy(chunks=[self._util_flatten(x, axis) for x in self._chunks])
+        out.knowchunksizes()
+        return out
+
+    def pad(self, length, maskedwhen=True, clip=False, axis=0):
+        return self.copy(chunks=[self._util_pad(x, length, maskedwhen, clip, axis) for x in self._chunks], chunksizes=self.chunksizes)
+
     def regular(self):
         self._valid()
         return self.numpy.concatenate([self._util_regular(x) for x in self._chunks])
@@ -583,14 +645,14 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         else:
             return False
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
+    def _reduce(self, ufunc, identity, dtype):
         self.knowchunksizes()
         self._valid()
 
         if self._util_hasjagged(self):
             chunks = []
             for chunkid, chunk in enumerate(self._chunks):
-                this = chunk._reduce(ufunc, identity, dtype, regularaxis)
+                this = chunk._reduce(ufunc, identity, dtype)
                 if len(this) > 0:
                     chunks.append(this)
             return self.copy(chunks=chunks)
@@ -598,7 +660,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         out = None
         for chunkid, chunk in enumerate(self._chunks):
             if self._chunksizes[chunkid] > 0:
-                this = self._util_reduce(chunk[:self._chunksizes[chunkid]], ufunc, identity, dtype, regularaxis)
+                this = self._util_reduce(chunk[:self._chunksizes[chunkid]], ufunc, identity, dtype)
                 if out is None:
                     out = this
                 else:
@@ -612,7 +674,25 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         else:
             return out
 
-    def _prepare(self, identity, dtype):
+    def argmin(self):
+        if self._util_hasjagged(self):
+            return self.copy(chunks=[x.argmin() for x in self._chunks], chunksizes=self._chunksizes)
+        else:
+            indexes = [x.argmin() for x in self._chunks]
+            chunkid = self.numpy.argmin([x[i] for i, x in zip(indexes, self._chunks)])
+            self.knowchunksizes(chunkid)
+            return self.offsets[chunkid] + indexes[chunkid]
+
+    def argmax(self):
+        if self._util_hasjagged(self):
+            return self.copy(chunks=[x.argmax() for x in self._chunks], chunksizes=self._chunksizes)
+        else:
+            indexes = [x.argmax() for x in self._chunks]
+            chunkid = self.numpy.argmax([x[i] for i, x in zip(indexes, self._chunks)])
+            self.knowchunksizes(chunkid)
+            return self.offsets[chunkid] + indexes[chunkid]
+
+    def _prepare(self, ufunc, identity, dtype):
         self.knowchunksizes()
         out = None
         pos = 0
@@ -637,15 +717,22 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         else:
             return out
 
-    @property
-    def columns(self):
+    def _util_columns(self, seen):
+        if id(self) in seen:
+            return []
+        seen.add(id(self))
         for chunkid in range(len(self._chunks)):
             self.knowchunksizes(chunkid + 1)
             if self._chunksizes[chunkid] > 0:
-                if isinstance(self._chunks[chunkid], self.numpy.ndarray):
-                    return []
-                else:
-                    return self._chunks[chunkid].columns
+                return self._util_columns_descend(self._chunks[chunkid], seen)
+
+    def _util_rowname(self, seen):
+        if id(self) in seen:
+            raise TypeError("not a Table, so there is no rowname")
+        for chunkid in range(len(self._chunks)):
+            self.knowchunksizes(chunkid + 1)
+            if self._chunksizes[chunkid] > 0:
+                return self._util_rowname_descend(self._chunks[chunkid], seen)
 
     def astype(self, dtype):
         chunks = []
@@ -667,14 +754,26 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             chunksizes.append(self._chunksizes[i])
         return self.copy(chunks=chunks, chunksizes=chunksizes)
 
-    def _util_pandas(self, seen):
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, ChunkedArray) for x in arrays)
+        if all(x.chunksizesknown for x in arrays):
+            chunksizes = [y for x in arrays for y in x._chunksizes]
+        else:
+            chunksizes = []
+        chunks = [y for x in arrays for y in x._chunks]
+        return cls(chunks, chunksizes)
+
+    _topandas_name = "ChunkedSeries"
+
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("ChunkedSeries", self)
-            out._chunks = [x._util_pandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x for x in out._chunks]
+            out.__class__ = awkward.pandas.mixin(type(self))
+            out._chunks = [x._topandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x for x in out._chunks]
             return out
 
 class AppendableArray(ChunkedArray):
@@ -794,6 +893,15 @@ class AppendableArray(ChunkedArray):
 
     def _gettype(self, seen):
         return self._dtype
+
+    def _util_layout(self, position, seen, lookup):
+        positions = []
+        for i, x in enumerate(self._chunks):
+            awkward.type.LayoutNode(x, position + (i,), seen, lookup)
+            positions.append(position + (i,))
+        return (awkward.type.LayoutArg("chunkshape", self._chunkshape),
+                awkward.type.LayoutArg("dtype", self._dtype),
+                awkward.type.LayoutArg("chunks", positions))
 
     def __len__(self):
         return sum(self._chunksizes)

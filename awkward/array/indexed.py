@@ -117,6 +117,12 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             out = awkward.type.ArrayType(x, out)
         return out
 
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._index, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._content, position + (1,), seen, lookup)
+        return (awkward.type.LayoutArg("index", position + (0,)),
+                awkward.type.LayoutArg("content", position + (1,)))
+
     def _valid(self):
         if self.check_whole_valid:
             if not self._isvalid:
@@ -168,6 +174,7 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
             self._content[where] = self._invert(what)
 
         elif self._util_isstringslice(where):
+            what = what.unzip()
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
@@ -194,40 +201,117 @@ class IndexedArray(awkward.array.base.AwkwardArrayWithContent):
     @property
     def counts(self):
         self._valid()
-        return self._util_counts(self._content)[self._index]
+        return self._util_counts(self._content[self._index])
+
+    def boolmask(self, maskedwhen=True):
+        self._valid()
+        return self._util_boolmask(self._content[self._index], maskedwhen)
+
+    def choose(self, n):
+        self._valid()
+        return self._content[self._index].choose(n)
+
+    def argchoose(self, n):
+        self._valid()
+        return self._content[self._index].argchoose(n)
+
+    def distincts(self, nested=False):
+        self._valid()
+        return self._content[self._index].distincts(nested=nested)
+
+    def argdistincts(self, nested=False):
+        self._valid()
+        return self._content[self._index].argdistincts(nested=nested)
+
+    def pairs(self, nested=False):
+        self._valid()
+        return self._content[self._index].pairs(nested=nested)
+
+    def argpairs(self, nested=False):
+        self._valid()
+        return self._content[self._index].argpairs(nested=nested)
+
+    def cross(self, other, nested=False):
+        self._valid()
+        return self._content[self._index].cross(other, nested=nested)
+
+    def argcross(self, other, nested=False):
+        self._valid()
+        return self._content[self._index].argcross(other, nested=nested)
+
+    def flattentuple(self):
+        self._valid()
+        return self.copy(content=self._util_flattentuple(self._content))
+
+    def flatten(self, axis=0):
+        self._valid()
+        return self._util_flatten(self._content[self._index], axis)
+
+    def pad(self, length, maskedwhen=True, clip=False, axis=0):
+        return self._util_pad(self._content[self._index], length, maskedwhen, clip, axis)
 
     def regular(self):
         self._valid()
-        return self._util_regular(self._content)[self._index]
+        return self._util_regular(self._content[self._index])
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
+    def _reduce(self, ufunc, identity, dtype):
         if self._util_hasjagged(self._content):
-            return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
+            return self.copy(content=self._content._reduce(ufunc, identity, dtype))
 
         elif isinstance(self._content, awkward.array.table.Table):
-            out = awkward.array.table.Table()
+            out = self._content.copy(contents={})
             for n, x in self._content._contents.items():
                 out[n] = self.copy(content=x)
-            return out._reduce(ufunc, identity, dtype, regularaxis)
+            return out._reduce(ufunc, identity, dtype)
 
         else:
-            return ufunc.reduce(self._prepare(identity, dtype))
+            prepared = self._prepare(ufunc, identity, dtype)
+            if ufunc is None:
+                return (1 - self.numpy.isnan(prepared)).sum()
+            elif ufunc is self.numpy.count_nonzero:
+                return (1 - (prepared == 0)).sum()
+            if issubclass(prepared.dtype.type, (self.numpy.floating, self.numpy.complexfloating)):
+                prepared = self.numpy.where(self.numpy.isnan(prepared), identity, prepared)
+            return ufunc.reduce(prepared)
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
         if isinstance(self._content, self.numpy.ndarray):
             return self._content[self._index]
         else:
-            return self._content._prepare(identity, dtype)[self._index]
+            return self._content._prepare(ufunc, identity, dtype)[self._index]
 
-    def _util_pandas(self, seen):
+    def argmin(self):
+        return self._content[self._index].argmin()
+
+    def argmax(self):
+        return self._content[self._index].argmax()
+
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, IndexedArray) for x in arrays)
+
+        indexes = []
+        offset = 0
+        for x in arrays:
+            indexes.append(x._index + offset)
+            offset += len(x._content)
+        index = cls.numpy.concatenate(indexes)
+
+        content = awkward.array.base.AwkwardArray.concatenate([x._content for x in arrays], axis=0)
+
+        return cls(index, content)
+
+    _topandas_name = "IndexedSeries"
+
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("IndexedSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             if isinstance(self._content, awkward.array.base.AwkwardArray):
-                out._content = out._content._util_pandas(seen)
+                out._content = out._content._topandas(seen)
             return out
 
 class SparseArray(awkward.array.base.AwkwardArrayWithContent):
@@ -370,6 +454,14 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _gettype(self, seen):
         return awkward.type._fromarray(self._content, seen)
+
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._index, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._content, position + (1,), seen, lookup)
+        return (awkward.type.LayoutArg("length", self._length),
+                awkward.type.LayoutArg("index", position + (0,)),
+                awkward.type.LayoutArg("content", position + (1,)),
+                awkward.type.LayoutArg("default", self._default))
 
     def _getnbytes(self, seen):
         if id(self) in seen:
@@ -582,6 +674,7 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             self._content[where] = self._invert(what)
 
         elif self._util_isstringslice(where):
+            what = what.unzip()
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for x, y in zip(where, what):
@@ -609,11 +702,31 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
     def counts(self):
         self._valid()
         content = self._util_counts(self._content)
-        out = self.numpy.zeros(self.shape, dtype=content.dtype)
+        try:
+            defaultlen = len(self.default)
+        except:
+            defaultlen = -1
+        out = self.numpy.full(self.shape, defaultlen, dtype=content.dtype)
         if len(self._index) != 0:
             mask = self.boolmask(maskedwhen=True)
             out[mask] = content[self._inverse[mask]]
         return out
+
+    def flattentuple(self):
+        self._valid()
+        return self.copy(content=self._util_flattentuple(self._content))
+
+    def flatten(self, axis=0):
+        self._valid()
+        out = self._util_flatten(self._content, axis)
+        out = self.numpy.full(self.shape, self.default, dtype=content.dtype)
+        if len(self._index) != 0:
+            mask = self.boolmask(maskedwhen=True)
+            out[mask] = content[self._inverse[mask]]
+        return out
+
+    def pad(self, length, maskedwhen=True, clip=False, axis=0):
+        return self._util_pad(self._content.dense, length, maskedwhen, clip, axis)
 
     def regular(self):
         self._valid()
@@ -624,32 +737,47 @@ class SparseArray(awkward.array.base.AwkwardArrayWithContent):
             out[mask] = content[self._inverse[mask]]
         return out
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
+    def _reduce(self, ufunc, identity, dtype):
         if self._util_hasjagged(self._content):
-            return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
+            return self.copy(content=self._content._reduce(ufunc, identity, dtype))
 
         elif isinstance(self._content, awkward.array.table.Table):
-            out = awkward.array.table.Table()
+            out = self._content.copy(contents={})
             for n, x in self._content._contents.items():
                 out[n] = self.copy(content=x)
-            return out._reduce(ufunc, identity, dtype, regularaxis)
+            return out._reduce(ufunc, identity, dtype)
 
         else:
-            return ufunc.reduce(self._prepare(identity, dtype))
+            prepared = self._prepare(ufunc, identity, dtype)
+            if ufunc is None:
+                return (1 - self.numpy.isnan(prepared)).sum()
+            elif ufunc is self.numpy.count_nonzero:
+                return (1 - (prepared == 0)).sum()
+            if issubclass(prepared.dtype.type, (self.numpy.floating, self.numpy.complexfloating)):
+                prepared = self.numpy.where(self.numpy.isnan(prepared), identity, prepared)
+            return ufunc.reduce(prepared)
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
         if isinstance(self._content, self.numpy.ndarray):
             return self.dense
         else:
-            return self.copy(content=self._content._prepare(identity, dtype)).dense
+            return self.copy(content=self._content._prepare(ufunc, identity, dtype)).dense
 
-    def _util_pandas(self, seen):
+    def argmin(self):
+        return self.dense.argmin()
+
+    def argmax(self):
+        return self.dense.argmax()
+
+    _topandas_name = "SparseSeries"
+
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("SparseSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             if isinstance(self._content, awkward.array.base.AwkwardArray):
-                out._content = out._content._util_pandas(seen)
+                out._content = out._content._topandas(seen)
             return out

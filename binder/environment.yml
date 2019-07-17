@@ -1,0 +1,9 @@
+name: binder
+channels:
+  - conda-forge
+dependencies:
+  - numpy>=1.13.1
+  - numba>=0.43.1
+  - pyarrow>=0.14.0
+  - uproot>=3.7.2
+  - h5py>=2.9.0

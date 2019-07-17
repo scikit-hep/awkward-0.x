@@ -47,8 +47,8 @@ class Test(unittest.TestCase):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
         assert a.type == ArrayType(4, numpy.inf, 1, float)
 
-    def test_jagged_fromindex(self):
-        a = JaggedArray.fromindex([0, 1, 0, 0, 0, 1, 2, 0, 1, 0], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+    def test_jagged_fromlocalindex(self):
+        a = JaggedArray.fromlocalindex([0, 1, 0, 0, 0, 1, 2, 0, 1, 0], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         self.assertEqual(a.tolist(), [[0.0, 1.1], [2.2], [3.3], [4.4, 5.5, 6.6], [7.7, 8.8], [9.9]])
         self.assertEqual(a.starts.tolist(), [0, 2, 3, 4, 7, 9])
         self.assertEqual(a.stops.tolist(), [2, 3, 4, 7, 9, 10])
@@ -236,7 +236,7 @@ class Test(unittest.TestCase):
             assert len(c[3]) == 0
             assert c[2]["0"].tolist() == sum([[x] * (i - x) for x in range(i)], [])
             assert c[2]["1"].tolist() == sum([list(range(x, i)) for x in range(i)], [])
-        
+
     def test_jagged_distincts(self):
         for i in range(50):
             a = JaggedArray.fromiter([[], [123], list(range(i)), []])
@@ -386,13 +386,14 @@ class Test(unittest.TestCase):
         assert a.sum().tolist() == [3.3000000000000003, 0.0, 7.7, 38.5]
 
         a = JaggedArray([[0, 3], [3, 5]], [[3, 3], [5, 10]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        assert a.sum(regularaxis=0).tolist() == [[3.3000000000000003, 0.0], [7.7, 38.5]]
+        assert a.sum().tolist() == [[3.3000000000000003, 0.0], [7.7, 38.5]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
-        assert a.sum(regularaxis=0).tolist() == [[3.3000000000000003], [0.0], [7.7], [38.5]]
+        assert a.sum().tolist() == [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2], [3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7], [8.8, 8.8], [9.9, 9.9]])
-        assert a.sum(regularaxis=0).tolist() == [[3.3000000000000003, 3.3000000000000003], [0.0, 0.0], [7.7, 7.7], [38.5, 38.5]]
+
+        assert a.sum().tolist() == [[0.0, 2.2, 4.4], [], [6.6, 8.8], [11.0, 13.2, 15.4, 17.6, 19.8]]
 
     def test_jagged_prod(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
@@ -402,10 +403,10 @@ class Test(unittest.TestCase):
         assert a.prod().tolist() == [[0.0, 1.0], [14.52, 24350.911200000002]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
-        assert a.prod(regularaxis=0).tolist() == [[0.0], [1.0], [14.52], [24350.911200000002]]
+        assert a.prod().tolist() == [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2], [3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7], [8.8, 8.8], [9.9, 9.9]])
-        assert a.prod(regularaxis=0).tolist() == [[0.0, 0.0], [1.0, 1.0], [14.52, 14.52], [24350.911200000002, 24350.911200000002]]
+        assert a.prod().tolist() == [[0.0, 1.2100000000000002, 4.840000000000001], [], [10.889999999999999, 19.360000000000003], [30.25, 43.559999999999995, 59.290000000000006, 77.44000000000001, 98.01]]
 
     def test_jagged_argmin(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
@@ -429,10 +430,10 @@ class Test(unittest.TestCase):
         assert a.min().tolist() == [[0.0, numpy.inf], [3.3, 5.5]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
-        assert a.min(regularaxis=0).tolist() == [[0.0], [numpy.inf], [3.3], [5.5]]
+        assert a.min().tolist() == [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2], [3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7], [8.8, 8.8], [9.9, 9.9]])
-        assert a.min(regularaxis=0).tolist() == [[0.0, 0.0], [numpy.inf, numpy.inf], [3.3, 3.3], [5.5, 5.5]]
+        assert a.min().tolist() == [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
 
     def test_jagged_max(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
@@ -442,10 +443,10 @@ class Test(unittest.TestCase):
         assert a.max().tolist() == [[2.2, -numpy.inf], [4.4, 9.9]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0], [1.1], [2.2], [3.3], [4.4], [5.5], [6.6], [7.7], [8.8], [9.9]])
-        assert a.max(regularaxis=0).tolist() == [[2.2], [-numpy.inf], [4.4], [9.9]]
+        assert a.max().tolist() == [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [[0.0, 0.0], [1.1, 1.1], [2.2, 2.2], [3.3, 3.3], [4.4, 4.4], [5.5, 5.5], [6.6, 6.6], [7.7, 7.7], [8.8, 8.8], [9.9, 9.9]])
-        assert a.max(regularaxis=0).tolist() == [[2.2, 2.2], [-numpy.inf, -numpy.inf], [4.4, 4.4], [9.9, 9.9]]
+        assert a.max().tolist() == [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5, 6.6, 7.7, 8.8, 9.9]]
 
     def test_jagged_concatenate(self):
         lst = [[1, 2, 3], [], [4, 5], [6, 7], [8], [], [9], [10, 11], [12]]
@@ -582,14 +583,19 @@ class Test(unittest.TestCase):
         assert all(array1[indices1] == array2[indices1])
         assert all(array2[indices1] == array2[indices2])
 
-    def test_jagged_index(self):
+    def test_jagged_localindex(self):
         a = awkward.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
-        assert a.index.tolist() == [[0, 1, 2, 3, 4], [], [0, 1, 2], [0]]
+        assert a.localindex.tolist() == [[0, 1, 2, 3, 4], [], [0, 1, 2], [0]]
         b = a[[False, True, False, True]]
-        assert b.index.tolist() == [[], [0]]
+        assert b.localindex.tolist() == [[], [0]]
 
     def test_jagged_parents(self):
         a = awkward.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
         assert a.parents.tolist() == [0, 0, 0, 0, 0, 2, 2, 2, 3]
         b = a[[False, True, False, True]]
         assert b.parents.tolist() == [-1, -1, -1, -1, -1, -1, -1, -1, 1]
+
+    def test_jagged_sort(self):
+        a = awkward.fromiter([[2.,3.,1.], [4., -numpy.inf, 5.], [numpy.inf, 4., numpy.nan, -numpy.inf], [numpy.nan], [3., None, 4., -1.]])
+        assert a.argsort().tolist() == [[1, 0, 2], [2, 0, 1], [0, 1, 3, 2], [0], [2, 0, 3]]
+        assert a.argsort(True).tolist() == [[2, 0, 1], [1, 0, 2], [3, 1, 0, 2], [0], [3, 0, 2]]

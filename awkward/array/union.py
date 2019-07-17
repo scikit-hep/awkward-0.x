@@ -244,6 +244,17 @@ class UnionArray(awkward.array.base.AwkwardArray):
             out = awkward.type.ArrayType(x, out)
         return out
 
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._tags, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._index, position + (1,), seen, lookup)
+        positions = []
+        for i, x in enumerate(self._contents):
+            awkward.type.LayoutNode(x, position + (2 + i,), seen, lookup)
+            positions.append(position + (2 + i,))
+        return (awkward.type.LayoutArg("tags", position + (0,)),
+                awkward.type.LayoutArg("index", position + (1,)),
+                awkward.type.LayoutArg("contents", positions))
+
     def _valid(self):
         if self.check_whole_valid:
             if not self._isvalid:
@@ -321,6 +332,7 @@ class UnionArray(awkward.array.base.AwkwardArray):
                 self._contents[tag][where] = self.IndexedArray(inverseindex, what)
 
         elif self._util_isstringslice(where):
+            what = what.unzip()
             if len(where) != len(what):
                 raise ValueError("number of keys ({0}) does not match number of provided arrays ({1})".format(len(where), len(what)))
             for tag in self.numpy.unique(self._tags):
@@ -417,6 +429,49 @@ class UnionArray(awkward.array.base.AwkwardArray):
             out[mask] = array[self._index[mask]]
         return out
 
+    def boolmask(self, maskedwhen=True):
+        self._valid()
+        arrays = [self._util_boolmask(x, maskedwhen) for x in self._contents]
+        out = self.numpy.empty(len(self), self.MASKTYPE)
+        for tag, array in enumerate(arrays):
+            mask = (self._tags == tag)
+            out[mask] = array[self._index[mask]]
+        return out
+
+    def choose(self, n):
+        raise NotImplementedError("choose not yet implemented for UnionArray")
+
+    def argchoose(self, n):
+        raise NotImplementedError("argchoose not yet implemented for UnionArray")
+
+    def distincts(self, nested=False):
+        raise NotImplementedError("distincts not yet implemented for UnionArray")
+
+    def argdistincts(self, nested=False):
+        raise NotImplementedError("argdistincts not yet implemented for UnionArray")
+
+    def pairs(self, nested=False):
+        raise NotImplementedError("pairs not yet implemented for UnionArray")
+
+    def argpairs(self, nested=False):
+        raise NotImplementedError("argpairs not yet implemented for UnionArray")
+
+    def cross(self, other, nested=False):
+        raise NotImplementedError("cross not yet implemented for UnionArray")
+
+    def argcross(self, other, nested=False):
+        raise NotImplementedError("argcross not yet implemented for UnionArray")
+
+    def flattentuple(self):
+        return self.copy(contents=[self._util_flattentuple(x) for x in self._contents])
+
+    def flatten(self, axis=0):
+        raise NotImplementedError("flatten not yet implemented for UnionArray")
+
+    def pad(self, length, maskedwhen=True, clip=False, axis=0):
+        self._valid()
+        return self.copy(contents=[self._util_pad(x, length, maskedwhen, clip, axis) for x in self._contents])
+
     def regular(self):
         self._valid()
         arrays = [self._util_regular(x) for x in self._contents]
@@ -427,22 +482,25 @@ class UnionArray(awkward.array.base.AwkwardArray):
         return out
 
     def _hasjagged(self):
-        return all(self._util_hasjagged(x) for x in self._contents)
-
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
-        if self._hasjagged():
-            return self.copy(contents=[x._reduce(ufunc, identity, dtype, regularaxis) for x in self._contents])
-
-        elif self.columns != []:
-            out = awkward.array.table.Table()
-            for n in self.columns:
-                out[n] = self.copy(content=self[n])
-            return out._reduce(ufunc, identity, dtype, regularaxis)
-
+        num = sum(1 if self._util_hasjagged(x) else 0 for x in self._contents)
+        if num == 0:
+            return False
+        elif num == len(self._contents):
+            return True
         else:
-            return ufunc.reduce(self._prepare(identity, dtype))
+            raise ValueError("some UnionArray possibilities are jagged and others are not")
 
-    def _prepare(self, identity, dtype):
+    def _reduce(self, ufunc, identity, dtype):
+        prepared = self._prepare(ufunc, identity, dtype)
+        if ufunc is None:
+            return (1 - self.numpy.isnan(prepared)).sum()
+        elif ufunc is self.numpy.count_nonzero:
+            return (1 - (prepared == 0)).sum()
+        if issubclass(prepared.dtype.type, (self.numpy.floating, self.numpy.complexfloating)):
+            prepared = self.numpy.where(self.numpy.isnan(prepared), identity, prepared)
+        return ufunc.reduce(prepared)
+
+    def _prepare(self, ufunc, identity, dtype):
         if dtype is None and issubclass(self.dtype.type, (self.numpy.bool_, self.numpy.bool)):
             dtype = self.numpy.dtype(type(identity))
         if dtype is None:
@@ -452,7 +510,10 @@ class UnionArray(awkward.array.base.AwkwardArray):
         index = self._index[:len(self._tags)]
         for tag, content in enumerate(self._contents):
             if not isinstance(content, self.numpy.ndarray):
-                content = content._prepare(identity, dtype)
+                content = content._prepare(ufunc, identity, dtype)
+
+            if not isinstance(content, self.numpy.ndarray):
+                raise TypeError("cannot reduce a UnionArray of non-primitive type")
 
             mask = (self._tags == tag)
             c = content[index[mask]]
@@ -463,20 +524,41 @@ class UnionArray(awkward.array.base.AwkwardArray):
 
         return out
 
-    @property
-    def columns(self):
+    def argmin(self):
+        raise NotImplementedError("argmin not yet implemented for UnionArray")
+
+    def argmax(self):
+        raise NotImplementedError("argmax not yet implemented for UnionArray")
+
+    def _util_columns(self, seen):
+        if id(self) in seen:
+            return []
+        seen.add(id(self))
         out = None
         for content in self._contents:
-            if isinstance(content, self.numpy.ndarray):
-                return []
-
+            tmp = self._util_columns_descend(content, seen)
             if out is None:
-                out = content.columns
+                out = tmp
             else:
-                out = [x for x in content.columns if x in out]
-
+                out = out + [x for x in tmp if x not in out]
         if out is None:
             return []
+        else:
+            return out
+
+    def _util_rowname(self, seen):
+        if id(self) in seen:
+            raise TypeError("not a Table, so there is no rowname")
+        seen.add(id(self))
+        out = None
+        for content in self._contents:
+            tmp = self._util_rowname_descend(content, seen)
+        if out is None:
+            out = tmp
+        elif out != tmp:
+            raise TypeError("union of multiple Tables with different names, so there is no single rowname")
+        if out is None:
+            raise TypeError("not a Table, so there is no rowname")
         else:
             return out
 
@@ -486,12 +568,20 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def fillna(self, value):
         return self.copy(contents=[self._util_fillna(x, value) for x in self._contents])
 
-    def _util_pandas(self, seen):
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, UnionArray) for x in arrays)
+        tags = cls.numpy.concatenate([cls.numpy.full(len(x), i, dtype=cls.TAGTYPE) for i, x in enumerate(arrays)])
+        return cls.UnionArray.fget(None).fromtags(tags, arrays)
+
+    _topandas_name = "UnionSeries"
+
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("UnionSeries", self)
-            out._contents = [x._util_pandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x for x in out._contents]
+            out.__class__ = awkward.pandas.mixin(type(self))
+            out._contents = [x._topandas(seen) if isinstance(x, awkward.array.base.AwkwardArray) else x for x in out._contents]
             return out

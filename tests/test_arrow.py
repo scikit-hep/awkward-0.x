@@ -108,7 +108,7 @@ class Test(unittest.TestCase):
         if pyarrow is None:
             pytest.skip("unable to import pyarrow")
         else:
-            a = pyarrow.chunked_array([pyarrow.array([1.1, 2.2, 3.3, 4.4, 5.5]), pyarrow.array([]), pyarrow.array([6.6, 7.7, 8.8])])
+            a = pyarrow.chunked_array([pyarrow.array([1.1, 2.2, 3.3, 4.4, 5.5]), pyarrow.array([], pyarrow.float64()), pyarrow.array([6.6, 7.7, 8.8])])
             assert awkward.arrow.fromarrow(a).tolist() == [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8]
 
     def test_arrow_struct(self):
@@ -143,7 +143,8 @@ class Test(unittest.TestCase):
         if pyarrow is None:
             pytest.skip("unable to import pyarrow")
         else:
-            a = pyarrow.chunked_array([pyarrow.array([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}]), pyarrow.array([]), pyarrow.array([{"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])])
+            t = pyarrow.struct({"x": pyarrow.int64(), "y": pyarrow.float64()})
+            a = pyarrow.chunked_array([pyarrow.array([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}], t), pyarrow.array([], t), pyarrow.array([{"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}], t)])
             assert awkward.arrow.fromarrow(a).tolist() == [{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}, {"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}]
 
     def test_arrow_nested_struct(self):
@@ -414,7 +415,7 @@ class Test(unittest.TestCase):
             storage = {}
             awkward.serialize(a, storage)
             b = awkward.deserialize(storage)
-            assert b["b"].tolist() == [[1, 2, 3], [], [None], None, [4, 5, 6], [2, 1, 3], [], [None], None, [4, 5, 6], [1, 2, 3], [], [None], None, [4, 5, 6], [2, 1, 3], [], [None], None, [4, 5, 6]] 
+            assert b["b"].tolist() == [[1, 2, 3], [], [None], None, [4, 5, 6], [2, 1, 3], [], [None], None, [4, 5, 6], [1, 2, 3], [], [None], None, [4, 5, 6], [2, 1, 3], [], [None], None, [4, 5, 6]]
             assert a["c"].tolist() == [[[1.1, 2.2]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[2.2, 1.1]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[1.1, 2.2]], None, [[3.3, None], []], [], [None, [4.4, 5.5]], [[2.2 , 1.1]], None, [[3.3, None], []], [], [None, [4.4, 5.5]]]
 
 def test_arrow_writeparquet2(tmpdir):

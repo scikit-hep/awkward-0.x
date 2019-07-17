@@ -215,6 +215,15 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         else:
             return self._type.to
 
+    def _util_layout(self, position, seen, lookup):
+        args = (awkward.type.LayoutArg("generator", self._generator),
+                awkward.type.LayoutArg("args", self._args),
+                awkward.type.LayoutArg("kwargs", dict(self._kwargs)))
+        if self.ismaterialized:
+            awkward.type.LayoutNode(self.array, position + (0,), seen, lookup)
+            args = args + (awkward.type.LayoutArg("array", position + (0,)),)
+        return args
+
     @property
     def type(self):
         if self._type is None or self.ismaterialized:
@@ -397,16 +406,52 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def counts(self):
         return self._util_counts(self.array)
 
+    def boolmask(self, maskedwhen=True):
+        return self._util_boolmask(self.array, maskedwhen)
+
+    def choose(self, n):
+        return self.array.choose(n)
+
+    def argchoose(self, n):
+        return self.array.argchoose(n)
+
+    def distincts(self, nested=False):
+        return self.array.distincts(nested=nested)
+
+    def argdistincts(self, nested=False):
+        return self.array.argdistincts(nested=nested)
+
+    def pairs(self, nested=False):
+        return self.array.pairs(nested=nested)
+
+    def argpairs(self, nested=False):
+        return self.array.argpairs(nested=nested)
+
+    def cross(self, other, nested=False):
+        return self.array.cross(other, nested=nested)
+
+    def argcross(self, other, nested=False):
+        return self.array.argcross(other, nested=nested)
+
+    def flattentuple(self):
+        return self._util_flattentuple(self.array)
+
+    def flatten(self, axis=0):
+        return self._util_flatten(self.array, axis)
+
+    def pad(self, length, maskedwhen=True, clip=False, axis=0):
+        return self._util_pad(self.array, length, maskedwhen, clip, axis)
+
     def regular(self):
         return self._util_regular(self.array)
 
     def _hasjagged(self):
         return self._util_hasjagged(self.array)
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
-        return self._util_reduce(self.array, ufunc, identity, dtype, regularaxis)
+    def _reduce(self, ufunc, identity, dtype):
+        return self._util_reduce(self.array, ufunc, identity, dtype)
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
         array = self.array
         if isinstance(array, self.numpy.ndarray):
             if dtype is None and issubclass(array.dtype.type, (self.numpy.bool_, self.numpy.bool)):
@@ -416,15 +461,25 @@ class VirtualArray(awkward.array.base.AwkwardArray):
             else:
                 return array.astype(dtype)
         else:
-            return array._prepare(identity, dtype)
+            return array._prepare(ufunc, identity, dtype)
 
-    @property
-    def columns(self):
-        array = self.array
-        if isinstance(array, self.numpy.ndarray):
+    def argmin(self):
+        return self.array.argmin()
+
+    def argmax(self):
+        return self.array.argmax()
+
+    def _util_columns(self, seen):
+        if id(self) in seen:
             return []
-        else:
-            return array.columns
+        seen.add(id(self))
+        return self._util_columns_descend(self.array, seen)
+
+    def _util_rowname(self, seen):
+        if id(self) in seen:
+            raise TypeError("not a Table, so there is no rowname")
+        seen.add(id(self))
+        return self._util_rowname_descend(self.array, seen)
 
     def astype(self, dtype):
         return self.array.astype(dtype)
@@ -432,15 +487,27 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def fillna(self, value):
         return self._util_fillna(self.array, value)
 
-    @staticmethod
-    def _util_pandas_doit(virtualarray):
-        return virtualarray.array.pandas
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, VirtualArray) for x in arrays)
+        return awkward.array.base.AwkwardArray.concatenate([x.array for x in arrays], axis=0)
 
-    def _util_pandas(self, seen):
+    @classmethod
+    def _concatenate_axis1(cls, arrays):
+        assert all(isinstance(x, VirtualArray) for x in arrays)
+        return awkward.array.base.AwkwardArray.concatenate([x.array for x in arrays], axis=1)
+
+    @staticmethod
+    def _topandas_doit(virtualarray):
+        return virtualarray.array._topandas()
+
+    _topandas_name = "VirtualSeries"
+
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
-            out = seen[id(self)] = self.VirtualArray(self._util_pandas_doit, (self,), cache=self.cache, persistentkey=self.persistentkey, type=self.type, nbytes=self.nbytes, persistvirtual=self.persistvirtual)
-            out.__class__ = awkward.pandas.mixin("VirtualSeries", self)
+            out = seen[id(self)] = self.VirtualArray(self._topandas_doit, (self,), cache=self.cache, persistentkey=self.persistentkey, type=self.type, nbytes=self.nbytes, persistvirtual=self.persistvirtual)
+            out.__class__ = awkward.pandas.mixin(type(self))
             return out

@@ -1,0 +1,162 @@
+= Serialization
+:Author: Jim Pivarski
+:Email: pivarski@princeton.edu
+:Date: 2019-07-08
+:Revision: 0.x
+
+The purpose of awkward-array is to perform computations on complex data with an array programming idiom, not as a storage or interchange format to rival https://root.cern[ROOT], https://parquet.apache.org[Parquet], or https://arrow.apache.org[Arrow]. However, since the bulk data consist entirely of basic (Numpy) arrays, any storage format that can store a set of named arrays and the awkward metadata can store one or more awkward-arrays.
+
+We define a protocol to store any awkward-array structure in any named array container so that users have a way to stash and share intermediate results and, hopefully, to communicate between awkward-array implementations. The definition consists of a JSON format with as little reference to Python specifics as possible, so that implementations of awkward-array in other languages would be able to share data. This sharing could be through pointer locations in a process, shared memory on a single operating system, files on disk, or a distributed network.
+
+This persistence protocol does not define a method for storing named arrays. We assume that an existing mechanism, such as ROOT, Parquet, or Arrow, or ZIP, HDF5, named files, or an object store manage that. For complete generality, the "`named arrays`" do not need to keep array metadata (the way HDF5 files do), but can store only named binary blobs (the way ZIP files do). We only fill this container with array data, assign names to them, and additionally provide a JSON object that can be used to reverse the process.
+
+The awkward-array library in Python uses this serialization mechanism to pickle array objects, `save` them to and `load` them from ZIP files, and to use HDF5 as a read-write database of awkward arrays. ZIP files of awkward-array objects are identified with file extension `.awkd`.
+
+=== JSON metadata format
+
+The JSON object is a nested expression to be interpreted as a command, like a LISP https://en.wikipedia.org/wiki/S-expression[S-expression]. This provides the most flexibility for backward and forward compatibility. For security, deserialization takes a *whitelist* of allowed functions: maliciously constructed data cannot execute arbitrary functions, only the ones in the whitelist. If a new feature is added that requires the execution of previously unforeseen functions, users may need to manually expand the whitelist for forward compatibility (or they may completely open the whitelist if they trust the data source).
+
+A single JSON object represents a single awkward-array. Multiple awkward-arrays may be saved in the same namespace if they each have a different *prefix*. In general, it would be the user's responsibility to ensure that prefixes don't overlap, but the Numpy-only implementation of awkward-array checks for name collisions when writing to ZIP files and separates namespaces with Groups in HDF5 files. Prefixes can also be filesystem paths up to a directory delimiter -- arrays would not overlap if they are saved to different directories.
+
+==== Top level object
+
+The top level of the JSON format defines the following fields. If a field has a default, it is optional. If it isn't labeled with a default or as optional, it is required.
+
+   * `awkward` (required, but for information purposes only): the version of the awkward-array library that wrote this object. Only the existence of this field is checked as a format signature.
+   * `doc` (optional, for information purposes only): should be a string
+   * `metadata` (optional, for information purposes only): any JSON structure
+   * `prefix` (default is `""`): the prefix at the beginning of the name of each binary blob.
+   * `schema`: the *deserialization expression*, which recursively defines the awkward-array to build.
+
+If additional fields are filled, the object is not considered invalid, though it risks conflicts with future versions of this specification.
+
+==== Deserialization expressions
+
+A deserialization expression is a JSON object whose type is determined by the presence of an *identifying key*. If additional fields beyond the ones described below are filled, the object is not considered invalid, though it risks conflicts with future versions of this specification. However, a deserialization expression must not include more than one identifying key in the same JSON object.
+
+Every deserialization expression has an `"id"` field, which is a non-negative integer. These identifiers are used by `"ref"` to build cross-references and cyclic references into the arrays within the object. These identifiers are not guaranteed to be in order; a reference to an unrecognized identifier can be deserialized as a `VirtualArray` to break a cyclic dependency.
+
+Each of the sections below is labeled with the identifying key first.
+
+===== `+{"call": function, "args": [expressions...]}+`
+
+The expression is a function to be called if its function specification matches a pattern in the whitelist.
+
+    * `call`: function specification, described below.
+    * `args` (default is `[]`): list of <<deserialization expressions>> to use as positional arguments.
+    * `kwargs` (default is `{}`): JSON object of <<deserialization expressions>> to use as keyword, argument pairs.
+    * `cacheable` (default is `false`): if `true`, pass the cache as a `cache` keyword argument to the function.
+    * `whitelistable` (default is `false`): if `true`, pass the whitelist as a `whitelist` keyword argument to the function.
+
+Functions are specified by a list of at least two strings. The first is a fully qualified module path and rest are objects or objects within objects in that module that terminate in a callable.
+
+For example, `["awkward", "JaggedArray", "fromcounts"]` is the `fromcounts` constructor of class `JaggedArray` in module `awkward`.
+
+===== `+{"read": name}+`
+
+The expression is a binary blob to read with a given name.
+
+    * `read`: string; the name of the binary blob to read.
+    * `absolute` (default `false`): if `true`, the name is used as-is, if `false`, the global prefix must be prepended before the name.
+
+===== `+{"list": [expressions...]}+`
+
+The expression is a list of <<deserialization expressions>>.
+
+===== `+{"tuple": [expressions...]}+`
+
+The expression is a tuple of <<deserialization expressions>>.
+
+===== `+{"dict": {name: expression, ...}}+`
+
+The expression is a dict of name (string), <<deserialization expressions,deserialization expression>> pairs.
+
+
+===== `+{"pairs": [[name, expression], ...]}+`
+
+The expression is a list of name (string), <<deserialization expressions,deserialization expression>> pairs. It is not a JSON object so that the order is maintained.
+
+===== `+{"dtype": dtype}+`
+
+The expression is a Numpy dtype, expressed as JSON. Numpy distinguishes between Python tuples and lists, so the following patterns must all be converted to tuples before passing the result to the `numpy.dtype` constructor:
+
+   * `+[..., integer]+`
+   * `+[..., [all integers]]+`
+   * `+[string, ...]+`
+
+===== `+{"function": function-specification}+`
+
+The expression is a function object to pass as an argument, not to call. The function specification is the same as in the `"call"` type, though.
+
+===== `+{"json": data}+`
+
+The expression is purely expressed by `data`, an arbitrary JSON value.
+
+===== `+{"python": data}+`
+
+The expression is encoded in `data` in a way that only Python can decode. It is a https://en.wikipedia.org/wiki/Base64[base-64] encoding of a https://docs.python.org/3/library/pickle.html[pickled] object.
+
+===== `+{"ref": id}+`
+
+The expression is a reference to an array defined elsewhere in the object.
+
+=== Persistence configuration and signatures
+
+==== Whitelist specification
+
+The function whitelist is globally defined in `awkward.persist.whitelist` but it can also be passed into deserialization functions manually. The format is a list of function specifiers with glob-style wildcards. Function specifiers, as described in the `"call"` type, are a fully qualified module name followed by a path of objects within objects leading to a callable, like
+
+[source]
+----
+["awkward", "JaggedArray", "fromcounts"]
+----
+
+for the `fromcounts` constructor of the `JaggedArray` class in the `awkward` module. Whitelist specifiers allow http://man7.org/linux/man-pages/man3/fnmatch.3.html[fnmatch] wildcards, like
+
+[source]
+----
+["awkward", "*Array", "from*"]
+----
+
+to allow any array type's non-primary constructor. A single string is promoted to a specifier and a single specifier is promoted to a list of specifiers, so `"*"` by itself is a valid whitelist for allowing any function to run (for trusted data).
+
+A function name that satisfies _any_ wildcard expression is allowed.
+
+`awkward.persist.topython` should not be in a default whitelist because unpickling untrusted data can call arbitrary Python functions.
+
+An awkward-array library's default whitelist is not defined in this specification.
+
+==== Compression policy
+
+When serializing, users have the option to compress basic (Numpy) arrays. (When deserializing, whatever decompression functions are found are executed, if they are in the whitelist.) Compression has more value for some kinds of arrays than others, so the decision to compress or not compress is parameterized as in a policy.
+
+The default policy is globally defined in `awkward.persist.compression` as a list of rules. Each rule has the following format:
+
+    * `minsize`: minimum size in bytes; if the basic array is smaller than this size, it is not compressed by this rule.
+    * `types`: list of item types; if the basic array's item type is not a subclass of one of these types, it is not compressed by this rule.
+    * `contexts`: http://man7.org/linux/man-pages/man3/fnmatch.3.html[fnmatch] wildcard string or list of such strings; if the basic array's context (what parameter it belongs to in an awkward-array) does not match any of these patterns, it is not compressed by this rule.
+    * `pair`: 2-tuple of compression function, decompression function specifier. The compression function is a Python callable, which turns a buffer into compressed bytes. The decompression function is a tuple of strings naming the module and object where the function may be found (as in the `"call"` type). Whereas the compression function is needed right away, the decompression function need only be specified so that it can be called during deserialization. The compression and decompression functions should be strict inverses of one another, with no parameters needed except the buffer to compress or decompress.
+
+A single `pair` is promoted to a rule and a single rule is promoted to a list of rules, so it would be sufficient to pass `compression=(zlib.compress, ("zlib", "decompress"))` to a serialization function. If the compression pair is in the `awkward.persist.partner` dict, only the compression function is needed: `compression=zlib.compress`.
+
+==== Persistence functions
+
+`+serialize(obj, storage, name=None, delimiter="-", suffix=None, schemasuffix=None, compression=compression, **kwargs)+`
+
+serializes `obj` (an awkard-array) and puts all binary blobs into `storage` using names derived from a `name` prefix, separated by `delimiter`. Binary blobs optionally may have a `suffix` (such as `".raw"`) and the schema itself (also inserted into `storage` as a binary blob) may have a `schemasuffix` (such as `".json"`). The compression option is described above. No return value.
+
+`+deserialize(storage, name="", whitelist=whitelist, cache=None)+`
+
+returns an awkward-array from `storage` using `name` as a prefix and an exact name for finding the schema. The whitelist option is described above. If a `cache` is passed, that cache is passed as an argument to every `VirtualArray`.
+
+`+save(file, array, name=None, mode="a", **options)+`
+
+Save an `array` (an awkward-array) into a `file` specified as a name, a path, or as a file-like object. If it is a name that does not end in `.awkd`, this suffix is appended. The `mode` is passed to the `zipfile.ZipFile` object; `"a"` means append to an existing file or create a file. If there are name conflicts, an erorr is raised before writing anything to the file. No return value.
+
+`+load(file, **options)+`
+
+Open `file` as a read-only dict-like object containing awkward-arrays. The arrays may be found by asking for the dict-like object's `keys` and extracted with get-item.
+
+`+hdf5(group, **options)+`
+
+Interpret an HDF5 file or group (from the https://www.h5py.org/[h5py] library) as containing awkward-arrays, rather than arrays. Low-level binary blobs are hidden in favor of logical awkward arrays. This object can be written to or read from as a dict-like object with get-item, set-item, and del-item.

@@ -21,6 +21,14 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         self.content = content
         self.maskedwhen = maskedwhen
 
+    @classmethod
+    def fromcontent(cls, content, maskedwhen=True):
+        if maskedwhen:
+            mask = cls.numpy.zeros(len(content), dtype=cls.MASKTYPE)
+        else:
+            mask = cls.numpy.ones(len(content), dtype=cls.MASKTYPE)
+        return cls(mask, content, maskedwhen=maskedwhen)
+
     def copy(self, mask=None, content=None, maskedwhen=None):
         out = self.__class__.__new__(self.__class__)
         out._mask = self._mask
@@ -100,14 +108,6 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.numpy.logical_not(self._mask)
 
     @property
-    def ismasked(self):
-        return self.boolmask(maskedwhen=True)
-
-    @property
-    def isunmasked(self):
-        return self.boolmask(maskedwhen=False)
-
-    @property
     def content(self):
         return self._content
 
@@ -136,6 +136,13 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
 
     def _gettype(self, seen):
         return awkward.type.OptionType(awkward.type._fromarray(self._content, seen))
+
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._mask, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._content, position + (1,), seen, lookup)
+        return (awkward.type.LayoutArg("mask", position + (0,)),
+                awkward.type.LayoutArg("content", position + (1,)),
+                awkward.type.LayoutArg("maskedwhen", self._maskedwhen))
 
     def _valid(self):
         if self.check_whole_valid:
@@ -249,10 +256,43 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
     def counts(self):
         self._valid()
         content = self._util_counts(self._content)
-        out = self.numpy.zeros(self.shape, dtype=content.dtype)
+        out = self.numpy.full(self.shape, -1, dtype=content.dtype)
         mask = self.boolmask(maskedwhen=False)
         out[mask] = content[mask]
         return out
+
+    def choose(self, n):
+        return self.copy(content=self._content.choose(n))
+
+    def argchoose(self, n):
+        return self.copy(content=self._content.argchoose(n))
+
+    def distincts(self, nested=False):
+        return self.copy(content=self._content.distincts(nested=nested))
+
+    def argdistincts(self, nested=False):
+        return self.copy(content=self._content.argdistincts(nested=nested))
+
+    def pairs(self, nested=False):
+        return self.copy(content=self._content.pairs(nested=nested))
+
+    def argpairs(self, nested=False):
+        return self.copy(content=self._content.argpairs(nested=nested))
+
+    def cross(self, other, nested=False):
+        return self.copy(content=self._content.cross(other, nested=nested))
+
+    def argcross(self, other, nested=False):
+        return self.copy(content=self._content.argcross(other, nested=nested))
+
+    def flattentuple(self):
+        return self.copy(content=self._util_flattentuple(self._content))
+
+    def flatten(self, axis=0):
+        return self._util_flatten(self._content[self.boolmask(maskedwhen=False)], axis)
+
+    def pad(self, length, maskedwhen=True, clip=False, axis=0):
+        return self.copy(content=self._util_pad(self._content, length, maskedwhen, clip, axis))
 
     def regular(self):
         self._valid()
@@ -265,35 +305,87 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         maskindex[self.boolmask(maskedwhen=True)] = -1
         return IndexedMaskedArray(maskindex, self._content, maskedwhen=-1)
 
-    def _reduce(self, ufunc, identity, dtype, regularaxis):
+    def _reduce(self, ufunc, identity, dtype):
         if self._util_hasjagged(self._content):
-            return self.copy(content=self._content._reduce(ufunc, identity, dtype, regularaxis))
+            return self.copy(content=self._content._reduce(ufunc, identity, dtype))
 
         elif isinstance(self._content, awkward.array.table.Table):
-            out = awkward.array.table.Table()
+            out = self._content.copy(contents={})
             for n, x in self._content._contents.items():
                 out[n] = self.copy(content=x)
-            return out._reduce(ufunc, identity, dtype, regularaxis)
+            return out._reduce(ufunc, identity, dtype)
 
         else:
-            return ufunc.reduce(self._prepare(identity, dtype))
+            prepared = self._prepare(ufunc, identity, dtype)
+            if ufunc is None:
+                return (1 - self.numpy.isnan(prepared)).sum()
+            elif ufunc is self.numpy.count_nonzero:
+                return (1 - (prepared == 0)).sum()
+            if issubclass(prepared.dtype.type, (self.numpy.floating, self.numpy.complexfloating)):
+                prepared = self.numpy.where(self.numpy.isnan(prepared), identity, prepared)
+            return ufunc.reduce(prepared)
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
+        if isinstance(self._content, awkward.array.table.Table):
+            out = self._content.copy(contents={})
+            for n, x in self._content._contents.items():
+                out[n] = self.copy(content=x)._prepare(ufunc, identity, dtype)
+            return out
+
         if isinstance(self._content, self.numpy.ndarray):
             if dtype is None and issubclass(self._content.dtype.type, (self.numpy.bool_, self.numpy.bool)):
                 dtype = self.numpy.dtype(type(identity))
-            if dtype is None:
+            if ufunc is None:
+                content = self.numpy.zeros(self._content.shape, dtype=self.numpy.float32)
+                content[self.numpy.isnan(self._content)] = self.numpy.nan
+            elif ufunc is self.numpy.count_nonzero:
+                content = self.numpy.ones(self._content.shape, dtype=self.numpy.int8)
+                content[self.numpy.isnan(self._content)] = 0
+                content[self._content == 0] = 0
+            elif dtype is None:
                 content = self._content
             else:
                 content = self._content.astype(dtype)
         else:
-            content = self._content._prepare(identity, dtype)
+            content = self._content._prepare(ufunc, identity, dtype)
 
         if content is self._content or not content.flags.owndata:
             content = content.copy()
 
-        content[self.ismasked] = identity
+        if ufunc is None:
+            content[self.ismasked] = self.numpy.nan
+
+        else:
+            dtype = content.dtype
+
+            if identity == self.numpy.inf:
+                if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                    identity = True
+                elif self._util_isintegertype(dtype.type):
+                    identity = self.numpy.iinfo(dtype.type).max
+            elif identity == -self.numpy.inf:
+                if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                    identity = False
+                elif self._util_isintegertype(dtype.type):
+                    identity = self.numpy.iinfo(dtype.type).min
+
+            content[self.ismasked] = identity
+
         return content
+
+    def argmin(self):
+        if self._util_hasjagged(self):
+            return self.copy(content=self._content.argmin())
+        else:
+            index = self._content[self.isunmasked()].argmin()
+            return self.numpy.searchsorted(self.numpy.cumsum(self.ismasked()), index, side="right")
+
+    def argmax(self):
+        if self._util_hasjagged(self):
+            return self.copy(content=self._content.argmax())
+        else:
+            index = self._content[self.isunmasked()].argmax()
+            return self.numpy.searchsorted(self.numpy.cumsum(self.ismasked()), index, side="right")
 
     def fillna(self, value):
         out = self._util_fillna(self._content, value)
@@ -302,15 +394,24 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         out[self.boolmask(maskedwhen=True)] = value
         return out
 
-    def _util_pandas(self, seen):
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, MaskedArray) for x in arrays)
+        mask = cls.numpy.concatenate([x.boolmask(maskedwhen=True) for x in arrays])
+        content = awkward.array.base.AwkwardArray.concatenate([x._content for x in arrays])
+        return cls(mask, content, maskedwhen=True)
+
+    _topandas_name = "MaskedSeries"
+
+    def _topandas(self, seen):
         import awkward.pandas
         if id(self) in seen:
             return seen[id(self)]
         else:
             out = seen[id(self)] = self.copy()
-            out.__class__ = awkward.pandas.mixin("MaskedSeries", self)
+            out.__class__ = awkward.pandas.mixin(type(self))
             if isinstance(self._content, awkward.array.base.AwkwardArray):
-                out._content = out._content._util_pandas(seen)
+                out._content = out._content._topandas(seen)
             return out
 
 class BitMaskedArray(MaskedArray):
@@ -323,6 +424,14 @@ class BitMaskedArray(MaskedArray):
     def __init__(self, mask, content, maskedwhen=True, lsborder=False):
         super(BitMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
         self.lsborder = lsborder
+
+    @classmethod
+    def fromcontent(cls, content, maskedwhen=True, lsborder=False):
+        if maskedwhen:
+            mask = cls.numpy.zeros(cls._ceildiv8(len(content)), dtype=cls.BITMASKTYPE)
+        else:
+            mask = cls.numpy.ones(cls._ceildiv8(len(content)), dtype=cls.BITMASKTYPE)
+        return cls(mask, content, maskedwhen=maskedwhen, lsborder=lsborder)
 
     @classmethod
     def fromboolmask(cls, mask, content, maskedwhen=True, lsborder=False):
@@ -420,6 +529,14 @@ class BitMaskedArray(MaskedArray):
     @lsborder.setter
     def lsborder(self, value):
         self._lsborder = bool(value)
+
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._mask, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._content, position + (1,), seen, lookup)
+        return (awkward.type.LayoutArg("mask", position + (0,)),
+                awkward.type.LayoutArg("content", position + (1,)),
+                awkward.type.LayoutArg("maskedwhen", self._maskedwhen),
+                awkward.type.LayoutArg("lsborder", self._lsborder))
 
     def _valid(self):
         if self.check_whole_valid:
@@ -545,6 +662,10 @@ class BitMaskedArray(MaskedArray):
             else:
                 return self.copy(mask=self.bool2bit(mask, lsborder=self._lsborder), content=self._content[(head,) + tail], lsborder=self._lsborder)
 
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        raise NotImplementedError("concatenate not implemented for BitMaskedArray")
+
 class IndexedMaskedArray(MaskedArray):
     """
     IndexedMaskedArray
@@ -555,6 +676,11 @@ class IndexedMaskedArray(MaskedArray):
     def __init__(self, mask, content, maskedwhen=-1):
         super(IndexedMaskedArray, self).__init__(mask, content, maskedwhen=maskedwhen)
         self._isvalid = False
+
+    @classmethod
+    def fromcontent(cls, content, maskedwhen=-1):
+        mask = cls.numpy.arange(len(content), dtype=cls.INDEXTYPE)
+        return cls(mask, content, maskedwhen=maskedwhen)
 
     def copy(self, mask=None, content=None, maskedwhen=None):
         out = self.__class__.__new__(self.__class__)
@@ -621,6 +747,13 @@ class IndexedMaskedArray(MaskedArray):
             return self._mask == self._maskedwhen
         else:
             return self._mask != self._maskedwhen
+
+    def _util_layout(self, position, seen, lookup):
+        awkward.type.LayoutNode(self._mask, position + (0,), seen, lookup)
+        awkward.type.LayoutNode(self._content, position + (1,), seen, lookup)
+        return (awkward.type.LayoutArg("mask", position + (0,)),
+                awkward.type.LayoutArg("content", position + (1,)),
+                awkward.type.LayoutArg("maskedwhen", self._maskedwhen))
 
     def _valid(self):
         if self.check_whole_valid:
@@ -690,7 +823,7 @@ class IndexedMaskedArray(MaskedArray):
     def counts(self):
         self._valid()
         out = self._util_counts(self._content)[self._index]
-        out[self.boolmask(maskedwhen=True)] = 0
+        out[self.boolmask(maskedwhen=True)] = -1
         return out
 
     def regular(self):
@@ -702,7 +835,13 @@ class IndexedMaskedArray(MaskedArray):
     def indexed(self):
         return self
 
-    def _prepare(self, identity, dtype):
+    def _prepare(self, ufunc, identity, dtype):
+        if isinstance(self._content, awkward.array.table.Table):
+            out = self._content.copy(contents={})
+            for n, x in self._content._contents.items():
+                out[n] = self.copy(content=x)._prepare(ufunc, identity, dtype)
+            return out
+
         if isinstance(self._content, self.numpy.ndarray):
             if dtype is None and issubclass(self._content.dtype.type, (self.numpy.bool_, self.numpy.bool)):
                 dtype = self.numpy.dtype(type(identity))
@@ -711,11 +850,37 @@ class IndexedMaskedArray(MaskedArray):
             else:
                 content = self._content.astype(dtype)
         else:
-            content = self._content._prepare(identity, dtype)
+            content = self._content._prepare(ufunc, identity, dtype)
+
+        if identity == self.numpy.inf:
+            if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                identity = True
+            elif self._util_isintegertype(dtype.type):
+                identity = self.numpy.iinfo(dtype.type).max
+
+        elif identity == -self.numpy.inf:
+            if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                identity = False
+            elif self._util_isintegertype(dtype.type):
+                identity = self.numpy.iinfo(dtype.type).min
 
         out = self.numpy.full(self._mask.shape + content.shape[1:], identity, dtype=content.dtype)
         out[self.isunmasked] = content[self.mask[self.mask >= 0]]
         return out
+
+    def argmin(self):
+        if self._util_hasjagged(self):
+            return self.copy(content=self._content.argmin())
+        else:
+            index = self._content[self._mask[self.isunmasked()]].argmin()
+            return self.numpy.searchsorted(self.numpy.cumsum(self.ismasked()), index, side="right")
+
+    def argmax(self):
+        if self._util_hasjagged(self):
+            return self.copy(content=self._content.argmax())
+        else:
+            index = self._content[self._mask[self.isunmasked()]].argmax()
+            return self.numpy.searchsorted(self.numpy.cumsum(self.ismasked()), index, side="right")
 
     def fillna(self, value):
         out = self._util_fillna(self._content, value)
@@ -723,3 +888,20 @@ class IndexedMaskedArray(MaskedArray):
             out = self.numpy.array(out)
         out[self.mask < 0] = value
         return out
+
+    @classmethod
+    def _concatenate_axis0(cls, arrays):
+        assert all(isinstance(x, IndexedMaskedArray) for x in arrays)
+
+        indexes = []
+        offset = 0
+        for x in arrays:
+            tmp = x._index.copy()
+            tmp[tmp >= 0] += offset
+            indexes.append(tmp)
+            offset += len(x._content)
+        index = cls.numpy.concatenate(indexes)
+
+        content = awkward.array.base.AwkwardArray.concatenate([x._content for x in arrays], axis=0)
+
+        return cls(index, content, maskedwhen=maskedwhen)
