@@ -4,7 +4,6 @@
 #include <cinttypes>
 #include <cstring>
 #include "cpu_methods.h"
-#include <stdio.h>
 
 namespace py = pybind11;
 
