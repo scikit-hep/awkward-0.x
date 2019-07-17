@@ -10,8 +10,4 @@ from .base import CppMethods
 from .array_impl import JaggedArray
 
 class JaggedArrayCpp(CppMethods, JaggedArray, awkward.array.jagged.JaggedArray):
-    @classmethod
-    def parents2startsstops(cls, parents, length = None):
-        if length is None:
-            length = -1
-        return getattr(JaggedArray, "parents2startsstops")(parents, length)
+    pass

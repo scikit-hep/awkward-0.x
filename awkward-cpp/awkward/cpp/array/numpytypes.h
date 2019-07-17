@@ -29,6 +29,8 @@ public:
 
     py::object unwrap() { return py::cast(thisScalar); }
 
+    py::object tolist() { return unwrap(); }
+
     std::string str() {
         return py::str(unwrap());
     }
@@ -51,34 +53,28 @@ public:
         return py::str(thisArray);
     }
 
+    AnyArray* deepcopy() {
+        return new NumpyArray_t<T>(pyarray_deepcopy(thisArray));
+    }
+
     ssize_t len() {
         return thisArray.request().size;
     }
 
-    AnyArray* getitem(ssize_t start, ssize_t end) {
-        if (start < 0) {
-            start += thisArray.request().size;
-        }
-        if (end < 0) {
-            end += thisArray.request().size;
-        }
-        if (start < 0 || start > end || end > thisArray.request().size) {
-            throw std::out_of_range("getitem must be in the bounds of the array");
-        }
-        py::buffer_info temp_info = py::buffer_info();
-        temp_info.ptr = (void*)((T*)(thisArray.request().ptr) + start);
-        temp_info.itemsize = thisArray.request().itemsize;
-        temp_info.size = end - start;
-        temp_info.format = thisArray.request().format;
-        temp_info.ndim = thisArray.request().ndim;
-        temp_info.strides = thisArray.request().strides;
-        temp_info.shape = thisArray.request().shape;
-        temp_info.shape[0] = temp_info.size;
-        return new NumpyArray_t<T>(py::array(temp_info));
+    AnyArray* getitem(ssize_t start, ssize_t length, ssize_t step = 1) {
+        return new NumpyArray_t<T>(slice_numpy(thisArray, start, length, step));
     }
 
     AnyOutput* getitem(ssize_t i) {
         return new NumpyScalar_t<T>(((T*)thisArray.request().ptr)[i]);
+    }
+
+    py::object tolist() {
+        py::list out;
+        for (ssize_t i = 0; i < len(); i++) {
+            out.append(getitem(i)->tolist());
+        }
+        return out;
     }
 
     NumpyArray_t<T>(py::array_t<T> input) { thisArray = input; }

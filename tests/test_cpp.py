@@ -42,6 +42,133 @@ class Test(unittest.TestCase):
     def runTest(self):
         pass
 
+    def test_cpp_unbox(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = awkward_cpp.JaggedArray.fromcounts([2, 0, 1], a)
+        def test(x):
+            return 3.14
+        test(a)
+        test(a2)
+
+    def test_cpp_box(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = awkward_cpp.JaggedArray.fromcounts([2, 0, 1], a)
+        def test(x):
+            return x
+        assert test(a).tolist() == a.tolist()
+        assert test(a2).tolist() == a2.tolist()
+
+    def test_cpp_init(self):
+        def test(starts, stops, content):
+            return awkward_cpp.JaggedArray(starts, stops, content)
+        starts = numpy.array([0, 3, 3])
+        stops = numpy.array([3, 3, 5])
+        content = numpy.array([1.1, 2.2, 3.3, 4.4, 5.5])
+        z = test(starts, stops, content)
+        assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+        assert z.starts is starts
+        assert z.stops is stops
+        assert z.content is content
+        z = test(starts, stops, content)
+        assert z.tolist() == [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
+        assert z.starts is starts
+        assert z.stops is stops
+        assert z.content is content
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        starts2 = numpy.array([0, 2, 2])
+        stops2 = numpy.array([2, 2, 3])
+        assert test(starts2, stops2, a).tolist() == [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
+
+    def test_cpp_len(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = awkward_cpp.JaggedArray.fromcounts([2, 1], a)
+        def test1(x):
+            return len(x)
+        assert test1(a) == 3
+        assert test1(a2) == 2
+
+    def test_cpp_getitem_integer(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = awkward_cpp.JaggedArray.fromcounts([2, 0, 1], a)
+        def test1(x, i, j):
+            return x[i][j]
+        assert test1(a, 0, 0) == 1.1
+        assert test1(a, 0, 1) == 2.2
+        assert test1(a, 0, 2) == 3.3
+        assert test1(a, 2, 0) == 4.4
+        assert test1(a, 2, 1) == 5.5
+        def test2(x, i):
+            return x[i]
+        assert test2(a, 0).tolist() == [1.1, 2.2, 3.3]
+        assert test2(a, 1).tolist() == []
+        assert test2(a, 2).tolist() == [4.4, 5.5]
+        assert test2(a2, 0).tolist() == [[1.1, 2.2, 3.3], []]
+        assert test2(a2, 1).tolist() == []
+        assert test2(a2, 2).tolist() == [[4.4, 5.5]]
+        assert test2(a2, 0).content.tolist() == a.content.tolist()
+
+    def test_cpp_getitem_slice(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = awkward_cpp.JaggedArray.fromcounts([2, 0, 1], a)   # [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
+        def test1(x, i, j):
+            return x[i:j]
+        assert test1(a, 0, 2).tolist() == [[1.1, 2.2, 3.3], []]
+        assert test1(a, 1, 3).tolist() == [[], [4.4, 5.5]]
+        assert test1(a2, 0, 2).tolist() == [[[1.1, 2.2, 3.3], []], []]
+        assert test1(a2, 1, 3).tolist() == [[], [[4.4, 5.5]]]
+
+    def test_cpp_getitem_intarray(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        starts = numpy.array([0, 3, 4])
+        stops = numpy.array([3, 3, 6])
+        content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
+        a2 = awkward_cpp.JaggedArray(starts, stops, content)
+        index = numpy.array([2, 2, 0, 1])
+        def test1(x, i):
+            return x[i]
+        z = test1(a, index)
+        assert z.tolist() == [[4.4, 5.5], [4.4, 5.5], [1.1, 2.2, 3.3], []]
+        assert z.content.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
+        z2 = test1(a2, index)
+        assert z2.tolist() == [[4.4, 5.5], [4.4, 5.5], [1.1, 2.2, 3.3], []]
+        assert z2.content.tolist() == [1.1, 2.2, 3.3, 999, 4.4, 5.5]
+        #def test2(x, i):
+        #    return x[i].compact()
+        #z = test2(a, index)
+        #assert z.tolist() == [[4.4, 5.5], [4.4, 5.5], [1.1, 2.2, 3.3], []]
+        #ssert z.content.tolist() == [4.4, 5.5, 4.4, 5.5, 1.1, 2.2, 3.3]
+        #z2 = test2(a2, index)
+        #assert z2.tolist() == [[4.4, 5.5], [4.4, 5.5], [1.1, 2.2, 3.3], []]
+        #assert z2.content.tolist() == [4.4, 5.5, 4.4, 5.5, 1.1, 2.2, 3.3]
+        #a3 = awkward_cpp.JaggedArray.fromcounts([2, 0, 1], a)
+        #assert test1(a3, index).tolist() == [[[4.4, 5.5]], [[4.4, 5.5]], [[1.1, 2.2, 3.3], []], []]
+
+    def test_cpp_getitem_boolarray(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        starts = numpy.array([0, 3, 4])
+        stops = numpy.array([3, 3, 6])
+        content = numpy.array([1.1, 2.2, 3.3, 999, 4.4, 5.5])
+        a2 = awkward_cpp.JaggedArray(starts, stops, content)
+        index = numpy.array([False, True, True])
+        def test1(x, i):
+            return x[i]
+        z = test1(a, index)
+        assert z.tolist() == [[], [4.4, 5.5]]
+        assert z.content.tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
+        z2 = test1(a2, index)
+        assert z2.tolist() == [[], [4.4, 5.5]]
+        assert z2.content.tolist() == [1.1, 2.2, 3.3, 999, 4.4, 5.5]
+        #def test2(x, i):
+        #    return x[i].compact()
+        #z = test2(a, index)
+        #assert z.tolist() == [[], [4.4, 5.5]]
+        #assert z.content.tolist() == [4.4, 5.5]
+        #z2 = test2(a2, index)
+        #assert z2.tolist() == [[], [4.4, 5.5]]
+        #assert z2.content.tolist() == [4.4, 5.5]
+        #a3 = awkward_cpp.JaggedArray.fromcounts([2, 0, 1], a)
+        #assert test1(a3, index).tolist() == [[], [[4.4, 5.5]]]
+
     def test_cpp_offsets2parents(self):
         offsets = numpy.array([0, 2, 4, 4, 7], dtype=numpy.int64)
         parents = awkward_cpp.JaggedArray.offsets2parents(offsets)
@@ -92,30 +219,28 @@ class Test(unittest.TestCase):
         test = awkward.cpp.JaggedArray(a, b, c)
         assert str(test) == "[[1] [4 5 6 7 8] [1 2 3 4] [0 1 2 3 4 5 6 7 8 9]]"
 
-    def test_cpp_getitem_neg01(self):
+    def test_cpp_init_neg01(self):
         a = numpy.array([1, 2, 3, 4])
         b = numpy.array([2, 3, 4])
         c = numpy.arange(10)
-        test = awkward.cpp.JaggedArray(a, b, c)
         thrown = False
         try:
-            d = test[0]
-        except IndexError as e:
-            if str(e) != "starts must have the same or shorter length than stops":
+            test = awkward.cpp.JaggedArray(a, b, c)
+        except ValueError as e:
+            if str(e) != "starts must have the same (or shorter) length than stops":
                 raise
             thrown = True
         assert thrown
 
-    def test_cpp_getitem_neg02(self):
+    def test_cpp_init_neg02(self):
         a = numpy.array([0, 1, 2])
         b = numpy.array([2, 3, 4])
         c = numpy.arange(2)
-        test = awkward.cpp.JaggedArray(a, b, c)
         thrown = False
         try:
-            d = test[2]
-        except IndexError as e:
-            if str(e) != "getitem must be in the bounds of the array":
+            test = awkward.cpp.JaggedArray(a, b, c)
+        except ValueError as e:
+            if str(e) != "The maximum of starts for non-empty elements must be less than the length of content":
                 raise
             thrown = True
         assert thrown
