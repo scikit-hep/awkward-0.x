@@ -619,6 +619,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 if nslices >= 2:
                     raise NotImplementedError("this implementation cannot slice a JaggedArray in more than two dimensions")
 
+                # If we sliced down to an empty jagged array, take a shortcut
+                if len(node) == 0:
+                    return node
+
                 counts = node.stops - node._starts
                 step = 1 if head.step is None else head.step
 
