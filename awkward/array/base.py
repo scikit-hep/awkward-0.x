@@ -473,9 +473,9 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             return array.reshape(array.shape[:axis] + (-1,) + array.shape[axis + 2:])
 
     @classmethod
-    def _util_pad(cls, array, length, maskedwhen, clip):
+    def _util_pad(cls, array, length, maskedwhen, clip, axis):
         if isinstance(array, AwkwardArray):
-            return array.pad(length, maskedwhen=maskedwhen, clip=clip)
+            return array.pad(length, maskedwhen=maskedwhen, clip=clip, axis=axis)
 
         elif len(array.shape) == 1:
             raise ValueError("pad cannot be applied to scalars")

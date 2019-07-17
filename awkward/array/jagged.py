@@ -1775,7 +1775,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 table = first.Table.named("tuple", columns1, *columns2)
             return first.JaggedArray(first._starts, first._stops, table)
 
-    def pad(self, length, maskedwhen=True, clip=False):
+    def pad(self, length, maskedwhen=True, clip=False, axis=0):
+        if not self._util_isinteger(axis) or axis < 0:
+            raise TypeError("axis must be a non-negative integer (can't count from the end)")
+
+        if axis > 0:
+            return type(self).fromcounts(self.counts, self._util_pad(self._content, length, maskedwhen, clip, axis - 1))
+
         flatstarts = self._starts.reshape(-1)
 
         if clip:

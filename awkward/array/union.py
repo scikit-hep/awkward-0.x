@@ -468,9 +468,9 @@ class UnionArray(awkward.array.base.AwkwardArray):
     def flatten(self, axis=0):
         raise NotImplementedError("flatten not yet implemented for UnionArray")
 
-    def pad(self, length, maskedwhen=True, clip=False):
+    def pad(self, length, maskedwhen=True, clip=False, axis=0):
         self._valid()
-        return self.copy(contents=[self._util_pad(x, length, maskedwhen, clip) for x in self._contents])
+        return self.copy(contents=[self._util_pad(x, length, maskedwhen, clip, axis) for x in self._contents])
 
     def regular(self):
         self._valid()

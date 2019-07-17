@@ -767,10 +767,10 @@ class Table(awkward.array.base.AwkwardArray):
     def flatten(self, axis=0):
         raise ValueError("cannot flatten through a Table")
 
-    def pad(self, length, maskedwhen=True, clip=False):
+    def pad(self, length, maskedwhen=True, clip=False, axis=0):
         out = self.copy(contents={})
         for n, x in self._contents.items():
-            out[n] = self._util_pad(x, length, maskedwhen, clip)
+            out[n] = self._util_pad(x, length, maskedwhen, clip, axis)
         return out
 
     def regular(self):
