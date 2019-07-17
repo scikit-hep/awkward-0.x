@@ -11,10 +11,16 @@ namespace py = pybind11;
 struct c_array py2c(py::array input) {
     py::buffer_info info = input.request();
 
+    if (info.ndim > 15) {
+        throw std::invalid_argument("Array cannot exceed 15 dimensions");
+    }
+
     char format[15];
     strcpy(format, info.format.c_str());
-    std::vector<ssize_t> shape = info.shape;
-    std::vector<ssize_t> strides = info.strides;
+    ssize_t shape[15];
+    std::copy(info.shape.begin(), info.shape.end(), shape);
+    ssize_t strides[15];
+    std::copy(info.strides.begin(), info.strides.end(), strides);
 
     struct c_array out = {
         info.ptr,
