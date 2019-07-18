@@ -375,10 +375,6 @@ public:
         auto starts_ = py::array_t<std::int64_t>((ssize_t)length);
         auto stops_ = py::array_t<std::int64_t>((ssize_t)length);
 
-        /*std::stringstream stream;
-        stream << parents2startsstops_CPU(py2c(parents), py2c(starts_), py2c(stops_));
-        throw std::invalid_argument("Step = " + stream.str());*/
-
         if (!parents2startsstops_CPU(py2c(parents.request()), py2c(starts_.request()), py2c(stops_.request()))) {
             throw std::invalid_argument("Error in cpu_methods.h::parents2startsstops_CPU");
         }
@@ -397,61 +393,21 @@ public:
     static py::tuple uniques2offsetsparents(py::array uniques) {
         makeIntNative_CPU(uniques);
         uniques = uniques.cast<py::array_t<std::int64_t>>();
-        py::buffer_info uniques_info = uniques.request();
-        auto uniques_ptr = (std::int64_t*)uniques_info.ptr;
-        int N = uniques_info.strides[0] / uniques_info.itemsize;
 
-        ssize_t tempLength;
-        if (uniques_info.size < 1) {
-            tempLength = 0;
+        ssize_t tempLength = 0;
+        if (uniques.request().size > 0) {
+            tempLength = uniques.request().size - 1;
         }
-        else {
-            tempLength = uniques_info.size - 1;
-        }
-        auto tempArray = py::array_t<bool>(tempLength);
-        py::buffer_info tempArray_info = tempArray.request();
-        auto tempArray_ptr = (bool*)tempArray_info.ptr;
 
+        auto tempArray = py::array_t<std::int8_t>(tempLength);
         ssize_t countLength = 0;
-        for (ssize_t i = 0; i < uniques_info.size - 1; i++) {
-            if (uniques_ptr[i * N] != uniques_ptr[(i + 1) * N]) {
-                tempArray_ptr[i] = true;
-                countLength++;
-            }
-            else {
-                tempArray_ptr[i] = false;
-            }
+        if (!uniques2offsetsparents_generateTemparray_CPU(py2c(uniques.request()), py2c(tempArray.request()), &countLength)) {
+            throw std::invalid_argument("Error in cpu_methods.h::uniques2offsetsparents_generateTempArray_CPU");
         }
-        auto changes = py::array_t<std::int64_t>(countLength);
-        py::buffer_info changes_info = changes.request();
-        auto changes_ptr = (std::int64_t*)changes_info.ptr;
-        ssize_t index = 0;
-        for (ssize_t i = 0; i < tempArray_info.size; i++) {
-            if (tempArray_ptr[i]) {
-                changes_ptr[index++] = (std::int64_t)(i + 1);
-            }
-        }
-
-        auto offsets = py::array_t<std::int64_t>(changes_info.size + 2);
-        py::buffer_info offsets_info = offsets.request();
-        auto offsets_ptr = (std::int64_t*)offsets_info.ptr;
-        offsets_ptr[0] = 0;
-        offsets_ptr[offsets_info.size - 1] = (std::int64_t)uniques_info.size;
-        for (ssize_t i = 1; i < offsets_info.size - 1; i++) {
-            offsets_ptr[i] = changes_ptr[i - 1];
-        }
-
-        auto parents = py::array_t<std::int64_t>(uniques_info.size);
-        py::buffer_info parents_info = parents.request();
-        auto parents_ptr = (std::int64_t*)parents_info.ptr;
-        for (ssize_t i = 0; i < parents_info.size; i++) {
-            parents_ptr[i] = 0;
-        }
-        for (ssize_t i = 0; i < changes_info.size; i++) {
-            parents_ptr[(ssize_t)changes_ptr[i]] = 1;
-        }
-        for (ssize_t i = 1; i < parents_info.size; i++) {
-            parents_ptr[i] += parents_ptr[i - 1];
+        auto offsets = py::array_t<std::int64_t>(countLength + 2);
+        auto parents = py::array_t<std::int64_t>(uniques.request().size);
+        if (!uniques2offsetsparents_CPU(countLength, py2c(tempArray.request()), py2c(offsets.request()), py2c(parents.request()))) {
+            throw std::invalid_argument("Error in cpu_methods.h::uniques2offsetsparents_CPU");
         }
 
         py::list temp;

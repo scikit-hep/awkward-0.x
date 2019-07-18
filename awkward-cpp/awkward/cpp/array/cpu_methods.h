@@ -480,8 +480,9 @@ int parents2startsstops_CPU(struct c_array parents, struct c_array starts, struc
     /* PURPOSE:
         - converts parents to starts and stops
     PREREQUISITES:
-        - TODO: fill this list w/ requirements
-        - NOTE: must be 1d
+        - parents is a 1d int array
+        - starts and stops are NEW arrays of length <= parents.max + 1
+        - parents, starts, and stops are of the same type
     */
     if (parents.itemsize == 1)
         return parents2startsstops_8bit(parents, starts, stops);
@@ -491,6 +492,184 @@ int parents2startsstops_CPU(struct c_array parents, struct c_array starts, struc
         return parents2startsstops_32bit(parents, starts, stops);
     if (parents.itemsize == 8)
         return parents2startsstops_64bit(parents, starts, stops);
+    return 0;
+}
+
+int uniques2offsetsparents_generateTemparray_8bit(struct c_array uniques, struct c_array tempArray, ssize_t *countLength) {
+    *countLength = 0;
+    ssize_t N = uniques.strides[0] / uniques.itemsize;
+    for (ssize_t i = 0; i < uniques.size - 1; i++) {
+        if (((int8_t*)uniques.ptr)[i * N] != ((int8_t*)uniques.ptr)[(i + 1) * N]) {
+            ((int8_t*)tempArray.ptr)[i] = 1;
+            (*countLength)++;
+        }
+        else
+            ((int8_t*)tempArray.ptr)[i] = 0;
+    }
+    return 1;
+}
+
+int uniques2offsetsparents_generateTemparray_16bit(struct c_array uniques, struct c_array tempArray, ssize_t *countLength) {
+    *countLength = 0;
+    ssize_t N = uniques.strides[0] / uniques.itemsize;
+    for (ssize_t i = 0; i < uniques.size - 1; i++) {
+        if (((int16_t*)uniques.ptr)[i * N] != ((int16_t*)uniques.ptr)[(i + 1) * N]) {
+            ((int8_t*)tempArray.ptr)[i] = 1;
+            (*countLength)++;
+        }
+        else
+            ((int8_t*)tempArray.ptr)[i] = 0;
+    }
+    return 1;
+}
+
+int uniques2offsetsparents_generateTemparray_32bit(struct c_array uniques, struct c_array tempArray, ssize_t *countLength) {
+    *countLength = 0;
+    ssize_t N = uniques.strides[0] / uniques.itemsize;
+    for (ssize_t i = 0; i < uniques.size - 1; i++) {
+        if (((int32_t*)uniques.ptr)[i * N] != ((int32_t*)uniques.ptr)[(i + 1) * N]) {
+            ((int8_t*)tempArray.ptr)[i] = 1;
+            (*countLength)++;
+        }
+        else
+            ((int8_t*)tempArray.ptr)[i] = 0;
+    }
+    return 1;
+}
+
+int uniques2offsetsparents_generateTemparray_64bit(struct c_array uniques, struct c_array tempArray, ssize_t *countLength) {
+    *countLength = 0;
+    ssize_t N = uniques.strides[0] / uniques.itemsize;
+    for (ssize_t i = 0; i < uniques.size - 1; i++) {
+        if (((int64_t*)uniques.ptr)[i * N] != ((int64_t*)uniques.ptr)[(i + 1) * N]) {
+            ((int8_t*)tempArray.ptr)[i] = 1;
+            (*countLength)++;
+        }
+        else
+            ((int8_t*)tempArray.ptr)[i] = 0;
+    }
+    return 1;
+}
+
+int uniques2offsetsparents_generateTemparray_CPU(struct c_array uniques, struct c_array tempArray, ssize_t *countLength) {
+    /* PURPOSE:
+        - fills temparray and countLength as part of uniques2offsetsparents
+    PREREQUISITES:
+        - uniques is a 1d int array
+        - tempArray is a NEW int8_t array of length: [uniques.size - 1] (or 0 at minimum)
+    */
+    if (uniques.itemsize == 1)
+        return uniques2offsetsparents_generateTemparray_8bit(uniques, tempArray, countLength);
+    if (uniques.itemsize == 2)
+        return uniques2offsetsparents_generateTemparray_16bit(uniques, tempArray, countLength);
+    if (uniques.itemsize == 4)
+        return uniques2offsetsparents_generateTemparray_32bit(uniques, tempArray, countLength);
+    if (uniques.itemsize == 8)
+        return uniques2offsetsparents_generateTemparray_64bit(uniques, tempArray, countLength);
+    return 0;
+}
+
+int uniques2offsetsparents_8bit(ssize_t countLength, struct c_array tempArray, struct c_array offsets, struct c_array parents) {
+    ssize_t *changes;
+    changes = (ssize_t*) calloc(countLength, sizeof(ssize_t));
+    ssize_t index = 0;
+    for (ssize_t i = 0; i < tempArray.size; i++)
+        if (((int8_t*)tempArray.ptr)[i])
+            changes[index++] = i + 1;
+    ((int8_t*)offsets.ptr)[0] = 0;
+    ((int8_t*)offsets.ptr)[offsets.size - 1] = (int8_t)parents.size;
+    for (ssize_t i = 1; i < offsets.size - 1; i++)
+        ((int8_t*)offsets.ptr)[i] = (int8_t)changes[i - 1];
+    for (ssize_t i = 0; i < parents.size; i++)
+        ((int8_t*)parents.ptr)[i] = 0;
+    for (ssize_t i = 0; i < countLength; i++)
+        ((int8_t*)parents.ptr)[changes[i]] = 1;
+    for (ssize_t i = 1; i < parents.size; i++)
+        ((int8_t*)parents.ptr)[i] += ((int8_t*)parents.ptr)[i - 1];
+    free(changes);
+    return 1;
+}
+
+int uniques2offsetsparents_16bit(ssize_t countLength, struct c_array tempArray, struct c_array offsets, struct c_array parents) {
+    ssize_t *changes;
+    changes = (ssize_t*) calloc(countLength, sizeof(ssize_t));
+    ssize_t index = 0;
+    for (ssize_t i = 0; i < tempArray.size; i++)
+        if (((int8_t*)tempArray.ptr)[i])
+            changes[index++] = i + 1;
+    ((int16_t*)offsets.ptr)[0] = 0;
+    ((int16_t*)offsets.ptr)[offsets.size - 1] = (int16_t)parents.size;
+    for (ssize_t i = 1; i < offsets.size - 1; i++)
+        ((int16_t*)offsets.ptr)[i] = (int16_t)changes[i - 1];
+    for (ssize_t i = 0; i < parents.size; i++)
+        ((int16_t*)parents.ptr)[i] = 0;
+    for (ssize_t i = 0; i < countLength; i++)
+        ((int16_t*)parents.ptr)[changes[i]] = 1;
+    for (ssize_t i = 1; i < parents.size; i++)
+        ((int16_t*)parents.ptr)[i] += ((int16_t*)parents.ptr)[i - 1];
+    free(changes);
+    return 1;
+}
+
+int uniques2offsetsparents_32bit(ssize_t countLength, struct c_array tempArray, struct c_array offsets, struct c_array parents) {
+    ssize_t *changes;
+    changes = (ssize_t*) calloc(countLength, sizeof(ssize_t));
+    ssize_t index = 0;
+    for (ssize_t i = 0; i < tempArray.size; i++)
+        if (((int8_t*)tempArray.ptr)[i])
+            changes[index++] = i + 1;
+    ((int32_t*)offsets.ptr)[0] = 0;
+    ((int32_t*)offsets.ptr)[offsets.size - 1] = (int32_t)parents.size;
+    for (ssize_t i = 1; i < offsets.size - 1; i++)
+        ((int32_t*)offsets.ptr)[i] = (int32_t)changes[i - 1];
+    for (ssize_t i = 0; i < parents.size; i++)
+        ((int32_t*)parents.ptr)[i] = 0;
+    for (ssize_t i = 0; i < countLength; i++)
+        ((int32_t*)parents.ptr)[changes[i]] = 1;
+    for (ssize_t i = 1; i < parents.size; i++)
+        ((int32_t*)parents.ptr)[i] += ((int32_t*)parents.ptr)[i - 1];
+    free(changes);
+    return 1;
+}
+
+int uniques2offsetsparents_64bit(ssize_t countLength, struct c_array tempArray, struct c_array offsets, struct c_array parents) {
+    ssize_t *changes;
+    changes = (ssize_t*) calloc(countLength, sizeof(ssize_t));
+    ssize_t index = 0;
+    for (ssize_t i = 0; i < tempArray.size; i++)
+        if (((int8_t*)tempArray.ptr)[i])
+            changes[index++] = i + 1;
+    ((int64_t*)offsets.ptr)[0] = 0;
+    ((int64_t*)offsets.ptr)[offsets.size - 1] = (int64_t)parents.size;
+    for (ssize_t i = 1; i < offsets.size - 1; i++)
+        ((int64_t*)offsets.ptr)[i] = (int64_t)changes[i - 1];
+    for (ssize_t i = 0; i < parents.size; i++)
+        ((int64_t*)parents.ptr)[i] = 0;
+    for (ssize_t i = 0; i < countLength; i++)
+        ((int64_t*)parents.ptr)[changes[i]] = 1;
+    for (ssize_t i = 1; i < parents.size; i++)
+        ((int64_t*)parents.ptr)[i] += ((int64_t*)parents.ptr)[i - 1];
+    free(changes);
+    return 1;
+}
+
+int uniques2offsetsparents_CPU(ssize_t countLength, struct c_array tempArray, struct c_array offsets, struct c_array parents) {
+    /* PURPOSE:
+        - converts uniques to offsets and parents
+    PREREQUISITES:
+        - countLength and tempArray are from uniques2offsetsparents_generateTemparray_CPU
+        - offsets is a NEW int array of length: [countLength + 2]
+        - parents is a NEW int array of length: uniques.size
+        - offsets and parents are of the same type
+    */
+    if (offsets.itemsize == 1)
+        return uniques2offsetsparents_8bit(countLength, tempArray, offsets, parents);
+    if (offsets.itemsize == 2)
+        return uniques2offsetsparents_16bit(countLength, tempArray, offsets, parents);
+    if (offsets.itemsize == 4)
+        return uniques2offsetsparents_32bit(countLength, tempArray, offsets, parents);
+    if (offsets.itemsize == 8)
+        return uniques2offsetsparents_64bit(countLength, tempArray, offsets, parents);
     return 0;
 }
 
