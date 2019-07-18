@@ -10,6 +10,8 @@ namespace py = pybind11;
 struct c_array py2c(py::buffer_info info) {
     char format[6];
     strcpy(format, info.format.c_str());
+    const ssize_t *shape = &info.shape[0];
+    const ssize_t *strides = &info.strides[0];
 
     struct c_array out = {
         info.ptr,
@@ -17,8 +19,8 @@ struct c_array py2c(py::buffer_info info) {
         info.size,
         format,
         info.ndim,
-        &info.shape[0],
-        &info.strides[0]
+        shape,
+        strides,
     };
     return out;
 }
