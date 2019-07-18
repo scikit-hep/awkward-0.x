@@ -55,16 +55,11 @@ public:
     void set_starts(py::array starts_) {
         makeIntNative_CPU(starts_);
         starts_ = starts_.cast<py::array_t<std::int64_t>>();
-        py::buffer_info starts_info = starts_.request();
-        if (starts_info.ndim < 1) {
+        if (starts_.request().ndim < 1) {
             throw std::domain_error("starts must have at least 1 dimension");
         }
-        int N = starts_info.strides[0] / starts_info.itemsize;
-        auto starts_ptr = (std::int64_t*)starts_info.ptr;
-        for (ssize_t i = 0; i < starts_info.size; i++) {
-            if (starts_ptr[i * N] < 0) {
-                throw std::invalid_argument("starts must have all non-negative values: see index [" + std::to_string(i * N) + "]");
-            }
+        if (!checkNonNegative_CPU(py2c(starts_.request()))) {
+            throw std::invalid_argument("starts must have all non-negative values");
         }
         starts = starts_;
     }
@@ -79,19 +74,15 @@ public:
     void set_stops(py::array stops_) {
         makeIntNative_CPU(stops_);
         stops_ = stops_.cast<py::array_t<std::int64_t>>();
-        py::buffer_info stops_info = stops_.request();
-        if (stops_info.ndim < 1) {
+        if (stops_.request().ndim < 1) {
             throw std::domain_error("stops must have at least 1 dimension");
         }
-        int N = stops_info.strides[0] / stops_info.itemsize;
-        auto stops_ptr = (std::int64_t*)stops_info.ptr;
-        for (ssize_t i = 0; i < stops_info.size; i++) {
-            if (stops_ptr[i * N] < 0) {
-                throw std::invalid_argument("stops must have all non-negative values: see index [" + std::to_string(i * N) + "]");
-            }
+        if (!checkNonNegative_CPU(py2c(stops_.request()))) {
+            throw std::invalid_argument("stops must have all non-negative values");
         }
         stops = stops_;
     }
+    
     void python_set_stops(py::object input) {
         py::array stops_ = input.cast<py::array>();
         set_stops(stops_);

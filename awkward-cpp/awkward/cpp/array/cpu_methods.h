@@ -673,6 +673,91 @@ int uniques2offsetsparents_CPU(ssize_t countLength, struct c_array tempArray, st
     return 0;
 }
 
+int checkNonNegative_8bit(struct c_array input, ssize_t dim, ssize_t index) {
+    // to be initially called with checkNonNegative_8bit(input, 0, 0)
+    if (dim > input.ndim - 1)
+        return 0;
+    ssize_t N = input.strides[dim] / input.itemsize;
+    if (dim == input.ndim - 1) {
+        for (ssize_t i = 0; i < input.shape[dim]; i++)
+            if (((int8_t*)input.ptr)[index + i * N] < 0)
+                return 0;
+        return 1;
+    }
+    for (ssize_t i = 0; i < input.shape[dim]; i++)
+        if (!checkNonNegative_8bit(input, dim + 1, index + i * N))
+            return 0;
+    return 1;
+}
+
+int checkNonNegative_16bit(struct c_array input, ssize_t dim, ssize_t index) {
+    // to be initially called with checkNonNegative_16bit(input, 0, 0)
+    if (dim > input.ndim - 1)
+        return 0;
+    ssize_t N = input.strides[dim] / input.itemsize;
+    if (dim == input.ndim - 1) {
+        for (ssize_t i = 0; i < input.shape[dim]; i++)
+            if (((int16_t*)input.ptr)[index + i * N] < 0)
+                return 0;
+        return 1;
+    }
+    for (ssize_t i = 0; i < input.shape[dim]; i++)
+        if (!checkNonNegative_16bit(input, dim + 1, index + i * N))
+            return 0;
+    return 1;
+}
+
+int checkNonNegative_32bit(struct c_array input, ssize_t dim, ssize_t index) {
+    // to be initially called with checkNonNegative_32bit(input, 0, 0)
+    if (dim > input.ndim - 1)
+        return 0;
+    ssize_t N = input.strides[dim] / input.itemsize;
+    if (dim == input.ndim - 1) {
+        for (ssize_t i = 0; i < input.shape[dim]; i++)
+            if (((int32_t*)input.ptr)[index + i * N] < 0)
+                return 0;
+        return 1;
+    }
+    for (ssize_t i = 0; i < input.shape[dim]; i++)
+        if (!checkNonNegative_32bit(input, dim + 1, index + i * N))
+            return 0;
+    return 1;
+}
+
+int checkNonNegative_64bit(struct c_array input, ssize_t dim, ssize_t index) {
+    // to be initially called with checkNonNegative_64bit(input, 0, 0)
+    if (dim > input.ndim - 1)
+        return 0;
+    ssize_t N = input.strides[dim] / input.itemsize;
+    if (dim == input.ndim - 1) {
+        for (ssize_t i = 0; i < input.shape[dim]; i++)
+            if (((int64_t*)input.ptr)[index + i * N] < 0)
+                return 0;
+        return 1;
+    }
+    for (ssize_t i = 0; i < input.shape[dim]; i++)
+        if (!checkNonNegative_64bit(input, dim + 1, index + i * N))
+            return 0;
+    return 1;
+}
+
+int checkNonNegative_CPU(struct c_array input) {
+    /* PURPOSE:
+        - returns 1 if all non-negative, or 0 if there is a negative or an error
+    PREREQUISITES:
+        - input is an array, assumedly a signed int array
+    */
+    if (input.itemsize == 1)
+        return checkNonNegative_8bit(input, 0, 0);
+    if (input.itemsize == 2)
+        return checkNonNegative_16bit(input, 0, 0);
+    if (input.itemsize == 4)
+        return checkNonNegative_32bit(input, 0, 0);
+    if (input.itemsize == 8)
+        return checkNonNegative_64bit(input, 0, 0);
+    return 0;
+}
+
 #endif                       // end include guard
 
 #ifdef __cplusplus           // end C compiler instruction
