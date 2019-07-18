@@ -23,3 +23,8 @@ class Test(unittest.TestCase):
         isloose = fromiter([[], [False], [True], []])
         assert x[isloose].tolist() == [[], [], [0.6], []]
         assert x.sum().tolist() == [0.0, 0.5, 0.6, 0.0]
+
+    def test_issue163(self):
+        a = fromiter([[1, 3], [4, 5]])
+        b = a[a.counts > 10]
+        assert b[:,:1].tolist() == []
