@@ -82,7 +82,7 @@ public:
         }
         stops = stops_;
     }
-    
+
     void python_set_stops(py::object input) {
         py::array stops_ = input.cast<py::array>();
         set_stops(stops_);
@@ -97,22 +97,13 @@ public:
         if (starts_info.ndim != stops_info.ndim) {
             throw std::domain_error("starts and stops must have the same dimensionality");
         }
-        int N_starts = starts_info.strides[0] / starts_info.itemsize;
-        int N_stops = stops_info.strides[0] / stops_info.itemsize;
         std::int64_t starts_max = 0;
+        getMax_CPU(starts, &starts_max);
         std::int64_t stops_max = 0;
-        auto starts_ptr = (std::int64_t*)starts_info.ptr;
-        auto stops_ptr = (std::int64_t*)stops_info.ptr;
-        for (ssize_t i = 0; i < starts_info.size; i++) {
-            if (stops_ptr[i * N_stops] < starts_ptr[i * N_starts]) {
-                throw std::invalid_argument("stops must be greater than or equal to starts");
-            }
-            if (starts_ptr[i * N_starts] > starts_max) {
-                starts_max = starts_ptr[i * N_starts];
-            }
-            if (stops_ptr[i * N_stops] > stops_max) {
-                stops_max = stops_ptr[i * N_stops];
-            }
+        getMax_CPU(stops, &stops_max);
+        std::string comparison = "<=";
+        if (!compare_CPU(py2c(starts.request()), py2c(stops.request()), comparison.c_str())) {
+            throw std::invalid_argument("starts must be less than or equal to stops");
         }
         if (starts_info.size > 0) {
             if (starts_max >= content->len()) {

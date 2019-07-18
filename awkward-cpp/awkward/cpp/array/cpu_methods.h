@@ -758,6 +758,235 @@ int checkNonNegative_CPU(struct c_array input) {
     return 0;
 }
 
+int compare_8bit(struct c_array a, struct c_array b, const char *comparison, ssize_t dim, ssize_t index_a, ssize_t index_b) {
+    // to be initially called with compare_8bit(a, b, comparison, 0, 0, 0)
+    if (dim > a.ndim - 1)
+        return 0;
+    ssize_t N_a = a.strides[dim] / a.itemsize;
+    ssize_t N_b = b.strides[dim] / b.itemsize;
+    if (dim == a.ndim - 1) {
+        if (comparison[0] == '>' && comparison[1] == 0) {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int8_t*)a.ptr)[index_a + i * N_a] <= ((int8_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '<' && comparison[1] == 0) {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int8_t*)a.ptr)[index_a + i * N_a] >= ((int8_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int8_t*)a.ptr)[index_a + i * N_a] != ((int8_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '>' && comparison[1] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int8_t*)a.ptr)[index_a + i * N_a] < ((int8_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '<' && comparison[1] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int8_t*)a.ptr)[index_a + i * N_a] > ((int8_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '!') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int8_t*)a.ptr)[index_a + i * N_a] == ((int8_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else
+            return 0;
+    }
+    for (ssize_t i = 0; i < a.shape[dim]; i++)
+        if (!compare_8bit(a, b, comparison, dim + 1, index_a + i * N_a, index_b + i * N_b))
+            return 0;
+    return 1;
+}
+
+int compare_16bit(struct c_array a, struct c_array b, const char *comparison, ssize_t dim, ssize_t index_a, ssize_t index_b) {
+    // to be initially called with compare_16bit(a, b, comparison, 0, 0, 0)
+    if (dim > a.ndim - 1)
+        return 0;
+    ssize_t N_a = a.strides[dim] / a.itemsize;
+    ssize_t N_b = b.strides[dim] / b.itemsize;
+    if (dim == a.ndim - 1) {
+        if (comparison[0] == '>' && comparison[1] == 0) {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int16_t*)a.ptr)[index_a + i * N_a] <= ((int16_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '<' && comparison[1] == 0) {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int16_t*)a.ptr)[index_a + i * N_a] >= ((int16_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int16_t*)a.ptr)[index_a + i * N_a] != ((int16_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '>' && comparison[1] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int16_t*)a.ptr)[index_a + i * N_a] < ((int16_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '<' && comparison[1] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int16_t*)a.ptr)[index_a + i * N_a] > ((int16_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '!') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int16_t*)a.ptr)[index_a + i * N_a] == ((int16_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else
+            return 0;
+    }
+    for (ssize_t i = 0; i < a.shape[dim]; i++)
+        if (!compare_16bit(a, b, comparison, dim + 1, index_a + i * N_a, index_b + i * N_b))
+            return 0;
+    return 1;
+}
+
+int compare_32bit(struct c_array a, struct c_array b, const char *comparison, ssize_t dim, ssize_t index_a, ssize_t index_b) {
+    // to be initially called with compare_32bit(a, b, comparison, 0, 0, 0)
+    if (dim > a.ndim - 1)
+        return 0;
+    ssize_t N_a = a.strides[dim] / a.itemsize;
+    ssize_t N_b = b.strides[dim] / b.itemsize;
+    if (dim == a.ndim - 1) {
+        if (comparison[0] == '>' && comparison[1] == 0) {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int32_t*)a.ptr)[index_a + i * N_a] <= ((int32_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '<' && comparison[1] == 0) {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int32_t*)a.ptr)[index_a + i * N_a] >= ((int32_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int32_t*)a.ptr)[index_a + i * N_a] != ((int32_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '>' && comparison[1] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int32_t*)a.ptr)[index_a + i * N_a] < ((int32_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '<' && comparison[1] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int32_t*)a.ptr)[index_a + i * N_a] > ((int32_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '!') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int32_t*)a.ptr)[index_a + i * N_a] == ((int32_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else
+            return 0;
+    }
+    for (ssize_t i = 0; i < a.shape[dim]; i++)
+        if (!compare_32bit(a, b, comparison, dim + 1, index_a + i * N_a, index_b + i * N_b))
+            return 0;
+    return 1;
+}
+
+int compare_64bit(struct c_array a, struct c_array b, const char *comparison, ssize_t dim, ssize_t index_a, ssize_t index_b) {
+    // to be initially called with compare_64bit(a, b, comparison, 0, 0, 0)
+    if (dim > a.ndim - 1)
+        return 0;
+    ssize_t N_a = a.strides[dim] / a.itemsize;
+    ssize_t N_b = b.strides[dim] / b.itemsize;
+    if (dim == a.ndim - 1) {
+        if (comparison[0] == '>' && comparison[1] == 0) {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int64_t*)a.ptr)[index_a + i * N_a] <= ((int64_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '<' && comparison[1] == 0) {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int64_t*)a.ptr)[index_a + i * N_a] >= ((int64_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int64_t*)a.ptr)[index_a + i * N_a] != ((int64_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '>' && comparison[1] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int64_t*)a.ptr)[index_a + i * N_a] < ((int64_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '<' && comparison[1] == '=') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int64_t*)a.ptr)[index_a + i * N_a] > ((int64_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else if (comparison[0] == '!') {
+            for (ssize_t i = 0; i < a.shape[dim]; i++)
+                if (((int64_t*)a.ptr)[index_a + i * N_a] == ((int64_t*)b.ptr)[index_b + i * N_b])
+                    return 0;
+            return 1;
+        }
+        else
+            return 0;
+    }
+    for (ssize_t i = 0; i < a.shape[dim]; i++)
+        if (!compare_64bit(a, b, comparison, dim + 1, index_a + i * N_a, index_b + i * N_b))
+            return 0;
+    return 1;
+}
+
+int compare_CPU(struct c_array a, struct c_array b, const char *comparison) {
+    /* PURPOSE:
+        - return 1 if a[i] [compare] b[i] for all i in a.size
+        - return 0 if that isn't the case, or if there's an error
+    PREREQUISITES
+        - a and b must be arrays of the same type, dimensionality, and shape
+        - comparison must be '>', '<', '=', '>=', '<=', or '!='
+        - if comparison is not in that list, an error will occur (return 0)
+        - the comparison string must be zero-terminated
+    */
+    if (a.itemsize == 1)
+        return compare_8bit(a, b, comparison, 0, 0, 0);
+    if (a.itemsize == 2)
+        return compare_16bit(a, b, comparison, 0, 0, 0);
+    if (a.itemsize == 4)
+        return compare_32bit(a, b, comparison, 0, 0, 0);
+    if (a.itemsize == 8)
+        return compare_64bit(a, b, comparison, 0, 0, 0);
+    return 0;
+}
+
 #endif                       // end include guard
 
 #ifdef __cplusplus           // end C compiler instruction
