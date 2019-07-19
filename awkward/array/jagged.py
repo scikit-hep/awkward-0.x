@@ -134,6 +134,11 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @classmethod
     def fromoffsets(cls, offsets, content):
         offsets = cls._util_toarray(offsets, cls.INDEXTYPE, cls.numpy.ndarray)
+        if offsets.base is not None:
+            # We rely on the starts,stops slices to be views.
+            # If offsets is already a view, the base will not be offsets but its underlying base.
+            # Make a copy to prevent that
+            offsets = offsets.copy()
         return cls(offsets[:-1], offsets[1:], content)
 
     @classmethod
@@ -618,6 +623,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
                 nslices += 1
                 if nslices >= 2:
                     raise NotImplementedError("this implementation cannot slice a JaggedArray in more than two dimensions")
+
+                # If we sliced down to an empty jagged array, take a shortcut
+                if len(node) == 0:
+                    return node
 
                 counts = node.stops - node._starts
                 step = 1 if head.step is None else head.step
