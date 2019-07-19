@@ -32,12 +32,13 @@ py::array_t<T> slice_numpy(py::array_t<T> input, ssize_t start, ssize_t length, 
 
 template <typename T>
 py::array_t<T> pyarray_deepcopy(py::array_t<T> input) {
-    auto newArray = py::array_t<T>(input.request().size);
-    auto newArray_ptr = (T*)newArray.request().ptr;
-    auto input_ptr = (T*)input.request().ptr;
-    int N = input.request().strides[0] / input.request().itemsize;
-    for (ssize_t i = 0; i < input.request().size; i++) {
-        newArray_ptr[i] = input_ptr[i * N];
+    py::buffer_info input_info = input.request();
+    auto newArray = py::array_t<T>(input_info.size);
+    py::buffer_info newArray_info = newArray.request();
+
+    newArray.resize(input_info.shape);
+    if (!deepcopy_CPU(py2c(&newArray_info), py2c(&input_info))) {
+        throw std::invalid_argument("Error in cpu_methods.h::deepcopy_CPU");
     }
     return newArray;
 }

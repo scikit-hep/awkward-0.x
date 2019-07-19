@@ -972,7 +972,7 @@ int compare_CPU(struct c_array a, struct c_array b, const char *comparison) {
         - return 0 if that isn't the case, or if there's an error
     PREREQUISITES
         - a and b must be arrays of the same type, dimensionality, and shape
-        - comparison must be '>', '<', '=', '>=', '<=', or '!='
+        - comparison must be '>', '<', '==', '>=', '<=', or '!='
         - if comparison is not in that list, an error will occur (return 0)
         - the comparison string must be zero-terminated
     */
@@ -984,6 +984,88 @@ int compare_CPU(struct c_array a, struct c_array b, const char *comparison) {
         return compare_32bit(a, b, comparison, 0, 0, 0);
     if (a.itemsize == 8)
         return compare_64bit(a, b, comparison, 0, 0, 0);
+    return 0;
+}
+
+int deepcopy_8bit(struct c_array a, struct c_array b, ssize_t dim, ssize_t index_a, ssize_t index_b) {
+    // to be initially called with deepcopy_8bit(a, b, 0, 0, 0)
+    if (dim > b.ndim - 1)
+        return 0;
+    ssize_t N_a = a.strides[dim] / a.itemsize;
+    ssize_t N_b = b.strides[dim] / b.itemsize;
+    if (dim == b.ndim - 1) {
+        for (ssize_t i = 0; i < b.shape[dim]; i++)
+            ((int8_t*)a.ptr)[index_a + i * N_a] = ((int8_t*)b.ptr)[index_b + i * N_b];
+        return 1;
+    }
+    for (ssize_t i = 0; i < b.shape[dim]; i++)
+        deepcopy_8bit(a, b, dim + 1, index_a + i * N_a, index_b + i * N_b);
+    return 1;
+}
+
+int deepcopy_16bit(struct c_array a, struct c_array b, ssize_t dim, ssize_t index_a, ssize_t index_b) {
+    // to be initially called with deepcopy_16bit(a, b, 0, 0, 0)
+    if (dim > b.ndim - 1)
+        return 0;
+    ssize_t N_a = a.strides[dim] / a.itemsize;
+    ssize_t N_b = b.strides[dim] / b.itemsize;
+    if (dim == b.ndim - 1) {
+        for (ssize_t i = 0; i < b.shape[dim]; i++)
+            ((int16_t*)a.ptr)[index_a + i * N_a] = ((int16_t*)b.ptr)[index_b + i * N_b];
+        return 1;
+    }
+    for (ssize_t i = 0; i < b.shape[dim]; i++)
+        deepcopy_16bit(a, b, dim + 1, index_a + i * N_a, index_b + i * N_b);
+    return 1;
+}
+
+int deepcopy_32bit(struct c_array a, struct c_array b, ssize_t dim, ssize_t index_a, ssize_t index_b) {
+    // to be initially called with deepcopy_32bit(a, b, 0, 0, 0)
+    if (dim > b.ndim - 1)
+        return 0;
+    ssize_t N_a = a.strides[dim] / a.itemsize;
+    ssize_t N_b = b.strides[dim] / b.itemsize;
+    if (dim == b.ndim - 1) {
+        for (ssize_t i = 0; i < b.shape[dim]; i++)
+            ((int32_t*)a.ptr)[index_a + i * N_a] = ((int32_t*)b.ptr)[index_b + i * N_b];
+        return 1;
+    }
+    for (ssize_t i = 0; i < b.shape[dim]; i++)
+        deepcopy_32bit(a, b, dim + 1, index_a + i * N_a, index_b + i * N_b);
+    return 1;
+}
+
+int deepcopy_64bit(struct c_array a, struct c_array b, ssize_t dim, ssize_t index_a, ssize_t index_b) {
+    // to be initially called with deepcopy_64bit(a, b, 0, 0, 0)
+    if (dim > b.ndim - 1)
+        return 0;
+    ssize_t N_a = a.strides[dim] / a.itemsize;
+    ssize_t N_b = b.strides[dim] / b.itemsize;
+    if (dim == b.ndim - 1) {
+        for (ssize_t i = 0; i < b.shape[dim]; i++)
+            ((int64_t*)a.ptr)[index_a + i * N_a] = ((int64_t*)b.ptr)[index_b + i * N_b];
+        return 1;
+    }
+    for (ssize_t i = 0; i < b.shape[dim]; i++)
+        deepcopy_64bit(a, b, dim + 1, index_a + i * N_a, index_b + i * N_b);
+    return 1;
+}
+
+int deepcopy_CPU(struct c_array a, struct c_array b) {
+    /* PURPOSE:
+        - deepcopies all contents from b to a
+    PREREQUISITES:
+        - a and b have the same size/shape/dimensionality
+        - a and b are of the same type
+    */
+    if (b.itemsize == 1)
+        return deepcopy_8bit(a, b, 0, 0, 0);
+    if (b.itemsize == 2)
+        return deepcopy_16bit(a, b, 0, 0, 0);
+    if (b.itemsize == 4)
+        return deepcopy_32bit(a, b, 0, 0, 0);
+    if (b.itemsize == 8)
+        return deepcopy_64bit(a, b, 0, 0, 0);
     return 0;
 }
 
