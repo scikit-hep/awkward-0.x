@@ -600,7 +600,7 @@ class Test(unittest.TestCase):
         assert a.argsort().tolist() == [[1, 0, 2], [2, 0, 1], [0, 1, 3, 2], [0], [2, 0, 3]]
         assert a.argsort(True).tolist() == [[2, 0, 1], [1, 0, 2], [3, 1, 0, 2], [0], [3, 0, 2]]
 
-    def test_jagged_setitem(self):
+    def test_jagged_setitem_bool_indexing(self):
         a = fromiter([[1.1], [], [2.2, 3.3]])
 
         b1 = fromiter([[True], [], [True, True]])
@@ -616,4 +616,22 @@ class Test(unittest.TestCase):
         a[b2] = c2
         assert a.tolist() == [[4.4], [], [7.7, 8.8]]
         a[b3] = c3
+        assert a.tolist() == [[4.4], [], [9.9, 8.8]]
+
+    def test_jagged_setitem_integer_indexing(self):
+        a = fromiter([[1.1], [], [2.2, 3.3]])
+
+        i1 = fromiter([[0], [], [0, 1]])
+        i2 = fromiter([[], [], [0, 1]])
+        i3 = fromiter([[], [], [0]])
+
+        c1 = fromiter([[4.4], [], [5.5, 6.6]])
+        c2 = [7.7, 8.8]
+        c3 = 9.9
+
+        a[i1] = c1
+        assert a.tolist() == [[4.4], [], [5.5, 6.6]]
+        a[i2] = c2
+        assert a.tolist() == [[4.4], [], [7.7, 8.8]]
+        a[i3] = c3
         assert a.tolist() == [[4.4], [], [9.9, 8.8]]
