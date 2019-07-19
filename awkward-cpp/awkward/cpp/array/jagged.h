@@ -55,10 +55,11 @@ public:
     void set_starts(py::array starts_) {
         makeIntNative_CPU(starts_);
         starts_ = starts_.cast<py::array_t<std::int64_t>>();
-        if (starts_.request().ndim < 1) {
+        py::buffer_info starts_info = starts_.request();
+        if (starts_info.ndim < 1) {
             throw std::domain_error("starts must have at least 1 dimension");
         }
-        if (!checkNonNegative_CPU(py2c(starts_.request()))) {
+        if (!checkNonNegative_CPU(py2c(&starts_info))) {
             throw std::invalid_argument("starts must have all non-negative values");
         }
         starts = starts_;
@@ -74,10 +75,11 @@ public:
     void set_stops(py::array stops_) {
         makeIntNative_CPU(stops_);
         stops_ = stops_.cast<py::array_t<std::int64_t>>();
-        if (stops_.request().ndim < 1) {
+        py::buffer_info stops_info = stops_.request();
+        if (stops_info.ndim < 1) {
             throw std::domain_error("stops must have at least 1 dimension");
         }
-        if (!checkNonNegative_CPU(py2c(stops_.request()))) {
+        if (!checkNonNegative_CPU(py2c(&stops_info))) {
             throw std::invalid_argument("stops must have all non-negative values");
         }
         stops = stops_;
@@ -102,7 +104,7 @@ public:
         std::int64_t stops_max = 0;
         getMax_CPU(stops, &stops_max);
         std::string comparison = "<=";
-        if (!compare_CPU(py2c(starts.request()), py2c(stops.request()), comparison.c_str())) {
+        if (!compare_CPU(py2c(&starts_info), py2c(&stops_info), comparison.c_str())) {
             throw std::invalid_argument("starts must be less than or equal to stops");
         }
         if (starts_info.size > 0) {
@@ -296,8 +298,9 @@ public:
 
         ssize_t parents_length = (ssize_t)offsets_ptr[(offsets_info.size - 1) * N];
         auto parents = py::array_t<std::int64_t>(parents_length);
+        py::buffer_info parents_info = parents.request();
 
-        if (!offsets2parents_CPU(py2c(offsets.request()), py2c(parents.request()))) {
+        if (!offsets2parents_CPU(py2c(&offsets_info), py2c(&parents_info))) {
             throw std::invalid_argument("Error in cpu_methods.h::offsets2parents_CPU");
         }
         return parents;
@@ -311,8 +314,11 @@ public:
     static py::array_t<std::int64_t> counts2offsets(py::array counts) {
         makeIntNative_CPU(counts);
         counts = counts.cast<py::array_t<std::int64_t>>();
-        auto offsets = py::array_t<std::int64_t>(counts.request().size + 1);
-        if (!counts2offsets_CPU(py2c(counts.request()), py2c(offsets.request()))) {
+        py::buffer_info counts_info = counts.request();
+        auto offsets = py::array_t<std::int64_t>(counts_info.size + 1);
+        py::buffer_info offsets_info = offsets.request();
+
+        if (!counts2offsets_CPU(py2c(&counts_info), py2c(&offsets_info))) {
             throw std::invalid_argument("Error in cpu_methods.h::counts2offsets_CPU");
         }
         return offsets;
@@ -327,13 +333,16 @@ public:
         makeIntNative_CPU(starts_);
         makeIntNative_CPU(stops_);
         starts_ = starts_.cast<py::array_t<std::int64_t>>();
+        py::buffer_info starts_info = starts_.request();
         stops_ = stops_.cast<py::array_t<std::int64_t>>();
+        py::buffer_info stops_info = stops_.request();
 
         std::int64_t max = 0;
         getMax_CPU(stops_, &max);
         auto parents = py::array_t<std::int64_t>((ssize_t)max);
+        py::buffer_info parents_info = parents.request();
 
-        if (!startsstops2parents_CPU(py2c(starts_.request()), py2c(stops_.request()), py2c(parents.request()))) {
+        if (!startsstops2parents_CPU(py2c(&starts_info), py2c(&stops_info), py2c(&parents_info))) {
             throw std::invalid_argument("Error in cpu_methods.h::startsstops2parents_CPU");
         }
         return parents;
@@ -348,6 +357,7 @@ public:
     static py::tuple parents2startsstops(py::array parents, std::int64_t length = -1) {
         makeIntNative_CPU(parents);
         parents = parents.cast<py::array_t<std::int64_t>>();
+        py::buffer_info parents_info = parents.request();
 
         if (length < 0) {
             length = 0;
@@ -355,9 +365,11 @@ public:
             length++;
         }
         auto starts_ = py::array_t<std::int64_t>((ssize_t)length);
+        py::buffer_info starts_info = starts_.request();
         auto stops_ = py::array_t<std::int64_t>((ssize_t)length);
+        py::buffer_info stops_info = stops_.request();
 
-        if (!parents2startsstops_CPU(py2c(parents.request()), py2c(starts_.request()), py2c(stops_.request()))) {
+        if (!parents2startsstops_CPU(py2c(&parents_info), py2c(&starts_info), py2c(&stops_info))) {
             throw std::invalid_argument("Error in cpu_methods.h::parents2startsstops_CPU");
         }
         py::list temp;
@@ -375,20 +387,24 @@ public:
     static py::tuple uniques2offsetsparents(py::array uniques) {
         makeIntNative_CPU(uniques);
         uniques = uniques.cast<py::array_t<std::int64_t>>();
+        py::buffer_info uniques_info = uniques.request();
 
         ssize_t tempLength = 0;
-        if (uniques.request().size > 0) {
-            tempLength = uniques.request().size - 1;
+        if (uniques_info.size > 0) {
+            tempLength = uniques_info.size - 1;
         }
 
         auto tempArray = py::array_t<std::int8_t>(tempLength);
+        py::buffer_info temp_info = tempArray.request();
         ssize_t countLength = 0;
-        if (!uniques2offsetsparents_generateTemparray_CPU(py2c(uniques.request()), py2c(tempArray.request()), &countLength)) {
+        if (!uniques2offsetsparents_generateTemparray_CPU(py2c(&uniques_info), py2c(&temp_info), &countLength)) {
             throw std::invalid_argument("Error in cpu_methods.h::uniques2offsetsparents_generateTempArray_CPU");
         }
         auto offsets = py::array_t<std::int64_t>(countLength + 2);
-        auto parents = py::array_t<std::int64_t>(uniques.request().size);
-        if (!uniques2offsetsparents_CPU(countLength, py2c(tempArray.request()), py2c(offsets.request()), py2c(parents.request()))) {
+        py::buffer_info offsets_info = offsets.request();
+        auto parents = py::array_t<std::int64_t>(uniques_info.size);
+        py::buffer_info parents_info = parents.request();
+        if (!uniques2offsetsparents_CPU(countLength, py2c(&temp_info), py2c(&offsets_info), py2c(&parents_info))) {
             throw std::invalid_argument("Error in cpu_methods.h::uniques2offsetsparents_CPU");
         }
 
