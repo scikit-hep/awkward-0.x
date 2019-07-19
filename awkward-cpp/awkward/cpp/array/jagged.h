@@ -56,10 +56,11 @@ public:
         makeIntNative_CPU(starts_);
         starts_ = starts_.cast<py::array_t<std::int64_t>>();
         py::buffer_info starts_info = starts_.request();
+        struct c_array starts_struct = py2c(&starts_info);
         if (starts_info.ndim < 1) {
             throw std::domain_error("starts must have at least 1 dimension");
         }
-        if (!checkNonNegative_CPU(py2c(&starts_info))) {
+        if (!checkNonNegative_CPU(&starts_struct)) {
             throw std::invalid_argument("starts must have all non-negative values");
         }
         starts = starts_;
@@ -76,10 +77,11 @@ public:
         makeIntNative_CPU(stops_);
         stops_ = stops_.cast<py::array_t<std::int64_t>>();
         py::buffer_info stops_info = stops_.request();
+        struct c_array stops_struct = py2c(&stops_info);
         if (stops_info.ndim < 1) {
             throw std::domain_error("stops must have at least 1 dimension");
         }
-        if (!checkNonNegative_CPU(py2c(&stops_info))) {
+        if (!checkNonNegative_CPU(&stops_struct)) {
             throw std::invalid_argument("stops must have all non-negative values");
         }
         stops = stops_;
@@ -92,7 +94,9 @@ public:
 
     bool check_validity() {
         py::buffer_info starts_info = starts.request();
+        struct c_array starts_struct = py2c(&starts_info);
         py::buffer_info stops_info = stops.request();
+        struct c_array stops_struct = py2c(&stops_info);
         if (starts_info.size > stops_info.size) {
             throw std::invalid_argument("starts must have the same (or shorter) length than stops");
         }
@@ -104,7 +108,7 @@ public:
         std::int64_t stops_max = 0;
         getMax_CPU(stops, &stops_max);
         std::string comparison = "<=";
-        if (!compare_CPU(py2c(&starts_info), py2c(&stops_info), comparison.c_str())) {
+        if (!compare_CPU(&starts_struct, &stops_struct, comparison.c_str())) {
             throw std::invalid_argument("starts must be less than or equal to stops");
         }
         if (starts_info.size > 0) {
@@ -290,6 +294,7 @@ public:
         makeIntNative_CPU(offsets);
         offsets = offsets.cast<py::array_t<std::int64_t>>();
         py::buffer_info offsets_info = offsets.request();
+        struct c_array offsets_struct = py2c(&offsets_info);
         if (offsets_info.size <= 0) {
             throw std::invalid_argument("offsets must have at least one element");
         }
@@ -299,8 +304,9 @@ public:
         ssize_t parents_length = (ssize_t)offsets_ptr[(offsets_info.size - 1) * N];
         auto parents = py::array_t<std::int64_t>(parents_length);
         py::buffer_info parents_info = parents.request();
+        struct c_array parents_struct = py2c(&parents_info);
 
-        if (!offsets2parents_CPU(py2c(&offsets_info), py2c(&parents_info))) {
+        if (!offsets2parents_CPU(&offsets_struct, &parents_struct)) {
             throw std::invalid_argument("Error in cpu_methods.h::offsets2parents_CPU");
         }
         return parents;
@@ -315,10 +321,12 @@ public:
         makeIntNative_CPU(counts);
         counts = counts.cast<py::array_t<std::int64_t>>();
         py::buffer_info counts_info = counts.request();
+        struct c_array counts_struct = py2c(&counts_info);
         auto offsets = py::array_t<std::int64_t>(counts_info.size + 1);
         py::buffer_info offsets_info = offsets.request();
+        struct c_array offsets_struct = py2c(&offsets_info);
 
-        if (!counts2offsets_CPU(py2c(&counts_info), py2c(&offsets_info))) {
+        if (!counts2offsets_CPU(&counts_struct, &offsets_struct)) {
             throw std::invalid_argument("Error in cpu_methods.h::counts2offsets_CPU");
         }
         return offsets;
@@ -334,15 +342,18 @@ public:
         makeIntNative_CPU(stops_);
         starts_ = starts_.cast<py::array_t<std::int64_t>>();
         py::buffer_info starts_info = starts_.request();
+        struct c_array starts_struct = py2c(&starts_info);
         stops_ = stops_.cast<py::array_t<std::int64_t>>();
         py::buffer_info stops_info = stops_.request();
+        struct c_array stops_struct = py2c(&stops_info);
 
         std::int64_t max = 0;
         getMax_CPU(stops_, &max);
         auto parents = py::array_t<std::int64_t>((ssize_t)max);
         py::buffer_info parents_info = parents.request();
+        struct c_array parents_struct = py2c(&parents_info);
 
-        if (!startsstops2parents_CPU(py2c(&starts_info), py2c(&stops_info), py2c(&parents_info))) {
+        if (!startsstops2parents_CPU(&starts_struct, &stops_struct, &parents_struct)) {
             throw std::invalid_argument("Error in cpu_methods.h::startsstops2parents_CPU");
         }
         return parents;
@@ -358,6 +369,7 @@ public:
         makeIntNative_CPU(parents);
         parents = parents.cast<py::array_t<std::int64_t>>();
         py::buffer_info parents_info = parents.request();
+        struct c_array parents_struct = py2c(&parents_info);
 
         if (length < 0) {
             length = 0;
@@ -366,10 +378,12 @@ public:
         }
         auto starts_ = py::array_t<std::int64_t>((ssize_t)length);
         py::buffer_info starts_info = starts_.request();
+        struct c_array starts_struct = py2c(&starts_info);
         auto stops_ = py::array_t<std::int64_t>((ssize_t)length);
         py::buffer_info stops_info = stops_.request();
+        struct c_array stops_struct = py2c(&stops_info);
 
-        if (!parents2startsstops_CPU(py2c(&parents_info), py2c(&starts_info), py2c(&stops_info))) {
+        if (!parents2startsstops_CPU(&parents_struct, &starts_struct, &stops_struct)) {
             throw std::invalid_argument("Error in cpu_methods.h::parents2startsstops_CPU");
         }
         py::list temp;
@@ -388,6 +402,7 @@ public:
         makeIntNative_CPU(uniques);
         uniques = uniques.cast<py::array_t<std::int64_t>>();
         py::buffer_info uniques_info = uniques.request();
+        struct c_array uniques_struct = py2c(&uniques_info);
 
         ssize_t tempLength = 0;
         if (uniques_info.size > 0) {
@@ -396,15 +411,18 @@ public:
 
         auto tempArray = py::array_t<std::int8_t>(tempLength);
         py::buffer_info temp_info = tempArray.request();
+        struct c_array temp_struct = py2c(&temp_info);
         ssize_t countLength = 0;
-        if (!uniques2offsetsparents_generateTemparray_CPU(py2c(&uniques_info), py2c(&temp_info), &countLength)) {
+        if (!uniques2offsetsparents_generateTemparray_CPU(&uniques_struct, &temp_struct, &countLength)) {
             throw std::invalid_argument("Error in cpu_methods.h::uniques2offsetsparents_generateTempArray_CPU");
         }
         auto offsets = py::array_t<std::int64_t>(countLength + 2);
         py::buffer_info offsets_info = offsets.request();
+        struct c_array offsets_struct = py2c(&offsets_info);
         auto parents = py::array_t<std::int64_t>(uniques_info.size);
         py::buffer_info parents_info = parents.request();
-        if (!uniques2offsetsparents_CPU(countLength, py2c(&temp_info), py2c(&offsets_info), py2c(&parents_info))) {
+        struct c_array parents_struct = py2c(&parents_info);
+        if (!uniques2offsetsparents_CPU(countLength, &temp_struct, &offsets_struct, &parents_struct)) {
             throw std::invalid_argument("Error in cpu_methods.h::uniques2offsetsparents_CPU");
         }
 
@@ -425,7 +443,11 @@ public:
     }
 
     AnyArray* getitem(ssize_t start, ssize_t length, ssize_t step = 1) {
-        return new JaggedArray(slice_numpy(starts, start, length, step), slice_numpy(stops, start, length, step), content);
+        return new JaggedArray(
+            slice_numpy(starts, start, length, step),
+            slice_numpy(stops, start, length, step),
+            content
+        );
     }
 
     py::object python_getitem(py::slice input) {
