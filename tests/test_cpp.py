@@ -244,3 +244,9 @@ class Test(unittest.TestCase):
                 raise
             thrown = True
         assert thrown
+
+    def test_cpp_deepcopy(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1, 5, 2], [], [-6.1]])
+        b = a.deepcopy()
+        assert a.tolist() == b.tolist()
+        assert a.__repr__() != b.__repr__()

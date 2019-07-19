@@ -11,6 +11,8 @@
 #include "cpu_methods.h"
 #include "cpu_pybind11.h"
 
+#include <stdio.h> // for debugging purposes
+
 namespace py = pybind11;
 
 class JaggedArray : public AwkwardArray {
@@ -54,15 +56,12 @@ public:
         makeIntNative_CPU(starts_);
         starts_ = starts_.cast<py::array_t<std::int64_t>>();
         py::buffer_info starts_info = starts_.request();
+        struct c_array starts_struct = py2c(&starts_info);
         if (starts_info.ndim < 1) {
             throw std::domain_error("starts must have at least 1 dimension");
         }
-        int N = starts_info.strides[0] / starts_info.itemsize;
-        auto starts_ptr = (std::int64_t*)starts_info.ptr;
-        for (ssize_t i = 0; i < starts_info.size; i++) {
-            if (starts_ptr[i * N] < 0) {
-                throw std::invalid_argument("starts must have all non-negative values: see index [" + std::to_string(i * N) + "]");
-            }
+        if (!checkNonNegative_CPU(&starts_struct)) {
+            throw std::invalid_argument("starts must have all non-negative values");
         }
         starts = starts_;
     }
@@ -78,18 +77,16 @@ public:
         makeIntNative_CPU(stops_);
         stops_ = stops_.cast<py::array_t<std::int64_t>>();
         py::buffer_info stops_info = stops_.request();
+        struct c_array stops_struct = py2c(&stops_info);
         if (stops_info.ndim < 1) {
             throw std::domain_error("stops must have at least 1 dimension");
         }
-        int N = stops_info.strides[0] / stops_info.itemsize;
-        auto stops_ptr = (std::int64_t*)stops_info.ptr;
-        for (ssize_t i = 0; i < stops_info.size; i++) {
-            if (stops_ptr[i * N] < 0) {
-                throw std::invalid_argument("stops must have all non-negative values: see index [" + std::to_string(i * N) + "]");
-            }
+        if (!checkNonNegative_CPU(&stops_struct)) {
+            throw std::invalid_argument("stops must have all non-negative values");
         }
         stops = stops_;
     }
+
     void python_set_stops(py::object input) {
         py::array stops_ = input.cast<py::array>();
         set_stops(stops_);
@@ -97,29 +94,22 @@ public:
 
     bool check_validity() {
         py::buffer_info starts_info = starts.request();
+        struct c_array starts_struct = py2c(&starts_info);
         py::buffer_info stops_info = stops.request();
+        struct c_array stops_struct = py2c(&stops_info);
         if (starts_info.size > stops_info.size) {
             throw std::invalid_argument("starts must have the same (or shorter) length than stops");
         }
         if (starts_info.ndim != stops_info.ndim) {
             throw std::domain_error("starts and stops must have the same dimensionality");
         }
-        int N_starts = starts_info.strides[0] / starts_info.itemsize;
-        int N_stops = stops_info.strides[0] / stops_info.itemsize;
         std::int64_t starts_max = 0;
+        getMax_CPU(starts, &starts_max);
         std::int64_t stops_max = 0;
-        auto starts_ptr = (std::int64_t*)starts_info.ptr;
-        auto stops_ptr = (std::int64_t*)stops_info.ptr;
-        for (ssize_t i = 0; i < starts_info.size; i++) {
-            if (stops_ptr[i * N_stops] < starts_ptr[i * N_starts]) {
-                throw std::invalid_argument("stops must be greater than or equal to starts");
-            }
-            if (starts_ptr[i * N_starts] > starts_max) {
-                starts_max = starts_ptr[i * N_starts];
-            }
-            if (stops_ptr[i * N_stops] > stops_max) {
-                stops_max = stops_ptr[i * N_stops];
-            }
+        getMax_CPU(stops, &stops_max);
+        std::string comparison = "<=";
+        if (!compare_CPU(&starts_struct, &stops_struct, comparison.c_str())) {
+            throw std::invalid_argument("starts must be less than or equal to stops");
         }
         if (starts_info.size > 0) {
             if (starts_max >= content->len()) {
@@ -304,6 +294,7 @@ public:
         makeIntNative_CPU(offsets);
         offsets = offsets.cast<py::array_t<std::int64_t>>();
         py::buffer_info offsets_info = offsets.request();
+        struct c_array offsets_struct = py2c(&offsets_info);
         if (offsets_info.size <= 0) {
             throw std::invalid_argument("offsets must have at least one element");
         }
@@ -312,8 +303,10 @@ public:
 
         ssize_t parents_length = (ssize_t)offsets_ptr[(offsets_info.size - 1) * N];
         auto parents = py::array_t<std::int64_t>(parents_length);
+        py::buffer_info parents_info = parents.request();
+        struct c_array parents_struct = py2c(&parents_info);
 
-        if (!offsets2parents_CPU(py2c(offsets), py2c(parents))) {
+        if (!offsets2parents_CPU(&offsets_struct, &parents_struct)) {
             throw std::invalid_argument("Error in cpu_methods.h::offsets2parents_CPU");
         }
         return parents;
@@ -327,8 +320,13 @@ public:
     static py::array_t<std::int64_t> counts2offsets(py::array counts) {
         makeIntNative_CPU(counts);
         counts = counts.cast<py::array_t<std::int64_t>>();
-        auto offsets = py::array_t<std::int64_t>(counts.request().size + 1);
-        if (!counts2offsets_CPU(py2c(counts), py2c(offsets))) {
+        py::buffer_info counts_info = counts.request();
+        struct c_array counts_struct = py2c(&counts_info);
+        auto offsets = py::array_t<std::int64_t>(counts_info.size + 1);
+        py::buffer_info offsets_info = offsets.request();
+        struct c_array offsets_struct = py2c(&offsets_info);
+
+        if (!counts2offsets_CPU(&counts_struct, &offsets_struct)) {
             throw std::invalid_argument("Error in cpu_methods.h::counts2offsets_CPU");
         }
         return offsets;
@@ -343,13 +341,19 @@ public:
         makeIntNative_CPU(starts_);
         makeIntNative_CPU(stops_);
         starts_ = starts_.cast<py::array_t<std::int64_t>>();
+        py::buffer_info starts_info = starts_.request();
+        struct c_array starts_struct = py2c(&starts_info);
         stops_ = stops_.cast<py::array_t<std::int64_t>>();
+        py::buffer_info stops_info = stops_.request();
+        struct c_array stops_struct = py2c(&stops_info);
 
         std::int64_t max = 0;
         getMax_CPU(stops_, &max);
         auto parents = py::array_t<std::int64_t>((ssize_t)max);
+        py::buffer_info parents_info = parents.request();
+        struct c_array parents_struct = py2c(&parents_info);
 
-        if (!startsstops2parents_CPU(py2c(starts_), py2c(stops_), py2c(parents))) {
+        if (!startsstops2parents_CPU(&starts_struct, &stops_struct, &parents_struct)) {
             throw std::invalid_argument("Error in cpu_methods.h::startsstops2parents_CPU");
         }
         return parents;
@@ -365,53 +369,26 @@ public:
         makeIntNative_CPU(parents);
         parents = parents.cast<py::array_t<std::int64_t>>();
         py::buffer_info parents_info = parents.request();
-        auto parents_ptr = (std::int64_t*)parents_info.ptr;
-        int N = parents_info.strides[0] / parents_info.itemsize;
+        struct c_array parents_struct = py2c(&parents_info);
 
         if (length < 0) {
             length = 0;
-            for (ssize_t i = 0; i < parents_info.size; i++) {
-                if (parents_ptr[i] > length) {
-                    length = parents_ptr[i * N];
-                }
-            }
+            getMax_CPU(parents, &length);
             length++;
         }
+        auto starts_ = py::array_t<std::int64_t>((ssize_t)length);
+        py::buffer_info starts_info = starts_.request();
+        struct c_array starts_struct = py2c(&starts_info);
+        auto stops_ = py::array_t<std::int64_t>((ssize_t)length);
+        py::buffer_info stops_info = stops_.request();
+        struct c_array stops_struct = py2c(&stops_info);
 
-        auto starts = py::array_t<std::int64_t>((ssize_t)length);
-        py::buffer_info starts_info = starts.request();
-        auto starts_ptr = (std::int64_t*)starts_info.ptr;
-
-        auto stops = py::array_t<std::int64_t>((ssize_t)length);
-        py::buffer_info stops_info = stops.request();
-        auto stops_ptr = (std::int64_t*)stops_info.ptr;
-
-        for (ssize_t i = 0; i < (ssize_t)length; i++) {
-            starts_ptr[i] = 0;
-            stops_ptr[i] = 0;
+        if (!parents2startsstops_CPU(&parents_struct, &starts_struct, &stops_struct)) {
+            throw std::invalid_argument("Error in cpu_methods.h::parents2startsstops_CPU");
         }
-
-        std::int64_t last = -1;
-        for (ssize_t k = 0; k < parents_info.size; k++) {
-            auto thisOne = parents_ptr[k * N];
-            if (last != thisOne) {
-                if (last >= 0 && last < length) {
-                    stops_ptr[last] = (std::int64_t)k;
-                }
-                if (thisOne >= 0 && thisOne < length) {
-                    starts_ptr[thisOne] = (std::int64_t)k;
-                }
-            }
-            last = thisOne;
-        }
-
-        if (last != -1) {
-            stops_ptr[last] = (std::int64_t)parents_info.size;
-        }
-
         py::list temp;
-        temp.append(starts);
-        temp.append(stops);
+        temp.append(starts_);
+        temp.append(stops_);
         py::tuple out(temp);
         return out;
     }
@@ -425,60 +402,28 @@ public:
         makeIntNative_CPU(uniques);
         uniques = uniques.cast<py::array_t<std::int64_t>>();
         py::buffer_info uniques_info = uniques.request();
-        auto uniques_ptr = (std::int64_t*)uniques_info.ptr;
-        int N = uniques_info.strides[0] / uniques_info.itemsize;
+        struct c_array uniques_struct = py2c(&uniques_info);
 
-        ssize_t tempLength;
-        if (uniques_info.size < 1) {
-            tempLength = 0;
-        }
-        else {
+        ssize_t tempLength = 0;
+        if (uniques_info.size > 0) {
             tempLength = uniques_info.size - 1;
         }
-        auto tempArray = py::array_t<bool>(tempLength);
-        py::buffer_info tempArray_info = tempArray.request();
-        auto tempArray_ptr = (bool*)tempArray_info.ptr;
 
+        auto tempArray = py::array_t<std::int8_t>(tempLength);
+        py::buffer_info temp_info = tempArray.request();
+        struct c_array temp_struct = py2c(&temp_info);
         ssize_t countLength = 0;
-        for (ssize_t i = 0; i < uniques_info.size - 1; i++) {
-            if (uniques_ptr[i * N] != uniques_ptr[(i + 1) * N]) {
-                tempArray_ptr[i] = true;
-                countLength++;
-            }
-            else {
-                tempArray_ptr[i] = false;
-            }
+        if (!uniques2offsetsparents_generateTemparray_CPU(&uniques_struct, &temp_struct, &countLength)) {
+            throw std::invalid_argument("Error in cpu_methods.h::uniques2offsetsparents_generateTempArray_CPU");
         }
-        auto changes = py::array_t<std::int64_t>(countLength);
-        py::buffer_info changes_info = changes.request();
-        auto changes_ptr = (std::int64_t*)changes_info.ptr;
-        ssize_t index = 0;
-        for (ssize_t i = 0; i < tempArray_info.size; i++) {
-            if (tempArray_ptr[i]) {
-                changes_ptr[index++] = (std::int64_t)(i + 1);
-            }
-        }
-
-        auto offsets = py::array_t<std::int64_t>(changes_info.size + 2);
+        auto offsets = py::array_t<std::int64_t>(countLength + 2);
         py::buffer_info offsets_info = offsets.request();
-        auto offsets_ptr = (std::int64_t*)offsets_info.ptr;
-        offsets_ptr[0] = 0;
-        offsets_ptr[offsets_info.size - 1] = (std::int64_t)uniques_info.size;
-        for (ssize_t i = 1; i < offsets_info.size - 1; i++) {
-            offsets_ptr[i] = changes_ptr[i - 1];
-        }
-
+        struct c_array offsets_struct = py2c(&offsets_info);
         auto parents = py::array_t<std::int64_t>(uniques_info.size);
         py::buffer_info parents_info = parents.request();
-        auto parents_ptr = (std::int64_t*)parents_info.ptr;
-        for (ssize_t i = 0; i < parents_info.size; i++) {
-            parents_ptr[i] = 0;
-        }
-        for (ssize_t i = 0; i < changes_info.size; i++) {
-            parents_ptr[(ssize_t)changes_ptr[i]] = 1;
-        }
-        for (ssize_t i = 1; i < parents_info.size; i++) {
-            parents_ptr[i] += parents_ptr[i - 1];
+        struct c_array parents_struct = py2c(&parents_info);
+        if (!uniques2offsetsparents_CPU(countLength, &temp_struct, &offsets_struct, &parents_struct)) {
+            throw std::invalid_argument("Error in cpu_methods.h::uniques2offsetsparents_CPU");
         }
 
         py::list temp;
@@ -498,40 +443,11 @@ public:
     }
 
     AnyArray* getitem(ssize_t start, ssize_t length, ssize_t step = 1) {
-        if (step == 0) {
-            throw std::invalid_argument("slice step cannot be 0");
-        }
-        if (length < 0) {
-            throw std::invalid_argument("slice length cannot be less than 0");
-        }
-        if (start < 0 || start >= len() || (length > 0 &&
-            (start + ((length - 1) * step) > len() ||
-            start + ((length - 1) * step) < -1))) {
-            throw std::out_of_range("getitem must be in the bounds of the array.");
-        }
-        auto newStarts = py::array_t<std::int64_t>(length);
-        py::buffer_info newStarts_info = newStarts.request();
-        auto newStarts_ptr = (std::int64_t*)newStarts_info.ptr;
-
-        py::buffer_info starts_info = starts.request();
-        auto starts_ptr = (std::int64_t*)starts_info.ptr;
-        int N_starts = starts_info.strides[0] / starts_info.itemsize;
-
-        auto newStops = py::array_t<std::int64_t>(length);
-        py::buffer_info newStops_info = newStops.request();
-        auto newStops_ptr = (std::int64_t*)newStops_info.ptr;
-
-        py::buffer_info stops_info = stops.request();
-        auto stops_ptr = (std::int64_t*)stops_info.ptr;
-        int N_stops = stops_info.strides[0] / stops_info.itemsize;
-
-        ssize_t newIndex = 0;
-        for (ssize_t i = 0; i < length; i++) {
-            newStarts_ptr[newIndex] = starts_ptr[start + (i * step * N_starts)];
-            newStops_ptr[newIndex++] = stops_ptr[start + (i * step * N_stops)];
-        }
-
-        return new JaggedArray(newStarts, newStops, content);
+        return new JaggedArray(
+            slice_numpy(starts, start, length, step),
+            slice_numpy(stops, start, length, step),
+            content
+        );
     }
 
     py::object python_getitem(py::slice input) {
