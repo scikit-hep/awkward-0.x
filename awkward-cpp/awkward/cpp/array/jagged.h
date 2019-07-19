@@ -425,40 +425,7 @@ public:
     }
 
     AnyArray* getitem(ssize_t start, ssize_t length, ssize_t step = 1) {
-        if (step == 0) {
-            throw std::invalid_argument("slice step cannot be 0");
-        }
-        if (length < 0) {
-            throw std::invalid_argument("slice length cannot be less than 0");
-        }
-        if (start < 0 || start >= len() || (length > 0 &&
-            (start + ((length - 1) * step) > len() ||
-            start + ((length - 1) * step) < -1))) {
-            throw std::out_of_range("getitem must be in the bounds of the array.");
-        }
-        auto newStarts = py::array_t<std::int64_t>(length);
-        py::buffer_info newStarts_info = newStarts.request();
-        auto newStarts_ptr = (std::int64_t*)newStarts_info.ptr;
-
-        py::buffer_info starts_info = starts.request();
-        auto starts_ptr = (std::int64_t*)starts_info.ptr;
-        int N_starts = starts_info.strides[0] / starts_info.itemsize;
-
-        auto newStops = py::array_t<std::int64_t>(length);
-        py::buffer_info newStops_info = newStops.request();
-        auto newStops_ptr = (std::int64_t*)newStops_info.ptr;
-
-        py::buffer_info stops_info = stops.request();
-        auto stops_ptr = (std::int64_t*)stops_info.ptr;
-        int N_stops = stops_info.strides[0] / stops_info.itemsize;
-
-        ssize_t newIndex = 0;
-        for (ssize_t i = 0; i < length; i++) {
-            newStarts_ptr[newIndex] = starts_ptr[start + (i * step * N_starts)];
-            newStops_ptr[newIndex++] = stops_ptr[start + (i * step * N_stops)];
-        }
-
-        return new JaggedArray(newStarts, newStops, content);
+        return new JaggedArray(slice_numpy(starts, start, length, step), slice_numpy(stops, start, length, step), content);
     }
 
     py::object python_getitem(py::slice input) {
