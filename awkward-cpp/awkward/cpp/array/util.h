@@ -7,6 +7,8 @@
 #include <complex>
 #include <sstream>
 #include <iomanip>
+#include "cpu_methods.h"
+#include "cpu_pybind11.h"
 
 namespace py = pybind11;
 
