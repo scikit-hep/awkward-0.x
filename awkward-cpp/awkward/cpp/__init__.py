@@ -4,7 +4,6 @@
 
 import numpy
 
-# the following commented out lines allow JaggedArrayCpp to inherit from awkward-array
 #from awkward.cpp.array.base import CppMethods
 #from awkward.cpp.array.jagged import JaggedArrayCpp as JaggedArray
 
