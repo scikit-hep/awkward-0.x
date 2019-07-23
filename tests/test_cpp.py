@@ -169,6 +169,33 @@ class Test(unittest.TestCase):
         #a3 = awkward_cpp.JaggedArray.fromcounts([2, 0, 1], a)
         #assert test1(a3, index).tolist() == [[], [[4.4, 5.5]]]
 
+    def test_cpp_getitem_tuple_integer(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        def test1(x, i):
+            return x[i,]
+        assert test1(a, 2).tolist() == [4.4, 5.5]
+
+        a2 = awkward_cpp.JaggedArray.fromcounts([2, 0, 1], a)  # [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
+        def test2(x, i, j):
+            return x[i, j]
+        assert test2(a2, 0, 0).tolist() == [1.1, 2.2, 3.3]
+
+    def test_cpp_getitem_tuple_slice(self):
+        a = awkward_cpp.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = awkward_cpp.JaggedArray.fromcounts([2, 0, 1], a)   # [[[1.1, 2.2, 3.3], []], [], [[4.4, 5.5]]]
+        def test1(x, i, j):
+            return x[i:j,]
+        assert test1(a, 0, 2).tolist() == [[1.1, 2.2, 3.3], []]
+        assert test1(a, 1, 3).tolist() == [[], [4.4, 5.5]]
+        assert test1(a2, 0, 2).tolist() == [[[1.1, 2.2, 3.3], []], []]
+        assert test1(a2, 1, 3).tolist() == [[], [[4.4, 5.5]]]
+
+        a3 = awkward_cpp.JaggedArray.fromcounts([2, 1], a)   # [[[1.1, 2.2, 3.3], []], [[4.4, 5.5]]]
+        assert a3[0:2, 0].tolist() == [[1.1, 2.2, 3.3], [4.4, 5.5]]
+        def test2(x, i, j, k):
+            return x[i:j, k]
+        assert test2(a3, 0, 2, 0).tolist() == [[1.1, 2.2, 3.3], [4.4, 5.5]]
+
     def test_cpp_offsets2parents(self):
         offsets = numpy.array([0, 2, 4, 4, 7], dtype=numpy.int64)
         parents = awkward_cpp.JaggedArray.offsets2parents(offsets)
