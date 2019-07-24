@@ -29,15 +29,11 @@ public:
         throw std::domain_error("getitem is not allowed on a NumpyScalar");
     }
 
-    AnyOutput* getitem(py::tuple input, ssize_t index = 0) {
+    py::object getitem_tuple(py::tuple input, ssize_t index = 0) {
         if (index >= (ssize_t)input.size()) {
-            return this;
+            return this->unwrap();
         }
         throw std::domain_error("getitem is not allowed on a NumpyScalar");
-    }
-
-    ssize_t len() {
-        throw std::domain_error("len is not allowed on a NumpyScalar");
     }
 
     py::object unwrap() { return py::cast(thisScalar); }
@@ -129,14 +125,24 @@ public:
         return intarray_getitem(input);
     }
 
-    AnyOutput* getitem(py::tuple input, ssize_t index = 0) {
+    py::object getitem_tuple(py::tuple input, ssize_t index = 0) {
         if (index >= (ssize_t)input.size()) {
-            return this;
+            return unwrap();
         }
+        try {
+            py::tuple check = input[index].cast<py::tuple>();
+            check[0];
+            py::array here = input[index].cast<py::array>();
+            if (index != input.size() - 1) {
+                throw std::invalid_argument("NumpyArray does not support object types");
+            }
+            return getitem(here)->unwrap();
+        }
+        catch (std::exception e) { }
         try {
             ssize_t here = input[index].cast<ssize_t>();
             AnyOutput* fromHere = getitem(here);
-            return fromHere->getitem(input, index + 1);
+            return fromHere->getitem_tuple(input, index + 1);
         }
         catch (py::cast_error e) { }
         try {
@@ -148,15 +154,7 @@ public:
             if (index != input.size() - 1) {
                 throw std::invalid_argument("NumpyArray does not support object types");
             }
-            return getitem((ssize_t)start, (ssize_t)slicelength, (ssize_t)step);
-        }
-        catch (py::cast_error e) { }
-        try {
-            py::array here = input[index].cast<py::array>();
-            if (index != input.size() - 1) {
-                throw std::invalid_argument("NumpyArray does not support object types");
-            }
-            return getitem(here);
+            return getitem((ssize_t)start, (ssize_t)slicelength, (ssize_t)step)->unwrap();
         }
         catch (py::cast_error e) {
             throw std::invalid_argument("argument index for __getitem__(tuple) not recognized");
@@ -164,10 +162,7 @@ public:
     }
 
     py::object tolist() {
-        py::list out;
-        for (ssize_t i = 0; i < len(); i++) {
-            out.append(getitem(i)->tolist());
-        }
+        py::list out = thisArray.cast<py::list>();
         return out;
     }
 
@@ -175,33 +170,6 @@ public:
 
     py::buffer_info request() { return thisArray.request(); }
 
-    template <typename S>
-    class NumpyArrayIterator {
-    private:
-        NumpyArray_t<S>* iterArray;
-        ssize_t          iter_index;
-
-    public:
-        NumpyArrayIterator<S>(NumpyArray_t<S>* thisArray_) {
-            iter_index = 0;
-            iterArray = thisArray_;
-        }
-
-        NumpyArrayIterator<S>* iter() {
-            return this;
-        }
-
-        py::object next() {
-            if (iter_index >= iterArray->len()) {
-                throw py::stop_iteration();
-            }
-            return iterArray->getitem(iter_index++)->unwrap();
-        }
-    };
-
-    NumpyArrayIterator<T>* iter() {
-        return new NumpyArrayIterator<T>(this);
-    }
 };
 
 NumpyArray* getNumpyArray_t(py::array input) {

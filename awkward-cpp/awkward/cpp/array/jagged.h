@@ -112,8 +112,8 @@ public:
             throw std::invalid_argument("starts must be less than or equal to stops");
         }
         if (starts_info.size > 0) {
-            if (starts_max >= content->len()) {
-                throw std::invalid_argument("The maximum of starts for non-empty elements must be less than the length of content");
+            if (starts_max > content->len()) {
+                throw std::invalid_argument("The maximum of starts for non-empty elements must be less than or equal to the length of content");
             }
             if (stops_max > content->len()) {
                 throw std::invalid_argument("The maximum of stops for non-empty elements must be less than or equal to the length of content");
@@ -556,28 +556,52 @@ public:
         return getitem(input)->unwrap();
     }
 
-    static AnyArray* fromiter_any(py::object input) {
+    static AnyOutput* fromiter_any(py::object input) {
         py::tuple iter = input.cast<py::tuple>();
+        try {
+            iter[0];
+        }
+        catch (std::exception e) {
+            throw std::invalid_argument("checkpoint");
+            py::list temp;
+            temp.append(input);
+            py::array tempArray = temp.cast<py::array>();
+            NumpyArray* tempNumpy = getNumpyArray_t(tempArray);
+            AnyOutput* out = tempNumpy->getitem(0);
+            return out;
+        }
         if (iter.size() > 0) {
             try {
-                py::tuple iter2 = iter[0].cast<py::tuple>();
+                py::tuple inner = iter[0].cast<py::tuple>();
+                inner[0];
+                JaggedArray* out = fromiter(input);
+                return out;
             }
-            catch (py::cast_error e) {
-                py::array out = input.cast<py::array>();
-                return getNumpyArray_t(out);
-            }
+            catch (std::exception e) { }
         }
-        return fromiter(input);
+        py::array out = input.cast<py::array>();
+        return getNumpyArray_t(out);
     }
 
-    AnyOutput* getitem(py::tuple input, ssize_t index = 0) {
+    py::object getitem_tuple(py::tuple input, ssize_t index = 0) {
         if (index < 0 || index >= (ssize_t)input.size()) {
-            return this;
+            return unwrap();
         }
         try {
+            py::tuple check = input[index].cast<py::tuple>();
+            check[0];
+            py::array here = input[index].cast<py::array>();
+            AnyArray* fromHere = getitem(here);
+            py::list temp;
+            for (ssize_t i = 0; i < fromHere->len(); i++) {
+                temp.append(fromHere->getitem(i)->getitem_tuple(input, index + 1));
+            }
+            return fromiter_any(temp)->unwrap();
+        }
+        catch (std::exception e) { }
+        try {
             ssize_t here = input[index].cast<ssize_t>();
-            AnyOutput* fromHere = getitem(here);
-            return fromHere->getitem(input, index + 1);
+            return getitem(here)->getitem_tuple(input, index + 1);
         }
         catch (py::cast_error e) { }
         try {
@@ -586,28 +610,12 @@ public:
             if (!here.compute(len(), &start, &stop, &step, &slicelength)) {
                 throw py::error_already_set();
             }
-            AnyOutput* fromHere = getitem((ssize_t)start, (ssize_t)slicelength, (ssize_t)step);
-            if (index == ((ssize_t)input.size() - 1)) {
-                return fromHere;
-            }
+            AnyArray* fromHere = getitem((ssize_t)start, (ssize_t)slicelength, (ssize_t)step);
             py::list temp;
             for (ssize_t i = 0; i < fromHere->len(); i++) {
-                temp.append(fromHere->getitem(i)->getitem(input, index + 1));
+                temp.append(fromHere->getitem(i)->getitem_tuple(input, index + 1));
             }
-            return fromiter_any(temp);
-        }
-        catch (py::cast_error e) { }
-        try {
-            py::array here = input[index].cast<py::array>();
-            AnyOutput* fromHere = getitem(here);
-            if (index == ((ssize_t)input.size() - 1)) {
-                return fromHere;
-            }
-            py::list temp;
-            for (ssize_t i = 0; i < fromHere->len(); i++) {
-                temp.append(fromHere->getitem(i)->getitem(input, index + 1));
-            }
-            return fromiter_any(temp);
+            return fromiter_any(temp)->unwrap();
         }
         catch (py::cast_error e) {
             throw std::invalid_argument("argument index for __getitem__(tuple) not recognized");
@@ -615,7 +623,11 @@ public:
     }
 
     py::object python_getitem(py::tuple input) {
-        return getitem(input)->unwrap();
+        return getitem_tuple(input);
+    }
+
+    AnyOutput* getitem(py::tuple input) {
+        return fromiter_any(getitem_tuple(input));
     }
 
     py::object tolist() {
