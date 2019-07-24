@@ -789,9 +789,13 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             if isinstance(what, JaggedArray):
                 what = what.flatten()
 
-            if self._util_isintegertype(where._content.dtype.type):
-                if len(where.shape) == 1 and where._starts.shape != self._starts.shape:
+            if len(where.shape) == 1:
+                if where._starts.shape != self._starts.shape:
                     raise ValueError("jagged array used as index has a different shape {0} from the jagged array it is selecting from {1}".format(where._starts.shape, self._starts.shape))
+            elif where.shape != self.shape:
+                raise ValueError("jagged array used as index has a different shape {0} from the jagged array it is selecting from {1}".format(where._starts.shape, self._starts.shape))
+
+            if self._util_isintegertype(where._content.dtype.type):
 
                 whereoffsets = self.counts2offsets(where.counts)
                 where = where._tojagged(whereoffsets[:-1], whereoffsets[1:], copy=False)
@@ -810,21 +814,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
                 self._content[indexes] = what
 
-            elif len(where.shape) == 1 and issubclass(where._content.dtype.type, (self.numpy.bool, self.numpy.bool_)):
-                where = where._tojagged(self._starts, self._stops, copy=False)
-                wherecontent = self.numpy.array(where._content, dtype=self.BOOLTYPE)
-
-                wherecontent_indices_to_ignore = self.numpy.resize(where.parents < 0, wherecontent.shape)
-                wherecontent_indices_to_ignore[len(where.parents):] = True
-                wherecontent[wherecontent_indices_to_ignore] = False
-
-                original_wherecontent_length = len(wherecontent)
-                wherecontent = self.numpy.resize(wherecontent, self._content.shape)
-                wherecontent[original_wherecontent_length:] = False
-
-                self._content[wherecontent] = what
-
-            elif where.shape == self.shape and issubclass(where._content.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+            elif issubclass(where._content.dtype.type, (self.numpy.bool, self.numpy.bool_)):
                 index = self.localindex + self.starts
                 flatindex = index.flatten()[where.flatten()]
                 self._content[flatindex] = what
