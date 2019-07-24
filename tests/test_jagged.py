@@ -601,7 +601,8 @@ class Test(unittest.TestCase):
         assert a.argsort(True).tolist() == [[2, 0, 1], [1, 0, 2], [3, 1, 0, 2], [0], [3, 0, 2]]
 
     def test_jagged_setitem_bool_indexing(self):
-        a = fromiter([[1.1], [], [2.2, 3.3]])
+        a_normal = JaggedArray([0, 1, 1], [1, 1, 3], [1.1, 2.2, 3.3])
+        a_abnormal = JaggedArray([3, 4, 1], [4, 4, 3], [0.0, 2.2, 3.3, 1.1, 4.4])
 
         b1 = fromiter([[True], [], [True, True]])
         b2 = fromiter([[False], [], [True, True]])
@@ -611,15 +612,22 @@ class Test(unittest.TestCase):
         c2 = [7.7, 8.8]
         c3 = 9.9
 
-        a[b1] = c1
-        assert a.tolist() == [[4.4], [], [5.5, 6.6]]
-        a[b2] = c2
-        assert a.tolist() == [[4.4], [], [7.7, 8.8]]
-        a[b3] = c3
-        assert a.tolist() == [[4.4], [], [9.9, 8.8]]
+        a_normal[b1] = c1
+        a_abnormal[b1] = c1
+        assert a_normal.tolist() == [[4.4], [], [5.5, 6.6]]
+        assert a_abnormal.tolist() == [[4.4], [], [5.5, 6.6]]
+        a_normal[b2] = c2
+        a_abnormal[b2] = c2
+        assert a_normal.tolist() == [[4.4], [], [7.7, 8.8]]
+        assert a_abnormal.tolist() == [[4.4], [], [7.7, 8.8]]
+        a_normal[b3] = c3
+        a_abnormal[b3] = c3
+        assert a_normal.tolist() == [[4.4], [], [9.9, 8.8]]
+        assert a_abnormal.tolist() == [[4.4], [], [9.9, 8.8]]
 
     def test_jagged_setitem_integer_indexing(self):
-        a = fromiter([[1.1], [], [2.2, 3.3]])
+        a_normal = JaggedArray([0, 1, 1], [1, 1, 3], [1.1, 2.2, 3.3])
+        a_abnormal = JaggedArray([3, 4, 1], [4, 4, 3], [0.0, 2.2, 3.3, 1.1, 4.4])
 
         i1 = fromiter([[0], [], [0, 1]])
         i2 = fromiter([[], [], [0, 1]])
@@ -629,9 +637,15 @@ class Test(unittest.TestCase):
         c2 = [7.7, 8.8]
         c3 = 9.9
 
-        a[i1] = c1
-        assert a.tolist() == [[4.4], [], [5.5, 6.6]]
-        a[i2] = c2
-        assert a.tolist() == [[4.4], [], [7.7, 8.8]]
-        a[i3] = c3
-        assert a.tolist() == [[4.4], [], [9.9, 8.8]]
+        a_normal[i1] = c1
+        a_abnormal[i1] = c1
+        assert a_normal.tolist() == [[4.4], [], [5.5, 6.6]]
+        assert a_abnormal.tolist() == [[4.4], [], [5.5, 6.6]]
+        a_normal[i2] = c2
+        a_abnormal[i2] = c2
+        assert a_normal.tolist() == [[4.4], [], [7.7, 8.8]]
+        assert a_abnormal.tolist() == [[4.4], [], [7.7, 8.8]]
+        a_normal[i3] = c3
+        a_abnormal[i3] = c3
+        assert a_normal.tolist() == [[4.4], [], [9.9, 8.8]]
+        assert a_abnormal.tolist() == [[4.4], [], [9.9, 8.8]]
