@@ -29,7 +29,7 @@ public:
         throw std::domain_error("getitem is not allowed on a NumpyScalar");
     }
 
-    py::object getitem_tuple(py::tuple input, ssize_t index = 0) {
+    py::object getitem_tuple(py::tuple input, ssize_t index = 0, ssize_t select_index = -1) {
         if (index >= (ssize_t)input.size()) {
             return this->unwrap();
         }
@@ -42,6 +42,12 @@ public:
 
     std::string str() {
         return py::str(unwrap());
+    }
+
+    std::string repr() {
+        std::stringstream stream;
+        stream << std::hex << (long)this;
+        return "<NumpyScalar " + str() + " at 0x" + stream.str() + ">";
     }
 };
 
@@ -62,6 +68,12 @@ public:
 
     std::string str() {
         return py::str(thisArray);
+    }
+
+    std::string repr() {
+        std::stringstream stream;
+        stream << std::hex << (long)this;
+        return "<NumpyArray " + str() + " at 0x" + stream.str() + ">";
     }
 
     AnyArray* deepcopy() {
@@ -125,44 +137,80 @@ public:
         return intarray_getitem(input);
     }
 
-    py::object getitem_tuple(py::tuple input, ssize_t index = 0) {
+    py::object getitem_tuple(py::tuple input, ssize_t index = 0, ssize_t select_index = -1) {
         if (index >= (ssize_t)input.size()) {
             return unwrap();
         }
         try {
+            ssize_t here = input[index].cast<ssize_t>();
+            return getitem(here)->getitem_tuple(input, index + 1, select_index);
+        }
+        catch(py::cast_error e) { }
+        try {
             py::tuple check = input[index].cast<py::tuple>();
             check[0];
-            py::array here = input[index].cast<py::array>();
+        }
+        catch (std::exception e) {
+            try {
+                py::slice here = input[index].cast<py::slice>();
+                size_t start, stop, step, slicelength;
+                if (!here.compute(len(), &start, &stop, &step, &slicelength)) {
+                    throw py::error_already_set();
+                }
+                if (index != input.size() - 1) {
+                    throw std::invalid_argument("NumpyArray does not support object types");
+                }
+                return getitem((ssize_t)start, (ssize_t)slicelength, (ssize_t)step)->unwrap();
+            }
+            catch (py::cast_error e) {
+                throw std::invalid_argument("argument index for __getitem__(tuple) not recognized");
+            }
+        }
+        py::array here = input[index].cast<py::array>();
+        if (select_index < 0) {
             if (index != input.size() - 1) {
                 throw std::invalid_argument("NumpyArray does not support object types");
             }
             return getitem(here)->unwrap();
         }
-        catch (std::exception e) { }
-        try {
-            ssize_t here = input[index].cast<ssize_t>();
-            AnyOutput* fromHere = getitem(here);
-            return fromHere->getitem_tuple(input, index + 1);
-        }
-        catch (py::cast_error e) { }
-        try {
-            py::slice here = input[index].cast<py::slice>();
-            size_t start, stop, step, slicelength;
-            if (!here.compute(len(), &start, &stop, &step, &slicelength)) {
-                throw py::error_already_set();
+
+        py::array_t<ssize_t> indices;
+        if (here.request().format.find("?") != std::string::npos) {
+            if (here.request().size != len()) {
+                throw std::domain_error("Error: boolean array length is "
+                + std::to_string(here.request().size) + ", but dimension length is "
+                + std::to_string(len()) + ".");
             }
-            if (index != input.size() - 1) {
-                throw std::invalid_argument("NumpyArray does not support object types");
+            py::list trues;
+            for (ssize_t i = 0; i < here.request().size; i++) {
+                if (((bool*)here.request().ptr)[i]) {
+                    trues.append(i);
+                }
             }
-            return getitem((ssize_t)start, (ssize_t)slicelength, (ssize_t)step)->unwrap();
+            indices = trues.cast<py::array_t<ssize_t>>();
         }
-        catch (py::cast_error e) {
-            throw std::invalid_argument("argument index for __getitem__(tuple) not recognized");
+        else {
+            try {
+                indices = here.cast<py::array_t<ssize_t>>();
+            }
+            catch (py::cast_error e) {
+                throw std::invalid_argument("array must be of bool or int type");
+            }
         }
+        if (indices.request().size == 1) {
+            return getitem(((ssize_t*)indices.request().ptr)[0])->getitem_tuple(input, index + 1, select_index);
+        }
+        if (select_index > indices.request().size) {
+            throw std::domain_error("Error: selection index exceeded selection length");
+        }
+        return getitem(((ssize_t*)indices.request().ptr)[select_index])->getitem_tuple(input, index + 1, select_index);
     }
 
     py::object tolist() {
-        py::list out = thisArray.cast<py::list>();
+        py::list out;
+        for (ssize_t i = 0; i < len(); i++) {
+            out.append(getitem(i)->tolist());
+        }
         return out;
     }
 
