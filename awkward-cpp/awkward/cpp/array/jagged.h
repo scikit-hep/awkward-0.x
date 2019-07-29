@@ -686,6 +686,91 @@ public:
         return fromiter_any(getitem_tuple(input));
     }
 
+    py::object booljagged_getitem(JaggedArray* input) {
+        if (input->len() != len()) {
+            throw std::domain_error("bool array shape does not match array");
+        }
+        JaggedArray* inside = dynamic_cast<JaggedArray*>(content);
+        if (inside != 0) {
+            JaggedArray* input_inside = dynamic_cast<JaggedArray*>(input->get_content());
+            if (input_inside != 0) {
+                py::list out;
+                for (ssize_t i = 0; i < len(); i++) {
+                    inside = dynamic_cast<JaggedArray*>(getitem(i));
+                    input_inside = dynamic_cast<JaggedArray*>(input->getitem(i));
+                    out.append(inside->booljagged_getitem(input_inside));
+                }
+                return out;
+            }
+            else {
+                JaggedArray* this_array;
+                NumpyArray* input_array;
+                py::array input_unwrap;
+                py::list out;
+                for (ssize_t i = 0; i < len(); i++) {
+                    this_array = dynamic_cast<JaggedArray*>(getitem(i));
+                    input_array = dynamic_cast<NumpyArray*>(input->getitem(i));
+                    input_unwrap = input_array->unwrap().cast<py::array>();
+                    out.append(this_array->boolarray_getitem(input_unwrap)->unwrap());
+                }
+                return out;
+            }
+        }
+        else {
+            JaggedArray* input_inside = dynamic_cast<JaggedArray*>(input->get_content());
+            if (input_inside != 0) {
+                throw std::domain_error("arrays must be of the same dimensionality");
+            }
+            NumpyArray* this_array;
+            NumpyArray* input_array;
+            py::array input_unwrap;
+            py::list out;
+            for (ssize_t i = 0; i < len(); i++) {
+                this_array = dynamic_cast<NumpyArray*>(getitem(i));
+                input_array = dynamic_cast<NumpyArray*>(input->getitem(i));
+                input_unwrap = input_array->unwrap().cast<py::array>();
+                out.append(this_array->boolarray_getitem(input_unwrap)->unwrap());
+            }
+            return out;
+        }
+    }
+
+    py::object intjagged_getitem(JaggedArray* input) {
+        return unwrap(); // todo
+    }
+
+    JaggedArray* getitem(JaggedArray* input) {
+        if (input->len() == 0) {
+            return this;
+        }
+        AnyArray* content_ = input->get_content();
+        while (true) {
+            NumpyArray* array_content = dynamic_cast<NumpyArray*>(content_);
+            if (array_content != 0) {
+                if (array_content->len() == 0) {
+                    return this;
+                }
+                if (array_content->request().format.find("?") != std::string::npos) {
+                    return fromiter(booljagged_getitem(input));
+                }
+                return fromiter(intjagged_getitem(input));
+            }
+            else {
+                JaggedArray* this_content = dynamic_cast<JaggedArray*>(content_);
+                if (this_content != 0) {
+                    content_ = this_content->get_content();
+                }
+                else {
+                    throw std::invalid_argument("could not determine jagged array type");
+                }
+            }
+        }
+    }
+
+    py::object python_getitem(JaggedArray* input) {
+        return getitem(input)->unwrap();
+    }
+
     py::object tolist() {
         py::list out;
         for (ssize_t i = 0; i < len(); i++) {

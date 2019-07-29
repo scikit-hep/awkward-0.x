@@ -53,7 +53,8 @@ public:
 
 class NumpyArray : public AnyArray {
 public:
-    virtual py::buffer_info request() = 0;
+    virtual py::buffer_info request()                = 0;
+    virtual NumpyArray* boolarray_getitem(py::array) = 0;
 };
 
 NumpyArray* getNumpyArray_t(py::array input);
@@ -85,6 +86,10 @@ public:
     }
 
     AnyArray* getitem(ssize_t start, ssize_t length, ssize_t step = 1) {
+        if (length == 0) {
+            auto newPyarray = py::array_t<T>(0);
+            return new NumpyArray_t<T>(newPyarray);
+        }
         return new NumpyArray_t<T>(slice_numpy(thisArray, start, length, step));
     }
 
