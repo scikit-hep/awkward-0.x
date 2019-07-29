@@ -46,6 +46,6 @@ install:
 build_script:
   - "pip install %NUMPY%"
   - "pip install pytest pytest-runner h5py uproot-methods"
-  - "python -c \"import uproot_methods; print(uproot_methods.__version__)\""
+  - "python -c \"import 'uproot_methods==0.4.7'; print(uproot_methods.__version__)\""
   - "python -c \"import awkward; print(awkward.__version__)\""
   - "pytest -v tests"
