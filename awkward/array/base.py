@@ -321,7 +321,7 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         else:
             try:
                 return cls.numpy.frombuffer(value, dtype=getattr(value, "dtype", defaultdtype)).reshape(getattr(value, "shape", -1))
-            except AttributeError:
+            except (AttributeError, TypeError):
                 if len(value) == 0:
                     return cls.numpy.array(value, dtype=defaultdtype, copy=False)
                 else:
