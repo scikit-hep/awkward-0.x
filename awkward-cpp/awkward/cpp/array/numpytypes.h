@@ -54,7 +54,6 @@ public:
 class NumpyArray : public AnyArray {
 public:
     virtual py::buffer_info request()                = 0;
-    virtual NumpyArray* boolarray_getitem(py::array) = 0;
 };
 
 NumpyArray* getNumpyArray_t(py::array input);
@@ -98,7 +97,7 @@ public:
         return new NumpyScalar_t<T>(((T*)thisArray.request().ptr)[i * N]);
     }
 
-    NumpyArray* boolarray_getitem(py::array input) {
+    AnyArray* boolarray_getitem(py::array input) {
         ssize_t length = input.request().size;
         if (length != len()) {
             throw std::invalid_argument("bool array length must be equal to array length");

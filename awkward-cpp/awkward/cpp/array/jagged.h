@@ -485,7 +485,7 @@ public:
         return getitem(index)->unwrap();
     }
 
-    JaggedArray* boolarray_getitem(py::array input) {
+    AnyArray* boolarray_getitem(py::array input) {
         ssize_t length = input.request().size;
         if (length != len()) {
             throw std::invalid_argument("bool array length must be equal to jagged array length");
@@ -702,37 +702,18 @@ public:
                 }
                 return out;
             }
-            else {
-                JaggedArray* this_array;
-                NumpyArray* input_array;
-                py::array input_unwrap;
-                py::list out;
-                for (ssize_t i = 0; i < len(); i++) {
-                    this_array = dynamic_cast<JaggedArray*>(getitem(i));
-                    input_array = dynamic_cast<NumpyArray*>(input->getitem(i));
-                    input_unwrap = input_array->unwrap().cast<py::array>();
-                    out.append(this_array->boolarray_getitem(input_unwrap)->unwrap());
-                }
-                return out;
-            }
         }
-        else {
-            JaggedArray* input_inside = dynamic_cast<JaggedArray*>(input->get_content());
-            if (input_inside != 0) {
-                throw std::domain_error("arrays must be of the same dimensionality");
-            }
-            NumpyArray* this_array;
-            NumpyArray* input_array;
-            py::array input_unwrap;
-            py::list out;
-            for (ssize_t i = 0; i < len(); i++) {
-                this_array = dynamic_cast<NumpyArray*>(getitem(i));
-                input_array = dynamic_cast<NumpyArray*>(input->getitem(i));
-                input_unwrap = input_array->unwrap().cast<py::array>();
-                out.append(this_array->boolarray_getitem(input_unwrap)->unwrap());
-            }
-            return out;
+        AnyArray* this_array;
+        NumpyArray* input_array;
+        py::array input_unwrap;
+        py::list out;
+        for (ssize_t i = 0; i < len(); i++) {
+            this_array = dynamic_cast<AnyArray*>(getitem(i));
+            input_array = dynamic_cast<NumpyArray*>(input->getitem(i));
+            input_unwrap = input_array->unwrap().cast<py::array>();
+            out.append(this_array->boolarray_getitem(input_unwrap)->unwrap());
         }
+        return out;
     }
 
     py::object intjagged_getitem(JaggedArray* input) {
