@@ -785,8 +785,45 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             for x, y in zip(where, what):
                 self._content[x] = self.tojagged(y)._content
 
+        elif isinstance(where, JaggedArray):
+            if isinstance(what, JaggedArray):
+                what = what.flatten()
+
+            if len(where.shape) == 1:
+                if where._starts.shape != self._starts.shape:
+                    raise ValueError("jagged array used as index has a different shape {0} from the jagged array it is selecting from {1}".format(where._starts.shape, self._starts.shape))
+            elif where.shape != self.shape:
+                raise ValueError("jagged array used as index has a different shape {0} from the jagged array it is selecting from {1}".format(where._starts.shape, self._starts.shape))
+
+            if self._util_isintegertype(where._content.dtype.type):
+
+                whereoffsets = self.counts2offsets(where.counts)
+                where = where._tojagged(whereoffsets[:-1], whereoffsets[1:], copy=False)
+
+                counts = where.tojagged(self.counts)._content
+
+                indexes = self.numpy.array(where._content[:whereoffsets[-1]], copy=True)
+
+                negatives = (indexes < 0)
+                indexes[negatives] += counts[negatives]
+
+                if not self.numpy.bitwise_and(0 <= indexes, indexes < counts).all():
+                    raise IndexError("jagged array used as index contains out-of-bounds values")
+
+                indexes += where.tojagged(self._starts)._content
+
+                self._content[indexes] = what
+
+            elif issubclass(where._content.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+                index = self.localindex + self.starts
+                flatindex = index.flatten()[where.flatten()]
+                self._content[flatindex] = what
+
+            else:
+                raise TypeError("jagged index must be boolean (mask) or integer (fancy indexing)")
+
         else:
-            raise TypeError("invalid index for assigning column to Table: {0}".format(where))
+            raise TypeError("invalid index for assigning to JaggedArray: {0}".format(where))
 
     def tojagged(self, data):
         if isinstance(data, JaggedArray):
