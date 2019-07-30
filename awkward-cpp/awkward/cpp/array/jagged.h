@@ -514,7 +514,7 @@ public:
         return new JaggedArray(outStarts, outStops, content);
     }
 
-    JaggedArray* intarray_getitem(py::array input) {
+    AnyArray* intarray_getitem(py::array input) {
         makeIntNative_CPU(input);
         input = input.cast<py::array_t<std::int64_t>>();
         py::buffer_info array_info = input.request();
@@ -562,7 +562,6 @@ public:
             iter[0];
         }
         catch (std::exception e) {
-            throw std::invalid_argument("checkpoint");
             py::list temp;
             temp.append(input);
             py::array tempArray = temp.cast<py::array>();
@@ -691,9 +690,9 @@ public:
             throw std::domain_error("bool array shape does not match array");
         }
         JaggedArray* inside = dynamic_cast<JaggedArray*>(content);
-        if (inside != 0) {
-            JaggedArray* input_inside = dynamic_cast<JaggedArray*>(input->get_content());
-            if (input_inside != 0) {
+        JaggedArray* input_inside = dynamic_cast<JaggedArray*>(input->get_content());
+        if (input_inside != 0) {
+            if (inside != 0) {
                 py::list out;
                 for (ssize_t i = 0; i < len(); i++) {
                     inside = dynamic_cast<JaggedArray*>(getitem(i));
@@ -702,6 +701,7 @@ public:
                 }
                 return out;
             }
+            throw std::domain_error("cannot have doubly jagged mask with singly jagged array");
         }
         AnyArray* this_array;
         NumpyArray* input_array;
@@ -717,7 +717,34 @@ public:
     }
 
     py::object intjagged_getitem(JaggedArray* input) {
-        return unwrap(); // todo
+        JaggedArray* inside = dynamic_cast<JaggedArray*>(content);
+        JaggedArray* input_inside = dynamic_cast<JaggedArray*>(input->get_content());
+        if (input_inside != 0) {
+            if (inside != 0) {
+                if (input->len() != len()) {
+                    throw std::domain_error("int array shape does not match array");
+                }
+                py::list out;
+                for (ssize_t i = 0; i < input->len(); i++) {
+                    inside = dynamic_cast<JaggedArray*>(getitem(i));
+                    input_inside = dynamic_cast<JaggedArray*>(input->getitem(i));
+                    out.append(inside->intjagged_getitem(input_inside));
+                }
+                return out;
+            }
+            throw std::domain_error("cannot have doubly jagged int array with single jagged array");
+        }
+        AnyArray* this_array;
+        NumpyArray* input_array;
+        py::array input_unwrap;
+        py::list out;
+        for (ssize_t i = 0; i < len(); i++) {
+            this_array = dynamic_cast<AnyArray*>(getitem(i));
+            input_array = dynamic_cast<NumpyArray*>(input->getitem(i));
+            input_unwrap = input_array->unwrap().cast<py::array>();
+            out.append(this_array->intarray_getitem(input_unwrap)->unwrap());
+        }
+        return out;
     }
 
     JaggedArray* getitem(JaggedArray* input) {

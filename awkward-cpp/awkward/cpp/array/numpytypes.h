@@ -113,7 +113,7 @@ public:
         return getNumpyArray_t(out);
     }
 
-    NumpyArray* intarray_getitem(py::array input) {
+    AnyArray* intarray_getitem(py::array input) {
         makeIntNative_CPU(input);
         input = input.cast<py::array_t<ssize_t>>();
         py::buffer_info array_info = input.request();
@@ -129,7 +129,7 @@ public:
             if (here < 0 || here >= len()) {
                 throw std::invalid_argument("int array indices must be within the bounds of the array");
             }
-            out_ptr[i] = ((T*)thisArray.request().ptr)[i * N];
+            out_ptr[i] = ((T*)thisArray.request().ptr)[here * N];
         }
         return getNumpyArray_t(out);
     }

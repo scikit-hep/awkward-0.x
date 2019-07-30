@@ -25,6 +25,7 @@ public:
     virtual AnyArray*   deepcopy()                         = 0;
     virtual ssize_t     len()                              = 0;
     virtual AnyArray*   boolarray_getitem(py::array input) = 0;
+    virtual AnyArray*   intarray_getitem(py::array input)  = 0;
 };
 
 class AwkwardArray : public AnyArray {

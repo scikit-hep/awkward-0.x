@@ -252,6 +252,15 @@ class Test(unittest.TestCase):
         assert test1(a2, JaggedArray.fromiter([[True, False], [], [True]])).tolist() == [[[1.1, 2.2, 3.3]], [], [[4.4, 5.5]]]
         assert test1(a2, JaggedArray.fromiter([[[True, False, True], []], [], [[False, True]]])).tolist() == [[[1.1, 3.3], []], [], [[5.5]]]
 
+    def test_cpp_getitem_jagged_intarray(self):
+        a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = JaggedArray.fromcounts([2, 0, 1], a)
+        def test1(x, i):
+            return x[i]
+        assert test1(a, JaggedArray.fromiter([[2, 0, 0], [], [1]])).tolist() == [[3.3, 1.1, 1.1], [], [5.5]]
+        assert test1(a2, JaggedArray.fromiter([[1, 0], [], [0]])).tolist() == [[[], [1.1, 2.2, 3.3]], [], [[4.4, 5.5]]]
+        assert test1(a2, JaggedArray.fromiter([[[2, 0, 0], []], [], [[1]]])).tolist() == [[[3.3, 1.1, 1.1], []], [], [[5.5]]]
+
     def test_cpp_offsets2parents(self):
         offsets = numpy.array([0, 2, 4, 4, 7], dtype=numpy.int64)
         parents = JaggedArray.offsets2parents(offsets)
