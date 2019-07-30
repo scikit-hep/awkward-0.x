@@ -213,36 +213,6 @@ class Test(unittest.TestCase):
         assert test1(a, numpy.array([2, 0]), 1).tolist() == [7.7, 2.2]
         assert test1(a2, numpy.array([1, 0, 0]), 1).tolist() == [[8.8, 9.9], [4.4, 5.5], [4.4, 5.5]]
 
-    def test_cpp_getitem_tuple_slice_boolarray(self):
-        a = numpy.arange(36).reshape(4, 3, 3)
-        a2 = JaggedArray.fromiter(a)
-        def test1(x, i):
-            return x[1:3, i]
-        assert test1(a, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
-        assert test1(a2, numpy.array([True, False, True])).tolist() == [[[9, 10, 11], [15, 16, 17]], [[18, 19, 20], [24, 25, 26]]]
-        def test2(x, i, j):
-            return x[1:3, i, j]
-        assert test2(a, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[9, 16], [18, 25]]
-        assert test2(a2, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[9, 16], [18, 25]]
-        a = numpy.arange(27).reshape(3, 3, 3)
-        a2 = JaggedArray.fromiter(a)
-        def test3(x, i, j):
-            return x[i, j]
-        assert test3(a, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[0, 1, 2], [21, 22, 23]]
-        assert test3(a2, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[0, 1, 2], [21, 22, 23]]
-        def test4(x, i, j):
-            return x[i, :, j]
-        assert test4(a, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[0, 3, 6], [19, 22, 25]]
-        assert test4(a2, numpy.array([True, False, True]), numpy.array([True, True, False])).tolist() == [[0, 3, 6], [19, 22, 25]]
-
-    def test_cpp_getitem_tuple_slice_intarray(self):
-        a = numpy.arange(36).reshape(4, 3, 3)
-        a2 = JaggedArray.fromiter(a)
-        def test1(x, i):
-            return x[1:3, i]
-        assert test1(a, numpy.array([1, 0, 2])).tolist() == [[[12, 13, 14], [9, 10, 11], [15, 16, 17]], [[21, 22, 23], [18, 19, 20], [24, 25, 26]]]
-        assert test1(a2, numpy.array([1, 0, 2])).tolist() == [[[12, 13, 14], [9, 10, 11], [15, 16, 17]], [[21, 22, 23], [18, 19, 20], [24, 25, 26]]]
-
     def test_cpp_getitem_jagged_boolarray(self):
         a = JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         a2 = JaggedArray.fromcounts([2, 0, 1], a)
