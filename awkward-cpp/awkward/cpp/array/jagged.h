@@ -516,32 +516,29 @@ public:
 
     AnyArray* intarray_getitem(py::array input) {
         makeIntNative_CPU(input);
-        input = input.cast<py::array_t<std::int64_t>>();
+        input = input.cast<py::array_t<ssize_t>>();
         py::buffer_info array_info = input.request();
-        auto array_ptr = (std::int64_t*)array_info.ptr;
+        struct c_array array_struct = py2c(&array_info);
 
         auto newStarts = py::array_t<std::int64_t>(array_info.size);
-        auto newStarts_ptr = (std::int64_t*)newStarts.request().ptr;
+        py::buffer_info newStarts_info = newStarts.request();
+        struct c_array newStarts_struct = py2c(&newStarts_info);
 
         py::buffer_info starts_info = starts.request();
-        auto starts_ptr = (std::int64_t*)starts_info.ptr;
-        int N_starts = starts_info.strides[0] / starts_info.itemsize;
+        struct c_array starts_struct = py2c(&starts_info);
 
         auto newStops = py::array_t<std::int64_t>(array_info.size);
-        auto newStops_ptr = (std::int64_t*)newStops.request().ptr;
+        py::buffer_info newStops_info = newStops.request();
+        struct c_array newStops_struct = py2c(&newStops_info);
 
         py::buffer_info stops_info = stops.request();
-        auto stops_ptr = (std::int64_t*)stops_info.ptr;
-        int N_stops = stops_info.strides[0] / stops_info.itemsize;
+        struct c_array stops_struct = py2c(&stops_info);
 
-        for (ssize_t i = 0; i < array_info.size; i++) {
-            std::int64_t here = array_ptr[i];
-            if (here < 0 || here >= len()) {
-                throw std::invalid_argument("int array indices must be within the bounds of the jagged array");
-            }
-            newStarts_ptr[i] = starts_ptr[N_starts * here];
-            newStops_ptr[i] = stops_ptr[N_stops * here];
+        if (!fillintarray_CPU(&array_struct, &newStarts_struct, &starts_struct)
+            || !fillintarray_CPU(&array_struct, &newStops_struct, &stops_struct)) {
+            throw std::invalid_argument("Error in cpu_methods.h::fillintarray_CPU");
         }
+
         return new JaggedArray(newStarts, newStops, content);
     }
 
