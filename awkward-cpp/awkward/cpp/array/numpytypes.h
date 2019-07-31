@@ -117,20 +117,19 @@ public:
         makeIntNative_CPU(input);
         input = input.cast<py::array_t<ssize_t>>();
         py::buffer_info array_info = input.request();
-        auto array_ptr = (ssize_t*)array_info.ptr;
+        struct c_array array_struct = py2c(&array_info);
 
         auto out = py::array_t<T>(array_info.size);
-        auto out_ptr = (T*)out.request().ptr;
+        py::buffer_info out_info = out.request();
+        struct c_array out_struct = py2c(&out_info);
 
-        int N = thisArray.request().strides[0] / thisArray.request().itemsize;
+        py::buffer_info thisArray_info = thisArray.request();
+        struct c_array thisArray_struct = py2c(&thisArray_info);
 
-        for (ssize_t i = 0; i < array_info.size; i++) {
-            ssize_t here = array_ptr[i];
-            if (here < 0 || here >= len()) {
-                throw std::invalid_argument("int array indices must be within the bounds of the array");
-            }
-            out_ptr[i] = ((T*)thisArray.request().ptr)[here * N];
+        if (!fillintarray_CPU(&array_struct, &out_struct, &thisArray_struct)) {
+            throw std::invalid_argument("Error in cpu_methods.h::fillintarray_CPU");
         }
+        
         return getNumpyArray_t(out);
     }
 
