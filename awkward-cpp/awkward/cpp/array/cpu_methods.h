@@ -1072,6 +1072,9 @@ int deepcopy_CPU(struct c_array *a, struct c_array *b) {
     return 0;
 }
 
+// todo: write an intarray function which takes an array and an intarray
+//      and fills the intarray using the array.
+
 #endif                       // end include guard
 
 #ifdef __cplusplus           // end C compiler instruction
