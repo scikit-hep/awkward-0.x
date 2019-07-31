@@ -23,9 +23,9 @@ struct c_array py2c(py::buffer_info *info) {
 int makeIntNative_CPU(py::array input) {
     py::buffer_info input_info = input.request();
     struct c_array input_struct = py2c(&input_info);
-    if (!checkInt_CPU(&input_struct)) {
+    /*if (!checkInt_CPU(&input_struct)) {
         throw std::invalid_argument("Argument must be an int array");
-    }
+    }*/
     if (!makeNative_CPU(&input_struct)) {
         throw std::invalid_argument("Error in cpu_methods.h::makeNative_CPU");
     }

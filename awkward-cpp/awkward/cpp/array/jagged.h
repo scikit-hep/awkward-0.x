@@ -112,8 +112,8 @@ public:
             throw std::invalid_argument("starts must be less than or equal to stops");
         }
         if (starts_info.size > 0) {
-            if (starts_max >= content->len()) {
-                throw std::invalid_argument("The maximum of starts for non-empty elements must be less than the length of content");
+            if (starts_max > content->len()) {
+                throw std::invalid_argument("The maximum of starts for non-empty elements must be less than or equal to the length of content");
             }
             if (stops_max > content->len()) {
                 throw std::invalid_argument("The maximum of stops for non-empty elements must be less than or equal to the length of content");
@@ -458,7 +458,7 @@ public:
         return getitem((ssize_t)start, (ssize_t)slicelength, (ssize_t)step)->unwrap();
     }
 
-    AnyArray* getitem(ssize_t index) {
+    AnyOutput* getitem(ssize_t index) {
         py::buffer_info starts_info = starts.request();
         py::buffer_info stops_info = stops.request();
         if (starts_info.size > stops_info.size) {
@@ -485,7 +485,7 @@ public:
         return getitem(index)->unwrap();
     }
 
-    JaggedArray* boolarray_getitem(py::array input) {
+    AnyArray* boolarray_getitem(py::array input) {
         ssize_t length = input.request().size;
         if (length != len()) {
             throw std::invalid_argument("bool array length must be equal to jagged array length");
@@ -514,7 +514,7 @@ public:
         return new JaggedArray(outStarts, outStops, content);
     }
 
-    JaggedArray* intarray_getitem(py::array input) {
+    AnyArray* intarray_getitem(py::array input) {
         makeIntNative_CPU(input);
         input = input.cast<py::array_t<std::int64_t>>();
         py::buffer_info array_info = input.request();
@@ -545,7 +545,7 @@ public:
         return new JaggedArray(newStarts, newStops, content);
     }
 
-    JaggedArray* getitem(py::array input) {
+    AnyArray* getitem(py::array input) {
         if (input.request().format.find("?") != std::string::npos) {
             return boolarray_getitem(input);
         }
@@ -553,6 +553,229 @@ public:
     }
 
     py::object python_getitem(py::array input) {
+        return getitem(input)->unwrap();
+    }
+
+    static AnyOutput* fromiter_any(py::object input) {
+        py::tuple iter = input.cast<py::tuple>();
+        try {
+            iter[0];
+        }
+        catch (std::exception e) {
+            py::list temp;
+            temp.append(input);
+            py::array tempArray = temp.cast<py::array>();
+            NumpyArray* tempNumpy = getNumpyArray_t(tempArray);
+            AnyOutput* out = tempNumpy->getitem(0);
+            return out;
+        }
+        if (iter.size() > 0) {
+            try {
+                py::tuple inner = iter[0].cast<py::tuple>();
+                inner[0];
+                JaggedArray* out = fromiter(input);
+                return out;
+            }
+            catch (std::exception e) { }
+        }
+        py::array out = input.cast<py::array>();
+        return getNumpyArray_t(out);
+    }
+
+    py::object getitem_tuple(py::tuple input, ssize_t index = 0, ssize_t select_index = -1) {
+        if (index < 0 || index >= (ssize_t)input.size()) { // end case
+            return unwrap();
+        }
+        try { // int input
+            ssize_t here = input[index].cast<ssize_t>();
+            return getitem(here)->getitem_tuple(input, index + 1, select_index);
+        }
+        catch (py::cast_error e) { }
+        try { // array input --> goes past the catch block
+            py::tuple check = input[index].cast<py::tuple>();
+            check[0];
+        }
+        catch (std::exception e) {
+            try { // slice input
+                py::slice here = input[index].cast<py::slice>();
+                size_t start, stop, step, slicelength;
+                if (!here.compute(len(), &start, &stop, &step, &slicelength)) {
+                    throw py::error_already_set();
+                }
+                AnyArray* fromHere = getitem((ssize_t)start, (ssize_t)slicelength, (ssize_t)step);
+                /*if (index + 1 < (ssize_t)input.size()) {
+                    bool nextIsArray = false;
+                    try {
+                        py::tuple check = input[index + 1].cast<py::tuple>();
+                        check[0];
+                        nextIsArray = True;
+                    }
+                    catch (std::exception) { }
+                    if (nextIsArray) {
+                        py::list temp;
+                        for (ssize_t i = 0; i < fromHere->len(); i++) {
+
+                        }
+                    }
+                }*/
+                py::list temp;
+                for (ssize_t i = 0; i < fromHere->len(); i++) {
+                    temp.append(fromHere->getitem(i)->getitem_tuple(input, index + 1, select_index));
+                }
+                return fromiter_any(temp)->unwrap();
+            }
+            catch (py::cast_error e) {
+                throw std::invalid_argument("argument index for __getitem__(tuple) not recognized");
+            }
+        } // continued array input
+        py::array here = input[index].cast<py::array>();
+        if (select_index < 0) {
+            AnyArray* fromHere = getitem(here);
+            if (fromHere->len() == 1) {
+                py::list temp;
+                temp.append(fromHere->getitem(0)->getitem_tuple(input, index + 1, select_index));
+                return fromiter_any(temp)->unwrap();
+            }
+            py::list temp;
+            for (ssize_t i = 0; i < fromHere->len(); i++) {
+                temp.append(fromHere->getitem(i)->getitem_tuple(input, index + 1, i));
+            }
+            return fromiter_any(temp)->unwrap();
+        }
+
+        py::array_t<ssize_t> indices;
+        if (here.request().format.find("?") != std::string::npos) {
+            if (here.request().size != len()) {
+                throw std::domain_error("Error: boolean array length is "
+                + std::to_string(here.request().size) + ", but dimension length is "
+                + std::to_string(len()) + ".");
+            }
+            py::list trues;
+            for (ssize_t i = 0; i < here.request().size; i++) {
+                if (((bool*)here.request().ptr)[i]) {
+                    trues.append(i);
+                }
+            }
+            indices = trues.cast<py::array_t<ssize_t>>();
+        }
+        else {
+            try {
+                indices = here.cast<py::array_t<ssize_t>>();
+            }
+            catch (py::cast_error e) {
+                throw std::invalid_argument("array must be of bool or int type");
+            }
+        }
+        if (indices.request().size == 1) {
+            py::list out;
+            out.append(getitem(((ssize_t*)indices.request().ptr)[0])->getitem_tuple(input, index + 1, select_index));
+            return fromiter_any(out)->unwrap();
+        }
+        if (select_index > indices.request().size) {
+            throw std::domain_error("Error: selection index exceeded selection length");
+        }
+        return getitem(((ssize_t*)indices.request().ptr)[select_index])->getitem_tuple(input, index + 1, select_index);
+    }
+
+    py::object python_getitem(py::tuple input) {
+        return getitem_tuple(input);
+    }
+
+    AnyOutput* getitem(py::tuple input) {
+        return fromiter_any(getitem_tuple(input));
+    }
+
+    py::object booljagged_getitem(JaggedArray* input) {
+        if (input->len() != len()) {
+            throw std::domain_error("bool array shape does not match array");
+        }
+        JaggedArray* inside = dynamic_cast<JaggedArray*>(content);
+        JaggedArray* input_inside = dynamic_cast<JaggedArray*>(input->get_content());
+        if (input_inside != 0) {
+            if (inside != 0) {
+                py::list out;
+                for (ssize_t i = 0; i < len(); i++) {
+                    inside = dynamic_cast<JaggedArray*>(getitem(i));
+                    input_inside = dynamic_cast<JaggedArray*>(input->getitem(i));
+                    out.append(inside->booljagged_getitem(input_inside));
+                }
+                return out;
+            }
+            throw std::domain_error("cannot have doubly jagged mask with singly jagged array");
+        }
+        AnyArray* this_array;
+        NumpyArray* input_array;
+        py::array input_unwrap;
+        py::list out;
+        for (ssize_t i = 0; i < len(); i++) {
+            this_array = dynamic_cast<AnyArray*>(getitem(i));
+            input_array = dynamic_cast<NumpyArray*>(input->getitem(i));
+            input_unwrap = input_array->unwrap().cast<py::array>();
+            out.append(this_array->boolarray_getitem(input_unwrap)->unwrap());
+        }
+        return out;
+    }
+
+    py::object intjagged_getitem(JaggedArray* input) {
+        JaggedArray* inside = dynamic_cast<JaggedArray*>(content);
+        JaggedArray* input_inside = dynamic_cast<JaggedArray*>(input->get_content());
+        if (input_inside != 0) {
+            if (inside != 0) {
+                if (input->len() != len()) {
+                    throw std::domain_error("int array shape does not match array");
+                }
+                py::list out;
+                for (ssize_t i = 0; i < input->len(); i++) {
+                    inside = dynamic_cast<JaggedArray*>(getitem(i));
+                    input_inside = dynamic_cast<JaggedArray*>(input->getitem(i));
+                    out.append(inside->intjagged_getitem(input_inside));
+                }
+                return out;
+            }
+            throw std::domain_error("cannot have doubly jagged int array with single jagged array");
+        }
+        AnyArray* this_array;
+        NumpyArray* input_array;
+        py::array input_unwrap;
+        py::list out;
+        for (ssize_t i = 0; i < len(); i++) {
+            this_array = dynamic_cast<AnyArray*>(getitem(i));
+            input_array = dynamic_cast<NumpyArray*>(input->getitem(i));
+            input_unwrap = input_array->unwrap().cast<py::array>();
+            out.append(this_array->intarray_getitem(input_unwrap)->unwrap());
+        }
+        return out;
+    }
+
+    JaggedArray* getitem(JaggedArray* input) {
+        if (input->len() == 0) {
+            return this;
+        }
+        AnyArray* content_ = input->get_content();
+        while (true) {
+            NumpyArray* array_content = dynamic_cast<NumpyArray*>(content_);
+            if (array_content != 0) {
+                if (array_content->len() == 0) {
+                    return this;
+                }
+                if (array_content->request().format.find("?") != std::string::npos) {
+                    return fromiter(booljagged_getitem(input));
+                }
+                return fromiter(intjagged_getitem(input));
+            }
+            else {
+                JaggedArray* this_content = dynamic_cast<JaggedArray*>(content_);
+                if (this_content != 0) {
+                    content_ = this_content->get_content();
+                }
+                else {
+                    throw std::invalid_argument("could not determine jagged array type");
+                }
+            }
+        }
+    }
+
+    py::object python_getitem(JaggedArray* input) {
         return getitem(input)->unwrap();
     }
 

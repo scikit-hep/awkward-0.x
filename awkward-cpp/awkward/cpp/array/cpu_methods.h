@@ -112,6 +112,9 @@ int makeNative_CPU(struct c_array *input) {
 
 int checkInt_CPU(struct c_array *input) {
     // returns 1 if it's an int array
+    if (input->size == 0) {
+        return 1;
+    }
     char intList[] = "qQlLhHbB";
     ssize_t k = 0;
     if (input->format[0] == '<' || input->format[0] == '>' ||
