@@ -12,6 +12,7 @@
 #include "cpu_pybind11.h"
 
 #include <stdio.h> // for debugging purposes
+#include <bitset> //temporary?
 
 namespace py = pybind11;
 
@@ -486,32 +487,40 @@ public:
     }
 
     AnyArray* boolarray_getitem(py::array input) {
-        ssize_t length = input.request().size;
-        if (length != len()) {
-            throw std::invalid_argument("bool array length must be equal to jagged array length");
-        }
-        auto array_ptr = (bool*)input.request().ptr;
-
-        py::list tempStarts;
-        py::list tempStops;
-
         py::buffer_info starts_info = starts.request();
-        auto starts_ptr = (std::int64_t*)starts_info.ptr;
-        int N_starts = starts_info.strides[0] / starts_info.itemsize;
+        struct c_array starts_struct = py2c(&starts_info);
 
         py::buffer_info stops_info = stops.request();
-        auto stops_ptr = (std::int64_t*)stops_info.ptr;
-        int N_stops = stops_info.strides[0] / stops_info.itemsize;
+        struct c_array stops_struct = py2c(&stops_info);
 
-        for (ssize_t i = 0; i < length; i++) {
-            if (array_ptr[i]) {
-                tempStarts.append(starts_ptr[i * N_starts]);
-                tempStops.append(stops_ptr[i * N_stops]);
-            }
+        auto tempStarts = py::array_t<std::int64_t>(starts_info.size);
+        py::buffer_info tempStarts_info = tempStarts.request();
+        struct c_array tempStarts_struct = py2c(&tempStarts_info);
+
+        auto tempStops = py::array_t<std::int64_t>(starts_info.size);
+        py::buffer_info tempStops_info = tempStops.request();
+        struct c_array tempStops_struct = py2c(&tempStops_info);
+
+        py::buffer_info array_info = input.request();
+        struct c_array array_struct = py2c(&array_info);
+
+        if (array_info.size != len()) {
+            throw std::invalid_argument("bool array length must be equal to jagged array length");
         }
-        py::array_t<std::int64_t> outStarts = tempStarts.cast<py::array_t<std::int64_t>>();
-        py::array_t<std::int64_t> outStops = tempStops.cast<py::array_t<std::int64_t>>();
-        return new JaggedArray(outStarts, outStops, content);
+
+        ssize_t startLength = 0;
+        ssize_t stopLength = 0;
+
+        if (!fillboolarray_CPU(&array_struct, &tempStarts_struct, &starts_struct, &startLength)
+            || !fillboolarray_CPU(&array_struct, &tempStops_struct, &stops_struct, &stopLength)) {
+            throw std::invalid_argument("Error in cpu_methods.h::fillboolarray_CPU");
+        }
+
+        return new JaggedArray(
+            slice_numpy(tempStarts, 0, startLength),
+            slice_numpy(tempStops, 0, stopLength),
+            content
+        );
     }
 
     AnyArray* intarray_getitem(py::array input) {

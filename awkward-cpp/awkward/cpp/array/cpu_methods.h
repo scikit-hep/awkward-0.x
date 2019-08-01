@@ -1193,18 +1193,55 @@ int fillintarray_CPU(struct c_array *ints, struct c_array *a, struct c_array *b)
     return 0;
 }
 
-// todo: paste/replace in the 16bit, 32bit, and 64bit versions of fillboolarray
-
 int fillboolarray_8bit(struct c_array *bools, struct c_array *a, struct c_array *b, ssize_t *len) {
-    if (bools->size != a->size || a->size != b->size)
+    if (bools->size != a->size || a->size > b->size)
         return 0;
     *len = 0;
-    ssize_t N_bools = bools->shape[0] / bools->itemsize,
-            N_a = a->shape[0] / a->itemsize,
-            N_b = b->shape[0] / b->itemsize;
-    for (ssize_t i = 0; i < b->size; i++)
-        if (((bool*)bool->ptr)[i * N_bools])
+    ssize_t N_bools = bools->strides[0] / bools->itemsize,
+            N_a = a->strides[0] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    for (ssize_t i = 0; i < a->size; i++)
+        if (((uint8_t*)bools->ptr)[i * N_bools])
             ((int8_t*)a->ptr)[(*len)++ * N_a] = ((int8_t*)b->ptr)[i * N_b];
+    return 1;
+}
+
+int fillboolarray_16bit(struct c_array *bools, struct c_array *a, struct c_array *b, ssize_t *len) {
+    if (bools->size != a->size || a->size > b->size)
+        return 0;
+    *len = 0;
+    ssize_t N_bools = bools->strides[0] / bools->itemsize,
+            N_a = a->strides[0] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    for (ssize_t i = 0; i < a->size; i++)
+        if (((uint8_t*)bools->ptr)[i * N_bools])
+            ((int16_t*)a->ptr)[(*len)++ * N_a] = ((int16_t*)b->ptr)[i * N_b];
+    return 1;
+}
+
+int fillboolarray_32bit(struct c_array *bools, struct c_array *a, struct c_array *b, ssize_t *len) {
+    if (bools->size != a->size || a->size > b->size)
+        return 0;
+    *len = 0;
+    ssize_t N_bools = bools->strides[0] / bools->itemsize,
+            N_a = a->strides[0] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    for (ssize_t i = 0; i < a->size; i++)
+        if (((uint8_t*)bools->ptr)[i * N_bools])
+            ((int32_t*)a->ptr)[(*len)++ * N_a] = ((int32_t*)b->ptr)[i * N_b];
+    return 1;
+}
+
+int fillboolarray_64bit(struct c_array *bools, struct c_array *a, struct c_array *b, ssize_t *len) {
+    if (bools->size != a->size || a->size > b->size)
+        return 0;
+    *len = 0;
+    ssize_t N_bools = bools->strides[0] / bools->itemsize,
+            N_a = a->strides[0] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    for (ssize_t i = 0; i < a->size; i++)
+        if (((uint8_t*)bools->ptr)[i * N_bools])
+            ((int64_t*)a->ptr)[(*len)++ * N_a] = ((int64_t*)b->ptr)[i * N_b];
     return 1;
 }
 
@@ -1214,7 +1251,8 @@ int fillboolarray_CPU(struct c_array *bools, struct c_array *a, struct c_array *
         - also writes the returned length of a to len
     PREREQUISITES:
         - bools must be a boolean array
-        - bools, a, and b must all be 1d with the same size
+        - bools, a, and b must all be 1d
+        - bools and a must be of equal length and of the same or shorter length than b
         - a and b must be the same type
     */
     if (b->itemsize == 1)
