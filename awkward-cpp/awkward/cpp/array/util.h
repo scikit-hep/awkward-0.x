@@ -17,7 +17,11 @@ py::array_t<T> slice_numpy(py::array_t<T> input, ssize_t start, ssize_t length, 
     if (length < 0) {
         throw std::invalid_argument("slice length cannot be less than 0");
     }
-    if (start < 0 || start > arrayLen || start + (length * step) > arrayLen || start + (length * step) < -1) {
+    if ((length != 0) && (
+        start < 0
+        || start >= arrayLen
+        || start + (length * step) > arrayLen
+        || start + (length * step) < -1)) {
         throw std::out_of_range("slice must be in the bounds of the array");
     }
     py::buffer_info temp_info = py::buffer_info(input.request());
