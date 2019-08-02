@@ -48,6 +48,8 @@ Awkward-array is a pure Python+Numpy library for manipulating complex data struc
 
 this library can access them as `columnar data structures <https://towardsdatascience.com/the-beauty-of-column-oriented-data-2945c0c9f560>`__, with the efficiency of Numpy arrays. They may be converted from JSON or Python data, loaded from "awkd" files, `HDF5 <https://www.hdfgroup.org>`__, `Parquet <https://parquet.apache.org>`__, or `ROOT <https://root.cern>`__ files, or they may be views into memory buffers like `Arrow <https://arrow.apache.org>`__.
 
+**Note:** feedback on this project informs the development of `awkward-1.0 <https://github.com/jpivarski/awkward-1.0>`__, a reimplementation in C++ with a simpler user interface, coming in 2020. Leave comments about the future of awkward-array there (as GitHub issues or in the Google Docs).
+
 .. inclusion-marker-2-do-not-remove
 
 Installation
