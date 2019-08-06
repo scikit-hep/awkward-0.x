@@ -1576,8 +1576,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         else:
             out = self.localindex[self.max() == self]
 
+        print("out", out.tolist())
+
         # workaround for lack of general out[...,:1] support
         nonempty = out.counts > 0
+        if self.offsetsaliased(out._starts, out._stops):
+            out.stops = out.stops.copy()
         out.stops[nonempty] = out.starts[nonempty] + 1
         return out
 
