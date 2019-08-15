@@ -117,7 +117,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         until = min(until, len(self._chunks))
         for i in range(len(self._chunksizes), until):
             self._chunksizes.append(len(self._chunks[i]))
-        self._offsets = None
+            self._offsets = None
 
     def knowtype(self, at):
         if not 0 <= at < len(self._chunks):
