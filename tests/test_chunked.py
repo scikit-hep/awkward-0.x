@@ -136,6 +136,11 @@ class Test(unittest.TestCase):
         assert a[[True, False, True, False, True, False, True, False, True, False], 0].tolist() == [0.0, 2.0, 4.0, 6.0, 8.0]
         assert a[[True, False, True, False, True, False, True, False, True, False], 1].tolist() == [0.0, 2.2, 4.4, 6.6, 8.8]
 
+    def test_chunked_flatten_len(self):
+        a = ChunkedArray([[[0, 1]], [[2, 3], [4, 5]], [[6, 7], [8, 9]]])
+        assert len(a) == 5
+        assert len(a.flatten()) == 10
+
     def test_appendable_append(self):
         a = AppendableArray(3, numpy.float64)
         assert a.tolist() == []
