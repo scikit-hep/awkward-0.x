@@ -726,6 +726,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             self.knowchunksizes(chunkid + 1)
             if self._chunksizes[chunkid] > 0:
                 return self._util_columns_descend(self._chunks[chunkid], seen)
+        return []
 
     def _util_rowname(self, seen):
         if id(self) in seen:

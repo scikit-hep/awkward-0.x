@@ -121,6 +121,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
     def shape(self):
         return self.type.shape
 
+    @property
+    def ndim(self):
+        return len(self.shape)
+
     def _try_tolist(self, x):
         try:
             return x.tolist()
