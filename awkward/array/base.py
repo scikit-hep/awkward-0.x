@@ -78,6 +78,11 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         self.__dict__.update(out.__dict__)
         self.__class__ = out.__class__
 
+    def __reduce__(self):
+        state = {}
+        awkward.persist.serialize(self, state)
+        return (awkward.persist.deserialize, (state,))
+
     def _checkiter(self):
         if not self.allow_iter:
             raise RuntimeError("awkward.array.base.AwkwardArray.allow_iter is False; refusing to iterate")
