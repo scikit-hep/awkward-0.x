@@ -207,5 +207,5 @@ class Test(unittest.TestCase):
     def test_table_row_dict_iteration(self):
         column_dict = {'a': [1, 3], 'b': [2, 4]}
         a = Table(column_dict)
-        b = [set([row[key] for key in row]) for row in a]
-        assert b == [set([1, 2]), set([3, 4])]
+        b = [{key: row[key] for key in row} for row in a]
+        assert b == [{'a': 1, 'b': 2}, {'a': 3, 'b': 4}]
