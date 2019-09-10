@@ -182,7 +182,11 @@ class Test(unittest.TestCase):
         assert all(unzip[0] == left)
         assert all(unzip[1] == right)
 
-    def test_table_iteration(self):
+    def test_table_row_tuple_len(self):
+        a = Table([1], [2])
+        assert len(a[0]) == 2
+
+    def test_table_row_tuple_iteration(self):
         rows = [[1, 2], [3, 4]]
         columns = zip(*rows)
         a = Table(*columns)
@@ -195,13 +199,13 @@ class Test(unittest.TestCase):
                     iter(element)
         assert b == rows
 
-    def test_table_column_dict_row_len(self):
+    def test_table_row_dict_len(self):
         column_dict = {'a': [1], 'b': [2]}
         a = Table(column_dict)
         assert len(a[0]) == 2
 
-    def test_table_column_dict_row_iteration(self):
+    def test_table_row_dict_iteration(self):
         column_dict = {'a': [1, 3], 'b': [2, 4]}
         a = Table(column_dict)
-        b = [set([element for element in row]) for row in a]
+        b = [set([row[key] for key in row]) for row in a]
         assert b == [set([1, 2]), set([3, 4])]
