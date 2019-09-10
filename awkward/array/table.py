@@ -53,13 +53,25 @@ class Table(awkward.array.base.AwkwardArray):
                 return dict((n, self._table._try_tolist(x[self._index])) for n, x in self._table._contents.items())
 
         def __len__(self):
-            return len(self._table._contents)
+            if self._table.rowname == 'Row':
+                return len(self._table._contents)
+            else:
+                i = 0
+                while str(i) in self._table._contents:
+                    i += 1
+                return i
 
         def __iter__(self, checkiter=True):
             if checkiter:
                 self._table._checkiter()
-            for i in self._table._contents:
-                yield self._table._contents[i][self._index]
+            if self._table.rowname == 'Row':
+                for i in self._table._contents:
+                    yield i
+            else:
+                i = 0
+                while str(i) in self._table._contents:
+                    yield self._table._contents[str(i)][self._index]
+                    i += 1
 
         def __getitem__(self, where):
             if isinstance(where, awkward.util.string):
