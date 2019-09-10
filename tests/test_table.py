@@ -194,3 +194,9 @@ class Test(unittest.TestCase):
                 with self.assertRaises(TypeError, msg='Scalar row element should not be iterable'):
                     iter(element)
         assert b == rows
+
+    def test_table_column_dict_iteration(self):
+        column_dict = {'a': [1, 3], 'b': [2, 4]}
+        a = Table(column_dict)
+        b = [set([element for element in row]) for row in a]
+        assert b == [set([1, 2]), set([3, 4])]
