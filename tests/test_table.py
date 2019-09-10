@@ -195,7 +195,12 @@ class Test(unittest.TestCase):
                     iter(element)
         assert b == rows
 
-    def test_table_column_dict_iteration(self):
+    def test_table_column_dict_row_len(self):
+        column_dict = {'a': [1], 'b': [2]}
+        a = Table(column_dict)
+        assert len(a[0]) == 2
+
+    def test_table_column_dict_row_iteration(self):
         column_dict = {'a': [1, 3], 'b': [2, 4]}
         a = Table(column_dict)
         b = [set([element for element in row]) for row in a]
