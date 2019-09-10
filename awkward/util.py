@@ -278,7 +278,7 @@ def topandas_flatten(array):
                 tpen = tpe[n]
                 colsn = cols + (n,) if seriously else cols
 
-                if isinstance(arrayn, awkward.array.objects.ObjectArray):
+                if isinstance(arrayn, awkward.array.objects.ObjectArray) and not isinstance(arrayn, awkward.array.objects.StringArray):
                     arrayn = arrayn.content
                 if not isinstance(tpen, (numpy.dtype, str, bytes, awkward.type.Type)):
                     tpen = awkward.type.fromarray(arrayn).to
@@ -295,6 +295,10 @@ def topandas_flatten(array):
 
                 elif isinstance(tpen, awkward.type.TableType):
                     tmp = recurse(arrayn, tpen, colsn, True)
+
+                elif isinstance(tpen, awkward.type.OptionType) and isinstance(arrayn.content, numpy.ndarray):
+                    columns.append(colsn)
+                    tmp = numpy.ma.MaskedArray(arrayn.content, arrayn.boolmask(maskedwhen=True))
 
                 else:
                     raise ValueError("this array has unflattenable substructure:\n\n{0}".format(str(tpen)))
