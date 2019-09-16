@@ -1832,6 +1832,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         flatstarts = self._starts.reshape(-1)
 
+        if len(self._content) == 0:
+            offsets = self.numpy.arange(0, length*len(flatstarts) + 1, length)
+            starts, stops = offsets[:-1], offsets[1:]
+            content = self.IndexedMaskedArray(self.numpy.full(length*len(flatstarts), -1, dtype=self.INDEXTYPE), self._content, maskedwhen=-1)
+            return self.copy(starts=starts.reshape(self._starts.shape), stops=stops.reshape(self._starts.shape), content=content)
+
         if clip:
             almostflat = self._starts.reshape(-1, 1)
             index = self.numpy.arange(length, dtype=self.INDEXTYPE) + almostflat
