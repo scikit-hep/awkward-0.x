@@ -28,3 +28,9 @@ class Test(unittest.TestCase):
         a = fromiter([[1, 3], [4, 5]])
         b = a[a.counts > 10]
         assert b[:,:1].tolist() == []
+
+    def test_issue_190(self):
+        a = JaggedArray.fromiter([[], []])
+        assert a.pad(1).tolist() == [[None], [None]]
+        assert a.pad(2).tolist() == [[None, None], [None, None]]
+        assert a.pad(3).tolist() == [[None, None, None], [None, None, None]]
