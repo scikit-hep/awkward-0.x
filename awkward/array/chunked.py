@@ -323,7 +323,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             where = (where,)
         head, tail = where[0], where[1:]
 
-        if isinstance(head, self.ChunkedArray):
+        if isinstance(head, ChunkedArray):
             if not self._aligned(head):
                 raise ValueError("A ChunkedArray can only be used as a slice of a ChunkedArray if they have the same chunk sizes")
             chunks = []
@@ -630,14 +630,32 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         return out
 
     def cross(self, other, nested=False):
-        out = self.copy(chunks=[x.cross(other, nested=nested) for x in self._chunks])
-        out.knowchunksizes()
-        return out
+        if not isinstance(other, ChunkedArray) or not self._aligned(other):
+            raise ValueError("A ChunkedArray can only be crossed with a ChunkedArray if they have the same chunk sizes")
+        chunks = []
+        chunksizes = []
+        for c, h in zip(self.chunks, other.chunks):
+            if isinstance(c, awkward.array.virtual.VirtualArray):
+                c = c.array
+            if isinstance(h, awkward.array.virtual.VirtualArray):
+                h = h.array
+            chunks.append(c.cross(h, nested=nested))
+            chunksizes.append(len(chunks[-1]))
+        return self.copy(chunks=chunks, chunksizes=chunksizes)
 
     def argcross(self, other, nested=False):
-        out = self.copy(chunks=[x.argcross(other, nested=nested) for x in self._chunks])
-        out.knowchunksizes()
-        return out
+        if not isinstance(other, ChunkedArray) or not self._aligned(other):
+            raise ValueError("A ChunkedArray can only be crossed with a ChunkedArray if they have the same chunk sizes")
+        chunks = []
+        chunksizes = []
+        for c, h in zip(self.chunks, other.chunks):
+            if isinstance(c, awkward.array.virtual.VirtualArray):
+                c = c.array
+            if isinstance(h, awkward.array.virtual.VirtualArray):
+                h = h.array
+            chunks.append(c.argcross(h, nested=nested))
+            chunksizes.append(len(chunks[-1]))
+        return self.copy(chunks=chunks, chunksizes=chunksizes)
 
     def flattentuple(self):
         return self.copy(chunks=[self._util_flattentuple(x) for x in self._chunks], chunksizes=self._chunksizes)
