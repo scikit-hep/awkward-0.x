@@ -302,6 +302,8 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
             return super(ChunkedArray, self).__array__(*args, **kwargs)
 
     def __getitem__(self, where):
+        import awkward.array.virtual
+
         self._valid()
 
         if self._util_isstringslice(where):
@@ -320,6 +322,20 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
         if not isinstance(where, tuple):
             where = (where,)
         head, tail = where[0], where[1:]
+
+        if isinstance(head, self.ChunkedArray):
+            if not self._aligned(head):
+                raise ValueError("A ChunkedArray can only be used as a slice of a ChunkedArray if they have the same chunk sizes")
+            chunks = []
+            chunksizes = []
+            for c, h in zip(self.chunks, head.chunks):
+                if isinstance(c, awkward.array.virtual.VirtualArray):
+                    c = c.array
+                if isinstance(h, awkward.array.virtual.VirtualArray):
+                    h = h.array
+                chunks.append(c[h, tail])
+                chunksizes.append(len(chunks[-1]))
+            return self.copy(chunks=chunks, chunksizes=chunksizes)
 
         if self._util_isinteger(head):
             chunk, localhead = self.global2local(head)
