@@ -63,10 +63,10 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
         if dtype is None:
             dtype = self.dtype
 
-        if dtype == self.numpy.dtype(object):
-            return self.numpy.array(list(self), dtype=dtype)
-        else:
-            return self.numpy.fromiter(self, dtype=dtype, count=len(self))
+        out = self.numpy.empty(len(self), dtype=dtype)
+        for i, x in enumerate(self):
+            out[i] = x
+        return out
 
     def __getstate__(self):
         state = {}
