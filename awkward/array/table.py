@@ -904,7 +904,7 @@ class Table(awkward.array.base.AwkwardArray):
             else:
                 concatenate = content_type.concatenate
 
-            out._contents[n] = concatenate([t._contents[n] for t in tables], axis=0)
+            out._contents[n] = concatenate([t[n] for t in tables], axis=0)
 
         out._valid()
         return out
