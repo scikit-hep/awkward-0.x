@@ -886,8 +886,13 @@ class IndexedMaskedArray(MaskedArray):
         out = self._util_fillna(self._content, value)
         if not isinstance(out, self.numpy.ndarray):
             out = self.numpy.array(out)
-        out[self.mask < 0] = value
-        return out
+        out = self.numpy.append(out, value)
+        if (self.mask < -1).any():
+            mask = self.mask.copy()
+            mask[mask < -1] = -1
+        else:
+            mask = self.mask
+        return out[mask]
 
     @classmethod
     def _concatenate_axis0(cls, arrays):
