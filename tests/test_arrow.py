@@ -367,7 +367,10 @@ class Test(unittest.TestCase):
             x = pyarrow.array([1, 2, 3])
             y = pyarrow.array([1.1, 2.2, 3.3])
             table = pyarrow.Table.from_arrays([x], ["x"])
-            table2 = table.add_column(1, pyarrow.column(pyarrow.field("y", y.type, False), numpy.array([1.1, 2.2, 3.3])))
+            if hasattr(pyarrow, "column"):
+                table2 = table.add_column(1, pyarrow.column(pyarrow.field("y", y.type, False), numpy.array([1.1, 2.2, 3.3])))
+            else:
+                table2 = table.add_column(1, "y", y)
             assert awkward.arrow.fromarrow(table2).tolist() == [{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}]
 
     def test_arrow_trailing_zero(self):
