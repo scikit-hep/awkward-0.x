@@ -81,6 +81,17 @@ Recommended packages:
 
 .. inclusion-marker-3-do-not-remove
 
+Questions
+=========
+
+If you have a question about how to use awkward-array that is not answered in the document below, I recommend asking your question on `StackOverflow <https://stackoverflow.com/questions/tagged/awkward-array>`__ with the ``[awkward-array]`` tag. (I get notified of questions with this tag.)
+
+.. raw:: html
+
+   <p align="center"><a href="https://stackoverflow.com/questions/tagged/awkward-array"><img src="https://cdn.sstatic.net/Sites/stackoverflow/company/img/logos/so/so-logo.png" width="30%"></a></p>
+
+If you believe you have found a bug in awkward-array, post it on the `GitHub issues tab <https://github.com/scikit-hep/awkward-array/issues>`__.
+
 Tutorial
 ========
 
