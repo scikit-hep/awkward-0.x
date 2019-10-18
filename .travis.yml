@@ -51,7 +51,7 @@ install:
   - python -c 'import awkward; print(awkward.__version__)'
   - if [[ $TRAVIS_PYTHON_VERSION != pypy*  &&  $NUMPY == "numpy==1.13.1" ]] ; then pip install h5py ; fi
   - if [[ $TRAVIS_PYTHON_VERSION != pypy*  &&  $NUMPY != "numpy==1.13.1" ]] ; then pip install h5py pyarrow; python -c 'import pyarrow; print("pyarrow", pyarrow.__version__)' ; fi
-  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install numba ; ln -s ../awkward-numba/awkward/numba awkward/numba ; fi
+#  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install numba ; ln -s ../awkward-numba/awkward/numba awkward/numba ; fi
   - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pybind11 ; cd awkward-cpp ; python setup.py build ; cd .. ; tree awkward-cpp/build/ ; cd awkward ; ln -s ../awkward-cpp/build/lib.*/awkward/cpp cpp ; cd .. ; ls -l awkward/cpp ; ls -l awkward/cpp/ ; python -c 'print("TESTING awkward-cpp"); import awkward.cpp; print(awkward.cpp.JaggedArray)' ; fi
   - export AWKWARD_DEPLOYMENT=awkward
   - pip install --upgrade pyOpenSSL     # for deployment

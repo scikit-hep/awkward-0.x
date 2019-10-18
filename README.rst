@@ -60,7 +60,6 @@ Install awkward like any other Python package:
 .. code-block:: bash
 
     pip install awkward                       # maybe with sudo or --user, or in virtualenv
-    pip install awkward-numba                 # optional: integration with and optimization by Numba
 
 or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
 
@@ -68,9 +67,8 @@ or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
 
     conda config --add channels conda-forge   # if you haven't added conda-forge already
     conda install awkward
-    conda install awkward-numba               # optional: integration with and optimization by Numba
 
-The base ``awkward`` package requires only `Numpy <https://scipy.org/install.html>`__  (1.13.1+), but ``awkward-numba`` additionally requires `Numba <https://numba.pydata.org/numba-doc/dev/user/installing.html>`__.
+The base ``awkward`` package requires only `Numpy <https://scipy.org/install.html>`__  (1.13.1+).
 
 Recommended packages:
 ---------------------
@@ -1274,7 +1272,7 @@ The following list translates awkward-array classes and features to their Arrow 
 High-level operations: common to all classes
 --------------------------------------------
 
-There are three levels of abstraction in awkward-array: high-level operations for data analysis, low-level operations for engineering the structure of the data, and implementation details. Implementation details are handled in the usual way for Python: if exposed at all, class, method, and function names begin with underscores and are not guaranteed to be stable from one release to the next. There is more than one implementation of awkward: the original awkward library, which depends only on Numpy, awkward-numba, which uses Numba to just-in-time compile its operations, and awkward-cpp, which has precompiled operations. Each has its own implementation details.
+There are three levels of abstraction in awkward-array: high-level operations for data analysis, low-level operations for engineering the structure of the data, and implementation details. Implementation details are handled in the usual way for Python: if exposed at all, class, method, and function names begin with underscores and are not guaranteed to be stable from one release to the next.
 
 The distinction between high-level operations and low-level operations is more subtle and developed as awkward-array was put to use. Data analysts care about the logical structure of the data—whether it is jagged, what the column names are, whether certain values could be ``None``, etc. Data engineers (or an analyst in "engineering mode") care about contiguousness, how much data are in memory at a given time, whether strings are dictionary-encoded, whether arrays have unreachable elements, etc. The dividing line is between high-level types and low-level array layout (both of which are defined in their own sections below). The following awkward classes have the same high-level type as their content:
 
@@ -3086,7 +3084,7 @@ Functions for input/output and conversion
 
 Most of the functions defined at the top-level of the library are conversion functions.
 
-* ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False, maskedwhen=True)``: convert Python or JSON data into awkward arrays. Not a fast function: it necessarily involves a Python for loop. The ``awkwardlib`` determines which awkward module to use to make arrays (``awkward`` is the default, but ``awkward.numba`` and ``awkward.cpp`` are alternatives). If ``dictencoding`` is ``True``, bytes and strings will be "dictionary-encoded" in Arrow/Parquet terms—this is an ``IndexedArray`` in awkward. The ``maskedwhen`` parameter determines whether ``MaskedArrays`` have a mask that is ``True`` when data are missing or ``False`` when data are missing.
+* ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False, maskedwhen=True)``: convert Python or JSON data into awkward arrays. Not a fast function: it necessarily involves a Python for loop. The ``awkwardlib`` determines which awkward module to use to make arrays. If ``dictencoding`` is ``True``, bytes and strings will be "dictionary-encoded" in Arrow/Parquet terms—this is an ``IndexedArray`` in awkward. The ``maskedwhen`` parameter determines whether ``MaskedArrays`` have a mask that is ``True`` when data are missing or ``False`` when data are missing.
 
 .. code-block:: python3
 
