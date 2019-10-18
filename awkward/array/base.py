@@ -572,10 +572,17 @@ class AwkwardArray(awkward.util.NDArrayOperatorsMixin):
             cls = type(self)
             arrays = (self,) + tuple(arrays)
 
+        def resolve(t):
+            for b in t.__bases__:
+                if issubclass(t, AwkwardArray):
+                    return resolve(b)
+            else:
+                return t
+
         if all(type(x) == cls.numpy.ndarray for x in arrays):
             return cls.numpy.concatenate(arrays, axis=axis)
 
-        if not all(type(x) == type(arrays[0]) for x in arrays):
+        if not all(resolve(type(x)) == resolve(type(arrays[0])) for x in arrays):
             if axis == 0:
                 tags = cls.numpy.concatenate([cls.numpy.full(len(x), i, dtype=cls.TAGTYPE) for i, x in enumerate(arrays)])
                 return cls.UnionArray.fget(None).fromtags(tags, arrays)
