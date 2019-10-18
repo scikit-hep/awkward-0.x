@@ -1633,6 +1633,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def _concatenate_axis1(cls, arrays):
+        import awkward.array.table
+
         if len(arrays) == 0:
             raise ValueError("at least one array must be provided")   # this can only happen in the classmethod case
         if any(len(a) != len(arrays[0]) for a in arrays):
@@ -1644,6 +1646,12 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
         flatarrays = [a.flatten() for a in arrays]
         n_arrays = len(arrays)
+
+        if n_arrays > 0 and all(isinstance(a, awkward.array.table.Table) and set(cls._util_columns_descend(a, set())) == set(cls._util_columns_descend(flatarrays[0], set())) for a in flatarrays):
+            results = {}
+            for n in flatarrays[0].columns:
+                results[n] = cls._concatenate_axis1([a[n] for a in arrays])
+            return cls.zip(results)
 
         # the first step is to get the starts and stops for the stacked structure
         counts = np.vstack([a.counts for a in arrays])
@@ -1704,7 +1712,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             content = flatarrays[0].copy(content=awkward.array.table.Table(**tablecontent))
 
         else:
-            raise NotImplementedError("concatenate with axis=1 is not implemented for " + type(arrays[0]).__name__)
+            raise NotImplementedError("concatenate with axis=1 is not implemented for these types")
 
         return arrays[0].__class__(starts[::n_arrays], stops[n_arrays-1::n_arrays], content)
 
