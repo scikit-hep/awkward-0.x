@@ -276,19 +276,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             return self.copy(content=self._content.ones_like(**overrides))
 
     def __awkward_serialize__(self, serializer):
-        if self._canuseoffset():
-            return serializer.encode_call(
-                ["awkward", "JaggedArray", "fromcounts"],
-                serializer(self.counts, "JaggedArray.counts"),
-                serializer(self._content, "JaggedArray.content"),
-            )
-        else:
-            return serializer.encode_call(
-                ["awkward", "JaggedArray"],
-                serializer(self._starts, "JaggedArray.starts"),
-                serializer(self._stops, "JaggedArray.stops"),
-                serializer(self._content, "JaggedArray.content"),
-            )
+        return serializer.encode_call(
+            ["awkward", "JaggedArray", "fromcounts"],
+            serializer(self.counts, "JaggedArray.counts"),
+            serializer(self.flatten(), "JaggedArray.content"))
 
     @property
     def starts(self):
