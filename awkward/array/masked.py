@@ -289,7 +289,18 @@ class MaskedArray(awkward.array.base.AwkwardArrayWithContent):
         return self.copy(content=self._util_flattentuple(self._content))
 
     def flatten(self, axis=0):
-        return self._util_flatten(self._content[self.boolmask(maskedwhen=False)], axis)
+        mask = self.boolmask(maskedwhen=False)
+        goodcontent = self._content[mask]
+        content = self._util_flatten(goodcontent, axis)
+        counts = self._util_counts(goodcontent)
+        counts[counts < 0] = 1
+        augcounts = self.numpy.ones(len(self), dtype=self.INDEXTYPE)
+        augcounts[mask] = counts
+        augparents = self.JaggedArray.offsets2parents(self.JaggedArray.counts2offsets(augcounts))
+        augmask = mask[augparents]
+        index = self.numpy.cumsum(augmask) - 1
+        index[~augmask] = -1
+        return self.IndexedMaskedArray(index, content)
 
     def pad(self, length, maskedwhen=True, clip=False, axis=0):
         return self.copy(content=self._util_pad(self._content, length, maskedwhen, clip, axis))
@@ -825,6 +836,20 @@ class IndexedMaskedArray(MaskedArray):
         out = self._util_counts(self._content)[self._index]
         out[self.boolmask(maskedwhen=True)] = -1
         return out
+
+    def flatten(self, axis=0):
+        mask = self.boolmask(maskedwhen=False)
+        goodcontent = self._content[self._mask[self._mask >= 0]]
+        content = self._util_flatten(goodcontent, axis)
+        counts = self._util_counts(goodcontent)
+        counts[counts < 0] = 1
+        augcounts = self.numpy.ones(len(self), dtype=self.INDEXTYPE)
+        augcounts[mask] = counts
+        augparents = self.JaggedArray.offsets2parents(self.JaggedArray.counts2offsets(augcounts))
+        augmask = mask[augparents]
+        index = self.numpy.cumsum(augmask) - 1
+        index[~augmask] = -1
+        return self.IndexedMaskedArray(index, content)
 
     def regular(self):
         self._valid()

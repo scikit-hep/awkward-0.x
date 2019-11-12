@@ -34,3 +34,11 @@ class Test(unittest.TestCase):
         assert a.pad(1).tolist() == [[None], [None]]
         assert a.pad(2).tolist() == [[None, None], [None, None]]
         assert a.pad(3).tolist() == [[None, None, None], [None, None, None]]
+
+    def test_issue_208(self):
+        a = awkward.MaskedArray([True, False, False, True, False, True], awkward.fromiter([[1, 2, 3], [4, 5], [6], [7, 8], [10, 11, 12], [999]]))
+        assert a.flatten().tolist() == [None, 4, 5, 6, None, 10, 11, 12, None]
+        assert (a + 100).flatten().tolist() == [None, 104, 105, 106, None, 110, 111, 112, None]
+        a = awkward.MaskedArray([True, False, False, True, False, True], [1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
+        assert a.flatten().tolist() == [None, 2.2, 3.3, None, 5.5, None]
+        assert (a + 100).flatten().tolist() == [None, 102.2, 103.3, None, 105.5, None]
