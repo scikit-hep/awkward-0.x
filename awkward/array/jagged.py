@@ -1308,6 +1308,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         right = other._starts[parents] + iop - ocp * iop_ocp
 
         out = self.JaggedArray.fromoffsets(offsets, self.Table.named("tuple", left, right))
+        out._offsets = offsets
         out._parents = parents
         return out
 
