@@ -60,7 +60,7 @@ setup(name = "awkward",
       test_suite = "tests",
       install_requires = ["numpy>=1.13.1"],
       setup_requires = ["pytest-runner"],
-      tests_require = ["pytest"],
+      tests_require = ["pytest", "pandas"],
       classifiers = [
           # "Development Status :: 1 - Planning",
           # "Development Status :: 2 - Pre-Alpha",
