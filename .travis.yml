@@ -43,7 +43,7 @@ script:
 install:
   - pip install --upgrade setuptools_scm
   - pip install $NUMPY
-  - if [[ $TRAVIS_PYTHON_VERSION == *2.7* ]] ; then pip install "pandas==0.24.2"; else pip install "pandas==0.25.3" ; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]] ; then pip install "pandas==0.24.2"; elif [[ $TRAVIS_PYTHON_VERSION != pypy* ]]; then pip install "pandas==0.25.3" ; fi
   - if [[ $TRAVIS_PYTHON_VERSION = pypy* ]] ; then pip install "numpy<1.16.0" ; fi       # FIXME: pypy bug in numpy
   - python -c 'import numpy; print(numpy.__version__)'
   - pip install pytest pytest-runner
