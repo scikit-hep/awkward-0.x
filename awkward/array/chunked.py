@@ -333,7 +333,7 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
                     c = c.array
                 if isinstance(h, awkward.array.virtual.VirtualArray):
                     h = h.array
-                chunks.append(c[h, tail])
+                chunks.append(c[(h,) + tail])
                 chunksizes.append(len(chunks[-1]))
             return self.copy(chunks=chunks, chunksizes=chunksizes)
 
