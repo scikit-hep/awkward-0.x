@@ -208,7 +208,20 @@ except AttributeError:
             __abs__ = _unary_method(um.absolute, 'abs')
             __invert__ = _unary_method(um.invert, 'invert')
 
-################################################################ conversion of arrays to Pandas
+################################################################ conversion of arrays from/to Pandas
+
+
+def frompandas(dataframe):
+    """Converts a Pandas DataFrame to an Awkward Table
+
+    :param dataframe: Pandas DataFrame
+    :return: awkward.Table
+    """
+
+    import awkward.array.table
+
+    return awkward.Table({name: dataframe[name].values for name in dataframe.columns})
+
 
 def topandas(array, flatten=False):
     import pandas
