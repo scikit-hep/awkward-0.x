@@ -12,7 +12,6 @@ try:
 except ImportError:
     from collections import Iterable
 
-import pyarrow
 import awkward.array.base
 import awkward.persist
 import awkward.type
@@ -135,10 +134,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @classmethod
     def fromoffsets(cls, offsets, content):
         offsets = cls._util_toarray(offsets, cls.INDEXTYPE, cls.numpy.ndarray)
-        if hasattr(offsets.base, 'base') and isinstance(offsets.base.base, pyarrow.lib.Buffer):
+        if hasattr(offsets.base, 'base') and str(type(offsets.base.base)) == "<class 'pyarrow.lib.Buffer'>":
             # special exception to prevent copy in awkward.fromarrow
             pass
-        if offsets.base is not None:
+        elif offsets.base is not None:
             # We rely on the starts,stops slices to be views.
             # If offsets is already a view, the base will not be offsets but its underlying base.
             # Make a copy to prevent that
