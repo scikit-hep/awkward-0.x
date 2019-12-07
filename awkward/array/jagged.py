@@ -134,7 +134,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @classmethod
     def fromoffsets(cls, offsets, content):
         offsets = cls._util_toarray(offsets, cls.INDEXTYPE, cls.numpy.ndarray)
-        if hasattr(offsets.base, 'base') and str(type(offsets.base.base)) == "<class 'pyarrow.lib.Buffer'>":
+        if hasattr(offsets.base, 'base') and type(offsets.base.base).__module__ == "pyarrow.lib" and type(offsets.base.base).__name__ == "Buffer":
             # special exception to prevent copy in awkward.fromarrow
             pass
         elif offsets.base is not None:
