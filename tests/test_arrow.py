@@ -389,6 +389,17 @@ class Test(unittest.TestCase):
             b = awkward.fromarrow(batch)
             assert a.tolist() == b["a"].tolist()
 
+    def test_arrow_fromarrow_zerocopy(self):
+        if pyarrow is None:
+            pytest.skip("unable to import pyarrow")
+        else:
+            a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8], [], [9.9]])
+            b = awkward.toarrow(a)
+            c = awkward.fromarrow(b)
+            assert c.offsets.ctypes.data == b.buffers()[1].address
+            assert c.content.ctypes.data == b.buffers()[3].address
+            assert c.offsetsaliased(c.starts, c.stops)
+
     # def test_arrow_writeparquet(self):
     #     if pyarrow is None:
     #         pytest.skip("unable to import pyarrow")
