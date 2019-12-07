@@ -152,9 +152,11 @@ def toarrow(obj, use_large_index=False):
         elif isinstance(obj, awkward.array.objects.StringArray):
             if obj.encoding is None and hasattr(pyarrow.BinaryArray, 'from_buffers'):
                 arrow_type = pyarrow.BinaryArray
+                arrow_offset_type = pyarrow.binary()
                 if hasattr(pyarrow, 'LargeBinaryArray') and use_large_index:
                     arrow_type = pyarrow.LargeBinaryArray
-                convert = lambda length, offsets, content: arrow_type.from_buffers(pyarrow.binary(), length, [None, offsets, content])
+                    arrow_offset_type = pyarrow.large_binary()
+                convert = lambda length, offsets, content: arrow_type.from_buffers(arrow_offset_type, length, [None, offsets, content])
             elif codecs.lookup(obj.encoding) is codecs.lookup("utf-8") or obj.encoding is None:
                 arrow_type = pyarrow.StringArray
                 if hasattr(pyarrow, 'LargeStringArray') and use_large_index:
