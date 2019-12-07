@@ -150,14 +150,12 @@ def toarrow(obj, use_large_index=False):
             return recurse(obj.content, thismask)
 
         elif isinstance(obj, awkward.array.objects.StringArray):
-            # # FIXME: BinaryArray.from_buffers is not implemented in pyarrow yet.
-            # if obj.encoding is None:
-            #     convert = lambda length, offsets, content: pyarrow.BinaryArray.from_buffers(pyarrow.binary(), length, [None, offsets, content])
-            # elif codecs.lookup(obj.encoding) is codecs.lookup("utf-8"):
-            #     convert = lambda length, offsets, content: pyarrow.StringArray.from_buffers(length, offsets, content)
-            # else:
-            #     raise ValueError("only encoding=None or encoding='utf-8' can be converted to Arrow")
-            convert = lambda length, offsets, content: pyarrow.StringArray.from_buffers(length, offsets, content)
+            if obj.encoding is None and hasattr(pyarrow.BinaryArray, 'from_buffers'):
+                convert = lambda length, offsets, content: pyarrow.BinaryArray.from_buffers(pyarrow.binary(), length, [None, offsets, content])
+            elif codecs.lookup(obj.encoding) is codecs.lookup("utf-8") or obj.encoding is None:
+                convert = lambda length, offsets, content: pyarrow.StringArray.from_buffers(length, offsets, content)
+            else:
+                raise ValueError("only encoding=None or encoding='utf-8' can be converted to Arrow")
 
             obj = obj.compact()
             offsets = obj.offsets
@@ -388,7 +386,7 @@ def fromarrow(obj, awkwardlib=None):
     elif isinstance(obj, pyarrow.lib.ChunkedArray):
         chunks = [x for x in obj.chunks if len(x) > 0]
         if len(chunks) == 1:
-            return chunks[0]
+            return fromarrow(chunks[0])
         else:
             return awkwardlib.ChunkedArray([fromarrow(x) for x in chunks], chunksizes=[len(x) for x in chunks])
 
