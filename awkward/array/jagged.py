@@ -134,7 +134,10 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
     @classmethod
     def fromoffsets(cls, offsets, content):
         offsets = cls._util_toarray(offsets, cls.INDEXTYPE, cls.numpy.ndarray)
-        if offsets.base is not None:
+        if hasattr(offsets.base, 'base') and type(offsets.base.base).__module__ == "pyarrow.lib" and type(offsets.base.base).__name__ == "Buffer":
+            # special exception to prevent copy in awkward.fromarrow
+            pass
+        elif offsets.base is not None:
             # We rely on the starts,stops slices to be views.
             # If offsets is already a view, the base will not be offsets but its underlying base.
             # Make a copy to prevent that
