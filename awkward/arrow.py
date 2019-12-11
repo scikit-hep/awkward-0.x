@@ -106,7 +106,7 @@ def schema2type(schema):
 ################################################################################ value conversions
 
 # we need an opt-out of the large indices in certain cases, otherwise use by default
-def toarrow(obj, use_32bit_offsets_only=False):
+def toarrow(obj):
     import pyarrow
 
     def recurse(obj, mask):
@@ -130,8 +130,9 @@ def toarrow(obj, use_32bit_offsets_only=False):
             if mask is not None:
                 mask = obj.tojagged(mask).flatten()
             arrow_type = pyarrow.ListArray
-            if not use_32bit_offsets_only and hasattr(pyarrow, 'LargeListArray') and obj.starts.itemsize > 4:
-                arrow_type = pyarrow.LargeListArray
+            # 64bit offsets not yet completely golden in arrow
+            # if hasattr(pyarrow, 'LargeListArray') and obj.starts.itemsize > 4:
+            #     arrow_type = pyarrow.LargeListArray
             return arrow_type.from_arrays(obj.offsets, recurse(obj.content, mask))
 
         elif isinstance(obj, awkward.array.masked.IndexedMaskedArray):
@@ -154,21 +155,24 @@ def toarrow(obj, use_32bit_offsets_only=False):
             if obj.encoding is None and hasattr(pyarrow.BinaryArray, 'from_buffers'):
                 arrow_type = pyarrow.BinaryArray
                 arrow_offset_type = pyarrow.binary()
-                if not use_32bit_offsets_only and hasattr(pyarrow, 'LargeBinaryArray') and obj.starts.itemsize > 4:
-                    arrow_type = pyarrow.LargeBinaryArray
-                    arrow_offset_type = pyarrow.large_binary()
+                # 64bit offsets not yet completely golden in arrow
+                # if hasattr(pyarrow, 'LargeBinaryArray') and obj.starts.itemsize > 4:
+                #     arrow_type = pyarrow.LargeBinaryArray
+                #     arrow_offset_type = pyarrow.large_binary()
                 convert = lambda length, offsets, content: arrow_type.from_buffers(arrow_offset_type, length, [None, offsets, content])
             elif codecs.lookup(obj.encoding) is codecs.lookup("utf-8") or obj.encoding is None:
                 arrow_type = pyarrow.StringArray
-                if not use_32bit_offsets_only and hasattr(pyarrow, 'LargeStringArray') and obj.starts.itemsize > 4:
-                    arrow_type = pyarrow.LargeStringArray
+                # if hasattr(pyarrow, 'LargeStringArray') and obj.starts.itemsize > 4:
+                #     arrow_type = pyarrow.LargeStringArray
                 convert = lambda length, offsets, content: arrow_type.from_buffers(length, offsets, content)
             else:
                 raise ValueError("only encoding=None or encoding='utf-8' can be converted to Arrow")
 
             obj = obj.compact()
             offsets = obj.offsets
-            
+            if offsets.dtype != numpy.dtype(numpy.int32):
+                offsets = offsets.astype(numpy.int32)
+
             return convert(len(offsets) - 1, pyarrow.py_buffer(offsets), pyarrow.py_buffer(obj.content))
 
         elif isinstance(obj, awkward.array.objects.ObjectArray):
@@ -452,7 +456,7 @@ def toparquet(where, obj, **options):
 
     def convert(obj, message):
         if isinstance(obj, (awkward.array.base.AwkwardArray, numpy.ndarray)):
-            out = toarrow(obj, use_32bit_offsets_only=True) #need to set this for parquet serialization for now
+            out = toarrow(obj)
             if isinstance(out, pyarrow.Table):
                 return out
             else:
