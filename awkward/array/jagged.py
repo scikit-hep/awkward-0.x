@@ -515,6 +515,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             out = cls.__new__(cls)
             out.__dict__.update(self.__dict__)
             out._content = content
+            out.__doc__ = content.__doc__
             return out
 
         if isinstance(where, tuple) and len(where) == 0:
