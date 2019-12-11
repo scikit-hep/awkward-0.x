@@ -83,7 +83,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         return out
 
     def deepcopy(self, generator=None, args=None, kwargs=None, cache=None, persistentkey=None, type=None, nbytes=None, persistvirtual=None):
-        out = self.copy(generator=generator, args=arge, kwargs=kwargs, cache=cache, persistentkey=persistentkey, type=type, nbytes=nbytes, persistvirtual=persistvirtual)
+        out = self.copy(generator=generator, args=args, kwargs=kwargs, cache=cache, persistentkey=persistentkey, type=type, nbytes=nbytes, persistvirtual=persistvirtual)
         out._array = self._util_deepcopy(out._array)
         if out._setitem is not None:
             for n in list(out._setitem):
@@ -92,19 +92,19 @@ class VirtualArray(awkward.array.base.AwkwardArray):
 
     def empty_like(self, **overrides):
         if isinstance(self.array, self.numpy.ndarray):
-            return self.numpy.empty_like(array)
+            return self.numpy.empty_like(self.array)
         else:
             return self.array.empty_like(**overrides)
 
     def zeros_like(self, **overrides):
         if isinstance(self.array, self.numpy.ndarray):
-            return self.numpy.zeros_like(array)
+            return self.numpy.zeros_like(self.array)
         else:
             return self.array.zeros_like(**overrides)
 
     def ones_like(self, **overrides):
         if isinstance(self.array, self.numpy.ndarray):
-            return self.numpy.ones_like(array)
+            return self.numpy.ones_like(self.array)
         else:
             return self.array.ones_like(**overrides)
 
@@ -371,7 +371,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def __setitem__(self, where, what):
         self.array[where] = what
         if self._type is not None:
-            self._type = awkward.type.fromarray(array)
+            self._type = awkward.type.fromarray(self.array)
         if self._setitem is None:
             self._setitem = OrderedDict()
         self._setitem[where] = what
@@ -379,7 +379,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
     def __delitem__(self, where):
         del self.array[where]
         if self._type is not None:
-            self._type = awkward.type.fromarray(array)
+            self._type = awkward.type.fromarray(self.array)
         if self._setitem is not None and where in self._setitem:
             del self._setitem
         if self._delitem is None:
