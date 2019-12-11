@@ -105,6 +105,7 @@ def schema2type(schema):
 
 ################################################################################ value conversions
 
+# we need an opt-out of the large indices in certain cases, otherwise use by default
 def toarrow(obj):
     import pyarrow
 
@@ -128,7 +129,11 @@ def toarrow(obj):
             obj = obj.compact()
             if mask is not None:
                 mask = obj.tojagged(mask).flatten()
-            return pyarrow.ListArray.from_arrays(obj.offsets, recurse(obj.content, mask))
+            arrow_type = pyarrow.ListArray
+            # 64bit offsets not yet completely golden in arrow
+            # if hasattr(pyarrow, 'LargeListArray') and obj.starts.itemsize > 4:
+            #     arrow_type = pyarrow.LargeListArray
+            return arrow_type.from_arrays(obj.offsets, recurse(obj.content, mask))
 
         elif isinstance(obj, awkward.array.masked.IndexedMaskedArray):
             thismask = obj.boolmask(maskedwhen=True)
@@ -147,14 +152,21 @@ def toarrow(obj):
             return recurse(obj.content, thismask)
 
         elif isinstance(obj, awkward.array.objects.StringArray):
-            # # FIXME: BinaryArray.from_buffers is not implemented in pyarrow yet.
-            # if obj.encoding is None:
-            #     convert = lambda length, offsets, content: pyarrow.BinaryArray.from_buffers(pyarrow.binary(), length, [None, offsets, content])
-            # elif codecs.lookup(obj.encoding) is codecs.lookup("utf-8"):
-            #     convert = lambda length, offsets, content: pyarrow.StringArray.from_buffers(length, offsets, content)
-            # else:
-            #     raise ValueError("only encoding=None or encoding='utf-8' can be converted to Arrow")
-            convert = lambda length, offsets, content: pyarrow.StringArray.from_buffers(length, offsets, content)
+            if obj.encoding is None and hasattr(pyarrow.BinaryArray, 'from_buffers'):
+                arrow_type = pyarrow.BinaryArray
+                arrow_offset_type = pyarrow.binary()
+                # 64bit offsets not yet completely golden in arrow
+                # if hasattr(pyarrow, 'LargeBinaryArray') and obj.starts.itemsize > 4:
+                #     arrow_type = pyarrow.LargeBinaryArray
+                #     arrow_offset_type = pyarrow.large_binary()
+                convert = lambda length, offsets, content: arrow_type.from_buffers(arrow_offset_type, length, [None, offsets, content])
+            elif codecs.lookup(obj.encoding) is codecs.lookup("utf-8") or obj.encoding is None:
+                arrow_type = pyarrow.StringArray
+                # if hasattr(pyarrow, 'LargeStringArray') and obj.starts.itemsize > 4:
+                #     arrow_type = pyarrow.LargeStringArray
+                convert = lambda length, offsets, content: arrow_type.from_buffers(length, offsets, content)
+            else:
+                raise ValueError("only encoding=None or encoding='utf-8' can be converted to Arrow")
 
             obj = obj.compact()
             offsets = obj.offsets
@@ -222,6 +234,7 @@ def fromarrow(obj, awkwardlib=None):
     awkwardlib = awkward.util.awkwardlib(awkwardlib)
     ARROW_BITMASKTYPE = awkwardlib.numpy.uint8
     ARROW_INDEXTYPE = awkwardlib.numpy.int32
+    ARROW_LARGEINDEXTYPE = awkwardlib.numpy.int64
     ARROW_TAGTYPE = awkwardlib.numpy.uint8
     ARROW_CHARTYPE = awkwardlib.numpy.uint8
 
@@ -256,6 +269,18 @@ def fromarrow(obj, awkwardlib=None):
             assert getattr(tpe, "num_buffers", 2) == 2
             mask = buffers.pop(0)
             offsets = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_INDEXTYPE)[:length + 1]
+            content = popbuffers(None if array is None else array.flatten(), tpe.value_type, buffers, offsets[-1])
+            out = awkwardlib.JaggedArray.fromoffsets(offsets, content)
+            if mask is not None:
+                mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
+                return awkwardlib.BitMaskedArray(mask, out, maskedwhen=False, lsborder=True)
+            else:
+                return out
+                
+        elif hasattr(pyarrow.lib, 'LargeListType') and isinstance(tpe, pyarrow.lib.LargeListType):
+            assert getattr(tpe, "num_buffers", 2) == 2
+            mask = buffers.pop(0)
+            offsets = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_LARGEINDEXTYPE)[:length + 1]
             content = popbuffers(None if array is None else array.flatten(), tpe.value_type, buffers, offsets[-1])
             out = awkwardlib.JaggedArray.fromoffsets(offsets, content)
             if mask is not None:
@@ -326,11 +351,35 @@ def fromarrow(obj, awkwardlib=None):
                 return awkwardlib.BitMaskedArray(mask, out, maskedwhen=False, lsborder=True)
             else:
                 return out
+                
+        elif tpe == pyarrow.large_string():
+            assert getattr(tpe, "num_buffers", 3) == 3
+            mask = buffers.pop(0)
+            offsets = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_LARGEINDEXTYPE)[:length + 1]
+            content = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_CHARTYPE)[:offsets[-1]]
+            out = awkwardlib.StringArray.fromoffsets(offsets, content[:offsets[-1]], encoding="utf-8")
+            if mask is not None:
+                mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
+                return awkwardlib.BitMaskedArray(mask, out, maskedwhen=False, lsborder=True)
+            else:
+                return out
 
         elif tpe == pyarrow.binary():
             assert getattr(tpe, "num_buffers", 3) == 3
             mask = buffers.pop(0)
             offsets = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_INDEXTYPE)[:length + 1]
+            content = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_CHARTYPE)[:offsets[-1]]
+            out = awkwardlib.StringArray.fromoffsets(offsets, content[:offsets[-1]], encoding=None)
+            if mask is not None:
+                mask = awkwardlib.numpy.frombuffer(mask, dtype=ARROW_BITMASKTYPE)
+                return awkwardlib.BitMaskedArray(mask, out, maskedwhen=False, lsborder=True)
+            else:
+                return out
+        
+        elif tpe == pyarrow.large_binary():
+            assert getattr(tpe, "num_buffers", 3) == 3
+            mask = buffers.pop(0)
+            offsets = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_LARGEINDEXTYPE)[:length + 1]
             content = awkwardlib.numpy.frombuffer(buffers.pop(0), dtype=ARROW_CHARTYPE)[:offsets[-1]]
             out = awkwardlib.StringArray.fromoffsets(offsets, content[:offsets[-1]], encoding=None)
             if mask is not None:
@@ -372,7 +421,7 @@ def fromarrow(obj, awkwardlib=None):
     elif isinstance(obj, pyarrow.lib.ChunkedArray):
         chunks = [x for x in obj.chunks if len(x) > 0]
         if len(chunks) == 1:
-            return chunks[0]
+            return fromarrow(chunks[0])
         else:
             return awkwardlib.ChunkedArray([fromarrow(x) for x in chunks], chunksizes=[len(x) for x in chunks])
 
