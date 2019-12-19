@@ -583,7 +583,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             elif head.shape == self.shape and issubclass(head._content.dtype.type, (self.numpy.bool, self.numpy.bool_)):
                 index = self.localindex + self.starts
                 flatindex = index.flatten()[head.flatten()]
-                return self.JaggedArray.fromcounts(head.sum(), self._content[flatindex])
+                return type(self).fromcounts(head.sum(), self._content[flatindex])
 
             else:
                 raise TypeError("jagged index must be boolean (mask) or integer (fancy indexing)")
