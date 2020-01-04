@@ -10,7 +10,7 @@ python:
   - 3.6
   - 3.7
   - pypy2.7-5.10.0
-  - pypy3.5
+  - pypy3.6
 
 env:
   - NUMPY="numpy==1.13.1"
@@ -23,11 +23,11 @@ matrix:
       env: NUMPY="numpy==1.13.1"
     - python: pypy2.7-5.10.0
       env: NUMPY="numpy==1.14.5"
-    - python: pypy3.5
+    - python: pypy3.6
       env: NUMPY="numpy==1.14.5"
     - python: pypy2.7-5.10.0
       env: NUMPY="numpy==1.13.1"
-    - python: pypy3.5
+    - python: pypy3.6
       env: NUMPY="numpy==1.13.1"
 
 addons:
