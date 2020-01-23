@@ -1317,6 +1317,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return out
 
     def argcross(self, other, nested=False):
+        if isinstance(other, self.VirtualArray):
+            other = other.array
         out = self._argcross(other)
         out["0"] = out["0"] - self._starts
         out["1"] = out["1"] - other._starts
@@ -1327,6 +1329,8 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
         return out
 
     def cross(self, other, nested=False):
+        if isinstance(other, self.VirtualArray):
+            other = other.array
         if hasattr(self, "_nestedcross"):
             thyself = self._nestedcross
         else:
