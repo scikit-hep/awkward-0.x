@@ -40,7 +40,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
         self.type = type
         self.nbytes = nbytes
         self.persistvirtual = persistvirtual
-        self._array = None
+        self._array = None if cache is None else self.key
         self._setitem = None
         self._delitem = None
 
@@ -307,7 +307,7 @@ class VirtualArray(awkward.array.base.AwkwardArray):
                 try:
                     # state (5)
                     return self._cache[self._array]
-                except:
+                except KeyError:
                     # state (4), taking any error in __getitem__ as evidence that it was evicted
                     return self.materialize()
             else:
