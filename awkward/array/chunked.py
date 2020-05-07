@@ -214,18 +214,18 @@ class ChunkedArray(awkward.array.base.AwkwardArray):
 
     def _gettype(self, seen):
         for tpe in self._types:
-            if tpe is not None and tpe is not ():
+            if tpe is not None and tpe != ():
                 break
         else:
             for i in range(len(self._types)):
                 tpe = self.knowtype(i)
-                if tpe is not None and tpe is not ():
+                if tpe is not None and tpe != ():
                     break
             else:
                 tpe = self.DEFAULTTYPE
 
         for i in range(len(self._types)):
-            if self._types[i] is None or self._types[i] is () or self._types[i] is tpe:
+            if self._types[i] is None or self._types[i] == () or self._types[i] is tpe:
                 pass
             elif self._types[i] == tpe:       # valid if all chunks have the same high-level type
                 self._types[i] = tpe          # once checked, make them identically equal for faster checking next time
