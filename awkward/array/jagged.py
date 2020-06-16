@@ -1689,7 +1689,7 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
             if len(ick) == 0:
                 dtype = np.dtype(arrays[0].dtype)
             else:
-                dtype = np.dtype(sum(ick), False)
+                dtype = np.dtype(np.sum(ick), False)
             allbools = not np.any([a.dtype != np.dtype(bool) for a in arrays])
             dtype = np.dtype(bool) if allbools else dtype
             return dtype
