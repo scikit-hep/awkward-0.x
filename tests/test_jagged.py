@@ -479,6 +479,12 @@ class Test(unittest.TestCase):
         c3 = a3.concatenate([b3], axis=1)
         assert c3.tolist() == [[],[0.,1.1,2.2,6.5,7.6,8.7,9.8,10.9],[4.3,5.4],[5.5,6.6,7.7,8.8,9.9]]
 
+        # Test type consistency
+        for dt in numpy.int32, numpy.int64, numpy.float32, numpy.float64:
+            a = JaggedArray([0], [1], numpy.ones(1, dtype=dt))
+            b = a.concatenate([a], axis=1)
+            self.assertEqual(dt, b.type.to.to)
+
 
     def test_jagged_get(self):
         a = JaggedArray.fromoffsets([0, 3, 3, 8, 10, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
