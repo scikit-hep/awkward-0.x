@@ -24,12 +24,20 @@ class JaggedArray(awkward.array.base.AwkwardArrayWithContent):
 
     @classmethod
     def offsetsaliased(cls, starts, stops):
+        if not hasattr(starts, "base") or starts.base is None:
+            starts_base = None
+        else:
+            starts_base = cls._util_toarray(starts.base, cls.INDEXTYPE)
+        if not hasattr(stops, "base") or stops.base is None:
+            stops_base = None
+        else:
+            stops_base = cls._util_toarray(stops.base, cls.INDEXTYPE)
         return (isinstance(starts, cls.numpy.ndarray) and isinstance(stops, cls.numpy.ndarray) and
-                starts.base is not None and stops.base is not None and starts.base is stops.base and
-                starts.ctypes.data == starts.base.ctypes.data and
-                stops.ctypes.data == stops.base.ctypes.data + stops.dtype.itemsize and
-                len(starts) == len(starts.base) - 1 and
-                len(stops) == len(stops.base) - 1)
+                starts_base is not None and stops_base is not None and starts_base is stops_base and
+                starts.ctypes.data == starts_base.ctypes.data and
+                stops.ctypes.data == stops_base.ctypes.data + stops.dtype.itemsize and
+                len(starts) == len(starts_base) - 1 and
+                len(stops) == len(stops_base) - 1)
 
     @classmethod
     def counts2offsets(cls, counts):

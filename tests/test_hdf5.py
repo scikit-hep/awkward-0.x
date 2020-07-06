@@ -25,7 +25,7 @@ def test_read_write_hdf(tmpdir, input_arr):
         ah5["example"] = a
 
     # Read
-    with h5py.File(str(tmp_file)) as hf:
+    with h5py.File(str(tmp_file), "r") as hf:
         ah5 = awkward.hdf5(hf)
         b = ah5["example"]
 
