@@ -94,7 +94,7 @@ def schema2type(schema):
 
     out = None
     for name in schema.names:
-        field = schema.field_by_name(name)
+        field = schema.field(name)
         mytype = awkward.type.ArrayType(name, recurse(field.type, field.nullable))
         if out is None:
             out = mytype
