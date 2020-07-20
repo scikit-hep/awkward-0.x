@@ -1,5 +1,28 @@
 .. image:: docs/source/logo-300px.png
 
+This is a deprecated version of Awkward Array
+=============================================
+
+See `scikit-hep/awkward-1.0 <https://github.com/scikit-hep/awkward-1.0#readme>`__ for the latest version of Awkward Array. Old and new versions are available as separate packages,
+
+.. code-block:: bash
+
+    pip install awkward    # old
+    pip install awkward1   # new
+
+because the interface has changed. Later this year, "Awkward 1" will simply become the ``awkward`` package with version number 1.0. Then the two packages will shift to
+
+.. code-block:: bash
+
+    pip install awkward    # new
+    pip install awkward0   # old
+
+You can adopt the new library gradually. If you want to use some of its features without completely switching over, you can use [ak.from_awkward0](https://awkward-array.readthedocs.io/en/latest/_auto/ak.from_awkward0.html) and [ak.to_awkward0](https://awkward-array.readthedocs.io/en/latest/_auto/ak.to_awkward0.html) with the new library loaded as
+
+.. code-block:: python
+
+    import awkward1 as ak
+
 awkward-array
 =============
 
