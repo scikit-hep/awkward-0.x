@@ -17,7 +17,7 @@ because the interface has changed. Later this year, "Awkward 1" will simply beco
     pip install awkward    # new
     pip install awkward0   # old
 
-You can adopt the new library gradually. If you want to use some of its features without completely switching over, you can use [ak.from_awkward0](https://awkward-array.readthedocs.io/en/latest/_auto/ak.from_awkward0.html) and [ak.to_awkward0](https://awkward-array.readthedocs.io/en/latest/_auto/ak.to_awkward0.html) with the new library loaded as
+You can adopt the new library gradually. If you want to use some of its features without completely switching over, you can use `ak.from_awkward0 <https://awkward-array.readthedocs.io/en/latest/_auto/ak.from_awkward0.html>`__ and `ak.to_awkward0 <https://awkward-array.readthedocs.io/en/latest/_auto/ak.to_awkward0.html>`__ with the new library loaded as
 
 .. code-block:: python
 
