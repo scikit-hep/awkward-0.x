@@ -25,7 +25,7 @@ class get_pybind_include(object):
     The purpose of this class is to postpone importing pybind11
     until it is actually installed, so that the ``get_include()``
     method can be invoked. """
-    
+
     def __init__(self, user=False):
         self.user = user
 
@@ -97,7 +97,7 @@ class BuildExt(build_ext):
         build_ext.build_extensions(self)
 
 ############################# end copy-pasted code ##############################
-        
+
 setup(name = "awkward-cpp",
       version = get_version(),
       packages = find_packages(exclude = ["tests"]),
@@ -137,6 +137,8 @@ setup(name = "awkward-cpp",
           "Programming Language :: Python :: 3.5",
           "Programming Language :: Python :: 3.6",
           "Programming Language :: Python :: 3.7",
+          "Programming Language :: Python :: 3.8",
+          "Programming Language :: Python :: 3.9",
           "Topic :: Scientific/Engineering",
           "Topic :: Scientific/Engineering :: Information Analysis",
           "Topic :: Scientific/Engineering :: Mathematics",
