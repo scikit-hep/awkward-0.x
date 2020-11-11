@@ -332,7 +332,8 @@ int counts2offsets_CPU(struct c_array *counts, struct c_array *offsets) {
 int startsstops2parents_8bit(struct c_array *starts, struct c_array *stops, struct c_array *parents) {
     for (ssize_t i = 0; i < parents->size; i++)
         ((int8_t*)parents->ptr)[i] = -1;
-    ssize_t N_sta = starts->strides[0] / starts->itemsize, N_sto = stops->strides[0] / stops->itemsize;
+    ssize_t N_sta = starts->strides[0] / starts->itemsize,
+            N_sto = stops->strides[0] / stops->itemsize;
     for (ssize_t i = 0; i < starts->size; i++)
         for (ssize_t j = (ssize_t)((int8_t*)starts->ptr)[i * N_sta]; j < (ssize_t)((int8_t*)stops->ptr)[i * N_sto]; j++)
             ((int8_t*)parents->ptr)[j] = (int8_t)i;
@@ -342,7 +343,8 @@ int startsstops2parents_8bit(struct c_array *starts, struct c_array *stops, stru
 int startsstops2parents_16bit(struct c_array *starts, struct c_array *stops, struct c_array *parents) {
     for (ssize_t i = 0; i < parents->size; i++)
         ((int16_t*)parents->ptr)[i] = -1;
-    ssize_t N_sta = starts->strides[0] / starts->itemsize, N_sto = stops->strides[0] / stops->itemsize;
+    ssize_t N_sta = starts->strides[0] / starts->itemsize,
+            N_sto = stops->strides[0] / stops->itemsize;
     for (ssize_t i = 0; i < starts->size; i++)
         for (ssize_t j = (ssize_t)((int16_t*)starts->ptr)[i * N_sta]; j < (ssize_t)((int16_t*)stops->ptr)[i * N_sto]; j++)
             ((int16_t*)parents->ptr)[j] = (int16_t)i;
@@ -352,7 +354,8 @@ int startsstops2parents_16bit(struct c_array *starts, struct c_array *stops, str
 int startsstops2parents_32bit(struct c_array *starts, struct c_array *stops, struct c_array *parents) {
     for (ssize_t i = 0; i < parents->size; i++)
         ((int32_t*)parents->ptr)[i] = -1;
-    ssize_t N_sta = starts->strides[0] / starts->itemsize, N_sto = stops->strides[0] / stops->itemsize;
+    ssize_t N_sta = starts->strides[0] / starts->itemsize,
+            N_sto = stops->strides[0] / stops->itemsize;
     for (ssize_t i = 0; i < starts->size; i++)
         for (ssize_t j = (ssize_t)((int32_t*)starts->ptr)[i * N_sta]; j < (ssize_t)((int32_t*)stops->ptr)[i * N_sto]; j++)
             ((int32_t*)parents->ptr)[j] = (int32_t)i;
@@ -362,7 +365,8 @@ int startsstops2parents_32bit(struct c_array *starts, struct c_array *stops, str
 int startsstops2parents_64bit(struct c_array *starts, struct c_array *stops, struct c_array *parents) {
     for (ssize_t i = 0; i < parents->size; i++)
         ((int64_t*)parents->ptr)[i] = -1;
-    ssize_t N_sta = starts->strides[0] / starts->itemsize, N_sto = stops->strides[0] / stops->itemsize;
+    ssize_t N_sta = starts->strides[0] / starts->itemsize,
+            N_sto = stops->strides[0] / stops->itemsize;
     for (ssize_t i = 0; i < starts->size; i++)
         for (ssize_t j = (ssize_t)((int64_t*)starts->ptr)[i * N_sta]; j < (ssize_t)((int64_t*)stops->ptr)[i * N_sto]; j++)
             ((int64_t*)parents->ptr)[j] = (int64_t)i;
@@ -765,8 +769,8 @@ int compare_8bit(struct c_array *a, struct c_array *b, const char *comparison, s
     // to be initially called with compare_8bit(a, b, comparison, 0, 0, 0)
     if (dim > a->ndim - 1)
         return 0;
-    ssize_t N_a = a->strides[dim] / a->itemsize;
-    ssize_t N_b = b->strides[dim] / b->itemsize;
+    ssize_t N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[dim] / b->itemsize;
     if (dim == a->ndim - 1) {
         if (comparison[0] == '>' && comparison[1] != '=') {
             for (ssize_t i = 0; i < a->shape[dim]; i++)
@@ -817,8 +821,8 @@ int compare_16bit(struct c_array *a, struct c_array *b, const char *comparison, 
     // to be initially called with compare_16bit(a, b, comparison, 0, 0, 0)
     if (dim > a->ndim - 1)
         return 0;
-    ssize_t N_a = a->strides[dim] / a->itemsize;
-    ssize_t N_b = b->strides[dim] / b->itemsize;
+    ssize_t N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[dim] / b->itemsize;
     if (dim == a->ndim - 1) {
         if (comparison[0] == '>' && comparison[1] != '=') {
             for (ssize_t i = 0; i < a->shape[dim]; i++)
@@ -869,8 +873,8 @@ int compare_32bit(struct c_array *a, struct c_array *b, const char *comparison, 
     // to be initially called with compare_32bit(a, b, comparison, 0, 0, 0)
     if (dim > a->ndim - 1)
         return 0;
-    ssize_t N_a = a->strides[dim] / a->itemsize;
-    ssize_t N_b = b->strides[dim] / b->itemsize;
+    ssize_t N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[dim] / b->itemsize;
     if (dim == a->ndim - 1) {
         if (comparison[0] == '>' && comparison[1] != '=') {
             for (ssize_t i = 0; i < a->shape[dim]; i++)
@@ -921,8 +925,8 @@ int compare_64bit(struct c_array *a, struct c_array *b, const char *comparison, 
     // to be initially called with compare_64bit(a, b, comparison, 0, 0, 0)
     if (dim > a->ndim - 1)
         return 0;
-    ssize_t N_a = a->strides[dim] / a->itemsize;
-    ssize_t N_b = b->strides[dim] / b->itemsize;
+    ssize_t N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[dim] / b->itemsize;
     if (dim == a->ndim - 1) {
         if (comparison[0] == '>' && comparison[1] != '=') {
             for (ssize_t i = 0; i < a->shape[dim]; i++)
@@ -994,8 +998,8 @@ int deepcopy_8bit(struct c_array *a, struct c_array *b, ssize_t dim, ssize_t ind
     // to be initially called with deepcopy_8bit(a, b, 0, 0, 0)
     if (dim > b->ndim - 1)
         return 0;
-    ssize_t N_a = a->strides[dim] / a->itemsize;
-    ssize_t N_b = b->strides[dim] / b->itemsize;
+    ssize_t N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[dim] / b->itemsize;
     if (dim == b->ndim - 1) {
         for (ssize_t i = 0; i < b->shape[dim]; i++)
             ((int8_t*)a->ptr)[index_a + i * N_a] = ((int8_t*)b->ptr)[index_b + i * N_b];
@@ -1010,8 +1014,8 @@ int deepcopy_16bit(struct c_array *a, struct c_array *b, ssize_t dim, ssize_t in
     // to be initially called with deepcopy_16bit(a, b, 0, 0, 0)
     if (dim > b->ndim - 1)
         return 0;
-    ssize_t N_a = a->strides[dim] / a->itemsize;
-    ssize_t N_b = b->strides[dim] / b->itemsize;
+    ssize_t N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[dim] / b->itemsize;
     if (dim == b->ndim - 1) {
         for (ssize_t i = 0; i < b->shape[dim]; i++)
             ((int16_t*)a->ptr)[index_a + i * N_a] = ((int16_t*)b->ptr)[index_b + i * N_b];
@@ -1026,8 +1030,8 @@ int deepcopy_32bit(struct c_array *a, struct c_array *b, ssize_t dim, ssize_t in
     // to be initially called with deepcopy_32bit(a, b, 0, 0, 0)
     if (dim > b->ndim - 1)
         return 0;
-    ssize_t N_a = a->strides[dim] / a->itemsize;
-    ssize_t N_b = b->strides[dim] / b->itemsize;
+    ssize_t N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[dim] / b->itemsize;
     if (dim == b->ndim - 1) {
         for (ssize_t i = 0; i < b->shape[dim]; i++)
             ((int32_t*)a->ptr)[index_a + i * N_a] = ((int32_t*)b->ptr)[index_b + i * N_b];
@@ -1042,8 +1046,8 @@ int deepcopy_64bit(struct c_array *a, struct c_array *b, ssize_t dim, ssize_t in
     // to be initially called with deepcopy_64bit(a, b, 0, 0, 0)
     if (dim > b->ndim - 1)
         return 0;
-    ssize_t N_a = a->strides[dim] / a->itemsize;
-    ssize_t N_b = b->strides[dim] / b->itemsize;
+    ssize_t N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[dim] / b->itemsize;
     if (dim == b->ndim - 1) {
         for (ssize_t i = 0; i < b->shape[dim]; i++)
             ((int64_t*)a->ptr)[index_a + i * N_a] = ((int64_t*)b->ptr)[index_b + i * N_b];
@@ -1069,6 +1073,196 @@ int deepcopy_CPU(struct c_array *a, struct c_array *b) {
         return deepcopy_32bit(a, b, 0, 0, 0);
     if (b->itemsize == 8)
         return deepcopy_64bit(a, b, 0, 0, 0);
+    return 0;
+}
+
+int fillintarray_8bit(struct c_array *ints, struct c_array *a, struct c_array *b, ssize_t dim, ssize_t index_ints, ssize_t index_a) {
+    // to be initially called with fillintarray_8bit(ints, a, b, 0, 0, 0)
+    if (dim > b->ndim - 1)
+        return 0;
+    if (ints->shape[dim] != a->shape[dim] || b->ndim != 1)
+        return 0;
+    ssize_t N_ints = ints->strides[dim] / ints->itemsize,
+            N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    if (dim == a->ndim - 1) {
+        for (ssize_t i = 0; i < a->shape[dim]; i++) {
+            ssize_t ints_here = ((ssize_t*)ints->ptr)[index_ints + i * N_ints];
+            if (ints_here < 0 || ints_here >= b->shape[0])
+                return 0;
+            ((int8_t*)a->ptr)[index_a + i * N_a] = ((int8_t*)b->ptr)[ints_here * N_b];
+        }
+        return 1;
+    }
+    for (ssize_t i = 0; i < a->shape[dim]; i++) {
+        fillintarray_8bit(ints, a, b, dim + 1, index_ints + i * N_ints, index_a + i * N_a);
+    }
+    return 1;
+}
+
+int fillintarray_16bit(struct c_array *ints, struct c_array *a, struct c_array *b, ssize_t dim, ssize_t index_ints, ssize_t index_a) {
+    // to be initially called with fillintarray_16bit(ints, a, b, 0, 0, 0)
+    if (dim > b->ndim - 1)
+        return 0;
+    if (ints->shape[dim] != a->shape[dim] || b->ndim != 1)
+        return 0;
+    ssize_t N_ints = ints->strides[dim] / ints->itemsize,
+            N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    if (dim == a->ndim - 1) {
+        for (ssize_t i = 0; i < a->shape[dim]; i++) {
+            ssize_t ints_here = ((ssize_t*)ints->ptr)[index_ints + i * N_ints];
+            if (ints_here < 0 || ints_here >= b->shape[0])
+                return 0;
+            ((int16_t*)a->ptr)[index_a + i * N_a] = ((int16_t*)b->ptr)[ints_here * N_b];
+        }
+        return 1;
+    }
+    for (ssize_t i = 0; i < a->shape[dim]; i++) {
+        fillintarray_16bit(ints, a, b, dim + 1, index_ints + i * N_ints, index_a + i * N_a);
+    }
+    return 1;
+}
+
+int fillintarray_32bit(struct c_array *ints, struct c_array *a, struct c_array *b, ssize_t dim, ssize_t index_ints, ssize_t index_a) {
+    // to be initially called with fillintarray_32bit(ints, a, b, 0, 0, 0)
+    if (dim > b->ndim - 1)
+        return 0;
+    if (ints->shape[dim] != a->shape[dim] || b->ndim != 1)
+        return 0;
+    ssize_t N_ints = ints->strides[dim] / ints->itemsize,
+            N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    if (dim == a->ndim - 1) {
+        for (ssize_t i = 0; i < a->shape[dim]; i++) {
+            ssize_t ints_here = ((ssize_t*)ints->ptr)[index_ints + i * N_ints];
+            if (ints_here < 0 || ints_here >= b->shape[0])
+                return 0;
+            ((int32_t*)a->ptr)[index_a + i * N_a] = ((int32_t*)b->ptr)[ints_here * N_b];
+        }
+        return 1;
+    }
+    for (ssize_t i = 0; i < a->shape[dim]; i++) {
+        fillintarray_32bit(ints, a, b, dim + 1, index_ints + i * N_ints, index_a + i * N_a);
+    }
+    return 1;
+}
+
+int fillintarray_64bit(struct c_array *ints, struct c_array *a, struct c_array *b, ssize_t dim, ssize_t index_ints, ssize_t index_a) {
+    // to be initially called with fillintarray_64bit(ints, a, b, 0, 0, 0)
+    if (dim > b->ndim - 1)
+        return 0;
+    if (ints->shape[dim] != a->shape[dim] || b->ndim != 1)
+        return 0;
+    ssize_t N_ints = ints->strides[dim] / ints->itemsize,
+            N_a = a->strides[dim] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    if (dim == a->ndim - 1) {
+        for (ssize_t i = 0; i < a->shape[dim]; i++) {
+            ssize_t ints_here = ((ssize_t*)ints->ptr)[index_ints + i * N_ints];
+            if (ints_here < 0 || ints_here >= b->shape[0])
+                return 0;
+            ((int64_t*)a->ptr)[index_a + i * N_a] = ((int64_t*)b->ptr)[ints_here * N_b];
+        }
+        return 1;
+    }
+    for (ssize_t i = 0; i < a->shape[dim]; i++) {
+        fillintarray_64bit(ints, a, b, dim + 1, index_ints + i * N_ints, index_a + i * N_a);
+    }
+    return 1;
+}
+
+int fillintarray_CPU(struct c_array *ints, struct c_array *a, struct c_array *b) {
+    /* PURPOSE:
+        - writes from b to a according to the intarray (ints)
+    PREREQUISITES:
+        - ints must be a ssize_t array
+        - a must be an array with the same size/shape/dimensionality as ints
+        - all values in ints must be within the bounds of b
+        - b must be a 1d array
+        - a and b must be of the same type
+    */
+    if (b->itemsize == 1)
+        return fillintarray_8bit(ints, a, b, 0, 0, 0);
+    if (b->itemsize == 2)
+        return fillintarray_16bit(ints, a, b, 0, 0, 0);
+    if (b->itemsize == 4)
+        return fillintarray_32bit(ints, a, b, 0, 0, 0);
+    if (b->itemsize == 8)
+        return fillintarray_64bit(ints, a, b, 0, 0, 0);
+    return 0;
+}
+
+int fillboolarray_8bit(struct c_array *bools, struct c_array *a, struct c_array *b, ssize_t *len) {
+    if (bools->size != a->size || a->size > b->size)
+        return 0;
+    *len = 0;
+    ssize_t N_bools = bools->strides[0] / bools->itemsize,
+            N_a = a->strides[0] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    for (ssize_t i = 0; i < a->size; i++)
+        if (((uint8_t*)bools->ptr)[i * N_bools])
+            ((int8_t*)a->ptr)[(*len)++ * N_a] = ((int8_t*)b->ptr)[i * N_b];
+    return 1;
+}
+
+int fillboolarray_16bit(struct c_array *bools, struct c_array *a, struct c_array *b, ssize_t *len) {
+    if (bools->size != a->size || a->size > b->size)
+        return 0;
+    *len = 0;
+    ssize_t N_bools = bools->strides[0] / bools->itemsize,
+            N_a = a->strides[0] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    for (ssize_t i = 0; i < a->size; i++)
+        if (((uint8_t*)bools->ptr)[i * N_bools])
+            ((int16_t*)a->ptr)[(*len)++ * N_a] = ((int16_t*)b->ptr)[i * N_b];
+    return 1;
+}
+
+int fillboolarray_32bit(struct c_array *bools, struct c_array *a, struct c_array *b, ssize_t *len) {
+    if (bools->size != a->size || a->size > b->size)
+        return 0;
+    *len = 0;
+    ssize_t N_bools = bools->strides[0] / bools->itemsize,
+            N_a = a->strides[0] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    for (ssize_t i = 0; i < a->size; i++)
+        if (((uint8_t*)bools->ptr)[i * N_bools])
+            ((int32_t*)a->ptr)[(*len)++ * N_a] = ((int32_t*)b->ptr)[i * N_b];
+    return 1;
+}
+
+int fillboolarray_64bit(struct c_array *bools, struct c_array *a, struct c_array *b, ssize_t *len) {
+    if (bools->size != a->size || a->size > b->size)
+        return 0;
+    *len = 0;
+    ssize_t N_bools = bools->strides[0] / bools->itemsize,
+            N_a = a->strides[0] / a->itemsize,
+            N_b = b->strides[0] / b->itemsize;
+    for (ssize_t i = 0; i < a->size; i++)
+        if (((uint8_t*)bools->ptr)[i * N_bools])
+            ((int64_t*)a->ptr)[(*len)++ * N_a] = ((int64_t*)b->ptr)[i * N_b];
+    return 1;
+}
+
+int fillboolarray_CPU(struct c_array *bools, struct c_array *a, struct c_array *b, ssize_t *len) {
+    /* PURPOSE:
+        - writes from b to a according to the boolean mask (bools)
+        - also writes the returned length of a to len
+    PREREQUISITES:
+        - bools must be a boolean array
+        - bools, a, and b must all be 1d
+        - bools and a must be of equal length and of the same or shorter length than b
+        - a and b must be the same type
+    */
+    if (b->itemsize == 1)
+        return fillboolarray_8bit(bools, a, b, len);
+    if (b->itemsize == 2)
+        return fillboolarray_16bit(bools, a, b, len);
+    if (b->itemsize == 4)
+        return fillboolarray_32bit(bools, a, b, len);
+    if (b->itemsize == 8)
+        return fillboolarray_64bit(bools, a, b, len);
     return 0;
 }
 

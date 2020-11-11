@@ -98,39 +98,46 @@ public:
     }
 
     AnyArray* boolarray_getitem(py::array input) {
-        ssize_t length = input.request().size;
-        if (length != len()) {
+        py::buffer_info input_info = input.request();
+        struct c_array input_struct = py2c(&input_info);
+
+        if (input_info.size != len()) {
             throw std::invalid_argument("bool array length must be equal to array length");
         }
-        py::list temp;
-        auto array_ptr = (bool*)input.request().ptr;
-        for (ssize_t i = 0; i < length; i++) {
-            if (array_ptr[i]) {
-                temp.append(getitem(i)->unwrap());
-            }
+
+        py::buffer_info thisArray_info = thisArray.request();
+        struct c_array thisArray_struct = py2c(&thisArray_info);
+
+        auto newArray = py::array_t<T>(thisArray_info.size);
+        py::buffer_info newArray_info = newArray.request();
+        struct c_array newArray_struct = py2c(&newArray_info);
+
+        ssize_t newLen = 0;
+
+        if (!fillboolarray_CPU(&input_struct, &newArray_struct, &thisArray_struct, &newLen)) {
+            throw std::invalid_argument("Error in cpu_methods.h::fillboolarray_CPU");
         }
-        py::array_t<T> out = temp.cast<py::array_t<T>>();
-        return getNumpyArray_t(out);
+
+        return new NumpyArray_t<T>(slice_numpy(newArray, 0, newLen));
     }
 
     AnyArray* intarray_getitem(py::array input) {
         makeIntNative_CPU(input);
         input = input.cast<py::array_t<ssize_t>>();
         py::buffer_info array_info = input.request();
-        auto array_ptr = (ssize_t*)array_info.ptr;
+        struct c_array array_struct = py2c(&array_info);
 
         auto out = py::array_t<T>(array_info.size);
-        auto out_ptr = (T*)out.request().ptr;
+        py::buffer_info out_info = out.request();
+        struct c_array out_struct = py2c(&out_info);
 
-        int N = thisArray.request().strides[0] / thisArray.request().itemsize;
+        py::buffer_info thisArray_info = thisArray.request();
+        struct c_array thisArray_struct = py2c(&thisArray_info);
 
-        for (ssize_t i = 0; i < array_info.size; i++) {
-            ssize_t here = array_ptr[i];
-            if (here < 0 || here >= len()) {
-                throw std::invalid_argument("int array indices must be within the bounds of the array");
-            }
-            out_ptr[i] = ((T*)thisArray.request().ptr)[here * N];
+        if (!fillintarray_CPU(&array_struct, &out_struct, &thisArray_struct)) {
+            throw std::invalid_argument("Error in cpu_methods.h::fillintarray_CPU");
         }
+
         return getNumpyArray_t(out);
     }
 
