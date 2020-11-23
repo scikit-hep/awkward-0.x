@@ -58,37 +58,10 @@ install:
   - python -c 'import uproot_methods; print(uproot_methods.__version__)'
   - python -c 'import awkward; print(awkward.__version__)'
   - if [[ $TRAVIS_PYTHON_VERSION != pypy*  &&  $NUMPY == "numpy==1.13.1" ]] ; then pip install h5py ; fi
-  # - if [[ $TRAVIS_PYTHON_VERSION != pypy*  &&  $NUMPY != "numpy==1.13.1" ]] ; then pip install h5py pyarrow; python -c 'import pyarrow; print("pyarrow", pyarrow.__version__)' ; fi
-#  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install numba ; ln -s ../awkward-numba/awkward/numba awkward/numba ; fi
-  - if [[ $TRAVIS_PYTHON_VERSION != pypy* ]] ; then pip install pybind11 ; cd awkward-cpp ; python setup.py build ; cd .. ; tree awkward-cpp/build/ ; cd awkward ; ln -s ../awkward-cpp/build/lib.*/awkward/cpp cpp ; cd .. ; ls -l awkward/cpp ; ls -l awkward/cpp/ ; python -c 'print("TESTING awkward-cpp"); import awkward.cpp; print(awkward.cpp.JaggedArray)' ; fi
-  - export AWKWARD_DEPLOYMENT=awkward
   - pip install --upgrade pyOpenSSL     # for deployment
 
 notifications:
   slack: scikit-hep:b6cgBXwccPoaCNLn5VKFJFVy
-
-before_deploy:
-  - echo "DEPLOYING" $AWKWARD_DEPLOYMENT
-  - |
-    if [[ $AWKWARD_DEPLOYMENT == awkward ]]
-    then
-        pwd
-        ls
-        export AWKWARD_DEPLOYMENT=awkward-numba
-    elif [[ $AWKWARD_DEPLOYMENT == awkward-numba ]]
-    then
-        cd awkward-numba
-        pwd
-        ls
-        export AWKWARD_DEPLOYMENT=awkward-cpp
-    elif [[ $AWKWARD_DEPLOYMENT == awkward-cpp ]]
-    then
-        cd ..
-        cd awkward-cpp
-        pwd
-        ls
-        export AWKWARD_DEPLOYMENT=none
-    fi
 
 deploy:
   - provider: pypi
@@ -100,21 +73,3 @@ deploy:
       tags: true
       branch: master
       condition: '$AWKWARD_DEPLOYMENT = awkward && $TRAVIS_PYTHON_VERSION = "3.7" && $NUMPY = "numpy>=1.15"'
-  - provider: pypi
-    user: pivarski
-    password:
-      secure: "GRE/YTl10fGZVQOHiWNEfuLxNnJxtrW5zW9as420yfSO8FeZ83pdjcKc4aADhf5YeRfEPbInZ0oseRyXujqw/cGpZL6LDMKmgjmcpL5dKF4u82pS3HYKMg/AdEHozsmQeJbOQdBn1RHknSyg38bswwwgBy5F5fP9RC7glax3sK7iScT+aVAW1KbHzMjtzNb+RDyFC87THkdWwJf/TgevslEMW6SBMWrE87Yf2Tu77Payz/eSMZ8lXcVmD6kyO3/GwIiygyLJojaC1RH0aw+zM+FSP2EKJb9MdXDGINRzyoaiWO43rvtE01z7OCUipYD8wEv4SuGy9UNbc7ALg3hQjLDmKMqyTCK6Y7mQ7zbSF9vaYyHzP2etnnz5djji/e4j88PQqmJVLDmsll/Af5+6apENn3VPM4SW2GEgECp7Y5f0CW+IceRY8eS2P1v1V+LPTwxOx4IWW3xjxI5GPz3XfUTA/tF0uGgvmkR97vcL7AzkvyOip+OL10YY1bj7+ZGYDt07UqIutn0uhHtGqb6gBm90CC4aWpykDqlnyBe6UHH9qcI3wNpAiy3VgeakB/1umkWmKmYSx92rRQvm9gd9FFQO9QMIddnlQ2f8FR4nEyF8K+/RDH/zKduGeiQbep86EcILkkuGCVhF/Z51AlFtHA9K7XBQMhvSyKn6NVjENCY="
-    distributions: "sdist bdist_wheel --universal"
-    on:
-      tags: true
-      branch: master
-      condition: '$AWKWARD_DEPLOYMENT = awkward-numba && $TRAVIS_PYTHON_VERSION = "3.7" && $NUMPY = "numpy>=1.15"'
-  - provider: pypi
-    user: pivarski
-    password:
-      secure: "OdHbicOsXRrArnGHiwzoh/IFQJGpbYlyE3U+yVpkAr/TIo86Zw7/Lu1GoOO0uqdjQxLcNO0iND7oNWFtSQx7POAItSmuZmYAJYXvHoSEfcO4p0A6k3fFh1q/mY0btKFWWfJJ4249JUtUt7IYEiKs74qfHigms8Qz0sL0B6/T97Wqf4IsCujzyZ4fygPAlNJMGmBtf98eTbJyuqpCyHrHN27xxRWJR21dir1nV6Yt777E3gkyXBgnerEaoHNWjMcpUTKbmdygmU/BM4awX6RULCGTXdPvDBmJuG73/PWt3Ru0hUQqDF9Aq3MuYVHDr0qzoGe3Z0KY5SNFV499xpCD3KZbcKN1iuQcsjp7B++fcXvc5fKhNl+cFXUP8b9CfgZo7jDNpI4WWydzGtdzvncVsG2jpXOo4DWItKjuOZzrZlB+gHrzCRG8O0+Y0DiQM0zU5lRrORZYiHTUFamK9EsGKO2iIo/26FVN81XWp9Yf8sk6cF1tsLG5AMpYKd+y0Ol78TmYpJYaGA+taO2bduGmMI24LGqDjg9vczv4mzjgqHlU+7OCNjB+kum+H6X2TmmnIhjPB6PeqhgTFDino9SwCsAfeL5gzlsXD+t1fFj9o5fY8v5pU/raXv5TAqZuza8hnrDmblJTbDxb4EgE9++H3GXSPsEmBPuB3B/6ZjKkBTU="
-    distributions: "sdist"
-    on:
-      tags: true
-      branch: master
-      condition: '$AWKWARD_DEPLOYMENT = awkward-cpp && $TRAVIS_PYTHON_VERSION = "3.7" && $NUMPY = "numpy>=1.15"'

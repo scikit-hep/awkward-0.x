@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-0.x/blob/master/LICENSE
 
 import os.path
 
@@ -9,7 +9,7 @@ from setuptools import setup
 
 def get_version():
     g = {}
-    exec(open(os.path.join("awkward", "version.py")).read(), g)
+    exec(open(os.path.join("awkward0", "version.py")).read(), g)
     return g["__version__"]
 
 def get_description():
@@ -17,9 +17,9 @@ def get_description():
     start = description.index(".. inclusion-marker-1-5-do-not-remove")
     stop = description.index(".. inclusion-marker-3-do-not-remove")
 
-    before = """.. image:: https://raw.githubusercontent.com/scikit-hep/awkward-array/master/docs/source/logo-300px.png
+    before = """.. image:: https://raw.githubusercontent.com/scikit-hep/awkward-0.x/master/docs/source/logo-300px.png
    :alt: awkward-array
-   :target: https://github.com/scikit-hep/awkward-array
+   :target: https://github.com/scikit-hep/awkward-0.x
 
 |
 
@@ -30,12 +30,12 @@ def get_description():
 Tutorial
 ========
 
-See the `project homepage <https://github.com/scikit-hep/awkward-array>`__ for a `tutorial <https://github.com/scikit-hep/awkward-array#tutorial>`__.
+See the `project homepage <https://github.com/scikit-hep/awkward-0.x>`__ for a `tutorial <https://github.com/scikit-hep/awkward-0.x#tutorial>`__.
 
 Interactive tutorial
 ====================
 
-Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/awkward-array/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
+Run `this tutorial <https://mybinder.org/v2/gh/scikit-hep/awkward-0.x/master?filepath=binder%2Ftutorial.ipynb>`__ on Binder.
 
 Reference documentation
 =======================
@@ -44,7 +44,7 @@ Reference documentation
 
     return before + description[start:stop].strip() # + after
 
-setup(name = "awkward",
+setup(name = "awkward0",
       version = get_version(),
       packages = find_packages(exclude = ["tests"]),
       scripts = [],
@@ -54,8 +54,8 @@ setup(name = "awkward",
       author_email = "pivarski@princeton.edu",
       maintainer = "Jim Pivarski (IRIS-HEP)",
       maintainer_email = "pivarski@princeton.edu",
-      url = "https://github.com/scikit-hep/awkward-array",
-      download_url = "https://github.com/scikit-hep/awkward-array/releases",
+      url = "https://github.com/scikit-hep/awkward-0.x",
+      download_url = "https://github.com/scikit-hep/awkward-0.x/releases",
       license = "BSD 3-clause",
       test_suite = "tests",
       install_requires = ["numpy>=1.13.1"],

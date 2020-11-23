@@ -2,21 +2,21 @@
 
 # Copyright (c) 2019, IRIS-HEP
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 # * Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
-# 
+#
 # * Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
-# 
+#
 # * Neither the name of the copyright holder nor the names of its
 #   contributors may be used to endorse or promote products derived from
 #   this software without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -29,7 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import numpy
-import awkward
+import awkward0
 
 def spread_advanced(starts, stops, advanced):
     if advanced is None:
@@ -53,13 +53,13 @@ def getitem_integer(array, head, tail, advanced):
             raise ValueError("integer index is beyond the range of one of the JaggedArray.starts-JaggedArray.stops pairs")
         index[i] = j
 
-    next = getitem_next(array.content[index], tail, advanced)    
+    next = getitem_next(array.content[index], tail, advanced)
     return next
 
 def getitem_slice2(array, head, tail, advanced):
     if (head.start is None or head.start == 0) and head.stop is None:
         next = getitem_next(array.content, tail, advanced)
-        return awkward.JaggedArray(array.starts, array.stops, next)
+        return awkward0.JaggedArray(array.starts, array.stops, next)
 
     starts = numpy.full(len(array.starts), 999, int)
     stops = numpy.full(len(array.starts), 999, int)
@@ -91,7 +91,7 @@ def getitem_slice2(array, head, tail, advanced):
         stops[i] = array.starts[i] + b
 
     next = getitem_next(array.content, tail, advanced)
-    return awkward.JaggedArray(starts, stops, next)
+    return awkward0.JaggedArray(starts, stops, next)
 
 def getitem_slice3(array, head, tail, advanced):
     if head.step == 0:
@@ -152,7 +152,7 @@ def getitem_slice3(array, head, tail, advanced):
     starts = offsets[:-1]
     stops = offsets[1:]
     next = getitem_next(array.content[index[:k]], tail, spread_advanced(starts, stops, advanced))
-    return awkward.JaggedArray(starts, stops, next)
+    return awkward0.JaggedArray(starts, stops, next)
 
 def getitem_intarray_none(array, head, tail, advanced):
     offsets = numpy.full(len(array.starts) + 1, 999, int)
@@ -178,7 +178,7 @@ def getitem_intarray_none(array, head, tail, advanced):
     starts = offsets[:-1]
     stops = offsets[1:]
     next = getitem_next(array.content[index], tail, nextadvanced)
-    return awkward.JaggedArray(starts, stops, next)
+    return awkward0.JaggedArray(starts, stops, next)
 
 def getitem_intarray_some(array, head, tail, advanced):
     index = numpy.full(len(array.starts), 999, int)
@@ -204,7 +204,7 @@ def getitem_next(array, where, advanced):
         return array
     if isinstance(array, numpy.ndarray):
         return array[where]
-    
+
     head = where[0]
     tail = where[1:]
     if isinstance(head, int):
@@ -248,7 +248,7 @@ def getitem_enter(array, where):
         else:
             newwhere.append(x)
 
-    fake = getitem_next(awkward.JaggedArray([0], [len(array)], array), newwhere, None)
+    fake = getitem_next(awkward0.JaggedArray([0], [len(array)], array), newwhere, None)
     if isinstance(fake, numpy.ndarray):
         return fake[0]
     else:
@@ -257,7 +257,7 @@ def getitem_enter(array, where):
 slices = [2, slice(None), slice(2, 4), slice(1, None, 2), slice(None, None, -1), numpy.array([2, 0, 0]), numpy.array([3, 1, 2]), numpy.array([True, False, True, True]), numpy.array([True, True, True, False])]
 
 a = numpy.arange(4**4).reshape(4, 4, 4, 4)
-a2 = awkward.fromiter(a)
+a2 = awkward0.fromiter(a)
 
 for x in slices:
     print(x)
@@ -287,7 +287,7 @@ for x in slices:
             assert a[x, y, z].tolist() == getitem_enter(a2, (x, y, z)).tolist()
 
 a = numpy.arange(4**3).reshape(4, 4, 4)
-a2 = awkward.fromiter(a)
+a2 = awkward0.fromiter(a)
 for x in slices:
     print(x)
     assert a[x,].tolist() == getitem_enter(a2, (x,)).tolist()

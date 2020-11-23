@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-0.x/blob/master/LICENSE
 
 import unittest
 
 import numpy
 
-import awkward
-from awkward import *
-from awkward.type import *
+import awkward0
+from awkward0 import *
+from awkward0.type import *
 
 class Test(unittest.TestCase):
     def runTest(self):
@@ -168,23 +168,23 @@ class Test(unittest.TestCase):
                 return "Z({0})".format(self.z)
 
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        assert (awkward.ObjectArray([100, 200, 300, 400], Z) + a).tolist() == [Z([100., 101.1, 102.2]), Z([]), Z([303.3, 304.4]), Z([405.5, 406.6, 407.7, 408.8, 409.9])]
+        assert (awkward0.ObjectArray([100, 200, 300, 400], Z) + a).tolist() == [Z([100., 101.1, 102.2]), Z([]), Z([303.3, 304.4]), Z([405.5, 406.6, 407.7, 408.8, 409.9])]
 
         self.assertRaises(ValueError, lambda: "yay" if (a + [100, 200, 300, 400]) == [[100.0, 101.1, 102.2], [], [303.3, 304.4], [405.5, 406.6, 407.7, 408.8, 409.9]] else "boo")
         self.assertRaises(ValueError, lambda: "yay" if (a + [100, 200, 300, 400]).content == [100.0, 101.1, 102.2, 303.3, 304.4, 405.5, 406.6, 407.7, 408.8, 409.9] else "boo")
 
-        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], awkward.ObjectArray([0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], Z))
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], awkward0.ObjectArray([0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9], Z))
         assert a.tolist() == [[Z(0.0), Z(1.1), Z(2.2)], [], [Z(3.3), Z(4.4)], [Z(5.5), Z(6.6), Z(7.7), Z(8.8), Z(9.9)]]
-        assert (a + awkward.ObjectArray([100, 200, 300, 400], Z)).tolist() == [[Z(100.0), Z(101.1), Z(102.2)], [], [Z(303.3), Z(304.4)], [Z(405.5), Z(406.6), Z(407.7), Z(408.8), Z(409.9)]]
+        assert (a + awkward0.ObjectArray([100, 200, 300, 400], Z)).tolist() == [[Z(100.0), Z(101.1), Z(102.2)], [], [Z(303.3), Z(304.4)], [Z(405.5), Z(406.6), Z(407.7), Z(408.8), Z(409.9)]]
 
     def test_jagged_ufunc_table(self):
         a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
-        assert (awkward.Table(x=[100, 200, 300, 400], y=[1000, 2000, 3000, 4000]) + a).tolist() == [{"x": [100.0, 101.1, 102.2], "y": [1000.0, 1001.1, 1002.2]}, {"x": [], "y": []}, {"x": [303.3, 304.4], "y": [3003.3, 3004.4]}, {"x": [405.5, 406.6, 407.7, 408.8, 409.9], "y": [4005.5, 4006.6, 4007.7, 4008.8, 4009.9]}]
+        assert (awkward0.Table(x=[100, 200, 300, 400], y=[1000, 2000, 3000, 4000]) + a).tolist() == [{"x": [100.0, 101.1, 102.2], "y": [1000.0, 1001.1, 1002.2]}, {"x": [], "y": []}, {"x": [303.3, 304.4], "y": [3003.3, 3004.4]}, {"x": [405.5, 406.6, 407.7, 408.8, 409.9], "y": [4005.5, 4006.6, 4007.7, 4008.8, 4009.9]}]
 
-        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], awkward.Table(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
+        a = JaggedArray([0, 3, 3, 5], [3, 3, 5, 10], awkward0.Table(x=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], y=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]))
         assert (a + 1000).tolist() == [[{"x": 1000, "y": 1000.0}, {"x": 1001, "y": 1001.1}, {"x": 1002, "y": 1002.2}], [], [{"x": 1003, "y": 1003.3}, {"x": 1004, "y": 1004.4}], [{"x": 1005, "y": 1005.5}, {"x": 1006, "y": 1006.6}, {"x": 1007, "y": 1007.7}, {"x": 1008, "y": 1008.8}, {"x": 1009, "y": 1009.9}]]
         assert (a + numpy.array([100, 200, 300, 400])).tolist() == [[{"x": 100, "y": 100.0}, {"x": 101, "y": 101.1}, {"x": 102, "y": 102.2}], [], [{"x": 303, "y": 303.3}, {"x": 304, "y": 304.4}], [{"x": 405, "y": 405.5}, {"x": 406, "y": 406.6}, {"x": 407, "y": 407.7}, {"x": 408, "y": 408.8}, {"x": 409, "y": 409.9}]]
-        assert (a + awkward.Table(x=[100, 200, 300, 400], y=[1000, 2000, 3000, 4000])).tolist() == [[{"x": 100, "y": 1000.0}, {"x": 101, "y": 1001.1}, {"x": 102, "y": 1002.2}], [], [{"x": 303, "y": 3003.3}, {"x": 304, "y": 3004.4}], [{"x": 405, "y": 4005.5}, {"x": 406, "y": 4006.6}, {"x": 407, "y": 4007.7}, {"x": 408, "y": 4008.8}, {"x": 409, "y": 4009.9}]]
+        assert (a + awkward0.Table(x=[100, 200, 300, 400], y=[1000, 2000, 3000, 4000])).tolist() == [[{"x": 100, "y": 1000.0}, {"x": 101, "y": 1001.1}, {"x": 102, "y": 1002.2}], [], [{"x": 303, "y": 3003.3}, {"x": 304, "y": 3004.4}], [{"x": 405, "y": 4005.5}, {"x": 406, "y": 4006.6}, {"x": 407, "y": 4007.7}, {"x": 408, "y": 4008.8}, {"x": 409, "y": 4009.9}]]
 
     def test_jagged_regular(self):
         a = JaggedArray([0, 3, 6, 9], [3, 6, 9, 12], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9, 10.0, 11.0])
@@ -338,9 +338,9 @@ class Test(unittest.TestCase):
             assert c[2].i4.tolist() == i4
 
     def test_jagged_cross_argnested(self):
-        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-        b = awkward.fromiter([[100, 200], [300], [400]])
-        c = awkward.fromiter([[999], [999], [999, 888]])
+        a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        b = awkward0.fromiter([[100, 200], [300], [400]])
+        c = awkward0.fromiter([[999], [999], [999, 888]])
 
         assert a.cross(b).tolist() == [[(1.1, 100), (1.1, 200), (2.2, 100), (2.2, 200), (3.3, 100), (3.3, 200)], [], [(4.4, 400), (5.5, 400)]]
         assert a.argcross(b).tolist() == [[(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)], [], [(0, 0), (1, 0)]]
@@ -355,9 +355,9 @@ class Test(unittest.TestCase):
         assert a.cross(b, nested=True).cross(c).tolist() == [[[(1.1, 100, 999), (1.1, 200, 999)], [(2.2, 100, 999), (2.2, 200, 999)], [(3.3, 100, 999), (3.3, 200, 999)]], [], [[(4.4, 400, 999), (4.4, 400, 888)], [(5.5, 400, 999), (5.5, 400, 888)]]]
         assert a.cross(b).cross(c, nested=True).tolist() == [[[(1.1, 100, 999)], [(1.1, 200, 999)], [(2.2, 100, 999)], [(2.2, 200, 999)], [(3.3, 100, 999)], [(3.3, 200, 999)]], [], [[(4.4, 400, 999), (4.4, 400, 888)], [(5.5, 400, 999), (5.5, 400, 888)]]]
 
-        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-        b = awkward.fromiter([[100, 200], [300], [400]])
-        c = awkward.fromiter([[999], [999], [999, 888, 777]])
+        a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        b = awkward0.fromiter([[100, 200], [300], [400]])
+        c = awkward0.fromiter([[999], [999], [999, 888, 777]])
 
         assert a.cross(b, nested=True).cross(c, nested=True).tolist()[0] == [[[(ai, bi, ci) for ci in c[0]] for bi in b[0]] for ai in a[0]]
         assert a.cross(b, nested=True).cross(c, nested=True).tolist()[1] == [[[(ai, bi, ci) for ci in c[1]] for bi in b[1]] for ai in a[1]]
@@ -368,14 +368,14 @@ class Test(unittest.TestCase):
         assert a.cross(b).cross(c, nested=True).tolist() == [[[(1.1, 100, 999)], [(1.1, 200, 999)], [(2.2, 100, 999)], [(2.2, 200, 999)], [(3.3, 100, 999)], [(3.3, 200, 999)]], [], [[(4.4, 400, 999), (4.4, 400, 888), (4.4, 400, 777)], [(5.5, 400, 999), (5.5, 400, 888), (5.5, 400, 777)]]]
 
     def test_jagged_pairs_argnested(self):
-        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         assert a.pairs().tolist() == [[(1.1, 1.1), (1.1, 2.2), (1.1, 3.3), (2.2, 2.2), (2.2, 3.3), (3.3, 3.3)], [], [(4.4, 4.4), (4.4, 5.5), (5.5, 5.5)]]
         assert a.argpairs().tolist() == [[(0, 0), (0, 1), (0, 2), (1, 1), (1, 2), (2, 2)], [], [(0, 0), (0, 1), (1, 1)]]
         assert a.pairs(nested=True).tolist() == [[[(1.1, 1.1), (1.1, 2.2), (1.1, 3.3)], [(2.2, 2.2), (2.2, 3.3)], [(3.3, 3.3)]], [], [[(4.4, 4.4), (4.4, 5.5)], [(5.5, 5.5)]]]
         assert a.argpairs(nested=True).tolist() == [[[(0, 0), (0, 1), (0, 2)], [(1, 1), (1, 2)], [(2, 2)]], [], [[(0, 0), (0, 1)], [(1, 1)]]]
 
     def test_jagged_distincts_argnested(self):
-        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         assert a.distincts().tolist() == [[(1.1, 2.2), (1.1, 3.3), (2.2, 3.3)], [], [(4.4, 5.5)]]
         assert a.argdistincts().tolist() == [[(0, 1), (0, 2), (1, 2)], [], [(0, 1)]]
         assert a.distincts(nested=True).tolist() == [[[(1.1, 2.2), (1.1, 3.3)], [(2.2, 3.3)]], [], [[(4.4, 5.5)]]]
@@ -522,39 +522,39 @@ class Test(unittest.TestCase):
         assert [x.tolist() for x in a[[True, False, True, False, True]]] == [[(0.0, 0.0), (1.1, 1.1), (2.2, 2.2)], [(3.3, 3.3), (4.4, 4.4), (5.5, 5.5), (6.6, 6.6), (7.7, 7.7)], []]
 
     def test_jagged_zip(self):
-        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-        b = awkward.JaggedArray([1, 5, 5], [4, 5, 7], [999, 10, 20, 30, 999, 40, 50, 999])
+        a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        b = awkward0.JaggedArray([1, 5, 5], [4, 5, 7], [999, 10, 20, 30, 999, 40, 50, 999])
         c = numpy.array([100, 200, 300])
         d = 1000
-        assert awkward.JaggedArray.zip(one=a, two=b).tolist() == [[{"one": 1.1, "two": 10}, {"one": 2.2, "two": 20}, {"one": 3.3, "two": 30}], [], [{"one": 4.4, "two": 40}, {"one": 5.5, "two": 50}]]
-        assert awkward.JaggedArray.zip(one=b, two=a).tolist() == [[{"one": 10, "two": 1.1}, {"one": 20, "two": 2.2}, {"one": 30, "two": 3.3}], [], [{"one": 40, "two": 4.4}, {"one": 50, "two": 5.5}]]
-        assert awkward.JaggedArray.zip(one=b, two=c).tolist() == [[{"one": 10, "two": 100}, {"one": 20, "two": 100}, {"one": 30, "two": 100}], [], [{"one": 40, "two": 300}, {"one": 50, "two": 300}]]
-        assert awkward.JaggedArray.zip(one=b, two=d).tolist() == [[{"one": 10, "two": 1000}, {"one": 20, "two": 1000}, {"one": 30, "two": 1000}], [], [{"one": 40, "two": 1000}, {"one": 50, "two": 1000}]]
+        assert awkward0.JaggedArray.zip(one=a, two=b).tolist() == [[{"one": 1.1, "two": 10}, {"one": 2.2, "two": 20}, {"one": 3.3, "two": 30}], [], [{"one": 4.4, "two": 40}, {"one": 5.5, "two": 50}]]
+        assert awkward0.JaggedArray.zip(one=b, two=a).tolist() == [[{"one": 10, "two": 1.1}, {"one": 20, "two": 2.2}, {"one": 30, "two": 3.3}], [], [{"one": 40, "two": 4.4}, {"one": 50, "two": 5.5}]]
+        assert awkward0.JaggedArray.zip(one=b, two=c).tolist() == [[{"one": 10, "two": 100}, {"one": 20, "two": 100}, {"one": 30, "two": 100}], [], [{"one": 40, "two": 300}, {"one": 50, "two": 300}]]
+        assert awkward0.JaggedArray.zip(one=b, two=d).tolist() == [[{"one": 10, "two": 1000}, {"one": 20, "two": 1000}, {"one": 30, "two": 1000}], [], [{"one": 40, "two": 1000}, {"one": 50, "two": 1000}]]
         assert a.zip(b).tolist() == [[(1.1, 10), (2.2, 20), (3.3, 30)], [], [(4.4, 40), (5.5, 50)]]
         assert b.zip(a).tolist() == [[(10, 1.1), (20, 2.2), (30, 3.3)], [], [(40, 4.4), (50, 5.5)]]
         assert b.zip(c).tolist() == [[(10, 100), (20, 100), (30, 100)], [], [(40, 300), (50, 300)]]
         assert b.zip(d).tolist() == [[(10, 1000), (20, 1000), (30, 1000)], [], [(40, 1000), (50, 1000)]]
 
     def test_jagged_structure1d(self):
-        a = awkward.JaggedArray([[0, 3, 3], [5, 8, 10]], [[3, 3, 5], [8, 10, 10]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = awkward0.JaggedArray([[0, 3, 3], [5, 8, 10]], [[3, 3, 5], [8, 10, 10]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         assert a.tolist() == a.structure1d().tolist()
-        a = awkward.JaggedArray([[[0], [3], [3]], [[5], [8], [10]]], [[[3], [3], [5]], [[8], [10], [10]]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = awkward0.JaggedArray([[[0], [3], [3]], [[5], [8], [10]]], [[[3], [3], [5]], [[8], [10], [10]]], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         assert a.tolist() == a.structure1d().tolist()
 
     def test_jagged_pad(self):
-        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         assert a.pad(4, clip=True).tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
         assert a.pad(4, numpy.ma.masked, clip=True).regular().tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
 
         assert a.pad(4).tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
         assert a.pad(4, numpy.ma.masked).regular().tolist() == [[1.1, 2.2, 3.3, None], [None, None, None, None], [4.4, 5.5, None, None]]
 
-        a = awkward.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
+        a = awkward0.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
         assert a.pad(3).tolist() == [[1.1, 2.2, 3.3, 4.4, 5.5], [None, None, None], [6.6, 7.7, 8.8], [9.9, None, None]]
         assert a.pad(3, clip=True).tolist() == [[1.1, 2.2, 3.3], [None, None, None], [6.6, 7.7, 8.8], [9.9, None, None]]
 
     def test_jagged_fillna(self):
-        a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         assert a.pad(4).fillna(999).tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]
         assert a.pad(4, numpy.ma.masked).fillna(999).regular().tolist() == [[1.1, 2.2, 3.3, 999], [999, 999, 999, 999], [4.4, 5.5, 999, 999]]
 
@@ -590,19 +590,19 @@ class Test(unittest.TestCase):
         assert all(array2[indices1] == array2[indices2])
 
     def test_jagged_localindex(self):
-        a = awkward.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
+        a = awkward0.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
         assert a.localindex.tolist() == [[0, 1, 2, 3, 4], [], [0, 1, 2], [0]]
         b = a[[False, True, False, True]]
         assert b.localindex.tolist() == [[], [0]]
 
     def test_jagged_parents(self):
-        a = awkward.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
+        a = awkward0.fromiter([[1.1, 2.2, 3.3, 4.4, 5.5], [], [6.6, 7.7, 8.8], [9.9]])
         assert a.parents.tolist() == [0, 0, 0, 0, 0, 2, 2, 2, 3]
         b = a[[False, True, False, True]]
         assert b.parents.tolist() == [-1, -1, -1, -1, -1, -1, -1, -1, 1]
 
     def test_jagged_sort(self):
-        a = awkward.fromiter([[2.,3.,1.], [4., -numpy.inf, 5.], [numpy.inf, 4., numpy.nan, -numpy.inf], [numpy.nan], [3., None, 4., -1.]])
+        a = awkward0.fromiter([[2.,3.,1.], [4., -numpy.inf, 5.], [numpy.inf, 4., numpy.nan, -numpy.inf], [numpy.nan], [3., None, 4., -1.]])
         assert a.argsort().tolist() == [[1, 0, 2], [2, 0, 1], [0, 1, 3, 2], [0], [2, 0, 3]]
         assert a.argsort(True).tolist() == [[2, 0, 1], [1, 0, 2], [3, 1, 0, 2], [0], [3, 0, 2]]
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-0.x/blob/master/LICENSE
 
 import unittest
 
 import numpy
 
-from awkward import *
+from awkward0 import *
 
 class Test(unittest.TestCase):
     def runTest(self):

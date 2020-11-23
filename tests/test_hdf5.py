@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-0.x/blob/master/LICENSE
 
 import pytest
 import numpy
 
-import awkward
+import awkward0
 
 h5py = pytest.importorskip("h5py")
 
@@ -20,13 +20,13 @@ def test_read_write_hdf(tmpdir, input_arr):
 
     # Write
     with h5py.File(str(tmp_file), "w") as hf:
-        a = awkward.JaggedArray.fromiter(input_arr)
-        ah5 = awkward.hdf5(hf)
+        a = awkward0.JaggedArray.fromiter(input_arr)
+        ah5 = awkward0.hdf5(hf)
         ah5["example"] = a
 
     # Read
     with h5py.File(str(tmp_file), "r") as hf:
-        ah5 = awkward.hdf5(hf)
+        ah5 = awkward0.hdf5(hf)
         b = ah5["example"]
 
     assert a.tolist() == b.tolist()

@@ -7,7 +7,7 @@
 
 == Jaggedness
 
-https://en.wikipedia.org/wiki/Jagged_array[Jagged arrays] have a logical structure that is independent of how they are represented in memory, but since awkward-array defines this structure in terms of a basic array library (Numpy), the structure we choose is a visible part of the awkward-array specification. This section presents many ways to represent jagged arrays, their advantages and disadvantages, before specifying the `JaggedArray` class itself. The `JaggedArray` class uses the most general representation internally with conversions to and from the other forms.
+https://en.wikipedia.org/wiki/Jagged_array[Jagged arrays] have a logical structure that is independent of how they are represented in memory, but since Awkward Array defines this structure in terms of a basic array library (Numpy), the structure we choose is a visible part of the Awkward Array specification. This section presents many ways to represent jagged arrays, their advantages and disadvantages, before specifying the `JaggedArray` class itself. The `JaggedArray` class uses the most general representation internally with conversions to and from the other forms.
 
 One natural way to represent a jagged array is to introduce markers in the serialized content where each variable-length nested list begins or ends, or to insert nested list sizes before each nested list (as in the https://avro.apache.org[Avro] protocol) to avoid having to distinguish content values from markers. However, this "`row-wise`" representation interrupts vectorized processing of the content. Another natural way is to create an array of pointers to nested lists, like Numpy's object array, but this is even worse because it additionally increases memory latency.
 
@@ -114,7 +114,7 @@ construct a jagged array whose content is an array of type `+[0, m) -> T+`. Regu
 
 the starts and stops must be arrays of type `+[0, n) -> INDEXTYPE+`. In a counts representation, the counts must be an array of this type. This cannot be expressed in an offsets representation because offsets elements do not have a one-to-one relationship with logical jagged array elements (another argument for starts and stops over offsets).
 
-Some applications of awkward-array may require data that is being filled while it is being accessed. This is possible if whole-array validity constraints on array shapes are not too strict. Assuming that basic arrays can be appended atomically, or at least their lengths can be increased atomically to reveal content filled before increasing their lengths, jagged arrays can atomically grow by
+Some applications of Awkward Array may require data that is being filled while it is being accessed. This is possible if whole-array validity constraints on array shapes are not too strict. Assuming that basic arrays can be appended atomically, or at least their lengths can be increased atomically to reveal content filled before increasing their lengths, jagged arrays can atomically grow by
 
    . appending content first,
    . then appending stops,
@@ -160,7 +160,7 @@ If `selection` is an integer, the element at that index is extracted (handling n
 
 [source, python]
 ----
-myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+myarray = awkward0.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 myarray[0]
 # returns array([1.1, 2.2, 3.3])
 myarray[1]
@@ -173,7 +173,7 @@ If `selection` is a slice, elements selected by the slice are returned as a new 
 
 [source, python]
 ----
-myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+myarray = awkward0.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 myarray[1:]
 # returns <JaggedArray [[] [4.4 5.5]] at 7f02018afc18>
 myarray[100:]
@@ -184,7 +184,7 @@ If `selection` is a non-jagged list or array of booleans, elements corresponding
 
 [source, python]
 ----
-myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+myarray = awkward0.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 mask = numpy.array([True, True, False])
 myarray[mask]
 # returns <JaggedArray [[1.1 2.2 3.3] []] at 7f020e8122b0>
@@ -194,8 +194,8 @@ If `selection` is a jagged array of booleans, sub-elements corresponding to `Tru
 
 [source, python]
 ----
-myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-mask = awkward.JaggedArray.fromiter([[False, True, True], [], [True, False]])
+myarray = awkward0.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+mask = awkward0.JaggedArray.fromiter([[False, True, True], [], [True, False]])
 myarray[mask]
 # returns <JaggedArray [[2.2 3.3] [] [4.4]] at 7f02018af8d0>
 ----
@@ -204,7 +204,7 @@ If `selection` is a non-jagged list or array of integers, elements identified by
 
 [source, python]
 ----
-myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+myarray = awkward0.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
 myarray[[2, 0, 1, -1]]
 # returns <JaggedArray [[4.4 5.5] [1.1 2.2 3.3] [] [4.4 5.5]] at 7f020c214438>
 ----
@@ -213,8 +213,8 @@ If `selection` is a jagged array of integers, sub-elements identified by the int
 
 [source, python]
 ----
-myarray = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-indexes = awkward.JaggedArray.fromiter([[2, 2, 0], [], [1]])
+myarray = awkward0.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+indexes = awkward0.JaggedArray.fromiter([[2, 2, 0], [], [1]])
 myarray[indexes]
 # returns <JaggedArray [[3.3 3.3 1.1] [] [5.5]] at 7f02018afa58>
 ----
@@ -223,7 +223,7 @@ If `selection` is a tuple, a multidimensional extract/slice/mask/gather operatio
 
 [source, python]
 ----
-myarray = awkward.JaggedArray.fromcounts([2, 0, 1], awkward.JaggedArray.fromiter(
+myarray = awkward0.JaggedArray.fromcounts([2, 0, 1], awkward0.JaggedArray.fromiter(
               [[1.1, 2.2, 3.3], [], [4.4, 5.5]]))
 myarray
 # returns <JaggedArray [[[1.1 2.2 3.3] []] [] [[4.4 5.5]]] at 7f02018afba8>
@@ -237,7 +237,7 @@ If `selection` is a string or a list or array of strings, the jagged column of t
 
 [source, python]
 ----
-myarray = awkward.JaggedArray.fromcounts([3, 0, 2], awkward.Table(
+myarray = awkward0.JaggedArray.fromcounts([3, 0, 2], awkward0.Table(
               x=[1, 2, 3, 4, 5],
               y=[1.1, 2.2, 3.3, 4.4, 5.5],
               z=[True, False, True, False, False]))
@@ -259,8 +259,8 @@ For example,
 
 [source, python]
 ----
-a = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-b = awkward.JaggedArray([0, 3, 4], [3, 3, 6], [10, 20, 30, -9999, 40, 50])
+a = awkward0.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+b = awkward0.JaggedArray([0, 3, 4], [3, 3, 6], [10, 20, 30, -9999, 40, 50])
 c = numpy.array([100, 200, 300])
 d = 1000
 ----
@@ -361,7 +361,7 @@ A `JaggedArray` may be created from one of the following alternate constructors.
 
 === Helper functions
 
-The `awkward.array.jagged` submodule may define helper functions, such as the following.
+The `awkward0.array.jagged` submodule may define helper functions, such as the following.
 
    * `offsetsaliased(starts, stops)`: returns `True` if the starts and stops arrays overlap in memory and are consistent with a single offsets array at `starts.base` (or equivalently, `stops.base`); `False` otherwise.
    * `counts2offsets(counts)`: convert a counts array to an offsets array.
@@ -375,7 +375,7 @@ The `awkward.array.jagged` submodule may define helper functions, such as the fo
 
 Product types, or arrays of records with a fixed set of named, typed fields can be conceptually represented as tables. The "`row-wise`" vs. https://en.wikipedia.org/wiki/Column-oriented_DBMS[columnar] representations discussed in the <<Jaggedness>> section were first developed in the context of tables. The "`row`" and "`table`" terminology came from a discussion of tables: named, typed attributes are conventionally associated with columns of a data table, while anonymous data points fill the rows. A row-wise data representation can be replaced with a columnar representation by simply transposing it in memory, or at least writing each column of data to a separate, equal-length array. Columnar layouts have been used in tabular databases since TAXIR in 1969.
 
-Numpy has a product type called a https://docs.scipy.org/doc/numpy/user/basics.rec.html[structured array] or record array. This is a row-wise data representation, which would be hard to mix with columnar jagged arrays. Instead of using structured arrays from the base library directly, awkward-array defines a `Table` type with the same syntax.
+Numpy has a product type called a https://docs.scipy.org/doc/numpy/user/basics.rec.html[structured array] or record array. This is a row-wise data representation, which would be hard to mix with columnar jagged arrays. Instead of using structured arrays from the base library directly, Awkward Array defines a `Table` type with the same syntax.
 
 Like Numpy's structured arrays, `Table` columns are selected by strings in a get-item, these string get-items commute with extract/slice/mask/gather get-items, and they can't be used in the same multidimensional tuple with extract/slice/mask/gather get-items. (Despite the tabular metaphors, columns are not a dimension in the sense of _N_-dimensional arrays; they're a qualitatively different kind of accessor.) Unlike Numpy's structured arrays, `Table` columns have no constraints on where they reside in memory: they may be strides across a Numpy structured array, they may be fully columnar arrays in an https://arrow.apache.org[Arrow] buffer, or they may be Numpy arrays, scattered in memory.
 
@@ -403,7 +403,7 @@ which is a `Table` whose column arrays all have shape `(n, m)`.
 
 === Table
 
-A `Table` is defined by an arbitrary number of named arrays, which are columns of the table. A `Table` need not represent purely tabular data; if it is nested within a `JaggedArray`, it is a jagged table, and if it contains any `JaggedArray`, it is a stringy table. Columns may be generated from any basic array, awkward-array, or Python iterable, with `DEFAULTTYPE` as the default type of empty iterables.
+A `Table` is defined by an arbitrary number of named arrays, which are columns of the table. A `Table` need not represent purely tabular data; if it is nested within a `JaggedArray`, it is a jagged table, and if it contains any `JaggedArray`, it is a stringy table. Columns may be generated from any basic array, Awkward Array, or Python iterable, with `DEFAULTTYPE` as the default type of empty iterables.
 
 The `Table` constructor permits the following argument patterns:
 
@@ -413,7 +413,7 @@ The `Table` constructor permits the following argument patterns:
 
 Pattern 1 and pattern 2 are incompatible; the first argument is either a subclass of dict or not. More than one positional argument in pattern 2 is not allowed. Both of the first two patterns are compatible with pattern 3: they may be freely mixed, as long as column names are never repeated (impossible with pattern 1).
 
-After construction, columns can be added, overwritten, and removed using `Table's` set-item and del-item methods. The fact that `Tables` may be nested is the only reason awkward-arrays have set-item and del-item methods: to pass a new column to a nested `Table` or request that one of its columns be deleted. Columns maintain their order (following Python's ordered dict semantics).
+After construction, columns can be added, overwritten, and removed using `Table's` set-item and del-item methods. The fact that `Tables` may be nested is the only reason Awkward Arrays have set-item and del-item methods: to pass a new column to a nested `Table` or request that one of its columns be deleted. Columns maintain their order (following Python's ordered dict semantics).
 
 `Table` has no whole-array validity conditions. The columns might have different lengths, but the total length of the `Table` is given by the minimum length of all contained columns (zero if there are no columns).
 
@@ -436,9 +436,9 @@ If `selection` is a string, one column is pulled from the table. If the column l
 
 [source, python]
 ----
-myarray = awkward.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8],
-                        y=[100, 101, 102, 103, 104, 105, 106],
-                        n=[0, 1, 2, 3, 4])
+myarray = awkward0.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8],
+                         y=[100, 101, 102, 103, 104, 105, 106],
+                         n=[0, 1, 2, 3, 4])
 myarray
 # returns <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 72afb63cba90>
 myarray["x"]
@@ -461,8 +461,8 @@ If `selection` is any integer, slice, list or array of booleans, or list or arra
 
 [source, python]
 ----
-myarray = awkward.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8],
-                        n=[0, 1, 2, 3, 4])
+myarray = awkward0.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8],
+                         n=[0, 1, 2, 3, 4])
 myarray
 # returns <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 70e1687f9a58>
 myarray[3]
@@ -489,8 +489,8 @@ Column-projection and extraction/slicing/masking/gathering cannot be performed i
 
 [source, python]
 ----
-points = awkward.Table(x=[0.0, 1.1, 2.2, 3.3], y=[0, 100, 101, 102, 103])
-myarray = awkward.Table(points=points, n=[0, 1, 2, 3])'
+points = awkward0.Table(x=[0.0, 1.1, 2.2, 3.3], y=[0, 100, 101, 102, 103])
+myarray = awkward0.Table(points=points, n=[0, 1, 2, 3])'
 myarray["points"]["x"]
 # returns array([0. , 1.1, 2.2, 3.3])
 myarray["points"]["y"]
@@ -499,11 +499,11 @@ myarray["n"]
 # returnsarray([0, 1, 2, 3])
 ----
 
-Tables inside of other awkward-array components may not be strictly rectangular. For example, a `JaggedArray` of `Table` is a jagged table:
+Tables inside of other Awkward Array components may not be strictly rectangular. For example, a `JaggedArray` of `Table` is a jagged table:
 
 [source, python]
 ----
-myarray = awkward.JaggedArray.fromcounts([3, 0, 2], awkward.Table(
+myarray = awkward0.JaggedArray.fromcounts([3, 0, 2], awkward0.Table(
               x=[0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8],
               n=[0, 1, 2, 3, 4]))
 myarray
@@ -514,12 +514,12 @@ myarray["n"]
 # returns <JaggedArray [[0 1 2] [] [3 4]] at 7e33e188c470>
 ----
 
-Other awkward-array components inside of tables may not be strictly rectangular. For example, a `Table` containing a `JaggedArray` is a stringy table:
+Other Awkward Array components inside of tables may not be strictly rectangular. For example, a `Table` containing a `JaggedArray` is a stringy table:
 
 [source, python]
 ----
-myarray = awkward.Table(
-              x=awkward.JaggedArray.fromcounts(
+myarray = awkward0.Table(
+              x=awkward0.JaggedArray.fromcounts(
                   [4, 0, 2, 2, 1],
                   [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8]),
               n=[0, 1, 2, 3, 4])
@@ -539,8 +539,8 @@ If tables are passed into a Numpy ufunc (or equivalent mapped kernel), the ufunc
 
 [source, python]
 ----
-a = awkward.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4], n=[0, 1, 2, 3, 4])
-b = awkward.Table(x=[0, 100, 200, 300, 400], n=[0, 100, 200, 300, 400])'
+a = awkward0.Table(x=[0.0, 1.1, 2.2, 3.3, 4.4], n=[0, 1, 2, 3, 4])
+b = awkward0.Table(x=[0, 100, 200, 300, 400], n=[0, 100, 200, 300, 400])'
 numpy.add(a, b)
 # returns <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 74ce37c32320>
 numpy.add(a, b).tolist()
@@ -641,9 +641,9 @@ For example,
 
 [source, python]
 ----
-myarray = awkward.UnionArray.fromtags([0, 1, 1, 0, 0, 1], [
+myarray = awkward0.UnionArray.fromtags([0, 1, 1, 0, 0, 1], [
               numpy.array([1.1, 2.2, 3.3]),
-              awkward.JaggedArray.fromiter([[100, 200, 300], [], [400, 500]])])
+              awkward0.JaggedArray.fromiter([[100, 200, 300], [], [400, 500]])])
 myarray
 # returns <UnionArray [1.1 [100 200 300] [] 2.2 3.3 [400 500]] at 7f5e1aceb7b8>
 myarray[1:5]
@@ -656,9 +656,9 @@ Some of these `selections` may not be valid for all `contents`. Whether their ap
 
 [source, python]
 ----
-myarray = awkward.UnionArray.fromtags([0, 1, 0, 0, 1], [
+myarray = awkward0.UnionArray.fromtags([0, 1, 0, 0, 1], [
               numpy.array([1.1, 2.2, 3.3]),
-              awkward.JaggedArray.fromiter([[100, 200, 300], [400, 500]])])
+              awkward0.JaggedArray.fromiter([[100, 200, 300], [400, 500]])])
 myarray
 # returns <UnionArray [1.1 [100 200 300] 2.2 3.3 [400 500]] at 7f5e1aceb630>
 myarray[myarray.tags == 1, :2]
@@ -675,9 +675,9 @@ For example,
 
 [source, python]
 ----
-a = awkward.UnionArray.fromtags([0, 1, 1, 0, 0, 1], [
+a = awkward0.UnionArray.fromtags([0, 1, 1, 0, 0, 1], [
         numpy.array([1.1, 2.2, 3.3]),
-        awkward.JaggedArray.fromiter([[100, 200, 300], [], [400, 500]])])
+        awkward0.JaggedArray.fromiter([[100, 200, 300], [], [400, 500]])])
 a
 # returns <UnionArray [1.1 [100 200 300] [] 2.2 3.3 [400 500]] at 7f5e1aceb710>
 numpy.add(a, 10)
@@ -701,7 +701,7 @@ This methods generates an `index` assuming that all `contents` are in order with
 
 In type theory, option types may be considered a special case of sum types: `?T` is the sum of `T` with a unit type; a unit type has only one possible value, null. As described above, we do not wish to introduce an array type whose only information content is the shape of the array.
 
-Additionally, we implement option types in a different way from unions: as boolean masks. With the exception of `IndexedMaskedArray`, Each missing value in a masked array has only one bit of information, the fact that it is missing. A single boolean mask array suffices. An awkward-array library has three masked array types:
+Additionally, we implement option types in a different way from unions: as boolean masks. With the exception of `IndexedMaskedArray`, Each missing value in a masked array has only one bit of information, the fact that it is missing. A single boolean mask array suffices. An Awkward Array library has three masked array types:
 
    * `MaskedArray` (superclass): the mask array has one boolean per byte.
    * `BitMaskedArray`: the mask array has one boolean per bit, with padding to fill a whole number of bytes.
@@ -753,8 +753,8 @@ For example,
 
 [content, python]
 ----
-myarray = awkward.MaskedArray([False, True, True, False],
-              awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [999], [4.4, 5.5]]))
+myarray = awkward0.MaskedArray([False, True, True, False],
+              awkward0.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [999], [4.4, 5.5]]))
 myarray
 # returns <MaskedArray [[1.1 2.2 3.3] None None [4.4 5.5]] at 7f5e1aceb7b8>
 myarray[0]
@@ -773,8 +773,8 @@ For example,
 
 [source, python]
 ----
-a = awkward.MaskedArray([False, False, True, False, True], [1.1, 2.2, 3.3, 4.4, 5.5])
-b = awkward.MaskedArray([False, True, True, False, False], [100, 200, 300, 400, 500])
+a = awkward0.MaskedArray([False, False, True, False, True], [1.1, 2.2, 3.3, 4.4, 5.5])
+b = awkward0.MaskedArray([False, True, True, False, False], [100, 200, 300, 400, 500])
 a
 # returns <MaskedArray [1.1 2.2 None 4.4 None] at 7f5e1aceb6d8>
 b
@@ -845,7 +845,7 @@ The length of the `IndexedMaskedArray` is the length of the `mask`.
 
 Most programming environments have a concept of a "`pointer`" or "`reference`" that allows one object to be logically nested within another without being nested in the memory layout. The referenced object may be anywhere in memory and might not conform to the structure required of its type (depending on how strictly the language maintains type-safety). Completely general pointers cannot be emulated with arrays unless the entirety of a program's memory were put into a single array. However, a limited form of indirection can be implemented through arrays of indexes.
 
-As described in the <<Cross-references and cyclic references,types section>>, awkward-array allows the same data to appear in multiple parts of the data structure or even to contain themselves. In Python, awkward-arrays are Python instances whose members can be reassigned after construction, so nothing prevents an array from appearing in multiple parts of a structure or from containing itself.
+As described in the <<Cross-references and cyclic references,types section>>, Awkward Array allows the same data to appear in multiple parts of the data structure or even to contain themselves. In Python, Awkward Arrays are Python instances whose members can be reassigned after construction, so nothing prevents an array from appearing in multiple parts of a structure or from containing itself.
 
 To facilitate this kind of indirection, the `IndexedArray` class represents a delayed gather operation: it contains an array of indexes and a content array: extraction, slicing, masking, and gathering are filtered through the indexes before selecting contents. Its content could be itself, allowing the creation of graphs, though a `JaggedArray` or `UnionArray` in between would be needed to keep the graph finite.
 
@@ -859,7 +859,7 @@ Since `SparseArray` must invert its index with every extraction, the index shoul
 ----
 index, content     # coordinates as two equal-length arrays
 order = numpy.argsort(index)
-awkward.SparseArray(length, index[order], content[order])
+awkward0.SparseArray(length, index[order], content[order])
 ----
 
 `IndexedArray` and `SparseArray` both have the data type of their content -- they are invisible at the type level, providing low-level features.
@@ -886,7 +886,7 @@ For example,
 
 [source, python]
 ----
-myarray = awkward.IndexedArray([2, 2, 1, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5])
+myarray = awkward0.IndexedArray([2, 2, 1, 4], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5])
 myarray
 # returns <IndexedArray [2.2 2.2 1.1 4.4] at 772e306077f0>
 myarray[2]
@@ -899,10 +899,10 @@ Here is another example, this one using a cyclic reference to build arbitrary de
 
 [source, python]
 ----
-myarray = awkward.IndexedArray([0],
-              awkward.UnionArray.fromtags([1, 0, 1, 0, 1, 0, 0, 1], [
+myarray = awkward0.IndexedArray([0],
+              awkward0.UnionArray.fromtags([1, 0, 1, 0, 1, 0, 0, 1], [
                   numpy.array([1.1, 2.2, 3.3, 4.4]),
-                  awkward.JaggedArray([1, 3, 5, 8], [3, 5, 8, 8], [])]))   # the [] will be replaced
+                  awkward0.JaggedArray([1, 3, 5, 8], [3, 5, 8, 8], [])]))   # the [] will be replaced
 myarray.content.contents[1].content = myarray.content
 myarray
 # returns <IndexedArray [[1.1 [2.2 [3.3 4.4 []]]]] at 746bf6c422b0>
@@ -962,7 +962,7 @@ For example,
 
 [source, python]
 ----
-myarray = awkward.SparseArray(1000, [101, 102, 105, 800], [1.1, 2.2, 3.3, 4.4])
+myarray = awkward0.SparseArray(1000, [101, 102, 105, 800], [1.1, 2.2, 3.3, 4.4])
 myarray
 # returns <SparseArray [0.0 0.0 0.0 ... 0.0 0.0 0.0] at 7131e4b9a438>
 myarray[100:106]
@@ -987,15 +987,15 @@ Unary and binary operators corresponding to mapped kernels should have the same 
 
 === Helper functions
 
-The `awkward.array.indexed` submodule may define helper functions, such as the following.
+The `awkward0.array.indexed` submodule may define helper functions, such as the following.
 
    * `invert(permutation)`: returns `inverse` such that `inverse[permutation] == numpy.arange(len(permutation))` is the identity. (If `permutation` contains all values from `0` to `len(permutation) - 1`, it is also the case that `permutation[inverse] == numpy.arange(len(permutation))`.) If not all values in `permutation` are distinct, this function raises an error.
 
 == Opaque objects
 
-The array types defined above are sufficient to create rich data types -- most of the types expected in a general programming environment. With columnar layouts in memory, they take a minimum of space and regular operations can be applied on them very quickly. However, all of these are awkward-array types: only Numpy ufuncs and Python get-item know how to operate on them. Situations will arise in which types must satisfy third-party constraints.
+The array types defined above are sufficient to create rich data types -- most of the types expected in a general programming environment. With columnar layouts in memory, they take a minimum of space and regular operations can be applied on them very quickly. However, all of these are Awkward Array types: only Numpy ufuncs and Python get-item know how to operate on them. Situations will arise in which types must satisfy third-party constraints.
 
-Data structures built by combining awkward-arrays are *constructive* (built by construction), instances of other types are *opaque* (not known to the awkward-array library). To emulate an array of opaque objects, we wrap it in an `ObjectArray` that applies a function to an element `i` to generate the object at `i`. The object must be a pure function of the data at element `i` and not maintain long-lived state.
+Data structures built by combining Awkward Arrays are *constructive* (built by construction), instances of other types are *opaque* (not known to the Awkward Array library). To emulate an array of opaque objects, we wrap it in an `ObjectArray` that applies a function to an element `i` to generate the object at `i`. The object must be a pure function of the data at element `i` and not maintain long-lived state.
 
 Get-item selections and mapped kernels perform vectorized operations across all or much of the array, and if the object type has methods, users may want to apply the methods as vectorized operations as well. Instantiating all elements in the array and invoking the method on all of them misses the point (one might as well use a Python list or a Numpy object array), so there is an alternate way to apply them: as vectorized operations on the data used to generate the objects.
 
@@ -1003,7 +1003,7 @@ Here is a motivating example: a `Table` of floating point `"x"` and `"y"` column
 
 These methods are added with a mix-in facility that accepts any class containing pure-function methods (no persistent state) and has no `__init__` method. This is where different languages  will put the most constraint on what can be done. Mix-ins are equivalent to Java's Interfaces, but in a statically compiled language, methods can't be added at runtime. In Java in particular, classes can be created from mix-ins in a nested `ClassContext`, but methods from these runtime types can't be used in the main `ClassContext` code because it has already been type-checked. Code that uses the new methods must be compiled after the mix-ins, which means that it must be compiled on the fly. In C++, a just-in-time compiler like https://root.cern.ch/cling[Cling] would be needed.
 
-A library may be called compliant with awkward-array if it lacks the ability to add mix-in methods.
+A library may be called compliant with Awkward Array if it lacks the ability to add mix-in methods.
 
 An important use of `ObjectArray` and mix-in methods is `StringArray`, which implements an array of strings as a `JaggedArray` of `CHARTYPE`, generating `str` or `bytes` objects upon extraction. It is important (for users) that the objects drawn from this array have the native string type of whichever language they're using. It's also important to have some vectorized methods, like dropping the last character of all strings (which can actually be a shift to the `JaggedArray's` stops array). `StringArray` has its mix-in methods built-in, so it does not suffer the dynamic vs. static issue described above.
 
@@ -1013,8 +1013,8 @@ Although Numpy can store strings in arrays, its rectangular model requires strin
 
 For a class to be eligible as a mix-in, it must not have an `__init__` method and must not modify `self` in any of its methods. Mix-ins can be added to a class by inheritance or to an instance (in Python) by changing an object's `__class__` attribute. Convenience functions are provided in `Methods`, which is a container of static methods:
 
-   * `mixin(methods, awkwardtype)`: given a `methods` class (the mix-ins) and an `awkwardtype` (the awkward-array class object, like `JaggedArray` or `ObjectArray`), this returns an array class object with the methods added. This class object can be constructed like the corresponding awkward-array, or it may be assigned to an existing instance's `__class__` attribute.
-   * `maybemixin(samples, awkwardtype)`: given a `samples` object (an array that might have mix-ins) or list (arrays that might have mix-ins) and an `awkwardtype` (the awkward-array class object, like `JaggedArray` or `ObjectArray`), this returns an array class object with any mix-ins any of the `samples` might have (union of all mix-in methods, in Python subclassing order). It is used to transfer mix-in methods from one array to another.
+   * `mixin(methods, awkwardtype)`: given a `methods` class (the mix-ins) and an `awkwardtype` (the Awkward Array class object, like `JaggedArray` or `ObjectArray`), this returns an array class object with the methods added. This class object can be constructed like the corresponding Awkward Array, or it may be assigned to an existing instance's `__class__` attribute.
+   * `maybemixin(samples, awkwardtype)`: given a `samples` object (an array that might have mix-ins) or list (arrays that might have mix-ins) and an `awkwardtype` (the Awkward Array class object, like `JaggedArray` or `ObjectArray`), this returns an array class object with any mix-ins any of the `samples` might have (union of all mix-in methods, in Python subclassing order). It is used to transfer mix-in methods from one array to another.
 
 Mix-in methods are automatically transferred in the following situations:
 
@@ -1061,7 +1061,7 @@ class Point(object):
     def __repr__(self):
         return "<Point {0} {1}>".format(self.x, self.y)
 
-myarray = awkward.ObjectArray(awkward.Table(x=[1.1, 2.2, 3.3], y=[10, 20, 30]), Point)
+myarray = awkward0.ObjectArray(awkward0.Table(x=[1.1, 2.2, 3.3], y=[10, 20, 30]), Point)
 myarray
 # returns <ObjectArray [<Point 1.1 10> <Point 2.2 20> <Point 3.3 30>] at 7779705f4860>
 myarray[1:]
@@ -1080,8 +1080,8 @@ Using the class from the previous example,
 
 [source, python]
 ----
-a = awkward.ObjectArray(awkward.Table(x=[1.1, 2.2, 3.3], y=[10, 20, 30]), Point)
-b = awkward.ObjectArray(awkward.Table(x=[10, 20, 30], y=[100, 100, 100]), Point)
+a = awkward0.ObjectArray(awkward0.Table(x=[1.1, 2.2, 3.3], y=[10, 20, 30]), Point)
+b = awkward0.ObjectArray(awkward0.Table(x=[10, 20, 30], y=[100, 100, 100]), Point)
 numpy.add(a, b)
 # returns <ObjectArray [<Point 11.1 110> <Point 22.2 120> <Point 33.3 130>] at 7aea8ce5a358>
 ----
@@ -1090,7 +1090,7 @@ Unary and binary operators corresponding to mapped kernels should have the same 
 
 === StringArray
 
-A `StringArray` is an `ObjectArray` with `awkward.array.objects.StringMethods` mix-ins. Its `content` is an internal `JaggedArray` and it accepts `JaggedArray` constructors. Its primary constructor parameters are:
+A `StringArray` is an `ObjectArray` with `awkward0.array.objects.StringMethods` mix-ins. Its `content` is an internal `JaggedArray` and it accepts `JaggedArray` constructors. Its primary constructor parameters are:
 
    * `starts`: same as `JaggedArray.starts` except that it will apply to byte positions in `content.
    * `stops`: same as `JaggedArray.stops` except that it will apply to byte positions in
@@ -1106,9 +1106,9 @@ The length and shape of `StringArray` are the length and shape of `starts`.
    * `StringArray.fromstr(shape, string)`: duplicates a single `str` or `bytes` object to fill an array with a given `shape` (may be a non-negative integer).
    * `StringArray.fromnumpy(array)`: converts a Numpy string array into a `StringArray`.
 
-As an `ObjectArray` with an implicit `generator` of `awkward.array.objects.tostring` an implicit `args` of `(encoding,)`, and an implicit `dims` of `len(starts.shape)`, a `StringArray` returns a `bytes` or `str` for each item.
+As an `ObjectArray` with an implicit `generator` of `awkward0.array.objects.tostring` an implicit `args` of `(encoding,)`, and an implicit `dims` of `len(starts.shape)`, a `StringArray` returns a `bytes` or `str` for each item.
 
-All Numpy ufuncs (or equivalent mapped functions) apply mathematical operations on the characters of the strings as though they were `uint8` integers, except for equality tests (`==` and `!=` or `numpy.equal` and `numpy.not_equal`), which are overloaded in `awkward.array.objects.StringMethods` to compute string equality.
+All Numpy ufuncs (or equivalent mapped functions) apply mathematical operations on the characters of the strings as though they were `uint8` integers, except for equality tests (`==` and `!=` or `numpy.equal` and `numpy.not_equal`), which are overloaded in `awkward0.array.objects.StringMethods` to compute string equality.
 
 == Non-contiguousness
 
@@ -1118,7 +1118,7 @@ However, just as we wrap arrays in classes to give them new logical structure, w
 
 To extract an element at index `i`, it is necessary to know the length of all chunks up to and including the one in which index `i` resides, but getting this information might be an expensive operation. Therefore, `ChunkedArray` does not require this information up-front, but requests it and retains it as higher indexes are requested. Its string representations (`str` and `repr` in Python) only show the first few elements and not the last if not all of the counts are known.
 
-A non-contiguous array interface makes it possible to efficiently append rows to an array. Instead of copying a whole array into a larger allocation with each append, we can allocate a chunk, fill it by writing to it and increasing its "`end`" pointer, then allocate a new chunk when it is full. Since we can address non-contiguous data as a single array, we never have to copy partial results to concatenate. `AppendableArray` is an array with appendable rows, and is one of the only two mutable array types in awkward-arrays: `AppendableArray` can add new rows and `Table` can add, overwrite, and remove columns.
+A non-contiguous array interface makes it possible to efficiently append rows to an array. Instead of copying a whole array into a larger allocation with each append, we can allocate a chunk, fill it by writing to it and increasing its "`end`" pointer, then allocate a new chunk when it is full. Since we can address non-contiguous data as a single array, we never have to copy partial results to concatenate. `AppendableArray` is an array with appendable rows, and is one of the only two mutable array types in Awkward Arrays: `AppendableArray` can add new rows and `Table` can add, overwrite, and remove columns.
 
 === ChunkedArray
 
@@ -1153,7 +1153,7 @@ Touching elements can affect which `counts` are known and therefore the string r
 
 [source, python]
 ----
-myarray = awkward.ChunkedArray([[0, 1, 2], [], [3, 4], [5, 6, 7, 8], [9]])
+myarray = awkward0.ChunkedArray([[0, 1, 2], [], [3, 4], [5, 6, 7, 8], [9]])
 myarray
 # returns <ChunkedArray [0 1 2 3 4 5 6 ...] at 7f778daed7f0>
 myarray[-1]
@@ -1198,7 +1198,7 @@ The whole-array validity conditions are the same as for `ChunkedArray`, except t
 
 == Laziness
 
-Often, datasets are too large to entirely load into memory or too large to load up-front. Many data-loading libraries offer the ability to load parts of a file or dataset as needed. However, the decisions about when to load data, how much to load, and what to cache are system-dependent, and we might instead want them to be encoded in the array structure itself, so awkward-array has a `VirtualArray` class to represent an array that might or might not be in memory, but will be when asked.
+Often, datasets are too large to entirely load into memory or too large to load up-front. Many data-loading libraries offer the ability to load parts of a file or dataset as needed. However, the decisions about when to load data, how much to load, and what to cache are system-dependent, and we might instead want them to be encoded in the array structure itself, so Awkward Array has a `VirtualArray` class to represent an array that might or might not be in memory, but will be when asked.
 
 Laziness and non-contiguousness are closely related. If a `Table` is too big to load but its columns of interest are not, then we may want a `Table` of `VirtualArrays`, so that each entire column is loaded when touched. However, if a single column is too big to load, then delaying that operation with a `VirtualArray` is not enough: we need a `ChunkedArray` of `VirtualArrays` to load chunks of rows at a time.
 

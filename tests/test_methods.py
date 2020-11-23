@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-0.x/blob/master/LICENSE
 
 from __future__ import division
 
@@ -8,16 +8,16 @@ import unittest
 import numbers
 import operator
 import numpy as np
-import awkward
+import awkward0
 
 class Test(unittest.TestCase):
     def runTest(self):
         pass
 
     def test_method_mixin(self):
-        class TypeArrayMethods(awkward.Methods):
+        class TypeArrayMethods(awkward0.Methods):
             def _initObjectArray(self, table):
-                awkward.ObjectArray.__init__(self, table, lambda row: Type(row["x"]))
+                awkward0.ObjectArray.__init__(self, table, lambda row: Type(row["x"]))
                 self.content.rowname = "Type"
 
             @property
@@ -34,12 +34,12 @@ class Test(unittest.TestCase):
 
                 inputs = list(inputs)
                 for i in range(len(inputs)):
-                    if isinstance(inputs[i], awkward.util.numpy.ndarray) and inputs[i].dtype == awkward.util.numpy.dtype(object) and len(inputs[i]) > 0:
-                        idarray = awkward.util.numpy.frombuffer(inputs[i], dtype=awkward.util.numpy.uintp)
+                    if isinstance(inputs[i], awkward0.util.numpy.ndarray) and inputs[i].dtype == awkward0.util.numpy.dtype(object) and len(inputs[i]) > 0:
+                        idarray = awkward0.util.numpy.frombuffer(inputs[i], dtype=awkward0.util.numpy.uintp)
                         if (idarray == idarray[0]).all():
                             inputs[i] = inputs[i][0]
 
-                if ufunc is awkward.util.numpy.add or ufunc is awkward.util.numpy.subtract:
+                if ufunc is awkward0.util.numpy.add or ufunc is awkward0.util.numpy.subtract:
                     if not all(isinstance(x, (TypeArrayMethods, TypeMethods)) for x in inputs):
                         raise TypeError("(arrays of) Type can only be added to/subtracted from other (arrays of) Type")
                     out = self.empty_like()
@@ -49,7 +49,7 @@ class Test(unittest.TestCase):
                 else:
                     return super(TypeArrayMethods, self).__array_ufunc__(ufunc, method, *inputs, **kwargs)
 
-        class TypeMethods(awkward.Methods):
+        class TypeMethods(awkward0.Methods):
             _arraymethods = TypeArrayMethods
 
             @property
@@ -61,13 +61,13 @@ class Test(unittest.TestCase):
                 self._x = value
 
             def _number_op(self, operator, scalar, reverse=False):
-                if not isinstance(scalar, (numbers.Number, awkward.util.numpy.number)):
+                if not isinstance(scalar, (numbers.Number, awkward0.util.numpy.number)):
                     raise TypeError("cannot {0} a Type with a {1}".format(operator.__name__, type(scalar).__name__))
                 if reverse:
                     return Type(operator(scalar, self.x))
                 else:
                     return Type(operator(self.x, scalar))
-        
+
             def _type_op(self, operator, other, reverse=False):
                 if isinstance(other, self._arraymethods):
                     # Give precedence to reverse op, implemented using self._arraymethods.__array_ufunc__
@@ -91,9 +91,9 @@ class Test(unittest.TestCase):
             def __radd__(self, other):
                 return self._type_op(operator.add, other, True)
 
-        class TypeArray(TypeArrayMethods, awkward.ObjectArray):
+        class TypeArray(TypeArrayMethods, awkward0.ObjectArray):
             def __init__(self, x):
-                self._initObjectArray(awkward.Table())
+                self._initObjectArray(awkward0.Table())
                 self["x"] = x
 
         class Type(TypeMethods):
@@ -119,7 +119,7 @@ class Test(unittest.TestCase):
         scalar2 = Type(4.)
         assert (scalar+scalar2).x == 7.
 
-        JaggedTypeArray = awkward.Methods.mixin(TypeArrayMethods, awkward.JaggedArray)
+        JaggedTypeArray = awkward0.Methods.mixin(TypeArrayMethods, awkward0.JaggedArray)
         jagged_array = JaggedTypeArray.fromcounts(counts, array)
         assert np.all(jagged_array.x.flatten() == x)
         assert np.all(jagged_array.pairs().i0.x.counts == counts*(counts+1)//2)

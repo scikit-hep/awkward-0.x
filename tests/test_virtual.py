@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-0.x/blob/master/LICENSE
 
 import struct
 import unittest
 
 import numpy
 
-from awkward import *
-import awkward.type
+from awkward0 import *
+import awkward0.type
 
 class Test(unittest.TestCase):
     def runTest(self):
@@ -62,7 +62,7 @@ class Test(unittest.TestCase):
         del a
 
     def test_virtual_dontmaterialize(self):
-        a = VirtualArray(lambda: [1, 2, 3], type=awkward.type.fromnumpy(3, int))
+        a = VirtualArray(lambda: [1, 2, 3], type=awkward0.type.fromnumpy(3, int))
         assert not a.ismaterialized
         assert a.dtype == numpy.dtype(int)
         assert a.shape == (3,)
