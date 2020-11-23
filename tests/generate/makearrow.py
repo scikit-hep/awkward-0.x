@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import pandas
-import awkward
+import awkward0
 import pyarrow
 
 exoplanets = pandas.read_csv("/home/pivarski/talks/2019-05-28-lpchats-numpy-uproot-awkward/data/nasa-exoplanets.csv")
@@ -29,8 +29,8 @@ for (starname, planetname), row in df.iterrows():
                                      "mass": row["planet", "mass (Jupiter)"],
                                      "radius": row["planet", "radius (Jupiter)"]})
 
-stars = awkward.fromiter(stardicts)
-arrowstars = awkward.toarrow(stars)
+stars = awkward0.fromiter(stardicts)
+arrowstars = awkward0.toarrow(stars)
 
 with open("exoplanets.arrow", "wb") as sink:
     writer = pyarrow.RecordBatchFileWriter(sink, arrowstars.schema)
@@ -39,4 +39,4 @@ with open("exoplanets.arrow", "wb") as sink:
     writer.close()
 
 # to read it back again:
-awkward.fromarrow(pyarrow.ipc.open_file(open("exoplanets.arrow", "rb")).get_batch(0))
+awkward0.fromarrow(pyarrow.ipc.open_file(open("exoplanets.arrow", "rb")).get_batch(0))

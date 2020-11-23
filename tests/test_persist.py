@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-0.x/blob/master/LICENSE
 
 import pickle
 import struct
@@ -9,9 +9,9 @@ import zlib
 
 import numpy
 
-from awkward import *
-from awkward.persist import *
-from awkward.type import *
+from awkward0 import *
+from awkward0.persist import *
+from awkward0.type import *
 
 def makearray():
     return range(10)
@@ -37,7 +37,7 @@ class Test(unittest.TestCase):
         pass
 
     def test_pickle(self):
-        a = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a = awkward0.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         b = pickle.loads(pickle.dumps(a))
         assert a.tolist() == b.tolist()
 
@@ -62,9 +62,9 @@ class Test(unittest.TestCase):
     def test_crossref(self):
         starts = [1, 0, 4, 0, 0]
         stops  = [4, 0, 5, 0, 0]
-        a = awkward.JaggedArray(starts, stops, [])
+        a = awkward0.JaggedArray(starts, stops, [])
         a.content = a
-        a = awkward.IndexedArray([0, 4], a)
+        a = awkward0.IndexedArray([0, 4], a)
         storage = {}
         serialize(a, storage)
         b = deserialize(storage)
@@ -72,8 +72,8 @@ class Test(unittest.TestCase):
 
     def test_two_in_one(self):
         storage = {}
-        a1 = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-        a2 = awkward.JaggedArray.fromiter([[], [1, 2], [3], []])
+        a1 = awkward0.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a2 = awkward0.JaggedArray.fromiter([[], [1, 2], [3], []])
         serialize(a1, storage, "one")
         serialize(a2, storage, "two")
         b1 = deserialize(storage, "one")
@@ -83,7 +83,7 @@ class Test(unittest.TestCase):
 
     def test_ChunkedArray(self):
         storage = {}
-        a = awkward.ChunkedArray([[0.0, 1.1, 2.2], [], [3.3, 4.4]])
+        a = awkward0.ChunkedArray([[0.0, 1.1, 2.2], [], [3.3, 4.4]])
         serialize(a, storage)
         b = deserialize(storage)
         assert a.tolist() == b.tolist()
@@ -107,7 +107,7 @@ class Test(unittest.TestCase):
 
     def test_IndexedArray(self):
         storage = {}
-        a = awkward.IndexedArray([2, 3, 6, 3, 2, 2, 7], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+        a = awkward0.IndexedArray([2, 3, 6, 3, 2, 2, 7], [0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
         serialize(a, storage)
         b = deserialize(storage)
         assert a.tolist() == b.tolist()
@@ -121,14 +121,14 @@ class Test(unittest.TestCase):
 
     def test_JaggedArray(self):
         storage = {}
-        a = awkward.JaggedArray([2, 1], [5, 2], [1.1, 2.2, 3.3, 4.4, 5.5])
+        a = awkward0.JaggedArray([2, 1], [5, 2], [1.1, 2.2, 3.3, 4.4, 5.5])
         serialize(a, storage)
         b = deserialize(storage)
         assert a.tolist() == b.tolist()
 
     def test_JaggedArray_fromcounts(self):
         storage = {}
-        a = awkward.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+        a = awkward0.JaggedArray.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
         serialize(a, storage)
         b = deserialize(storage)
         assert a.tolist() == b.tolist()
@@ -206,7 +206,7 @@ class Test(unittest.TestCase):
 
     def test_VirtualArray(self):
         storage = {}
-        a = awkward.VirtualArray(makearray)
+        a = awkward0.VirtualArray(makearray)
         serialize(a, storage)
         cache = {}
         b = deserialize(storage, cache=cache, whitelist="*")
@@ -219,7 +219,7 @@ class Test(unittest.TestCase):
         assert len(cache) == 1
 
         storage = {}
-        a = awkward.VirtualArray(makearray, persistentkey="find-me-again")
+        a = awkward0.VirtualArray(makearray, persistentkey="find-me-again")
         serialize(a, storage)
         cache = {}
         b = deserialize(storage, cache=cache, whitelist="*")
@@ -228,13 +228,13 @@ class Test(unittest.TestCase):
         assert list(cache.keys()) == ["find-me-again"]
 
         storage = {}
-        a = awkward.VirtualArray(makearray, type=ArrayType(10, numpy.dtype(int)))
+        a = awkward0.VirtualArray(makearray, type=ArrayType(10, numpy.dtype(int)))
         serialize(a, storage)
         b = deserialize(storage, whitelist="*")
         assert a.type == b.type
 
         storage = {}
-        a = awkward.VirtualArray(makearray, persistvirtual=False)
+        a = awkward0.VirtualArray(makearray, persistvirtual=False)
         serialize(a, storage)
         b = deserialize(storage, whitelist="*")
         assert isinstance(b, numpy.ndarray)

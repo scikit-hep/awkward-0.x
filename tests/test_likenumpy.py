@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-0.x/blob/master/LICENSE
 
 import unittest
 
 import numpy
 
-import awkward
+import awkward0
 
 class Test(unittest.TestCase):
     def runTest(self):
@@ -16,7 +16,7 @@ class Test(unittest.TestCase):
         print()
 
         np = numpy.array([[1, 10, 100], [2, 20, 200], [3, 30, 300]])
-        aw = awkward.fromiter(np)
+        aw = awkward0.fromiter(np)
 
         assert np.tolist() == aw.tolist()
         assert np[:2].tolist() == aw[:2].tolist()
@@ -34,7 +34,7 @@ class Test(unittest.TestCase):
         assert np[[True, False, True], [True, False, True]].tolist() == aw[[True, False, True], [True, False, True]].tolist()
 
         np = numpy.array([[[1, 10, 100], [2, 20, 200], [3, 30, 300]], [[4, 40, 400], [5, 50, 500], [6, 60, 600]], [[7, 70, 700], [8, 80, 800], [9, 90, 900]]])
-        aw = awkward.fromiter(np)
+        aw = awkward0.fromiter(np)
 
         assert np.tolist() == aw.tolist()
         assert np[:2].tolist() == aw[:2].tolist()

@@ -7,13 +7,6 @@ See `scikit-hep/awkward-1.0 <https://github.com/scikit-hep/awkward-1.0#readme>`_
 
 .. code-block:: bash
 
-    pip install awkward    # old
-    pip install awkward1   # new
-
-because the interface has changed. Later this year, "Awkward 1" will simply become the ``awkward`` package with version number 1.0. Then the two packages will shift to
-
-.. code-block:: bash
-
     pip install awkward    # new
     pip install awkward0   # old
 
@@ -21,19 +14,13 @@ You can adopt the new library gradually. If you want to use some of its features
 
 .. code-block:: python
 
-    import awkward1 as ak
+    import awkward as ak
 
-awkward-array
+Awkward Array
 =============
-
-.. image:: https://travis-ci.org/scikit-hep/awkward-array.svg?branch=master
-   :target: https://travis-ci.org/scikit-hep/awkward-array
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3275017.svg
    :target: https://doi.org/10.5281/zenodo.3275017
-
-.. image:: https://mybinder.org/badge_logo.svg
-   :target: https://mybinder.org/v2/gh/scikit-hep/awkward-array/master?urlpath=lab/tree/binder%2Ftutorial.ipynb
 
 .. inclusion-marker-1-do-not-remove
 
@@ -57,7 +44,7 @@ versus
 
 Not only is the latter easier to read, it's hundreds of times faster than the for loop (and provides opportunities for hidden vectorization and parallelization). However, the Numpy abstraction stops at rectangular arrays of numbers or character strings. While it's possible to put arbitrary Python data in a Numpy array, Numpy's ``dtype=object`` is essentially a fixed-length list: data are not contiguous in memory and operations are not vectorized.
 
-Awkward-array is a pure Python+Numpy library for manipulating complex data structures as you would Numpy arrays. Even if your data structures
+Awkward Array is a pure Python+Numpy library for manipulating complex data structures as you would Numpy arrays. Even if your data structures
 
 * contain variable-length lists (jagged/ragged),
 * are deeply nested (record structure),
@@ -71,33 +58,24 @@ Awkward-array is a pure Python+Numpy library for manipulating complex data struc
 
 this library can access them as `columnar data structures <https://towardsdatascience.com/the-beauty-of-column-oriented-data-2945c0c9f560>`__, with the efficiency of Numpy arrays. They may be converted from JSON or Python data, loaded from "awkd" files, `HDF5 <https://www.hdfgroup.org>`__, `Parquet <https://parquet.apache.org>`__, or `ROOT <https://root.cern>`__ files, or they may be views into memory buffers like `Arrow <https://arrow.apache.org>`__.
 
-**Note:** feedback on this project informs the development of `awkward-1.0 <https://github.com/jpivarski/awkward-1.0>`__, a reimplementation in C++ with a simpler user interface, coming in 2020. Leave comments about the future of awkward-array there (as GitHub issues or in the Google Docs).
-
 .. inclusion-marker-2-do-not-remove
 
 Installation
 ============
 
-Install awkward like any other Python package:
+Install Awkward Array like any other Python package:
 
 .. code-block:: bash
 
-    pip install awkward                       # maybe with sudo or --user, or in virtualenv
+    pip install awkward0                      # maybe with sudo or --user, or in virtualenv
 
-or install with `conda <https://conda.io/en/latest/miniconda.html>`__:
-
-.. code-block:: bash
-
-    conda config --add channels conda-forge   # if you haven't added conda-forge already
-    conda install awkward
-
-The base ``awkward`` package requires only `Numpy <https://scipy.org/install.html>`__  (1.13.1+).
+The base ``awkward0`` package requires only `Numpy <https://scipy.org/install.html>`__  (1.13.1+).
 
 Recommended packages:
 ---------------------
 
-- `pyarrow <https://arrow.apache.org/docs/python/install.html>`__ to view Arrow and Parquet data as awkward-arrays
-- `h5py <https://www.h5py.org>`__ to read and write awkward-arrays in HDF5 files
+- `pyarrow <https://arrow.apache.org/docs/python/install.html>`__ to view Arrow and Parquet data as Awkward Arrays
+- `h5py <https://www.h5py.org>`__ to read and write Awkward Arrays in HDF5 files
 - `Pandas <https://pandas.pydata.org>`__ as an alternative view
 
 .. inclusion-marker-3-do-not-remove
@@ -105,19 +83,16 @@ Recommended packages:
 Questions
 =========
 
-If you have a question about how to use awkward-array that is not answered in the document below, I recommend asking your question on `StackOverflow <https://stackoverflow.com/questions/tagged/awkward-array>`__ with the ``[awkward-array]`` tag. (I get notified of questions with this tag.)
+If you have a question about how to use Awkward Array that is not answered in the document below, I recommend asking your question on `StackOverflow <https://stackoverflow.com/questions/tagged/awkward-array>`__ with the ``[awkward-array]`` tag. (I get notified of questions with this tag.) Note that this tag is primarily intended for the new version of Awkward Array, so if you're using this version (Awkward 0.x), be sure to mention that.
 
 .. raw:: html
 
    <p align="center"><a href="https://stackoverflow.com/questions/tagged/awkward-array"><img src="https://cdn.sstatic.net/Sites/stackoverflow/company/img/logos/so/so-logo.png" width="30%"></a></p>
 
-If you believe you have found a bug in awkward-array, post it on the `GitHub issues tab <https://github.com/scikit-hep/awkward-array/issues>`__.
+If you believe you have found a bug in Awkward Array, post it on the `GitHub issues tab <https://github.com/scikit-hep/awkward-0.x/issues>`__.
 
 Tutorial
 ========
-
-.. image:: https://mybinder.org/badge_logo.svg
-   :target: https://mybinder.org/v2/gh/scikit-hep/awkward-array/master?urlpath=lab/tree/binder%2Ftutorial.ipynb
 
 **Table of contents:**
 
@@ -133,7 +108,7 @@ Tutorial
 
   * `LHC data from a ROOT file <#lhc-data-from-a-root-file>`__
 
-* `Awkward-array data model <#awkward-array-data-model>`__
+* `Awkward Array data model <#awkward-array-data-model>`__
 
   * `Mutability <#mutability>`__
 
@@ -231,16 +206,16 @@ As before, we get a ``dtype=object`` without vectorized methods.
 
 What's worse, this array looks purely numerical and could have been made by a process that was *supposed* to create equal-length inner lists.
 
-Awkward-array provides a way of talking about these data structures as arrays.
+Awkward Array provides a way of talking about these data structures as arrays.
 
 .. code-block:: python3
 
-    import awkward
-    nested = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}, {"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])
+    import awkward0
+    nested = awkward0.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}, {"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])
     nested
     # <Table [<Row 0> <Row 1> <Row 2> <Row 3> <Row 4>] at 0x7f25e80a01d0>
 
-This ``Table`` is a columnar data structure with the same meaning as the Python data we built it with. To undo ``awkward.fromiter``, call ``.tolist()``.
+This ``Table`` is a columnar data structure with the same meaning as the Python data we built it with. To undo ``awkward0.fromiter``, call ``.tolist()``.
 
 .. code-block:: python3
 
@@ -283,7 +258,7 @@ It's less obvious that variable-length data can be represented in a columnar for
 
 .. code-block:: python3
 
-    varlen = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6], [7.7, 8.8, 9.9]])
+    varlen = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6], [7.7, 8.8, 9.9]])
     varlen
     # <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5] [6.6] [7.7 8.8 9.9]] at 0x7f25bc7b1438>
 
@@ -331,14 +306,14 @@ Masking with the ``.counts`` is handy because all the Numpy advanced indexing ru
     varlen[varlen.counts > 1, 1]
     # array([2.2, 5.5, 8.8])
 
-I've only presented the two most important awkward classes, ``Table`` and ``JaggedArray`` (and not how they combine). Each class is presented in more detail below. For now, I'd just like to point out that you can make crazy complicated data structures
+I've only presented the two most important Awkward Array classes, ``Table`` and ``JaggedArray`` (and not how they combine). Each class is presented in more detail below. For now, I'd just like to point out that you can make crazy complicated data structures
 
 .. code-block:: python3
 
-    crazy = awkward.fromiter([[1.21, 4.84, None, 10.89, None],
-                              [19.36, [30.25]],
-                              [{"x": 36, "y": {"z": 49}}, None, {"x": 64, "y": {"z": 81}}]
-                             ])
+    crazy = awkward0.fromiter([[1.21, 4.84, None, 10.89, None],
+                               [19.36, [30.25]],
+                               [{"x": 36, "y": {"z": 49}}, None, {"x": 64, "y": {"z": 81}}]
+                              ])
 
 and they vectorize and slice as expected.
 
@@ -349,16 +324,16 @@ and they vectorize and slice as expected.
     #  [4.4, [5.5]],
     #  [{'x': 6.0, 'y': {'z': 7.0}}, None, {'x': 8.0, 'y': {'z': 9.0}}]]
 
-This is because any awkward array can be the content of any other awkward array. Like Numpy, the features of awkward-array are simple, yet compose nicely to let you build what you need.
+This is because any Awkward Array can be the content of any other Awkward Array. Like Numpy, the features of Awkward Array are simple, yet compose nicely to let you build what you need.
 
 Overview with sample datasets
 -----------------------------
 
-Many of the examples in this tutorial use ``awkward.fromiter`` to make awkward arrays from lists and ``array.tolist()`` to turn them back into lists (or dicts for ``Table``, tuples for ``Table`` with anonymous fields, Python objects for ``ObjectArrays``, etc.). These should be considered slow methods, since Python instructions are executed in the loop, but that's a necessary part of examining or building Python objects.
+Many of the examples in this tutorial use ``awkward0.fromiter`` to make Awkward Arrays from lists and ``array.tolist()`` to turn them back into lists (or dicts for ``Table``, tuples for ``Table`` with anonymous fields, Python objects for ``ObjectArrays``, etc.). These should be considered slow methods, since Python instructions are executed in the loop, but that's a necessary part of examining or building Python objects.
 
-Ideally, you'd want to get your data from a binary, columnar source and produce binary, columnar output, or convert only once and reuse the converted data. `Parquet <https://parquet.apache.org>`__ is a popular columnar format for storing data on disk and `Arrow <https://arrow.apache.org>`__ is a popular columnar format for sharing data in memory (between functions or applications). `ROOT <https://root.cern>`__ is a popular columnar format for particle physicists, and `uproot <https://github.com/scikit-hep/uproot>`__ natively produces awkward arrays from ROOT files.
+Ideally, you'd want to get your data from a binary, columnar source and produce binary, columnar output, or convert only once and reuse the converted data. `Parquet <https://parquet.apache.org>`__ is a popular columnar format for storing data on disk and `Arrow <https://arrow.apache.org>`__ is a popular columnar format for sharing data in memory (between functions or applications). `ROOT <https://root.cern>`__ is a popular columnar format for particle physicists, and `uproot <https://github.com/scikit-hep/uproot3>`__ natively produces Awkward Arrays from ROOT files.
 
-`HDF5 <https://www.hdfgroup.org>`__ and its Python library `h5py <https://www.h5py.org/>`__ are columnar, but only for rectangular arrays, unlike the others mentioned here. Awkward-array can *wrap* HDF5 with an interpretation layer to store columnar data structures, but then the awkward-array library wuold be needed to read the data back in a meaningful way. Awkward also has a native file format, ``.awkd`` files, which are simply ZIP archives of columns as binary blobs and metadata (just as Numpy's ``.npz`` is a ZIP of arrays with metadata). The HDF5, awkd, and pickle serialization procedures use the same protocol, which has backward and forward compatibility features.
+`HDF5 <https://www.hdfgroup.org>`__ and its Python library `h5py <https://www.h5py.org/>`__ are columnar, but only for rectangular arrays, unlike the others mentioned here. Awkward Array can *wrap* HDF5 with an interpretation layer to store columnar data structures, but then the Awkward Array library wuold be needed to read the data back in a meaningful way. Awkward also has a native file format, ``.awkd`` files, which are simply ZIP archives of columns as binary blobs and metadata (just as Numpy's ``.npz`` is a ZIP of arrays with metadata). The HDF5, awkd, and pickle serialization procedures use the same protocol, which has backward and forward compatibility features. (Note: these storage formats are not compatible with Awkward 1.0 onward.)
 
 NASA exoplanets from a Parquet file
 """""""""""""""""""""""""""""""""""
@@ -367,11 +342,11 @@ Let's start by opening a Parquet file. Awkward reads Parquet through the `pyarro
 
 .. code-block:: python3
 
-    stars = awkward.fromparquet("tests/samples/exoplanets.parquet")
+    stars = awkward0.fromparquet("tests/samples/exoplanets.parquet")
     stars
     # <ChunkedArray [<Row 0> <Row 1> <Row 2> ... <Row 2932> <Row 2933> <Row 2934>] at 0x7f25b9c67780>
 
-(There is also an ``awkward.toparquet`` that takes the file name and array as arguments.)
+(There is also an ``awkward0.toparquet`` that takes the file name and array as arguments.)
 
 Columns are accessible with square brackets and strings
 
@@ -401,7 +376,7 @@ This file contains data about extrasolar planets and their host stars. As such, 
 
 For large arrays, only the first and last values are printed: the second-to-last star has three planets; all the other stars shown here have one planet.
 
-These arrays are called ``ChunkedArrays`` because the Parquet file is lazily read in chunks (Parquet's row group structure). The ``ChunkedArray`` (subdivides the file) contains ``VirtualArrays`` (read one chunk on demand), which generate the ``JaggedArrays``. This is an illustration of how each awkward class provides one feature, and you get desired behavior by combining them.
+These arrays are called ``ChunkedArrays`` because the Parquet file is lazily read in chunks (Parquet's row group structure). The ``ChunkedArray`` (subdivides the file) contains ``VirtualArrays`` (read one chunk on demand), which generate the ``JaggedArrays``. This is an illustration of how each Awkward class provides one feature, and you get desired behavior by combining them.
 
 The ``ChunkedArrays`` and ``VirtualArrays`` support the same Numpy-like access as ``JaggedArray``, so we can compute with them just as we would any other array.
 
@@ -426,11 +401,11 @@ Unlike Parquet, which is intended as a file format, Arrow is a memory format. Yo
 
     import pyarrow
     arrow_buffer = pyarrow.ipc.open_file(open("tests/samples/exoplanets.arrow", "rb")).get_batch(0)
-    stars = awkward.fromarrow(arrow_buffer)
+    stars = awkward0.fromarrow(arrow_buffer)
     stars
     # <Table [<Row 0> <Row 1> <Row 2> ... <Row 2932> <Row 2933> <Row 2934>] at 0x7f25b94f2518>
 
-(There is also an ``awkward.toarrow`` that takes an awkward array as its only argument, returning the relevant Arrow structure.)
+(There is also an ``awkward0.toarrow`` that takes an Awkward Array as its only argument, returning the relevant Arrow structure.)
 
 This file is structured differently. Instead of jagged arrays of numbers like ``"planet_mass"``, ``"planet_period"``, and ``"planet_orbit"``, this file has a jagged table of ``"planets"``. A jagged table is a ``JaggedArray`` of ``Table``.
 
@@ -604,7 +579,7 @@ The limitation is that only a single jagged structure can be represented by a Da
 
 .. code-block:: python3
 
-    array = awkward.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
+    array = awkward0.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
 
     stars[1734]["planets"][4]["name"]
     # 'f'
@@ -627,11 +602,11 @@ are a useful way to restructure data without incurring a runtime cost.
 Relationship to Pandas
 """"""""""""""""""""""
 
-Arguably, this kind of dataset could be manipulated as a `Pandas DataFrame <https://pandas.pydata.org>`__ instead of awkward arrays. Despite the variable number of planets per star, the exoplanets dataset could be flattened into a rectangular DataFrame, in which the distinction between solar systems is represented by a two-component index (leftmost pair of columns below), a `MultiIndex <https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html>`__.
+Arguably, this kind of dataset could be manipulated as a `Pandas DataFrame <https://pandas.pydata.org>`__ instead of Awkward Arrays. Despite the variable number of planets per star, the exoplanets dataset could be flattened into a rectangular DataFrame, in which the distinction between solar systems is represented by a two-component index (leftmost pair of columns below), a `MultiIndex <https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html>`__.
 
 .. code-block:: python3
 
-    awkward.topandas(stars, flatten=True)[-9:]
+    awkward0.topandas(stars, flatten=True)[-9:]
 
 .. raw:: html
 
@@ -814,10 +789,10 @@ The limitation is that only a single jagged structure can be represented by a Da
 
 .. code-block:: python3
 
-    array = awkward.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
-                              {"a": {"b": 4, "c": {"d": [5, 5.1]}}, "e": 6},
-                              {"a": {"b": 7, "c": {"d": [8, 8.1, 8.2]}}, "e": 9}])
-    awkward.topandas(array, flatten=True)
+    array = awkward0.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
+                               {"a": {"b": 4, "c": {"d": [5, 5.1]}}, "e": 6},
+                               {"a": {"b": 7, "c": {"d": [8, 8.1, 8.2]}}, "e": 9}])
+    awkward0.topandas(array, flatten=True)
 
 .. raw:: html    
 
@@ -891,10 +866,10 @@ and arbitrarily deep in ``JaggedArrays`` (which add depth to the row names),
 
 .. code-block:: python3
 
-    array = awkward.fromiter([{"a": 1, "b": [[2.2, 3.3, 4.4], [], [5.5, 6.6]]},
-                              {"a": 10, "b": [[1.1], [2.2, 3.3], [], [4.4]]},
-                              {"a": 100, "b": [[], [9.9]]}])
-    awkward.topandas(array, flatten=True)
+    array = awkward0.fromiter([{"a": 1, "b": [[2.2, 3.3, 4.4], [], [5.5, 6.6]]},
+                               {"a": 10, "b": [[1.1], [2.2, 3.3], [], [4.4]]},
+                               {"a": 100, "b": [[], [9.9]]}])
+    awkward0.topandas(array, flatten=True)
 
 .. raw:: html
     
@@ -975,10 +950,10 @@ and they can even have two ``JaggedArrays`` at the same level if their number of
 
 .. code-block:: python3
 
-    array = awkward.fromiter([{"a": [[1.1, 2.2, 3.3], [], [4.4, 5.5]], "b": [[1, 2, 3], [], [4, 5]]},
-                              {"a": [[1.1], [2.2, 3.3], [], [4.4]],    "b": [[1], [2, 3], [], [4]]},
-                              {"a": [[], [9.9]],                       "b": [[], [9]]}])
-    awkward.topandas(array, flatten=True)
+    array = awkward0.fromiter([{"a": [[1.1, 2.2, 3.3], [], [4.4, 5.5]], "b": [[1, 2, 3], [], [4, 5]]},
+                               {"a": [[1.1], [2.2, 3.3], [], [4.4]],    "b": [[1], [2, 3], [], [4]]},
+                               {"a": [[], [9.9]],                       "b": [[], [9]]}])
+    awkward0.topandas(array, flatten=True)
 
 .. raw:: html
 
@@ -1070,26 +1045,26 @@ But if there are two ``JaggedArrays`` with *different* structure at the same lev
 
 .. code-block:: python3
 
-    array = awkward.fromiter([{"a": [1, 2, 3], "b": [1.1, 2.2]},
-                              {"a": [1],       "b": [1.1, 2.2, 3.3]},
-                              {"a": [1, 2],    "b": []}])
+    array = awkward0.fromiter([{"a": [1, 2, 3], "b": [1.1, 2.2]},
+                               {"a": [1],       "b": [1.1, 2.2, 3.3]},
+                               {"a": [1, 2],    "b": []}])
     try:
-        awkward.topandas(array, flatten=True)
+        awkward0.topandas(array, flatten=True)
     except Exception as err:
         print(type(err), str(err))
     # <class 'ValueError'> this array has more than one jagged array structure
 
-To describe data like these, you'd need two DataFrames, and any calculations involving both ``"a"`` and ``"b"`` would have to include a join on those DataFrames. Awkward arrays are not limited in this way: the last ``array`` above is a valid awkward array and is useful for calculations that mix ``"a"`` and ``"b"``.
+To describe data like these, you'd need two DataFrames, and any calculations involving both ``"a"`` and ``"b"`` would have to include a join on those DataFrames. Awkward Arrays are not limited in this way: the last ``array`` above is a valid Awkward Array and is useful for calculations that mix ``"a"`` and ``"b"``.
 
 LHC data from a ROOT file
 """""""""""""""""""""""""
 
-Particle physicsts need structures like these—in fact, they have been a staple of particle physics analyses for decades. The `ROOT <https://root.cern>`__ file format was developed in the mid-90's to serialize arbitrary C++ data structures in a columnar way (replacing ZEBRA and similar Fortran projects that date back to the 70's). The `PyROOT <https://root.cern.ch/pyroot>`__ library dynamically wraps these objects to present them in Python, though with a performance penalty. The `uproot <https://github.com/scikit-hep/uproot>`__ library reads columnar data directly from ROOT files in Python without intermediary C++.
+Particle physicsts need structures like these—in fact, they have been a staple of particle physics analyses for decades. The `ROOT <https://root.cern>`__ file format was developed in the mid-90's to serialize arbitrary C++ data structures in a columnar way (replacing ZEBRA and similar Fortran projects that date back to the 70's). The `PyROOT <https://root.cern.ch/pyroot>`__ library dynamically wraps these objects to present them in Python, though with a performance penalty. The `uproot <https://github.com/scikit-hep/uproot3>`__ library reads columnar data directly from ROOT files in Python without intermediary C++.
 
 .. code-block:: python3
 
-    import uproot
-    events = uproot.open("http://scikit-hep.org/uproot/examples/HZZ-objects.root")["events"].lazyarrays()
+    import uproot3
+    events = uproot3.open("http://scikit-hep.org/uproot3/examples/HZZ-objects.root")["events"].lazyarrays()
     events
     # <Table [<Row 0> <Row 1> <Row 2> ... <Row 2418> <Row 2419> <Row 2420>] at 0x781189cd7b70>
 
@@ -1138,10 +1113,10 @@ Unlike the exoplanet data, these events cannot be represented as a DataFrame bec
 .. code-block:: python3
 
     try:
-        awkward.topandas(events[["muonp4", "jetp4", "MET"]], flatten=True)
+        awkward0.topandas(events[["muonp4", "jetp4", "MET"]], flatten=True)
     except Exception as err:
         print(type(err), str(err))
-    # <class 'NameError'> name 'awkward' is not defined
+    # <class 'NameError'> name 'awkward0' is not defined
 
 It could be described as a collection of DataFrames, in which every operation relating particles in the same event would require a join. But that would make analysis harder, not easier. An event has meaning on its own.
 
@@ -1174,14 +1149,14 @@ It could be described as a collection of DataFrames, in which every operation re
 
 Particle physics isn't alone in this: analyzing JSON-formatted log files in production systems or allele likelihoods in genomics are two other fields where variable-length, nested structures can help. Arbitrary data structures are useful and working with them in columns provides a new way to do exploratory data analysis: one array at a time.
 
-Awkward-array data model
+Awkward Array data model
 ------------------------
 
-Awkward array features are provided by a suite of classes that each extend Numpy arrays in one small way. These classes may then be composed to combine features.
+Awkward Array features are provided by a suite of classes that each extend Numpy arrays in one small way. These classes may then be composed to combine features.
 
-In this sense, Numpy arrays are awkward-array's most basic array class. A Numpy array is a small Python object that points to a large, contiguous region of memory, and, as much as possible, operations replace or change the small Python object, not the big data buffer. Therefore, many Numpy operations are *views*, rather than *in-place operations* or *copies*, leaving the original value intact but returning a new value that is linked to the original. Assigning to arrays and in-place operations are allowed, but they are more complicated to use because one must be aware of which arrays are views and which are copies.
+In this sense, Numpy arrays are Awkward Array's most basic array class. A Numpy array is a small Python object that points to a large, contiguous region of memory, and, as much as possible, operations replace or change the small Python object, not the big data buffer. Therefore, many Numpy operations are *views*, rather than *in-place operations* or *copies*, leaving the original value intact but returning a new value that is linked to the original. Assigning to arrays and in-place operations are allowed, but they are more complicated to use because one must be aware of which arrays are views and which are copies.
 
-Awkward-array's model is to treat all arrays as though they were immutable, favoring views over copies, and not providing any high-level in-place operations on low-level memory buffers (i.e. no in-place assignment).
+Awkward Array's model is to treat all arrays as though they were immutable, favoring views over copies, and not providing any high-level in-place operations on low-level memory buffers (i.e. no in-place assignment).
 
 Numpy provides complete control over the interpretation of an ``N`` dimensional array. A Numpy array has a `dtype <https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html>`__ to interpret bytes as signed and unsigned integers of various bit-widths, floating-point numbers, booleans, little endian and big endian, fixed-width bytestrings (for applications such as 6-byte MAC addresses or human-readable strings with padding), or `record arrays <https://docs.scipy.org/doc/numpy/user/basics.rec.html>`__ for contiguous structures. A Numpy array has a `pointer <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.ctypes.html>`__ to the first element of its data buffer (``array.ctypes.data``) and a `shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.shape.html>`__ to describe its ``N`` dimensions as a rank-``N`` tensor. Only ``shape[0]`` is the length as returned by the Python function ``len``. Furthermore, an `order <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html>`__ flag determines if rank > 1 arrays are laid out in "C" order or "Fortran" order. A Numpy array also has a `stride <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.strides.html>`__ to determine how many bytes separate one element from the next. (Data in a Numpy array need not be strictly contiguous, but they must be regular: the number of bytes seprating them is a constant.) This stride may even be negative to describe a reversed view of an array, which allows any ``slice`` of an array, even those with ``skip != 1`` to be a view, rather than a copy. Numpy arrays also have flags to determine whether they `own <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html>`__ their data buffer (and should therefore delete it when the Python object goes out of scope) and whether the data buffer is `writable <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html>`__.
 
@@ -1190,15 +1165,15 @@ The biggest restriction on this data model is that Numpy arrays are strictly rec
 
 Although Numpy's `record arrays <https://docs.scipy.org/doc/numpy/user/basics.rec.html>`__ present a buffer as a table, with differently typed, named columns, that table must be contiguous or interleaved (with non-trivial ``strides``) in memory: an `array of structs <https://en.wikipedia.org/wiki/AOS_and_SOA>`__. Awkward's ``Table`` provides the same interface, except that each column may be anywhere in memory, stored in a ``contents`` dict mapping field names to arrays. This is a true generalization: a ``Table`` may be a wrapped view of a Numpy record array, but not vice-versa. Use a ``Table`` anywhere you'd have a record/class/struct in non-columnar data structures. A ``Table`` with anonymous (integer-valued, rather than string-valued) fields is like an array of strongly typed tuples.
 
-Numpy has a `masked array <https://docs.scipy.org/doc/numpy/reference/maskedarray.html>`__ module for nullable data—values that may be "missing" (like Python's ``None``). Naturally, the only kinds of arrays Numpy can mask are subclasses of its own ``ndarray``, and we need to be able to mask any awkward array, so the awkward library defines its own ``MaskedArray``. Additionally, we sometimes want to mask with bits, rather than bytes (e.g. for Arrow compatibility), so there's a ``BitMaskedArray``, and sometimes we want to mask large structures without using memory for the masked-out values, so there's an ``IndexedMaskedArray`` (fusing the functionality of a ``MaskedArray`` with an ``IndexedArray``).
+Numpy has a `masked array <https://docs.scipy.org/doc/numpy/reference/maskedarray.html>`__ module for nullable data—values that may be "missing" (like Python's ``None``). Naturally, the only kinds of arrays Numpy can mask are subclasses of its own ``ndarray``, and we need to be able to mask any Awkward Array, so the Awkward library defines its own ``MaskedArray``. Additionally, we sometimes want to mask with bits, rather than bytes (e.g. for Arrow compatibility), so there's a ``BitMaskedArray``, and sometimes we want to mask large structures without using memory for the masked-out values, so there's an ``IndexedMaskedArray`` (fusing the functionality of a ``MaskedArray`` with an ``IndexedArray``).
 
-Numpy has no provision for an array containing different data types ("heterogeneous"), but awkward-array has a ``UnionArray``. The ``UnionArray`` stores data for each type as separate ``contents`` and identifies the types and positions of each element in the ``contents`` using ``tags`` and ``index`` arrays (equivalent to Arrow's `dense union type <https://arrow.apache.org/docs/memory_layout.html#dense-union-type>`__ with ``types`` and ``offsets`` buffers). As a data type, unions are a counterpart to records or tuples (making ``UnionArray`` a counterpart to ``Table``): each record/tuple contains *all* of its ``contents`` but a union contains *any* of its ``contents``. (Note that a ``UnionArray`` may be the best way to interleave two arrays, even if they have the same type. Heterogeneity is not a necessary feature of a ``UnionArray``.)
+Numpy has no provision for an array containing different data types ("heterogeneous"), but Awkward Array has a ``UnionArray``. The ``UnionArray`` stores data for each type as separate ``contents`` and identifies the types and positions of each element in the ``contents`` using ``tags`` and ``index`` arrays (equivalent to Arrow's `dense union type <https://arrow.apache.org/docs/memory_layout.html#dense-union-type>`__ with ``types`` and ``offsets`` buffers). As a data type, unions are a counterpart to records or tuples (making ``UnionArray`` a counterpart to ``Table``): each record/tuple contains *all* of its ``contents`` but a union contains *any* of its ``contents``. (Note that a ``UnionArray`` may be the best way to interleave two arrays, even if they have the same type. Heterogeneity is not a necessary feature of a ``UnionArray``.)
 
-Numpy has a ``dtype=object`` for arrays of Python objects, but awkward's ``ObjectArray`` creates Python objects on demand from array data. A large dataset of some ``Point`` class, containing floating-point members ``x`` and ``y``, can be stored as an ``ObjectArray`` of a ``Table`` of ``x`` and ``y`` with much less memory than a Numpy array of ``Point`` objects. The ``ObjectArray`` has a ``generator`` function that produces Python objects from array elements.  ``StringArray`` is also a special case of ``ObjectArray``, which instantiates variable-length character contents as Python strings.
+Numpy has a ``dtype=object`` for arrays of Python objects, but Awkward's ``ObjectArray`` creates Python objects on demand from array data. A large dataset of some ``Point`` class, containing floating-point members ``x`` and ``y``, can be stored as an ``ObjectArray`` of a ``Table`` of ``x`` and ``y`` with much less memory than a Numpy array of ``Point`` objects. The ``ObjectArray`` has a ``generator`` function that produces Python objects from array elements.  ``StringArray`` is also a special case of ``ObjectArray``, which instantiates variable-length character contents as Python strings.
 
-Although an ``ObjectArray`` can save memory, creating Python objects in a loop may still use more computation time than is necessary. Therefore, awkward arrays can also have vectorized ``Methods``—bound functions that operate on the array data, rather than instantiating every Python object in an ``ObjectArray``. Although an ``ObjectArray`` is a good use-case for ``Methods``, any awkward array can have them. (The second most common case being a ``JaggedArray`` of ``ObjectArrays``.)
+Although an ``ObjectArray`` can save memory, creating Python objects in a loop may still use more computation time than is necessary. Therefore, Awkward Arrays can also have vectorized ``Methods``—bound functions that operate on the array data, rather than instantiating every Python object in an ``ObjectArray``. Although an ``ObjectArray`` is a good use-case for ``Methods``, any Awkward Array can have them. (The second most common case being a ``JaggedArray`` of ``ObjectArrays``.)
 
-The nesting of awkward arrays within awkward arrays need not be tree-like: they can have cross-references and cyclic references (using ordinary Python assignment). ``IndexedArray`` can aid in building complex structures: it is simply an integer ``index`` that would be applied to its ``content`` with `integer array indexing <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#integer-array-indexing>`__ to get any element. ``IndexedArray`` is the equivalent of a pointer in non-columnar data structures.
+The nesting of Awkward arrays within Awkward Arrays need not be tree-like: they can have cross-references and cyclic references (using ordinary Python assignment). ``IndexedArray`` can aid in building complex structures: it is simply an integer ``index`` that would be applied to its ``content`` with `integer array indexing <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#integer-array-indexing>`__ to get any element. ``IndexedArray`` is the equivalent of a pointer in non-columnar data structures.
 
 The counterpart of an ``IndexedArray`` is a ``SparseArray``: whereas an ``IndexedArray`` consists of pointers *to* elements of its ``content``, a ``SparseArray`` consists of pointers *from* elements of its content, representing a very large array in terms of its non-zero (or non-``default``) elements. Awkward's ``SparseArray`` is a `coordinate format (COO) <https://scipy-lectures.org/advanced/scipy_sparse/coo_matrix.html>`__, one-dimensional array.
 
@@ -1206,84 +1181,84 @@ Another limitation of Numpy is that arrays cannot span multiple memory buffers. 
 
 Another application of ``ChunkedArray`` is to lazily load data in chunks. Awkward's ``VirtualArray`` calls its ``generator`` function to materialize an array when needed, and a ``ChunkedArray`` of ``VirtualArrays`` is a classic lazy-loading array, used to gradually read Parquet and ROOT files. In most libraries, lazy-loading is not a part of the data but a feature of the reading interface. Nesting virtualness makes it possible to load ``Tables`` within ``Tables``, where even the columns of the inner ``Tables`` are on-demand.
 
-For more details, see `array classes <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc>`__.
+For more details, see `array classes <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc>`__.
 
-* `Jaggedness <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#jaggedness>`__
+* `Jaggedness <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#jaggedness>`__
 
-  * `JaggedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#jaggedarray>`__
+  * `JaggedArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#jaggedarray>`__
 
-  * `Helper functions <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#helper-functions>`__
+  * `Helper functions <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#helper-functions>`__
 
-* `Product types <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#product-types>`__
+* `Product types <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#product-types>`__
 
-  * `Table <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#table>`__
+  * `Table <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#table>`__
 
-* `Sum types <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#sum-types>`__
+* `Sum types <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#sum-types>`__
 
-  * `UnionArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#unionarray>`__
+  * `UnionArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#unionarray>`__
 
-* `Option types <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#option-types>`__
+* `Option types <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#option-types>`__
 
-  * `MaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#maskedarray>`__
+  * `MaskedArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#maskedarray>`__
 
-  * `BitMaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#bitmaskedarray>`__
+  * `BitMaskedArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#bitmaskedarray>`__
 
-  * `IndexedMaskedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indexedmaskedarray>`__
+  * `IndexedMaskedArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#indexedmaskedarray>`__
 
-* `Indirection <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indirection>`__
+* `Indirection <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#indirection>`__
 
-  * `IndexedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#indexedarray>`__
+  * `IndexedArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#indexedarray>`__
 
-  * `SparseArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#sparsearray>`__
+  * `SparseArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#sparsearray>`__
 
-  * `Helper functions <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#helper-functions-1>`__
+  * `Helper functions <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#helper-functions-1>`__
 
-* `Opaque objects <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#opaque-objects>`__
+* `Opaque objects <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#opaque-objects>`__
 
-  * `Mix-in Methods <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#mix-in-methods>`__
+  * `Mix-in Methods <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#mix-in-methods>`__
 
-  * `ObjectArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#objectarray>`__
+  * `ObjectArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#objectarray>`__
 
-  * `StringArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#stringarray>`__
+  * `StringArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#stringarray>`__
 
-* `Non-contiguousness <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#non-contiguousness>`__
+* `Non-contiguousness <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#non-contiguousness>`__
 
-  * `ChunkedArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#chunkedarray>`__
+  * `ChunkedArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#chunkedarray>`__
 
-  * `AppendableArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#appendablearray>`__
+  * `AppendableArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#appendablearray>`__
 
-* `Laziness <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#laziness>`__
+* `Laziness <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#laziness>`__
 
-  * `VirtualArray <https://github.com/scikit-hep/awkward-array/blob/master/docs/classes.adoc#virtualarray>`__
+  * `VirtualArray <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/classes.adoc#virtualarray>`__
 
 Mutability
 """"""""""
 
-Awkward arrays are considered immutable in the sense that elements of the data cannot be modified in-place. That is, assignment with square brackets at an integer index raises an error. Awkward does not prevent the underlying Numpy arrays from being modified in-place, though that can lead to confusing results—the behavior is left undefined. The reason for this omission in functionality is that the internal representation of columnar data structures is more constrained than their non-columnar counterparts: some in-place modification can't be defined, and others have surprising side-effects.
+Awkward Arrays are considered immutable in the sense that elements of the data cannot be modified in-place. That is, assignment with square brackets at an integer index raises an error. Awkward does not prevent the underlying Numpy arrays from being modified in-place, though that can lead to confusing results—the behavior is left undefined. The reason for this omission in functionality is that the internal representation of columnar data structures is more constrained than their non-columnar counterparts: some in-place modification can't be defined, and others have surprising side-effects.
 
-However, the Python objects representing awkward arrays can be changed in-place. Each class has properties defining its structure, such as ``content``, and these may be replaced at any time. (Replacing properties does not change values in any Numpy arrays.) In fact, this is the only way to build cyclic references: an object in Python must be assigned to a name before that name can be used as a reference.
+However, the Python objects representing Awkward Arrays can be changed in-place. Each class has properties defining its structure, such as ``content``, and these may be replaced at any time. (Replacing properties does not change values in any Numpy arrays.) In fact, this is the only way to build cyclic references: an object in Python must be assigned to a name before that name can be used as a reference.
 
-Awkward arrays are appendable, but only through ``AppendableArray``, and ``Table`` columns may be added, changed, or removed. The only use of square-bracket assignment (i.e. ``__setitem__``) is to modify ``Table`` columns.
+Awkward Arrays are appendable, but only through ``AppendableArray``, and ``Table`` columns may be added, changed, or removed. The only use of square-bracket assignment (i.e. ``__setitem__``) is to modify ``Table`` columns.
 
-Awkward arrays produced by an external program may grow continuously, as long as more deeply nested arrays are filled first. That is, the ``content`` of a ``JaggedArray`` must be updated before updating its structure arrays (``starts`` and ``stops``). The definitions of awkward array validity allow for nested elements with no references pointing at them ("unreachable" elements), but not for references pointing to a nested element that doesn't exist.
+Awkward Arrays produced by an external program may grow continuously, as long as more deeply nested arrays are filled first. That is, the ``content`` of a ``JaggedArray`` must be updated before updating its structure arrays (``starts`` and ``stops``). The definitions of Awkward Array validity allow for nested elements with no references pointing at them ("unreachable" elements), but not for references pointing to a nested element that doesn't exist.
 
 Relationship to Arrow
 """""""""""""""""""""
 
-`Apache Arrow <https://arrow.apache.org>`__ is a cross-language, columnar memory format for complex data structures. There is intentionally a high degree of overlap between awkward-array and Arrow. But whereas Arrow's focus is data portability, awkward's focus is computation: it would not be unusual to get data from Arrow, compute something with awkward-array, then return it to another Arrow buffer. For this reason, ``awkward.fromarrow`` is a zero-copy view. Awkward's data representation is broader than Arrow's, so ``awkward.toarrow`` does, in general, perform a copy.
+`Apache Arrow <https://arrow.apache.org>`__ is a cross-language, columnar memory format for complex data structures. There is intentionally a high degree of overlap between Awkward Array and Arrow. But whereas Arrow's focus is data portability, Awkward's focus is computation: it would not be unusual to get data from Arrow, compute something with Awkward Array, then return it to another Arrow buffer. For this reason, ``awkward0.fromarrow`` is a zero-copy view. Awkward's data representation is broader than Arrow's, so ``awkward0.toarrow`` does, in general, perform a copy.
 
-The main difference between awkward-array and Arrow is that awkward-array does not require all arrays to be included within a contiguous memory buffer, though libraries like `pyarrow <https://arrow.apache.org/docs/python>`__ relax this criterion while building a compliant Arrow buffer. This restriction does imply that Arrow cannot encode cross-references or cyclic dependencies.
+The main difference between Awkward Array and Arrow is that Awkward Array does not require all arrays to be included within a contiguous memory buffer, though libraries like `pyarrow <https://arrow.apache.org/docs/python>`__ relax this criterion while building a compliant Arrow buffer. This restriction does imply that Arrow cannot encode cross-references or cyclic dependencies.
 
 Arrow also doesn't have the luxury of relying on Numpy to define its `primitive arrays <https://arrow.apache.org/docs/memory_layout.html#primitive-value-arrays>`__, so it has a fixed endianness, has no regular tensors without expressing it as a jagged array, and requires 32-bit integers for indexing, instead of taking whatever integer type a user provides.
 
-`Nullability <https://arrow.apache.org/docs/memory_layout.html#null-bitmaps>`__ is an optional property of every data type in Arrow, but it's a structure element in awkward. Similarly, `dictionary encoding <https://arrow.apache.org/docs/memory_layout.html#dictionary-encoding>`__ is built into Arrow as a fundamental property, but it would be built from an ``IndexedArray`` in awkward. Chunking and lazy-loading are supported by readers such as `pyarrow <https://arrow.apache.org/docs/python>`__, but they're not part of the Arrow data model.
+`Nullability <https://arrow.apache.org/docs/memory_layout.html#null-bitmaps>`__ is an optional property of every data type in Arrow, but it's a structure element in Awkward. Similarly, `dictionary encoding <https://arrow.apache.org/docs/memory_layout.html#dictionary-encoding>`__ is built into Arrow as a fundamental property, but it would be built from an ``IndexedArray`` in Awkward. Chunking and lazy-loading are supported by readers such as `pyarrow <https://arrow.apache.org/docs/python>`__, but they're not part of the Arrow data model.
 
-The following list translates awkward-array classes and features to their Arrow counterparts, if possible.
+The following list translates Awkward Array classes and features to their Arrow counterparts, if possible.
 
 * ``JaggedArray``: Arrow's `list type <https://arrow.apache.org/docs/memory_layout.html#list-type>`__.
-* ``Table``: Arrow's `struct type <https://arrow.apache.org/docs/memory_layout.html#struct-type>`__, though columns can be added to or removed from awkward ``Tables`` whereas Arrow is strictly immutable.
-* ``BitMaskedArray``: every data type in Arrow potentially has a `null bitmap <https://arrow.apache.org/docs/memory_layout.html#null-bitmaps>`__, though it's an explicit array structure in awkward. (Arrow has no counterpart for Awkward's ``MaskedArray`` or ``IndexedMaskedArray``.)
-* ``UnionArray``: directly equivalent to Arrow's `dense union <https://arrow.apache.org/docs/memory_layout.html#dense-union-type>`__. Arrow also has a `sparse union <https://arrow.apache.org/docs/memory_layout.html#sparse-union-type>`__, which awkward-array only has as a ``UnionArray.fromtags`` constructor that builds the dense union on the fly from a sparse union.
+* ``Table``: Arrow's `struct type <https://arrow.apache.org/docs/memory_layout.html#struct-type>`__, though columns can be added to or removed from Awkward ``Tables`` whereas Arrow is strictly immutable.
+* ``BitMaskedArray``: every data type in Arrow potentially has a `null bitmap <https://arrow.apache.org/docs/memory_layout.html#null-bitmaps>`__, though it's an explicit array structure in Awkward. (Arrow has no counterpart for Awkward's ``MaskedArray`` or ``IndexedMaskedArray``.)
+* ``UnionArray``: directly equivalent to Arrow's `dense union <https://arrow.apache.org/docs/memory_layout.html#dense-union-type>`__. Arrow also has a `sparse union <https://arrow.apache.org/docs/memory_layout.html#sparse-union-type>`__, which Awkward Array only has as a ``UnionArray.fromtags`` constructor that builds the dense union on the fly from a sparse union.
 * ``ObjectArray`` and ``Methods``: no counterpart because Arrow must be usable in any language.
 * ``StringArray``: "string" is a logical type built on top of Arrow's `list type <https://arrow.apache.org/docs/memory_layout.html#list-type>`__.
 * ``IndexedArray``: no counterpart (though its role in building `dictionary encoding <https://arrow.apache.org/docs/memory_layout.html#dictionary-encoding>`__ is built into Arrow as a fundamental property).
@@ -1295,9 +1270,9 @@ The following list translates awkward-array classes and features to their Arrow 
 High-level operations: common to all classes
 --------------------------------------------
 
-There are three levels of abstraction in awkward-array: high-level operations for data analysis, low-level operations for engineering the structure of the data, and implementation details. Implementation details are handled in the usual way for Python: if exposed at all, class, method, and function names begin with underscores and are not guaranteed to be stable from one release to the next.
+There are three levels of abstraction in Awkward Array: high-level operations for data analysis, low-level operations for engineering the structure of the data, and implementation details. Implementation details are handled in the usual way for Python: if exposed at all, class, method, and function names begin with underscores and are not guaranteed to be stable from one release to the next.
 
-The distinction between high-level operations and low-level operations is more subtle and developed as awkward-array was put to use. Data analysts care about the logical structure of the data—whether it is jagged, what the column names are, whether certain values could be ``None``, etc. Data engineers (or an analyst in "engineering mode") care about contiguousness, how much data are in memory at a given time, whether strings are dictionary-encoded, whether arrays have unreachable elements, etc. The dividing line is between high-level types and low-level array layout (both of which are defined in their own sections below). The following awkward classes have the same high-level type as their content:
+The distinction between high-level operations and low-level operations is more subtle and developed as Awkward Array was put to use. Data analysts care about the logical structure of the data—whether it is jagged, what the column names are, whether certain values could be ``None``, etc. Data engineers (or an analyst in "engineering mode") care about contiguousness, how much data are in memory at a given time, whether strings are dictionary-encoded, whether arrays have unreachable elements, etc. The dividing line is between high-level types and low-level array layout (both of which are defined in their own sections below). The following Awkward classes have the same high-level type as their content:
 
 * ``IndexedArray`` because indirection to type ``T`` has type ``T``,
 * ``SparseArray`` because a lookup of elements with type ``T`` has type ``T``,
@@ -1308,20 +1283,20 @@ The distinction between high-level operations and low-level operations is more s
 
 All other classes, such as ``JaggedArray``, have a logically distinct type from their contents.
 
-This section describes a suite of operations that are common to all awkward classes. For some high-level types, the operation is meaningless or results in an error, such as the jagged ``counts`` of an array that is not jagged at any level, or the ``columns`` of an array that contains no tables, but the operation has a well-defined action on every array class. To use these operations, you do need to understand the high-level type of your data, but not whether it is wrapped in an ``IndexedArray``, a ``SparseArray``, a ``ChunkedArray``, an ``AppendableArray``, or a ``VirtualArray``.
+This section describes a suite of operations that are common to all Awkward classes. For some high-level types, the operation is meaningless or results in an error, such as the jagged ``counts`` of an array that is not jagged at any level, or the ``columns`` of an array that contains no tables, but the operation has a well-defined action on every array class. To use these operations, you do need to understand the high-level type of your data, but not whether it is wrapped in an ``IndexedArray``, a ``SparseArray``, a ``ChunkedArray``, an ``AppendableArray``, or a ``VirtualArray``.
 
 Slicing with square brackets
 """"""""""""""""""""""""""""
 
 The primary operation for all classes is slicing with square brackets. This is the operation defined by Python's ``__getitem__`` method. It is so basic that high-level types are defined in terms of what they return when a scalar argument is passed in square brakets.
 
-Just as Numpy's slicing reproduces but generalizes Python sequence behavior, awkward-array reproduces (most of) `Numpy's slicing behavior <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>`__ and generalizes it in certain cases. An integer argument, a single slice argument, a single Numpy array-like of booleans or integers, and a tuple of any of the above is handled just like Numpy. Awkward-array does not handle ellipsis (because the depth of an awkward array can be different on different branches of a ``Table`` or ``UnionArray``) or ``None`` (because it's not always possible to insert a ``newaxis``). Numpy `record arrays <https://docs.scipy.org/doc/numpy/user/basics.rec.html>`__ accept a string or sequence of strings as a column argument if it is the only argument, not in a tuple with other types. Awkward-array accepts a string or sequence of strings if it contains a ``Table`` at some level.
+Just as Numpy's slicing reproduces but generalizes Python sequence behavior, Awkward Array reproduces (most of) `Numpy's slicing behavior <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html>`__ and generalizes it in certain cases. An integer argument, a single slice argument, a single Numpy array-like of booleans or integers, and a tuple of any of the above is handled just like Numpy. Awkward Array does not handle ellipsis (because the depth of an Awkward Array can be different on different branches of a ``Table`` or ``UnionArray``) or ``None`` (because it's not always possible to insert a ``newaxis``). Numpy `record arrays <https://docs.scipy.org/doc/numpy/user/basics.rec.html>`__ accept a string or sequence of strings as a column argument if it is the only argument, not in a tuple with other types. Awkward Array accepts a string or sequence of strings if it contains a ``Table`` at some level.
 
 An integer argument selects one element from the top-level array (starting at zero), changing the type by decreasing rank or jaggedness by one level.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8], [9.9]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8], [9.9]])
     a[0]
     # array([1.1, 2.2, 3.3])
 
@@ -1377,14 +1352,14 @@ A skip value (third index of the slice) sets the stride for indexing, allowing y
     a[::-1]
     # <JaggedArray [[9.9] [6.6 7.7 8.8] [4.4 5.5] [] [1.1 2.2 3.3]] at 0x7811883f8ef0>
 
-A Numpy array-like of booleans with the same length as the array may be used to filter elements. Numpy has a specialized `numpy.compress <https://docs.scipy.org/doc/numpy/reference/generated/numpy.compress.html>`__ function for this operation, but the only way to get it in awkward-array is through square brackets.
+A Numpy array-like of booleans with the same length as the array may be used to filter elements. Numpy has a specialized `numpy.compress <https://docs.scipy.org/doc/numpy/reference/generated/numpy.compress.html>`__ function for this operation, but the only way to get it in Awkward Array is through square brackets.
 
 .. code-block:: python3
 
     a[[True, True, False, True, False]]
     # <JaggedArray [[1.1 2.2 3.3] [] [6.6 7.7 8.8]] at 0x781188407278>
 
-A Numpy array-like of integers with the same length as the array may be used to select a collection of indexes. Numpy has a specialized `numpy.take <https://docs.scipy.org/doc/numpy/reference/generated/numpy.take.html>`__ function for this operation, but the only way to get it in awkward-array is through square brakets. Negative indexes and repeated elements are handled in the same way as Numpy.
+A Numpy array-like of integers with the same length as the array may be used to select a collection of indexes. Numpy has a specialized `numpy.take <https://docs.scipy.org/doc/numpy/reference/generated/numpy.take.html>`__ function for this operation, but the only way to get it in Awkward Array is through square brakets. Negative indexes and repeated elements are handled in the same way as Numpy.
 
 .. code-block:: python3
 
@@ -1411,12 +1386,12 @@ As described in Numpy's `advanced indexing <https://docs.scipy.org/doc/numpy/ref
     a[[0, 3], [True, False, True]]
     # array([1.1, 8.8])
 
-Awkward array has two extensions beyond Numpy, both of which affect only jagged data. If an array is jagged and a jagged array of booleans with the same structure (same length at all levels) is passed in square brackets, only inner arrays would be filtered.
+Awkward Array has two extensions beyond Numpy, both of which affect only jagged data. If an array is jagged and a jagged array of booleans with the same structure (same length at all levels) is passed in square brackets, only inner arrays would be filtered.
 
 .. code-block:: python3
 
-    a    = awkward.fromiter([[  1.1,   2.2,  3.3], [], [ 4.4,  5.5], [ 6.6,  7.7,   8.8], [  9.9]])
-    mask = awkward.fromiter([[False, False, True], [], [True, True], [True, True, False], [False]])
+    a    = awkward0.fromiter([[  1.1,   2.2,  3.3], [], [ 4.4,  5.5], [ 6.6,  7.7,   8.8], [  9.9]])
+    mask = awkward0.fromiter([[False, False, True], [], [True, True], [True, True, False], [False]])
     a[mask]
     # <JaggedArray [[3.3] [] [4.4 5.5] [6.6 7.7] []] at 0x7811883f8f60>
 
@@ -1424,8 +1399,8 @@ Similarly, if an array is jagged and a jagged array of integers with the same st
 
 .. code-block:: python3
 
-    a     = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8], [9.9]])
-    index = awkward.fromiter([[2, 2, 2, 2], [], [1, 0], [2, 1, 0], []])
+    a     = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8], [9.9]])
+    index = awkward0.fromiter([[2, 2, 2, 2], [], [1, 0], [2, 1, 0], []])
     a[index]
     # <JaggedArray [[3.3 3.3 3.3 3.3] [] [5.5 4.4] [8.8 7.7 6.6] []] at 0x78118847acf8>
 
@@ -1435,7 +1410,7 @@ If an array contains a ``Table``, it can be selected with a string or a sequence
 
 .. code-block:: python3
 
-    a = awkward.fromiter([{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}, {"x": 3, "y": 3.3, "z": "three"}])
+    a = awkward0.fromiter([{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}, {"x": 3, "y": 3.3, "z": "three"}])
     a
     # <Table [<Row 0> <Row 1> <Row 2>] at 0x7811883930f0>
 
@@ -1455,7 +1430,7 @@ Like Numpy, integer indexes and string indexes commute if the integer index corr
     a[1]["y"]
     # 2.2
 
-    a = awkward.fromiter([[{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}], [], [{"x": 3, "y": 3.3, "z": "three"}]])
+    a = awkward0.fromiter([[{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}], [], [{"x": 3, "y": 3.3, "z": "three"}]])
     a
     # <JaggedArray [[<Row 0> <Row 1>] [] [<Row 2>]] at 0x781188407358>
 
@@ -1472,7 +1447,7 @@ but not
 
 .. code-block:: python3
 
-    a = awkward.fromiter([{"x": 1, "y": [1.1]}, {"x": 2, "y": [2.1, 2.2]}, {"x": 3, "y": [3.1, 3.2, 3.3]}])
+    a = awkward0.fromiter([{"x": 1, "y": [1.1]}, {"x": 2, "y": [2.1, 2.2]}, {"x": 3, "y": [3.1, 3.2, 3.3]}])
     a
     # <Table [<Row 0> <Row 1> <Row 2>] at 0x7811883934a8>
 
@@ -1509,17 +1484,17 @@ Generally speaking, string and sequence of string indexes are *column* indexes, 
 Assigning with square brackets
 """"""""""""""""""""""""""""""
 
-As discussed above, awkward arrays are generally immutable with few exceptions. Row assignment is only possible via appending to an ``AppendableArray``. Column assignment, reassignment, and deletion are in general allowed. The syntax for assigning and reassigning columns is through assignment to a square bracket expression. This operation is defined by Python's ``__setitem__`` method. The syntax for deleting columns is through the ``del`` operators on a square bracket expression. This operation is defined by Python's ``__delitem__`` method.
+As discussed above, Awkward Arrays are generally immutable with few exceptions. Row assignment is only possible via appending to an ``AppendableArray``. Column assignment, reassignment, and deletion are in general allowed. The syntax for assigning and reassigning columns is through assignment to a square bracket expression. This operation is defined by Python's ``__setitem__`` method. The syntax for deleting columns is through the ``del`` operators on a square bracket expression. This operation is defined by Python's ``__delitem__`` method.
 
 Since only columns can be changed, only strings and sequences of strings are allowed as indexes.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}], [], [{"x": 3, "y": 3.3, "z": "three"}]])
+    a = awkward0.fromiter([[{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}], [], [{"x": 3, "y": 3.3, "z": "three"}]])
     a
     # <JaggedArray [[<Row 0> <Row 1>] [] [<Row 2>]] at 0x7811883905c0>
 
-    a["a"] = awkward.fromiter([[100, 200], [], [300]])
+    a["a"] = awkward0.fromiter([[100, 200], [], [300]])
     a.tolist()
     # [[{'x': 1, 'y': 1.1, 'z': 'one', 'a': 100},
     #   {'x': 2, 'y': 2.2, 'z': 'two', 'a': 200}],
@@ -1532,7 +1507,7 @@ Since only columns can be changed, only strings and sequences of strings are all
     #  [],
     #  [{'x': 3, 'y': 3.3, 'z': 'three'}]]
 
-    a[["a", "b"]] = awkward.fromiter([[{"first": 100, "second": 111}, {"first": 200, "second": 222}], [], [{"first": 300, "second": 333}]])
+    a[["a", "b"]] = awkward0.fromiter([[{"first": 100, "second": 111}, {"first": 200, "second": 222}], [], [{"first": 300, "second": 333}]])
     a.tolist()
     # [[{'x': 1, 'y': 1.1, 'z': 'one', 'a': 100, 'b': 111},
     #   {'x': 2, 'y': 2.2, 'z': 'two', 'a': 200, 'b': 222}],
@@ -1543,7 +1518,7 @@ Note that the names of the columns on the right-hand side of the assignment are 
 
 .. code-block:: python3
 
-    a[["a", "b"]] = awkward.Table(awkward.fromiter([[100, 200], [], [300]]), awkward.fromiter([[111, 222], [], [333]]))
+    a[["a", "b"]] = awkward0.Table(awkward0.fromiter([[100, 200], [], [300]]), awkward0.fromiter([[111, 222], [], [333]]))
     a.tolist()
     # [[{'x': 1, 'y': 1.1, 'z': 'one', 'a': 100, 'b': 111},
     #   {'x': 2, 'y': 2.2, 'z': 'two', 'a': 200, 'b': 222}],
@@ -1555,7 +1530,7 @@ Another thing to note is that the structure (lengths at all levels of jaggedness
 .. code-block:: python3
 
     try:
-        a["c"] = awkward.fromiter([[100, 200, 300], [400], [500, 600]])
+        a["c"] = awkward0.fromiter([[100, 200, 300], [400], [500, 600]])
     except Exception as err:
         print(type(err), str(err))
     # <class 'ValueError'> cannot broadcast JaggedArray to match JaggedArray with a different counts
@@ -1564,7 +1539,7 @@ But if the right-hand side is shallower and can be *broadcasted* to the left-han
 
 .. code-block:: python3
 
-    a["c"] = awkward.fromiter([100, 200, 300])
+    a["c"] = awkward0.fromiter([100, 200, 300])
     a.tolist()
     # [[{'x': 1, 'y': 1.1, 'z': 'one', 'a': 100, 'b': 111, 'c': 100},
     #   {'x': 2, 'y': 2.2, 'z': 'two', 'a': 200, 'b': 222, 'c': 100}],
@@ -1590,11 +1565,11 @@ Singletons are also expanded to fit.
     # array([[101.1, 102.2, 103.3],
     #        [204.4, 205.5, 206.6]])
 
-Awkward arrays have the same feature, but this has particularly useful effects for jagged arrays. In an operation involving two arrays of different depths of jaggedness, the shallower one expands to fit the deeper one.
+Awkward Arrays have the same feature, but this has particularly useful effects for jagged arrays. In an operation involving two arrays of different depths of jaggedness, the shallower one expands to fit the deeper one.
 
 .. code-block:: python3
 
-    awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]) + awkward.fromiter([100, 200, 300])
+    awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]) + awkward0.fromiter([100, 200, 300])
     # <JaggedArray [[101.1 102.2 103.3] [] [304.4 305.5]] at 0x781188390940>
 
 Note that the ``100`` was broadcasted to all three of the elements of the first inner array, ``200`` was broadcasted to no elements in the second inner array (because the second inner array is empty), and ``300`` was broadcasted to all two of the elements of the third inner array.
@@ -1643,19 +1618,19 @@ Keep in mind that a ufunc is not simply a function that has this property, but a
     isinstance(numpy.sqrt, numpy.ufunc), isinstance(numpy.add, numpy.ufunc)
     # (True, True)
 
-This class of functions can be overridden, and awkward-array overrides them to recognize and properly handle awkward arrays.
+This class of functions can be overridden, and Awkward Array overrides them to recognize and properly handle Awkward Arrays.
 
 .. code-block:: python3
 
-    numpy.sqrt(awkward.fromiter([[1, 4, 9], [], [16, 25]]))
+    numpy.sqrt(awkward0.fromiter([[1, 4, 9], [], [16, 25]]))
     # <JaggedArray [[1.0 2.0 3.0] [] [4.0 5.0]] at 0x7811883f88d0>
 
-    numpy.add(awkward.fromiter([[[1.1], 2.2], [], [3.3, None]]), awkward.fromiter([[[100], 200], [], [None, 300]]))
+    numpy.add(awkward0.fromiter([[[1.1], 2.2], [], [3.3, None]]), awkward0.fromiter([[[100], 200], [], [None, 300]]))
     # <JaggedArray [[[101.1] 202.2] [] [None None]] at 0x7811883f8d68>
 
-Only the primary action of the ufunc (``ufunc.__call__``) has been overridden; methods like ``ufunc.at``, ``ufunc.reduce``, and ``ufunc.reduceat`` are not supported. Also, the in-place ``out`` parameter is not supported because awkward array data cannot be changed in-place.
+Only the primary action of the ufunc (``ufunc.__call__``) has been overridden; methods like ``ufunc.at``, ``ufunc.reduce``, and ``ufunc.reduceat`` are not supported. Also, the in-place ``out`` parameter is not supported because Awkward Array data cannot be changed in-place.
 
-For awkward arrays, the input arguments to a ufunc must all have the same structure or, if shallower, be broadcastable to the deepest structure. (See above for "broadcasting.") The scalar function is applied to elements at the same positions within this structure from different input arrays. The output array has this structure, populated by return values of the scalar function.
+For Awkward Arrays, the input arguments to a ufunc must all have the same structure or, if shallower, be broadcastable to the deepest structure. (See above for "broadcasting.") The scalar function is applied to elements at the same positions within this structure from different input arrays. The output array has this structure, populated by return values of the scalar function.
 
 * Rectangular arrays must have the same shape, just as in Numpy. A scalar can be broadcasted (expanded) to have the same shape as the arrays.
 * Jagged arrays must have the same number of elements in all inner arrays. A rectangular array with the same outer shape (i.e. containing scalars instead of inner arrays) can be broadcasted to inner arrays with the same lengths.
@@ -1665,13 +1640,13 @@ For awkward arrays, the input arguments to a ufunc must all have the same struct
 
 .. code-block:: python3
 
-    numpy.add(awkward.fromiter([{"x": 1, "y": 1.1}, {"y": 1.1, "z": 100}]),
-              awkward.fromiter([{"x": 3, "y": 3.3}, {"y": 3.3, "z": 300}])).tolist()
+    numpy.add(awkward0.fromiter([{"x": 1, "y": 1.1}, {"y": 1.1, "z": 100}]),
+              awkward0.fromiter([{"x": 3, "y": 3.3}, {"y": 3.3, "z": 300}])).tolist()
     # [{'x': 4, 'y': 4.4}, {'y': 4.4, 'z': 400}]
 
-Unary and binary operations on awkward arrays, such as ``-x``, ``x + y``, and ``x**2``, are actually Numpy ufuncs, so all of the above applies to them as well (such as broadcasting the scalar ``2`` in ``x**2``).
+Unary and binary operations on Awkward Arrays, such as ``-x``, ``x + y``, and ``x**2``, are actually Numpy ufuncs, so all of the above applies to them as well (such as broadcasting the scalar ``2`` in ``x**2``).
 
-Remember that only ufuncs have been overridden by awkward-array: other Numpy functions such as ``numpy.concatenate`` are ignorant of awkward arrays and will attempt to convert them to Numpy first. In some cases, that may be what you want, but in many, especially any cases involving jagged arrays, it will be a major performance loss and a loss of functionality: jagged arrays turn into Numpy ``dtype=object`` arrays containing Numpy arrays, which can be a very large number of Python objects and doesn't behave as a multidimensional array.
+Remember that only ufuncs have been overridden by Awkward Array: other Numpy functions such as ``numpy.concatenate`` are ignorant of Awkward Arrays and will attempt to convert them to Numpy first. In some cases, that may be what you want, but in many, especially any cases involving jagged arrays, it will be a major performance loss and a loss of functionality: jagged arrays turn into Numpy ``dtype=object`` arrays containing Numpy arrays, which can be a very large number of Python objects and doesn't behave as a multidimensional array.
 
 You can check to see if a function from Numpy is a ufunc with ``isinstance``.
 
@@ -1680,12 +1655,12 @@ You can check to see if a function from Numpy is a ufunc with ``isinstance``.
     isinstance(numpy.concatenate, numpy.ufunc)
     # False
 
-and you can prevent accidental conversions to Numpy by setting ``allow_tonumpy`` to ``False``, either on one array or globally on a whole class of awkward arrays. (See "global switches" below.)
+and you can prevent accidental conversions to Numpy by setting ``allow_tonumpy`` to ``False``, either on one array or globally on a whole class of Awkward Arrays. (See "global switches" below.)
 
 .. code-block:: python3
 
-    x = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    y = awkward.fromiter([[6.6, 7.7, 8.8], [9.9]])
+    x = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    y = awkward0.fromiter([[6.6, 7.7, 8.8], [9.9]])
     numpy.concatenate([x, y])
     # array([array([1.1, 2.2, 3.3]), array([], dtype=float64),
     #        array([4.4, 5.5]), array([6.6, 7.7, 8.8]), array([9.9])],
@@ -1696,27 +1671,27 @@ and you can prevent accidental conversions to Numpy by setting ``allow_tonumpy``
         numpy.concatenate([x, y])
     except Exception as err:
         print(type(err), str(err))
-    # <class 'RuntimeError'> awkward.array.base.AwkwardArray.allow_tonumpy is False; refusing to convert to Numpy
+    # <class 'RuntimeError'> awkward0.array.base.AwkwardArray.allow_tonumpy is False; refusing to convert to Numpy
 
 Global switches
 """""""""""""""
 
-The ``AwkwardArray`` abstract base class has the following switches to turn off sometmes-undesirable behavior. These switches could be set on the ``AwkwardArray`` class itself, affecting all awkward arrays, or they could be set on a particular class like ``JaggedArray`` to only affect ``JaggedArray`` instances, or they could be set on a particular instance, to affect only that instance.
+The ``AwkwardArray`` abstract base class has the following switches to turn off sometmes-undesirable behavior. These switches could be set on the ``AwkwardArray`` class itself, affecting all Awkward Arrays, or they could be set on a particular class like ``JaggedArray`` to only affect ``JaggedArray`` instances, or they could be set on a particular instance, to affect only that instance.
 
-* ``allow_tonumpy`` (default is ``True``); if ``False``, forbid any action that would convert an awkward array into a Numpy array (with a likely loss of performance and functionality).
-* ``allow_iter`` (default is ``True``); if ``False``, forbid any action that would iterate over an awkward array in Python (except printing a few elements as part of its string representation).
+* ``allow_tonumpy`` (default is ``True``); if ``False``, forbid any action that would convert an Awkward Array into a Numpy array (with a likely loss of performance and functionality).
+* ``allow_iter`` (default is ``True``); if ``False``, forbid any action that would iterate over an Awkward Array in Python (except printing a few elements as part of its string representation).
 * ``check_prop_valid`` (default is ``True``); if ``False``, skip the single-property validity checks in array constructors and when setting properties.
 * ``check_whole_valid`` (default is ``True``); if ``False``, skip the whole-array validity checks that are typically called before methods that need them.
 
 .. code-block:: python3
 
-    awkward.AwkwardArray.check_prop_valid
+    awkward0.AwkwardArray.check_prop_valid
     # True
 
-    awkward.JaggedArray.check_whole_valid
+    awkward0.JaggedArray.check_whole_valid
     # True
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     numpy.array(a)
     # array([array([1.1, 2.2, 3.3]), array([], dtype=float64),
     #        array([4.4, 5.5])], dtype=object)
@@ -1726,7 +1701,7 @@ The ``AwkwardArray`` abstract base class has the following switches to turn off 
         numpy.array(a)
     except Exception as err:
         print(type(err), str(err))
-    # <class 'RuntimeError'> awkward.array.base.AwkwardArray.allow_tonumpy is False; refusing to convert to Numpy
+    # <class 'RuntimeError'> awkward0.array.base.AwkwardArray.allow_tonumpy is False; refusing to convert to Numpy
 
     list(a)
     # [array([1.1, 2.2, 3.3]), array([], dtype=float64), array([4.4, 5.5])]
@@ -1736,7 +1711,7 @@ The ``AwkwardArray`` abstract base class has the following switches to turn off 
         list(a)
     except Exception as err:
         print(type(err), str(err))
-    # <class 'RuntimeError'> awkward.array.base.AwkwardArray.allow_iter is False; refusing to iterate
+    # <class 'RuntimeError'> awkward0.array.base.AwkwardArray.allow_iter is False; refusing to iterate
 
     a
     # <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78118847ae10>
@@ -1744,17 +1719,17 @@ The ``AwkwardArray`` abstract base class has the following switches to turn off 
 Generic properties and methods
 """"""""""""""""""""""""""""""
 
-All awkward arrays have the following properties and methods.
+All Awkward Arrays have the following properties and methods.
 
 * ``type``: the high-level type of the array. (See below for a detailed description of high-level types.)
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
-                          [4.4, [5.5]],
-                          [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
-                         ])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    b = awkward0.fromiter([[1.1, 2.2, None, 3.3, None],
+                           [4.4, [5.5]],
+                           [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                          ])
 
     a.type
     # ArrayType(3, inf, dtype('float64'))
@@ -1802,11 +1777,11 @@ All awkward arrays have the following properties and methods.
     # [   2, 1, 4, 1]         Table(z=layout[2, 1, 4, 1, 0])
     # [2, 1, 4, 1, 0]           ndarray(shape=2, dtype=dtype('int64'))
 
-* ``dtype``: the `Numpy dtype <https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html>`__ that this array would have if cast as a Numpy array. Numpy dtypes cannot fully specify awkward arrays: use the ``type`` for an analyst-friendly description of the data type or ``layout`` for details about how the arrays are represented.
+* ``dtype``: the `Numpy dtype <https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html>`__ that this array would have if cast as a Numpy array. Numpy dtypes cannot fully specify Awkward Arrays: use the ``type`` for an analyst-friendly description of the data type or ``layout`` for details about how the arrays are represented.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     a.dtype   # the closest Numpy dtype to a jagged array is dtype=object ('O')
     # dtype('O')
 
@@ -1814,11 +1789,11 @@ All awkward arrays have the following properties and methods.
     # array([array([1.1, 2.2, 3.3]), array([], dtype=float64),
     #        array([4.4, 5.5])], dtype=object)
 
-* ``shape``: the `Numpy shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.shape.html>`__ that this array would have if cast as a Numpy array. This only specifies the first regular dimensions, not any jagged dimensions or regular dimensions nested within awkward structures. The Python length (``__len__``) of the array is the first element of this ``shape``.
+* ``shape``: the `Numpy shape <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.shape.html>`__ that this array would have if cast as a Numpy array. This only specifies the first regular dimensions, not any jagged dimensions or regular dimensions nested within Awkward structures. The Python length (``__len__``) of the array is the first element of this ``shape``.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     a.shape
     # (3,)
 
@@ -1829,7 +1804,7 @@ The following ``JaggedArray`` has two fixed-size dimensions at the top, followed
 
 .. code-block:: python3
 
-    a = awkward.JaggedArray.fromcounts([[3, 0], [2, 4]], [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
+    a = awkward0.JaggedArray.fromcounts([[3, 0], [2, 4]], [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
     a
     # <JaggedArray [[[1.1 2.2 3.3] []] [[4.4 5.5] [6.6 7.7 8.8 9.9]]] at 0x7811883bc0b8>
 
@@ -1868,27 +1843,27 @@ Also, a dimension can effectively be fixed-size, but represented by a ``JaggedAr
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     a.nbytes
     # 72
 
     a.offsets.nbytes + a.content.nbytes
     # 72
 
-* ``tolist()``: converts the array into Python objects: ``lists`` for arrays, ``dicts`` for table rows, ``tuples`` for table rows with anonymous fields and a ``rowname`` of ``"tuple"``, ``None`` for missing data, and Python objects from ``ObjectArrays``. This is an approximate inverse of ``awkward.fromiter``.
+* ``tolist()``: converts the array into Python objects: ``lists`` for arrays, ``dicts`` for table rows, ``tuples`` for table rows with anonymous fields and a ``rowname`` of ``"tuple"``, ``None`` for missing data, and Python objects from ``ObjectArrays``. This is an approximate inverse of ``awkward0.fromiter``.
 
 .. code-block:: python3
 
-    awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]).tolist()
+    awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]).tolist()
     # [[1.1, 2.2, 3.3], [], [4.4, 5.5]]
 
-    awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}]).tolist()
+    awkward0.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}]).tolist()
     # [{'x': 1, 'y': 1.1}, {'x': 2, 'y': 2.2}, {'x': 3, 'y': 3.3}]
 
-    awkward.Table.named("tuple", [1, 2, 3], [1.1, 2.2, 3.3]).tolist()
+    awkward0.Table.named("tuple", [1, 2, 3], [1.1, 2.2, 3.3]).tolist()
     # [(1, 1.1), (2, 2.2), (3, 3.3)]
 
-    awkward.fromiter([[1.1, 2.2, None], [], [None, 3.3]]).tolist()
+    awkward0.fromiter([[1.1, 2.2, None], [], [None, 3.3]]).tolist()
     # [[1.1, 2.2, None], [], [None, 3.3]]
 
     class Point:
@@ -1897,7 +1872,7 @@ Also, a dimension can effectively be fixed-size, but represented by a ``JaggedAr
         def __repr__(self):
             return f"Point({self.x}, {self.y})"
 
-    a = awkward.fromiter([[Point(1, 1.1), Point(2, 2.2), Point(3, 3.3)], [], [Point(4, 4.4), Point(5, 5.5)]])
+    a = awkward0.fromiter([[Point(1, 1.1), Point(2, 2.2), Point(3, 3.3)], [], [Point(4, 4.4), Point(5, 5.5)]])
     a
     # <JaggedArray [[Point(1, 1.1) Point(2, 2.2) Point(3, 3.3)] [] [Point(4, 4.4) Point(5, 5.5)]] at 0x7811883bccf8>
 
@@ -1910,7 +1885,7 @@ Also, a dimension can effectively be fixed-size, but represented by a ``JaggedAr
 
 .. code-block:: python3
 
-    a = awkward.JaggedArray.fromcounts([3, 0, 2], [1.1, 2.2, 3.3, 4.4])  # content array is too short
+    a = awkward0.JaggedArray.fromcounts([3, 0, 2], [1.1, 2.2, 3.3, 4.4])  # content array is too short
     a.valid()
     # False
 
@@ -1923,20 +1898,20 @@ Also, a dimension can effectively be fixed-size, but represented by a ``JaggedAr
     a.valid(message=True)
     # "<class 'ValueError'>: maximum offset 5 is beyond the length of the content (4)"
 
-* ``astype(dtype)``: convert *nested Numpy arrays* into the given type while maintaining awkward structure.
+* ``astype(dtype)``: convert *nested Numpy arrays* into the given type while maintaining Awkward structure.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     a.astype(numpy.int32)
     # <JaggedArray [[1 2 3] [] [4 5]] at 0x7811883b9898>
 
-* ``regular()``: convert the awkward array into a Numpy array and (unlike ``numpy.array(awkward_array)``) raise an error if it cannot be faithfully represented.
+* ``regular()``: convert the Awkward Array into a Numpy array and (unlike ``numpy.array(awkward_array)``) raise an error if it cannot be faithfully represented.
 
 .. code-block:: python3
 
     # This JaggedArray happens to have equal-sized inner arrays.
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.9]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6], [7.7, 8.8, 9.9]])
     a
     # <JaggedArray [[1.1 2.2 3.3] [4.4 5.5 6.6] [7.7 8.8 9.9]] at 0x781188390240>
 
@@ -1946,7 +1921,7 @@ Also, a dimension can effectively be fixed-size, but represented by a ``JaggedAr
     #        [7.7, 8.8, 9.9]])
 
     # This one does not.
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     a
     # <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x7811883b9c18>
 
@@ -1956,7 +1931,7 @@ Also, a dimension can effectively be fixed-size, but represented by a ``JaggedAr
         print(type(err), str(err))
     # <class 'ValueError'> jagged array is not regular: different elements have different counts
 
-* ``copy(optional constructor arguments...)``: copy an awkward array object, non-recursively and without copying memory buffers, possibly replacing some of its parameters. If the class is an awkward subclass or has mix-in methods, they are propagated to the copy.
+* ``copy(optional constructor arguments...)``: copy an Awkward Array object, non-recursively and without copying memory buffers, possibly replacing some of its parameters. If the class is an Awkward subclass or has mix-in methods, they are propagated to the copy.
 
 .. code-block:: python3
 
@@ -1967,9 +1942,9 @@ Also, a dimension can effectively be fixed-size, but represented by a ``JaggedAr
             except IndexError:
                 return None
 
-    JaggedArrayMethods = awkward.Methods.mixin(Special, awkward.JaggedArray)
+    JaggedArrayMethods = awkward0.Methods.mixin(Special, awkward0.JaggedArray)
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     a.__class__ = JaggedArrayMethods
     a
     # <JaggedArrayMethods [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x7811883bc2b0>
@@ -2035,13 +2010,13 @@ Internally, all the methods that return views of the array (like slicing) use ``
 Reducers
 """"""""
 
-All awkward arrays also have a complete set of reducer methods. Reducers can be found in Numpy as well (as array methods and as free-standing functions), but they're not called out as a special class the way that universal functions ("ufuncs") are. Reducers decrease the rank or jaggedness of an array by one dimension, replacing subarrays with scalars. Examples include ``sum``, ``min``, and ``max``, but any monoid (associative operation with an identity) can be a reducer.
+All Awkward Arrays also have a complete set of reducer methods. Reducers can be found in Numpy as well (as array methods and as free-standing functions), but they're not called out as a special class the way that universal functions ("ufuncs") are. Reducers decrease the rank or jaggedness of an array by one dimension, replacing subarrays with scalars. Examples include ``sum``, ``min``, and ``max``, but any monoid (associative operation with an identity) can be a reducer.
 
-In awkward-array, reducers are only array methods (not free-standing functions) and unlike Numpy, they do not take an ``axis`` parameter. When a reducer is called at any level, it reduces the innermost dimension. (Since outer dimensions can be jagged, this is the only dimension that can be meaningfully reduced.)
+In Awkward Array, reducers are only array methods (not free-standing functions) and unlike Numpy, they do not take an ``axis`` parameter. When a reducer is called at any level, it reduces the innermost dimension. (Since outer dimensions can be jagged, this is the only dimension that can be meaningfully reduced.)
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[[[1, 2], [3]], [[4, 5]]], [[[], [6, 7, 8, 9]]]])
+    a = awkward0.fromiter([[[[1, 2], [3]], [[4, 5]]], [[[], [6, 7, 8, 9]]]])
     a
     # <JaggedArray [[[[1 2] [3]] [[4 5]]] [[[] [6 7 8 9]]]] at 0x7811883b9470>
 
@@ -2061,7 +2036,7 @@ In the following example, "the deepest axis" of different fields in the table ar
 
 .. code-block:: python3
 
-    a = awkward.fromiter([{"x": [], "y": [[0.1, 0.2], [], [0.3]]}, {"x": [1, 2, 3], "y": [[0.4], [], [0.5, 0.6]]}])
+    a = awkward0.fromiter([{"x": [], "y": [[0.1, 0.2], [], [0.3]]}, {"x": [1, 2, 3], "y": [[0.4], [], [0.5, 0.6]]}])
     a.tolist()
     # [{'x': [], 'y': [[0.1, 0.2], [], [0.3]]},
     #  {'x': [1, 2, 3], 'y': [[0.4], [], [0.5, 0.6]]}]
@@ -2084,7 +2059,7 @@ A table can be reduced if all of its fields are jagged or if all of its fields a
 
 .. code-block:: python3
 
-    a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
+    a = awkward0.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
     a.tolist()
     # [{'x': 1, 'y': 1.1}, {'x': 2, 'y': 2.2}, {'x': 3, 'y': 3.3}]
 
@@ -2095,14 +2070,14 @@ The resulting object is a scalar row—for your convenience, it has been labeled
 
 .. code-block:: python3
 
-    isinstance(a.sum(), awkward.Table.Row)
+    isinstance(a.sum(), awkward0.Table.Row)
     # True
 
 ``UnionArrays`` are even more constrained: they can only be reduced if they have primitive (Numpy) type.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([1, 2, 3, {"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}])
+    a = awkward0.fromiter([1, 2, 3, {"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}])
     a
     # <UnionArray [1 2 3 <Row 0> <Row 1>] at 0x781188355550>
 
@@ -2112,7 +2087,7 @@ The resulting object is a scalar row—for your convenience, it has been labeled
         print(type(err), str(err))
     # <class 'TypeError'> cannot reduce a UnionArray of non-primitive type
 
-    a = awkward.UnionArray.fromtags([0, 0, 0, 1, 1],
+    a = awkward0.UnionArray.fromtags([0, 0, 0, 1, 1],
                                     [numpy.array([1, 2, 3], dtype=numpy.int32),
                                      numpy.array([4, 5], dtype=numpy.float64)])
     a
@@ -2125,21 +2100,21 @@ In all reducers, ``NaN`` in floating-point arrays and ``None`` in ``MaskedArrays
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[[[1.1, numpy.nan], [2.2]], [[None, 3.3]]], [[[], [None, numpy.nan, None]]]])
+    a = awkward0.fromiter([[[[1.1, numpy.nan], [2.2]], [[None, 3.3]]], [[[], [None, numpy.nan, None]]]])
     a
     # <JaggedArray [[[[1.1 nan] [2.2]] [[None 3.3]]] [[[] [None nan None]]]] at 0x78118835c7b8>
 
     a.sum()
     # <JaggedArray [[[1.1 2.2] [3.3]] [[0.0 0.0]]] at 0x781188355a20>
 
-    a = awkward.fromiter([[{"x": 1, "y": 1.1}, None, {"x": 3, "y": 3.3}], [], [{"x": 4, "y": numpy.nan}]])
+    a = awkward0.fromiter([[{"x": 1, "y": 1.1}, None, {"x": 3, "y": 3.3}], [], [{"x": 4, "y": numpy.nan}]])
     a.tolist()
     # [[{'x': 1, 'y': 1.1}, None, {'x': 3, 'y': 3.3}], [], [{'x': 4, 'y': nan}]]
 
     a.sum().tolist()
     # [{'x': 4, 'y': 4.4}, {'x': 0, 'y': 0.0}, {'x': 4, 'y': 0.0}]
 
-The following reducers are defined as methods on all awkward arrays.
+The following reducers are defined as methods on all Awkward Arrays.
 
 * ``reduce(ufunc, identity)``: generic reducer, calls ``ufunc.reduceat`` and returns ``identity`` for empty arrays.
 
@@ -2151,7 +2126,7 @@ The following reducers are defined as methods on all awkward arrays.
     def sum_mod_10(x, y):
         return (x + y) % 10
 
-    a = awkward.fromiter([[1, 2, 3], [], [4, 5, 6], [7, 8, 9, 10]])
+    a = awkward0.fromiter([[1, 2, 3], [], [4, 5, 6], [7, 8, 9, 10]])
     a.sum()
     # array([ 6,  0, 15, 34])
 
@@ -2159,7 +2134,7 @@ The following reducers are defined as methods on all awkward arrays.
     # array([6, 0, 5, 4])
 
     # Missing (None) values are ignored.
-    a = awkward.fromiter([[1, 2, None, 3], [], [None, None, None], [7, 8, 9, 10]])
+    a = awkward0.fromiter([[1, 2, None, 3], [], [None, None, None], [7, 8, 9, 10]])
     a.reduce(sum_mod_10, 0)
     # array([6, 0, 0, 4])
 
@@ -2167,12 +2142,12 @@ The following reducers are defined as methods on all awkward arrays.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[False, False], [True, True], [True, False], []])
+    a = awkward0.fromiter([[False, False], [True, True], [True, False], []])
     a.any()
     # array([False,  True,  True, False])
 
     # Missing (None) values are ignored.
-    a = awkward.fromiter([[False, None], [True, None], [None]])
+    a = awkward0.fromiter([[False, None], [True, None], [None]])
     a.any()
     # array([False,  True, False])
 
@@ -2180,12 +2155,12 @@ The following reducers are defined as methods on all awkward arrays.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[False, False], [True, True], [True, False], []])
+    a = awkward0.fromiter([[False, False], [True, True], [True, False], []])
     a.all()
     # array([False,  True, False,  True])
 
     # Missing (None) values are ignored.
-    a = awkward.fromiter([[False, None], [True, None], [None]])
+    a = awkward0.fromiter([[False, None], [True, None], [None]])
     a.all()
     # array([False,  True,  True])
 
@@ -2193,7 +2168,7 @@ The following reducers are defined as methods on all awkward arrays.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
+    a = awkward0.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
     a.count()
     # array([2, 0, 1])
 
@@ -2201,7 +2176,7 @@ The following reducers are defined as methods on all awkward arrays.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, None, 0], [], [3.3, numpy.nan, 0]])
+    a = awkward0.fromiter([[1.1, 2.2, None, 0], [], [3.3, numpy.nan, 0]])
     a.count_nonzero()
     # array([2, 0, 1])
 
@@ -2209,7 +2184,7 @@ The following reducers are defined as methods on all awkward arrays.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
+    a = awkward0.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
     a.sum()
     # array([3.3, 0. , 3.3])
 
@@ -2217,7 +2192,7 @@ The following reducers are defined as methods on all awkward arrays.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
+    a = awkward0.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
     a.prod()
     # array([2.42, 1.  , 3.3 ])
 
@@ -2225,11 +2200,11 @@ The following reducers are defined as methods on all awkward arrays.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
+    a = awkward0.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
     a.min()
     # array([1.1, inf, 3.3])
 
-    a = awkward.fromiter([[1, 2, None], [], [3]])
+    a = awkward0.fromiter([[1, 2, None], [], [3]])
     a.min()
     # array([                  1, 9223372036854775807,                   3])
 
@@ -2239,11 +2214,11 @@ The identity of minimization is ``inf`` for floating-point values and ``92233720
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
+    a = awkward0.fromiter([[1.1, 2.2, None], [], [3.3, numpy.nan]])
     a.max()
     # array([ 2.2, -inf,  3.3])
 
-    a = awkward.fromiter([[1, 2, None], [], [3]])
+    a = awkward0.fromiter([[1, 2, None], [], [3]])
     a.max()
     # array([                   2, -9223372036854775808,                    3])
 
@@ -2253,20 +2228,20 @@ Note that the maximization-identity for unsigned types is ``0``.
 
 .. code-block:: python3
 
-    a = awkward.JaggedArray.fromcounts([3, 0, 2], numpy.array([1.1, 2.2, 3.3, 4.4, 5.5], dtype=numpy.uint16))
+    a = awkward0.JaggedArray.fromcounts([3, 0, 2], numpy.array([1.1, 2.2, 3.3, 4.4, 5.5], dtype=numpy.uint16))
     a
     # <JaggedArray [[1 2 3] [] [4 5]] at 0x78112c0e9a58>
 
     a.max()
     # array([3, 0, 5], dtype=uint16)
 
-Functions like mean and standard deviation aren't true reducers because they're not associative (``mean(mean(x1, x2, x3), mean(x4, x5))`` is not equal to ``mean(mean(x1, x2), mean(x3, x4, x5))``). However, they're useful methods that exist on all awkward arrays, defined in terms of reducers.
+Functions like mean and standard deviation aren't true reducers because they're not associative (``mean(mean(x1, x2, x3), mean(x4, x5))`` is not equal to ``mean(mean(x1, x2), mean(x3, x4, x5))``). However, they're useful methods that exist on all Awkward Arrays, defined in terms of reducers.
 
 * ``moment(n, weight=None)``: returns the ``n``th moment of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays. If ``weight`` is given, it is taken as an array of weights, which may have the same structure as the ``array`` or be broadcastable to it, though any broadcasted weights would have no effect on the moment.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
+    a = awkward0.fromiter([[1, 2, 3], [], [4, 5]])
 
     a.moment(1)
     # array([2. , nan, 4.5])
@@ -2291,14 +2266,14 @@ Only when the weight varies across an inner array does it have an effect.
 
 .. code-block:: python3
 
-    a.moment(1, awkward.fromiter([[1, 10, 100], [], [0, 100]]))
+    a.moment(1, awkward0.fromiter([[1, 10, 100], [], [0, 100]]))
     # array([2.89189189,        nan, 5.        ])
 
 * ``mean(weight=None)``: returns the mean of each array (a floating-point value), skipping ``None`` and ``NaN``, returning ``NaN`` for empty arrays, using optional ``weight`` as above.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
+    a = awkward0.fromiter([[1, 2, 3], [], [4, 5]])
     a.mean()
     # array([2. , nan, 4.5])
 
@@ -2306,7 +2281,7 @@ Only when the weight varies across an inner array does it have an effect.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1, 2, 3], [], [4, 5]])
+    a = awkward0.fromiter([[1, 2, 3], [], [4, 5]])
     a.var()
     # array([0.66666667,        nan, 0.25      ])
 
@@ -2326,18 +2301,18 @@ Only when the weight varies across an inner array does it have an effect.
 Properties and methods for jaggedness
 """""""""""""""""""""""""""""""""""""
 
-All awkward arrays have these methods, but they provide information about the first nested ``JaggedArray`` within a structure. If, for instance, the ``JaggedArray`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``JaggedArray``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``MaskedArray``, then that's what they do. If, however, it reaches a ``Table``, which may have some jagged columns and some non-jagged columns, the propagation stops.
+All Awkward Arrays have these methods, but they provide information about the first nested ``JaggedArray`` within a structure. If, for instance, the ``JaggedArray`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``JaggedArray``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``MaskedArray``, then that's what they do. If, however, it reaches a ``Table``, which may have some jagged columns and some non-jagged columns, the propagation stops.
 
 * ``counts``: Numpy array of the number of elements in each inner array of the shallowest ``JaggedArray``. The ``counts`` may have rank > 1 if there are any fixed-size dimensions before the ``JaggedArray``.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
     a.counts
     # array([3, 0, 2, 4])
 
     # MaskedArrays return -1 for missing values.
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], None, [6.6, 7.7, 8.8, 9.9]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], None, [6.6, 7.7, 8.8, 9.9]])
     a.counts
     # array([ 3,  0, -1,  4])
 
@@ -2352,12 +2327,12 @@ A missing inner array (counts is ``-1``) is distinct from an empty inner array (
     # <MaskedArray [[1.1 2.2 3.3] [6.6 7.7 8.8 9.9]] at 0x78112c0d54a8>
 
     # UnionArrays return -1 for non-jagged arrays mixed with jagged arrays.
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], 999, [6.6, 7.7, 8.8, 9.9]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], 999, [6.6, 7.7, 8.8, 9.9]])
     a.counts
     # array([ 3,  0, -1,  4])
 
     # Same for tabular data, regardless of whether they contain nested jagged arrays.
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], {"x": 1, "y": [1.1, 1.2, 1.3]}, [6.6, 7.7, 8.8, 9.9]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], {"x": 1, "y": [1.1, 1.2, 1.3]}, [6.6, 7.7, 8.8, 9.9]])
     a.counts
     # array([ 3,  0, -1,  4])
 
@@ -2365,7 +2340,7 @@ Note! This means that pure ``Tables`` will always return zeros for counts, regar
 
 .. code-block:: python3
 
-    a = awkward.fromiter([{"x": [], "y": []}, {"x": [1], "y": [1.1]}, {"x": [1, 2], "y": [1.1, 2.2]}])
+    a = awkward0.fromiter([{"x": [], "y": []}, {"x": [1], "y": [1.1]}, {"x": [1, 2], "y": [1.1, 2.2]}])
     a.counts
     # array([-1, -1, -1])
 
@@ -2373,7 +2348,7 @@ If all of the columns of a ``Table`` are ``JaggedArrays`` with the same structur
 
 .. code-block:: python3
 
-    b = awkward.JaggedArray.zip(x=a.x, y=a.y)
+    b = awkward0.JaggedArray.zip(x=a.x, y=a.y)
     b
     # <JaggedArray [[] [<Row 0>] [<Row 1> <Row 2>]] at 0x78112c0dc7f0>
 
@@ -2384,7 +2359,7 @@ If all of the columns of a ``Table`` are ``JaggedArrays`` with the same structur
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
     a.flatten()
     # array([1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9])
 
@@ -2393,8 +2368,8 @@ Unlike a ``JaggedArray``'s ``content``, which is part of its low-level layout, `
 .. code-block:: python3
 
     # JaggedArray with an unusual but valid structure.
-    a = awkward.JaggedArray([3, 100, 0, 6], [6, 100, 2, 10],
-                            [4.4, 5.5, 999, 1.1, 2.2, 3.3, 6.6, 7.7, 8.8, 9.9, 123])
+    a = awkward0.JaggedArray([3, 100, 0, 6], [6, 100, 2, 10],
+                             [4.4, 5.5, 999, 1.1, 2.2, 3.3, 6.6, 7.7, 8.8, 9.9, 123])
     a
     # <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5] [6.6 7.7 8.8 9.9]] at 0x78112c127cf8>
 
@@ -2411,7 +2386,7 @@ With ``flatten(axis=1)``, we can internally flatten nested ``JaggedArrays``.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[[1.1, 2.2], [3.3]], [], [[4.4, 5.5]], [[6.6, 7.7, 8.8], [], [9.9]]])
+    a = awkward0.fromiter([[[1.1, 2.2], [3.3]], [], [[4.4, 5.5]], [[6.6, 7.7, 8.8], [], [9.9]]])
     a
     # <JaggedArray [[[1.1 2.2] [3.3]] [] [[4.4 5.5]] [[6.6 7.7 8.8] [] [9.9]]] at 0x78112c127208>
 
@@ -2425,8 +2400,8 @@ Even if a ``JaggedArray``'s inner structure is due to a fixed-shape Numpy array,
 
 .. code-block:: python3
 
-    a = awkward.JaggedArray.fromcounts(numpy.array([3, 0, 2]),
-                                       numpy.array([[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]]))
+    a = awkward0.JaggedArray.fromcounts(numpy.array([3, 0, 2]),
+                                        numpy.array([[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]]))
     a
     # <JaggedArray [[[1 1] [2 2] [3 3]] [] [[4 4] [5 5]]] at 0x78112c0d5ac8>
 
@@ -2436,7 +2411,7 @@ Even if a ``JaggedArray``'s inner structure is due to a fixed-shape Numpy array,
     a.flatten(axis=1)
     # <JaggedArray [[1 1 2 2 3 3] [] [4 4 5 5]] at 0x78112c0d5a20>
 
-But, unlike Numpy, we can't ask for an ``axis`` starting from the other end (with a negative index). The "deepest array" is not a well-defined concept for awkward arrays.
+But, unlike Numpy, we can't ask for an ``axis`` starting from the other end (with a negative index). The "deepest array" is not a well-defined concept for Awkward Arrays.
 
 .. code-block:: python3
 
@@ -2446,7 +2421,7 @@ But, unlike Numpy, we can't ask for an ``axis`` starting from the other end (wit
         print(type(err), str(err))
     # <class 'TypeError'> axis must be a non-negative integer (can't count from the end)
 
-    a = awkward.fromiter([[[1.1, 2.2], [3.3]], [], None, [[6.6, 7.7, 8.8], [], [9.9]]])
+    a = awkward0.fromiter([[[1.1, 2.2], [3.3]], [], None, [[6.6, 7.7, 8.8], [], [9.9]]])
     a
     # <MaskedArray [[[1.1 2.2] [3.3]] [] None [[6.6 7.7 8.8] [] [9.9]]] at 0x78112c0d51d0>
 
@@ -2457,7 +2432,7 @@ But, unlike Numpy, we can't ask for an ``axis`` starting from the other end (wit
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
     a
     # <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5] [6.6 7.7 8.8 9.9]] at 0x78112c127be0>
 
@@ -2491,15 +2466,15 @@ If a ``JaggedArray`` is nested within some other type, ``pad`` will propagate do
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], None, [4.4, 5.5], None])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], None, [4.4, 5.5], None])
     a
     # <MaskedArray [[1.1 2.2 3.3] [] None [4.4 5.5] None] at 0x78112c0d52b0>
 
     a.pad(3)
     # <MaskedArray [[1.1 2.2 3.3] [None None None] None [4.4 5.5 None] None] at 0x78112c0e9908>
 
-    a = awkward.Table(x=[[1, 1], [2, 2], [3, 3], [4, 4]],
-                      y=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]]))
+    a = awkward0.Table(x=[[1, 1], [2, 2], [3, 3], [4, 4]],
+                       y=awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]]))
     a.tolist()
     # [{'x': [1, 1], 'y': [1.1, 2.2, 3.3]},
     #  {'x': [2, 2], 'y': []},
@@ -2522,8 +2497,8 @@ If you pass a ``pad`` through a ``Table``, be sure that every field in each reco
 
 .. code-block:: python3
 
-    a = awkward.Table(x=[1, 2, 3, 4],
-                      y=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]]))
+    a = awkward0.Table(x=[1, 2, 3, 4],
+                       y=awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]]))
     a.tolist()
     # [{'x': 1, 'y': [1.1, 2.2, 3.3]},
     #  {'x': 2, 'y': []},
@@ -2540,25 +2515,25 @@ The same goes for ``UnionArrays``.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3, [1, 2, 3]], [], [4.4, 5.5, [4, 5]]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3, [1, 2, 3]], [], [4.4, 5.5, [4, 5]]])
     a
     # <JaggedArray [[1.1 2.2 3.3 [1 2 3]] [] [4.4 5.5 [4 5]]] at 0x7811883c5d30>
 
     a.pad(5)
     # <JaggedArray [[1.1 2.2 3.3 [1 2 3] None] [None None None None None] [4.4 5.5 [4 5] None None]] at 0x78112c0e9a20>
 
-    a = awkward.UnionArray.fromtags([0, 0, 0, 1, 1],
-                                    [awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
-                                     awkward.fromiter([[100, 101], [102]])])
+    a = awkward0.UnionArray.fromtags([0, 0, 0, 1, 1],
+                                     [awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
+                                      awkward0.fromiter([[100, 101], [102]])])
     a
     # <UnionArray [[1.1 2.2 3.3] [] [4.4 5.5] [100 101] [102]] at 0x78112c0bed30>
 
     a.pad(3)
     # <UnionArray [[1.1 2.2 3.3] [None None None] [4.4 5.5 None] [100 101 None] [102 None None]] at 0x78112c0bedd8>
 
-    a = awkward.UnionArray.fromtags([0, 0, 0, 1, 1],
-                                    [awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
-                                     awkward.fromiter([100, 200])])
+    a = awkward0.UnionArray.fromtags([0, 0, 0, 1, 1],
+                                     [awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
+                                      awkward0.fromiter([100, 200])])
     a
     # <UnionArray [[1.1 2.2 3.3] [] [4.4 5.5] 100 200] at 0x78112c0e9b00>
 
@@ -2572,7 +2547,7 @@ The general behavior of ``pad`` is to replace the shallowest ``JaggedArray`` wit
 
 .. code-block:: python3
 
-    a = awkward.fromiter(["one", "two", "three"])
+    a = awkward0.fromiter(["one", "two", "three"])
     a
     # <StringArray ['one' 'two' 'three'] at 0x78112c0dcb00>
 
@@ -2589,7 +2564,7 @@ The general behavior of ``pad`` is to replace the shallowest ``JaggedArray`` wit
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[-3.3, 5.5, -8.8], [], [-6.6, 0.0, 2.2, 3.3], [], [2.2, -2.2, 4.4]])
+    a = awkward0.fromiter([[-3.3, 5.5, -8.8], [], [-6.6, 0.0, 2.2, 3.3], [], [2.2, -2.2, 4.4]])
     absa = abs(a)
 
     a
@@ -2612,8 +2587,8 @@ The general behavior of ``pad`` is to replace the shallowest ``JaggedArray`` wit
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
-    b = awkward.fromiter([["one", "two"], ["three"], ["four", "five", "six"], ["seven"]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+    b = awkward0.fromiter([["one", "two"], ["three"], ["four", "five", "six"], ["seven"]])
     a.cross(b)
     # <JaggedArray [[(1.1, one) (1.1, two) (2.2, one) (2.2, two) (3.3, one) (3.3, two)] [] [(4.4, four) (4.4, five) (4.4, six) (5.5, four) (5.5, five) (5.5, six)] [(6.6, seven) (7.7, seven) (8.8, seven) (9.9, seven)]] at 0x78112c0e9550>
 
@@ -2639,8 +2614,8 @@ This method is good to use with ``unzip``, which separates the ``Table`` of tupl
     # (<JaggedArray [[1.1 1.1 2.2 2.2 3.3 3.3] [] [4.4 4.4 4.4 5.5 5.5 5.5] [6.6 7.7 8.8 9.9]] at 0x78112c0be278>,
     #  <JaggedArray [['one' 'two' 'one' 'two' 'one' 'two'] [] ['four' 'five' 'six' 'four' 'five' 'six'] ['seven' 'seven' 'seven' 'seven']] at 0x78112c0d0470>)
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
-    b = awkward.fromiter([[1, 2], [3], [4, 5, 6], [7]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+    b = awkward0.fromiter([[1, 2], [3], [4, 5, 6], [7]])
     left, right = a.cross(b, nested=True).unzip()
     left, right
     # (<JaggedArray [[[1.1 1.1] [2.2 2.2] [3.3 3.3]] [] [[4.4 4.4 4.4] [5.5 5.5 5.5]] [[6.6] [7.7] [8.8] [9.9]]] at 0x78112c127048>,
@@ -2668,7 +2643,7 @@ Cross with ``nested=True``, followed by some calculation on the pairs and then s
 
 .. code-block:: python3
 
-    a = awkward.fromiter([["a", "b", "c"], [], ["d", "e"]])
+    a = awkward0.fromiter([["a", "b", "c"], [], ["d", "e"]])
     a.pairs()
     # <JaggedArray [[(a, a) (a, b) (a, c) (b, b) (b, c) (c, c)] [] [(d, d) (d, e) (e, e)]] at 0x78112c127898>
 
@@ -2694,7 +2669,7 @@ Just as with ``cross`` (above), this is good to combine with ``unzip`` and maybe
 
 .. code-block:: python3
 
-    a = awkward.fromiter([["a", "b", "c"], [], ["d", "e"]])
+    a = awkward0.fromiter([["a", "b", "c"], [], ["d", "e"]])
     a.distincts()
     # <JaggedArray [[(a, b) (a, c) (b, c)] [] [(d, e)]] at 0x78112c127080>
 
@@ -2720,7 +2695,7 @@ Just as with ``cross`` (above), this is good to combine with ``unzip`` and maybe
 
 .. code-block:: python3
 
-    a = awkward.fromiter([["a", "b", "c"], [], ["d", "e"], ["f", "g", "h", "i", "j"]])
+    a = awkward0.fromiter([["a", "b", "c"], [], ["d", "e"], ["f", "g", "h", "i", "j"]])
     a
     # <JaggedArray [['a' 'b' 'c'] [] ['d' 'e'] ['f' 'g' 'h' 'i' 'j']] at 0x78112c0d0400>
 
@@ -2763,17 +2738,17 @@ Just as with ``cross`` (above), this is good to combine with ``unzip`` and maybe
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    b = awkward.fromiter([[100, 200, 300], [], [400, 500]])
-    awkward.JaggedArray.zip(a, b)
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    b = awkward0.fromiter([[100, 200, 300], [], [400, 500]])
+    awkward0.JaggedArray.zip(a, b)
     # <JaggedArray [[(1.1, 100) (2.2, 200) (3.3, 300)] [] [(4.4, 400) (5.5, 500)]] at 0x78112c0f71d0>
 
-    awkward.JaggedArray.zip(x=a, y=b).tolist()
+    awkward0.JaggedArray.zip(x=a, y=b).tolist()
     # [[{'x': 1.1, 'y': 100}, {'x': 2.2, 'y': 200}, {'x': 3.3, 'y': 300}],
     #  [],
     #  [{'x': 4.4, 'y': 400}, {'x': 5.5, 'y': 500}]]
 
-    awkward.JaggedArray.zip({"x": a, "y": b}).tolist()
+    awkward0.JaggedArray.zip({"x": a, "y": b}).tolist()
     # [[{'x': 1.1, 'y': 100}, {'x': 2.2, 'y': 200}, {'x': 3.3, 'y': 300}],
     #  [],
     #  [{'x': 4.4, 'y': 400}, {'x': 5.5, 'y': 500}]]
@@ -2782,24 +2757,24 @@ Not all of the arguments need to be jagged; those that aren't will be broadcaste
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    b = awkward.fromiter([100, 200, 300])
-    awkward.JaggedArray.zip(a, b)
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    b = awkward0.fromiter([100, 200, 300])
+    awkward0.JaggedArray.zip(a, b)
     # <JaggedArray [[(1.1, 100) (2.2, 100) (3.3, 100)] [] [(4.4, 300) (5.5, 300)]] at 0x78112c0f7c18>
 
-    awkward.JaggedArray.zip(a, 1000)
+    awkward0.JaggedArray.zip(a, 1000)
     # <JaggedArray [[(1.1, 1000) (2.2, 1000) (3.3, 1000)] [] [(4.4, 1000) (5.5, 1000)]] at 0x78112c0f72e8>
 
 Properties and methods for tabular columns
 """"""""""""""""""""""""""""""""""""""""""
 
-All awkward arrays have these methods, but they provide information about the first nested ``Table`` within a structure. If, for instance, the ``Table`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``Table``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``MaskedArray``, then that's what they do.
+All Awkward Arrays have these methods, but they provide information about the first nested ``Table`` within a structure. If, for instance, the ``Table`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``Table``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``MaskedArray``, then that's what they do.
 
 * ``columns``: the names of the columns at the first tabular level of depth.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}, {"x": 3, "y": 3.3, "z": "three"}])
+    a = awkward0.fromiter([{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}, {"x": 3, "y": 3.3, "z": "three"}])
     a.tolist()
     # [{'x': 1, 'y': 1.1, 'z': 'one'},
     #  {'x': 2, 'y': 2.2, 'z': 'two'},
@@ -2808,9 +2783,9 @@ All awkward arrays have these methods, but they provide information about the fi
     a.columns
     # ['x', 'y', 'z']
 
-    a = awkward.Table(x=[1, 2, 3],
-                      y=[1.1, 2.2, 3.3],
-                      z=awkward.Table(a=[4, 5, 6], b=[4.4, 5.5, 6.6]))
+    a = awkward0.Table(x=[1, 2, 3],
+                       y=[1.1, 2.2, 3.3],
+                       z=awkward0.Table(a=[4, 5, 6], b=[4.4, 5.5, 6.6]))
     a.tolist()
     # [{'x': 1, 'y': 1.1, 'z': {'a': 4, 'b': 4.4}},
     #  {'x': 2, 'y': 2.2, 'z': {'a': 5, 'b': 5.5}},
@@ -2829,7 +2804,7 @@ All awkward arrays have these methods, but they provide information about the fi
 
 .. code-block:: python3
 
-    a = awkward.fromiter([{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}, {"x": 3, "y": 3.3, "z": "three"}])
+    a = awkward0.fromiter([{"x": 1, "y": 1.1, "z": "one"}, {"x": 2, "y": 2.2, "z": "two"}, {"x": 3, "y": 3.3, "z": "three"}])
     a.unzip()
     # (array([1, 2, 3]),
     #  array([1.1, 2.2, 3.3]),
@@ -2839,9 +2814,9 @@ The ``unzip`` method is the opposite of the ``Table`` constructor,
 
 .. code-block:: python3
 
-    a = awkward.Table(x=[1, 2, 3],
-                      y=[1.1, 2.2, 3.3],
-                      z=awkward.fromiter(["one", "two", "three"]))
+    a = awkward0.Table(x=[1, 2, 3],
+                       y=[1.1, 2.2, 3.3],
+                       z=awkward0.fromiter(["one", "two", "three"]))
     a.tolist()
     # [{'x': 1, 'y': 1.1, 'z': 'one'},
     #  {'x': 2, 'y': 2.2, 'z': 'two'},
@@ -2856,9 +2831,9 @@ but it is also the opposite of ``JaggedArray.zip``.
 
 .. code-block:: python3
 
-    b = awkward.JaggedArray.zip(x=awkward.fromiter([[1, 2, 3], [], [4, 5]]),
-                                y=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
-                                z=awkward.fromiter([["a", "b", "c"], [], ["d", "e"]]))
+    b = awkward0.JaggedArray.zip(x=awkward0.fromiter([[1, 2, 3], [], [4, 5]]),
+                                 y=awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
+                                 z=awkward0.fromiter([["a", "b", "c"], [], ["d", "e"]]))
     b.tolist()
     # [[{'x': 1, 'y': 1.1, 'z': 'a'},
     #   {'x': 2, 'y': 2.2, 'z': 'b'},
@@ -2887,9 +2862,9 @@ So ``unzip`` turns a flat ``Table`` into a tuple of flat arrays (opposite of the
 
 .. code-block:: python3
 
-    a = awkward.Table(x=[1, 2, 3],
-                      y=[1.1, 2.2, 3.3],
-                      z=awkward.fromiter(["one", "two", "three"]))
+    a = awkward0.Table(x=[1, 2, 3],
+                       y=[1.1, 2.2, 3.3],
+                       z=awkward0.fromiter(["one", "two", "three"]))
     a.tolist()
     # [{'x': 1, 'y': 1.1, 'z': 'one'},
     #  {'x': 2, 'y': 2.2, 'z': 'two'},
@@ -2898,9 +2873,9 @@ So ``unzip`` turns a flat ``Table`` into a tuple of flat arrays (opposite of the
     a.istuple
     # False
 
-    a = awkward.Table([1, 2, 3],
-                      [1.1, 2.2, 3.3],
-                      awkward.fromiter(["one", "two", "three"]))
+    a = awkward0.Table([1, 2, 3],
+                       [1.1, 2.2, 3.3],
+                       awkward0.fromiter(["one", "two", "three"]))
     a.tolist()
     # [(1, 1.1, 'one'), (2, 2.2, 'two'), (3, 3.3, 'three')]
 
@@ -2911,9 +2886,9 @@ Even though the following tuples are inside of a jagged array, the first level o
 
 .. code-block:: python3
 
-    b = awkward.JaggedArray.zip(awkward.fromiter([[1, 2, 3], [], [4, 5]]),
-                                awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
-                                awkward.fromiter([["a", "b", "c"], [], ["d", "e"]]))
+    b = awkward0.JaggedArray.zip(awkward0.fromiter([[1, 2, 3], [], [4, 5]]),
+                                 awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]]),
+                                 awkward0.fromiter([["a", "b", "c"], [], ["d", "e"]]))
     b
     # <JaggedArray [[(1, 1.1, a) (2, 2.2, b) (3, 3.3, c)] [] [(4, 4.4, d) (5, 5.5, e)]] at 0x78112c0d0e48>
 
@@ -2924,9 +2899,9 @@ Even though the following tuples are inside of a jagged array, the first level o
 
 .. code-block:: python3
 
-    a = awkward.Table([1, 2, 3],
-                      [1.1, 2.2, 3.3],
-                      awkward.fromiter(["one", "two", "three"]))
+    a = awkward0.Table([1, 2, 3],
+                       [1.1, 2.2, 3.3],
+                       awkward0.fromiter(["one", "two", "three"]))
     a.tolist()
     # [(1, 1.1, 'one'), (2, 2.2, 'two'), (3, 3.3, 'three')]
 
@@ -2943,16 +2918,16 @@ Even though the following tuples are inside of a jagged array, the first level o
 
 .. code-block:: python3
 
-    a = awkward.Table([1, 2, 3], [1, 2, 3], awkward.Table(awkward.Table([1, 2, 3], [1, 2, 3]), [1, 2, 3]))
+    a = awkward0.Table([1, 2, 3], [1, 2, 3], awkward0.Table(awkward0.Table([1, 2, 3], [1, 2, 3]), [1, 2, 3]))
     a.tolist()
     # [(1, 1, ((1, 1), 1)), (2, 2, ((2, 2), 2)), (3, 3, ((3, 3), 3))]
 
     a.flattentuple().tolist()
     # [(1, 1, 1, 1, 1), (2, 2, 2, 2, 2), (3, 3, 3, 3, 3)]
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
-    b = awkward.fromiter([[100, 200], [300], [400, 500, 600], [700]])
-    c = awkward.fromiter([["a"], ["b", "c"], ["d"], ["e", "f"]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]])
+    b = awkward0.fromiter([[100, 200], [300], [400, 500, 600], [700]])
+    c = awkward0.fromiter([["a"], ["b", "c"], ["d"], ["e", "f"]])
 
 The ``cross`` method internally calls ``flattentuples()`` if it detects that one of its arguments is the result of a ``cross``.
 
@@ -2984,13 +2959,13 @@ The ``cross`` method internally calls ``flattentuples()`` if it detects that one
 Properties and methods for missing values
 """""""""""""""""""""""""""""""""""""""""
 
-All awkward arrays have these methods, but they provide information about the first nested ``MaskedArray`` within a structure. If, for instance, the ``MaskedArray`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``MaskedArray``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``JaggedArray``, then that's what they do.
+All Awkward Arrays have these methods, but they provide information about the first nested ``MaskedArray`` within a structure. If, for instance, the ``MaskedArray`` is within some structure that doesn't affect high-level type (e.g. ``IndexedArray``, ``ChunkedArray``, ``VirtualArray``), then the methods are passed through to the ``MaskedArray``. If it's nested within something that does change type, but can meaningfully pass on the call, such as ``JaggedArray``, then that's what they do.
 
 * ``boolmask(maskedwhen=None)``: returns a Numpy array of booleans indicating which elements are missing ("masked") and which are not. If ``maskedwhen=True``, a ``True`` value in the Numpy array means missing/masked; if ``maskedwhen=False``, a ``False`` value in the Numpy array means missing/masked. If no value is passed (or ``None``), the ``MaskedArray``'s own ``maskedwhen`` property is used (which is by default ``True``). Non-``MaskedArrays`` are assumed to have a ``maskedwhen`` of ``True`` (the default).
 
 .. code-block:: python3
 
-    a = awkward.fromiter([1, 2, None, 3, 4, None, None, 5])
+    a = awkward0.fromiter([1, 2, None, 3, 4, None, None, 5])
     a.boolmask()
     # array([False, False,  True, False, False,  True,  True, False])
 
@@ -3001,14 +2976,14 @@ All awkward arrays have these methods, but they provide information about the fi
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, None, 2.2], [], [3.3, 4.4, None, 5.5]])
+    a = awkward0.fromiter([[1.1, None, 2.2], [], [3.3, 4.4, None, 5.5]])
     a.boolmask()
     # array([False, False, False])
 
     a.flatten().boolmask()
     # array([False,  True, False, False, False,  True, False])
 
-    a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": None, "y": 2.2}, {"x": None, "y": 3.3}, {"x": 4, "y": None}])
+    a = awkward0.fromiter([{"x": 1, "y": 1.1}, {"x": None, "y": 2.2}, {"x": None, "y": 3.3}, {"x": 4, "y": None}])
     a.boolmask()
     # array([False, False, False, False])
 
@@ -3022,7 +2997,7 @@ All awkward arrays have these methods, but they provide information about the fi
 
 .. code-block:: python3
 
-    a = awkward.fromiter([1, 2, None, 3, 4, None, None, 5])
+    a = awkward0.fromiter([1, 2, None, 3, 4, None, None, 5])
     a.ismasked
     # array([False, False,  True, False, False,  True,  True, False])
 
@@ -3033,15 +3008,15 @@ All awkward arrays have these methods, but they provide information about the fi
 
 .. code-block:: python3
 
-    a = awkward.fromiter([1, 2, None, 3, 4, None, None, 5])
+    a = awkward0.fromiter([1, 2, None, 3, 4, None, None, 5])
     a.fillna(999)
     # array([  1,   2, 999,   3,   4, 999, 999,   5])
 
-    a = awkward.fromiter([[1.1, None, 2.2], [], [3.3, 4.4, None, 5.5]])
+    a = awkward0.fromiter([[1.1, None, 2.2], [], [3.3, 4.4, None, 5.5]])
     a.fillna(999)
     # <JaggedArray [[1.1 999.0 2.2] [] [3.3 4.4 999.0 5.5]] at 0x78112c0859b0>
 
-    a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": None, "y": 2.2}, {"x": None, "y": 3.3}, {"x": 4, "y": None}])
+    a = awkward0.fromiter([{"x": 1, "y": 1.1}, {"x": None, "y": 2.2}, {"x": None, "y": 3.3}, {"x": 4, "y": None}])
     a.fillna(999).tolist()
     # [{'x': 1, 'y': 1.1},
     #  {'x': 999, 'y': 2.2},
@@ -3051,23 +3026,23 @@ All awkward arrays have these methods, but they provide information about the fi
 Functions for structure manipulation
 """"""""""""""""""""""""""""""""""""
 
-Only one structure-manipulation function (for now) is defined at top-level in awkward-array: ``awkward.concatenate``.
+Only one structure-manipulation function (for now) is defined at top-level in Awkward-Array: ``awkward0.concatenate``.
 
-* ``awkward.concatenate(arrays, axis=0)``: concatenate two or more ``arrays``. If ``axis=0``, the arrays are concatenated lengthwise (the resulting length is the sum of the lengths of each of the ``arrays``). If ``axis=1``, each inner array is concatenated: the input ``arrays`` must all be jagged with the same outer array length. (Values of ``axis`` greater than ``1`` are not yet supported.)
+* ``awkward0.concatenate(arrays, axis=0)``: concatenate two or more ``arrays``. If ``axis=0``, the arrays are concatenated lengthwise (the resulting length is the sum of the lengths of each of the ``arrays``). If ``axis=1``, each inner array is concatenated: the input ``arrays`` must all be jagged with the same outer array length. (Values of ``axis`` greater than ``1`` are not yet supported.)
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    b = awkward.fromiter([[100, 200], [300], [400, 500, 600]])
-    awkward.concatenate([a, b])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    b = awkward0.fromiter([[100, 200], [300], [400, 500, 600]])
+    awkward0.concatenate([a, b])
     # <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5] [100.0 200.0] [300.0] [400.0 500.0 600.0]] at 0x78112c122c88>
 
-    awkward.concatenate([a, b], axis=1)
+    awkward0.concatenate([a, b], axis=1)
     # <JaggedArray [[1.1 2.2 3.3 100.0 200.0] [300.0] [4.4 5.5 400.0 500.0 600.0]] at 0x78112c425978>
 
-    a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
-    b = awkward.fromiter([{"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])
-    awkward.concatenate([a, b]).tolist()
+    a = awkward0.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
+    b = awkward0.fromiter([{"x": 4, "y": 4.4}, {"x": 5, "y": 5.5}])
+    awkward0.concatenate([a, b]).tolist()
     # [{'x': 1, 'y': 1.1},
     #  {'x': 2, 'y': 2.2},
     #  {'x': 3, 'y': 3.3},
@@ -3078,9 +3053,9 @@ If the arrays have different types, their concatenation is a ``UnionArray``.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
-    b = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    awkward.concatenate([a, b]).tolist()
+    a = awkward0.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": 3.3}])
+    b = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    awkward0.concatenate([a, b]).tolist()
     # [{'x': 1, 'y': 1.1},
     #  {'x': 2, 'y': 2.2},
     #  {'x': 3, 'y': 3.3},
@@ -3088,18 +3063,18 @@ If the arrays have different types, their concatenation is a ``UnionArray``.
     #  [],
     #  [4.4, 5.5]]
 
-    a = awkward.fromiter([1, None, 2])
-    b = awkward.fromiter([None, 3, None])
-    awkward.concatenate([a, b])
+    a = awkward0.fromiter([1, None, 2])
+    b = awkward0.fromiter([None, 3, None])
+    awkward0.concatenate([a, b])
     # <MaskedArray [1 None 2 None 3 None] at 0x78112c085da0>
 
-    import awkward, numpy
-    a = awkward.fromiter(["one", "two", "three"])
-    b = awkward.fromiter(["four", "five", "six"])
-    awkward.concatenate([a, b])
+    import awkward0, numpy
+    a = awkward0.fromiter(["one", "two", "three"])
+    b = awkward0.fromiter(["four", "five", "six"])
+    awkward0.concatenate([a, b])
     # <StringArray ['one' 'two' 'three' 'four' 'five' 'six'] at 0x78112c14f7f0>
 
-    awkward.concatenate([a, b], axis=1)
+    awkward0.concatenate([a, b], axis=1)
     # <StringArray ['onefour' 'twofive' 'threesix'] at 0x78112c115518>
 
 Functions for input/output and conversion
@@ -3107,15 +3082,15 @@ Functions for input/output and conversion
 
 Most of the functions defined at the top-level of the library are conversion functions.
 
-* ``awkward.fromiter(iterable, awkwardlib=None, dictencoding=False, maskedwhen=True)``: convert Python or JSON data into awkward arrays. Not a fast function: it necessarily involves a Python for loop. The ``awkwardlib`` determines which awkward module to use to make arrays. If ``dictencoding`` is ``True``, bytes and strings will be "dictionary-encoded" in Arrow/Parquet terms—this is an ``IndexedArray`` in awkward. The ``maskedwhen`` parameter determines whether ``MaskedArrays`` have a mask that is ``True`` when data are missing or ``False`` when data are missing.
+* ``awkward0.fromiter(iterable, dictencoding=False, maskedwhen=True)``: convert Python or JSON data into Awkward Arrays. Not a fast function: it necessarily involves a Python for loop. If ``dictencoding`` is ``True``, bytes and strings will be "dictionary-encoded" in Arrow/Parquet terms—this is an ``IndexedArray`` in Awkward. The ``maskedwhen`` parameter determines whether ``MaskedArrays`` have a mask that is ``True`` when data are missing or ``False`` when data are missing.
 
 .. code-block:: python3
 
     # We have been using this function all along, but why not another example?
-    complicated = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
-                                    [4.4, [5.5]],
-                                    [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
-                                   ])
+    complicated = awkward0.fromiter([[1.1, 2.2, None, 3.3, None],
+                                     [4.4, [5.5]],
+                                     [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                                    ])
     complicated
     # <JaggedArray [[1.1 2.2 None 3.3 None] [4.4 [5.5]] [<Row 0> None <Row 1>]] at 0x78112c0ef438>
 
@@ -3160,28 +3135,28 @@ The fact that this nested, row-wise data have been converted into columnar array
 
 The number of arrays in this object scales with the complexity of its data type, but not with the size of the dataset. If it were as complicated as it is now but billions of elements long, it would still contain 11 Numpy arrays, and operations on it would scale as Numpy scales. However, converting a billion Python objects to these 11 arrays would be a large up-front cost.
 
-More detail on the row-wise to columnar conversion process is given in `docs/fromiter.adoc <https://github.com/scikit-hep/awkward-array/blob/master/docs/fromiter.adoc>`__.
+More detail on the row-wise to columnar conversion process is given in `docs/fromiter.adoc <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/fromiter.adoc>`__.
 
-* ``load(file, awkwardlib=None, whitelist=awkward.persist.whitelist, cache=None, schemasuffix=".json")``: loads data from an "awkd" (special ZIP) file. This function is like ``numpy.load``, but for awkward arrays. If the file contains a single object, that object will be read immediately; if it has a collection of named arrays, it will return a loader that loads those arrays on demand. The ``awkwardlib`` determines the module to use to define arrays, the ``whitelist`` is where you can provide a list of functions that may be called in this process, ``cache`` is a global cache object assigned to ``VirtualArrays``, and ``schemasuffix`` determines the file name pattern to look for objects inside the ZIP file.
+* ``load(file, whitelist=awkward0.persist.whitelist, cache=None, schemasuffix=".json")``: loads data from an "awkd" (special ZIP) file. This function is like ``numpy.load``, but for Awkward Arrays. If the file contains a single object, that object will be read immediately; if it has a collection of named arrays, it will return a loader that loads those arrays on demand. The ``whitelist`` is where you can provide a list of functions that may be called in this process, ``cache`` is a global cache object assigned to ``VirtualArrays``, and ``schemasuffix`` determines the file name pattern to look for objects inside the ZIP file.
 
-* ``save(file, array, name=None, mode="a", compression=awkward.persist.compression, delimiter="-", suffix=".raw", schemasuffix=".json")``: saves data to an "awkd" (special ZIP) file. This function is like ``numpy.savez`` and is the reverse of ``load`` (above). The ``array`` may be a single object or a dict of named arrays, the ``name`` is a name to use inside the file, ``mode="a"`` means create or append to an existing file, refusing to overwrite data while ``mode="w"`` overwrites data, ``compression`` is a compression policy (set of rules determining which arrays to compress and how), and the rest of the arguments determine file names within the ZIP: ``delimiter`` between name components, ``suffix`` for array data, and ``schemasuffix`` for the schemas that tell ``load`` how to find all other data.
+* ``save(file, array, name=None, mode="a", compression=awkward0.persist.compression, delimiter="-", suffix=".raw", schemasuffix=".json")``: saves data to an "awkd" (special ZIP) file. This function is like ``numpy.savez`` and is the reverse of ``load`` (above). The ``array`` may be a single object or a dict of named arrays, the ``name`` is a name to use inside the file, ``mode="a"`` means create or append to an existing file, refusing to overwrite data while ``mode="w"`` overwrites data, ``compression`` is a compression policy (set of rules determining which arrays to compress and how), and the rest of the arguments determine file names within the ZIP: ``delimiter`` between name components, ``suffix`` for array data, and ``schemasuffix`` for the schemas that tell ``load`` how to find all other data.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
-                          [4.4, [5.5]],
-                          [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
-                         ])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    b = awkward0.fromiter([[1.1, 2.2, None, 3.3, None],
+                           [4.4, [5.5]],
+                           [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                          ])
 
-    awkward.save("single.awkd", a, mode="w")
+    awkward0.save("single.awkd", a, mode="w")
 
-    awkward.load("single.awkd")
+    awkward0.load("single.awkd")
     # <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78112c14ff98>
 
-    awkward.save("multi.awkd", {"a": a, "b": b}, mode="w")
+    awkward0.save("multi.awkd", {"a": a, "b": b}, mode="w")
 
-    multi = awkward.load("multi.awkd")
+    multi = awkward0.load("multi.awkd")
 
     multi["a"]
     # <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78112c0906d8>
@@ -3193,65 +3168,65 @@ Only ``save`` has a ``compression`` parameter because only the writing process g
 
 .. code-block:: python3
 
-    awkward.persist.compression
+    awkward0.persist.compression
     # [{'minsize': 8192,
     #   'types': [numpy.bool_, bool, numpy.integer],
     #   'contexts': '*',
     #   'pair': (<function zlib.compress(data, /, level=-1)>,
     #    ('zlib', 'decompress'))}]
 
-The default policy has only one rule. If any array has a minimum size (``minsize``) of 8 kB (``8192`` bytes), a numeric type (``array.dtype.type``) that is a subclass of ``numpy.bool_``, ``bool``, or ``numpy.integer``, and is in any awkward-array context (``JaggedArray.starts``, ``MaskedArray.mask``, etc.), then it will be compressed with ``zip.compress`` and decompressed with ``('zlib', 'decompress')``. The compression function is given as an object—the Python function that will be called to transform byte strings into compressed byte strings—but the decompression function is given as a location in Python's namespace: a tuple of nested objects, the first of which is a fully qualified module name (submodules separated by dots). This is because only the *location* of the decompression function needs to be written to the file.
+The default policy has only one rule. If any array has a minimum size (``minsize``) of 8 kB (``8192`` bytes), a numeric type (``array.dtype.type``) that is a subclass of ``numpy.bool_``, ``bool``, or ``numpy.integer``, and is in any Awkward Array context (``JaggedArray.starts``, ``MaskedArray.mask``, etc.), then it will be compressed with ``zip.compress`` and decompressed with ``('zlib', 'decompress')``. The compression function is given as an object—the Python function that will be called to transform byte strings into compressed byte strings—but the decompression function is given as a location in Python's namespace: a tuple of nested objects, the first of which is a fully qualified module name (submodules separated by dots). This is because only the *location* of the decompression function needs to be written to the file.
 
-The saved awkward array consists of a collection of byte strings for Numpy arrays (2 for object ``a`` and 11 for object ``b``, above) and JSON-formatted metadata that reconstructs the nested hierarchy of awkward classes around those Numpy arrays. This metadata includes information such as which byte strings should be decompressed and how, but also which awkward constructors to call to fit everything together. As such, the JSON metadata is code, a limited language without looping or function definitions (i.e. not Turing complete) but with the ability to call any Python function.
+The saved Awkward Array consists of a collection of byte strings for Numpy arrays (2 for object ``a`` and 11 for object ``b``, above) and JSON-formatted metadata that reconstructs the nested hierarchy of Awkward classes around those Numpy arrays. This metadata includes information such as which byte strings should be decompressed and how, but also which Awkward constructors to call to fit everything together. As such, the JSON metadata is code, a limited language without looping or function definitions (i.e. not Turing complete) but with the ability to call any Python function.
 
 Using a mini-language as metadata gives us great capacity for backward and forward compatibility (new or old ways of encoding things are simply calling different functions), but it does raise the danger of malicious array files calling unwanted Python functions. For this reason, ``load`` refuses to call any functions not specified in a ``whitelist``. The default whitelist consists of functions known to be safe:
 
 .. code-block:: python3
 
-    awkward.persist.whitelist
+    awkward0.persist.whitelist
     # [['numpy', 'frombuffer'],
     #  ['zlib', 'decompress'],
     #  ['lzma', 'decompress'],
     #  ['backports.lzma', 'decompress'],
     #  ['lz4.block', 'decompress'],
-    #  ['awkward', '*Array'],
-    #  ['awkward', 'Table'],
-    #  ['awkward', 'numpy', 'frombuffer'],
-    #  ['awkward.util', 'frombuffer'],
-    #  ['awkward.persist'],
-    #  ['awkward.arrow', '_ParquetFile', 'fromjson'],
+    #  ['awkward0', '*Array'],
+    #  ['awkward0', 'Table'],
+    #  ['awkward0', 'numpy', 'frombuffer'],
+    #  ['awkward0.util', 'frombuffer'],
+    #  ['awkward0.persist'],
+    #  ['awkward0.arrow', '_ParquetFile', 'fromjson'],
     #  ['uproot_methods.classes.*'],
     #  ['uproot_methods.profiles.*'],
-    #  ['uproot.tree', '_LazyFiles'],
-    #  ['uproot.tree', '_LazyTree'],
-    #  ['uproot.tree', '_LazyBranch']]
+    #  ['uproot3.tree', '_LazyFiles'],
+    #  ['uproot3.tree', '_LazyTree'],
+    #  ['uproot3.tree', '_LazyBranch']]
 
-The format of each item in the whitelist is a list of nested objects, the first of which being a fully qualified module name (submodules separated by dots). For instance, in the ``awkward.arrow`` submodule, there is a class named ``_ParquetFile`` and it has a static method ``fromjson`` that is deemed to be safe. Patterns of safe names are can be wildcarded, such as ``['awkward', '*Array']`` and ``['uproot_methods.classes.*']``.
+The format of each item in the whitelist is a list of nested objects, the first of which being a fully qualified module name (submodules separated by dots). For instance, in the ``awkward0.arrow`` submodule, there is a class named ``_ParquetFile`` and it has a static method ``fromjson`` that is deemed to be safe. Patterns of safe names are can be wildcarded, such as ``['awkward0', '*Array']`` and ``['uproot_methods.classes.*']``.
 
-You can add your own functions, and forward compatibility (using data made by a new version in an old version of awkward-array) often dictates that you must add a function manually. The error message explains how to do this.
+You can add your own functions, and forward compatibility (using data made by a new version in an old version of Awkward Array) often dictates that you must add a function manually. The error message explains how to do this.
 
-The same serialization format is used when you pickle an awkward array or save it in an HDF5 file. More detail on the metadata mini-language is given in `docs/serialization.adoc <https://github.com/scikit-hep/awkward-array/blob/master/docs/serialization.adoc>`__.
+The same serialization format is used when you pickle an Awkward Array or save it in an HDF5 file. More detail on the metadata mini-language is given in `docs/serialization.adoc <https://github.com/scikit-hep/awkward-0.x/blob/master/docs/serialization.adoc>`__.
 
-* ``hdf5(group, awkwardlib=None, compression=awkward.persist.compression, whitelist=awkward.persist.whitelist, cache=None)``: wrap a ``h5py.Group`` as an awkward-aware group, to save awkward arrays to HDF5 files and to read them back again. The options have the same meaning as ``load`` and ``save``.
+* ``hdf5(group, compression=awkward0.persist.compression, whitelist=awkward0.persist.whitelist, cache=None)``: wrap a ``h5py.Group`` as an Awkward-aware group, to save Awkward Arrays to HDF5 files and to read them back again. The options have the same meaning as ``load`` and ``save``.
 
 Unlike "awkd" (special ZIP) files, HDF5 files can be written and overwritten like a database, rather than write-once files.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
-                          [4.4, [5.5]],
-                          [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
-                         ])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    b = awkward0.fromiter([[1.1, 2.2, None, 3.3, None],
+                           [4.4, [5.5]],
+                           [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                          ])
 
     import h5py
-    f = h5py.File("awkward.hdf5", "w")
+    f = h5py.File("awkward0.hdf5", "w")
     f
-    # <HDF5 file "awkward.hdf5" (mode r+)>
+    # <HDF5 file "awkward0.hdf5" (mode r+)>
 
-    g = awkward.hdf5(f)
+    g = awkward0.hdf5(f)
     g
-    # <awkward.hdf5 '/' (0 members)>
+    # <awkward0.hdf5 '/' (0 members)>
 
     g["array"] = a
 
@@ -3265,14 +3240,14 @@ Unlike "awkd" (special ZIP) files, HDF5 files can be written and overwritten lik
     g["array"]
     # <JaggedArray [[1.1 2.2 None 3.3 None] [4.4 [5.5]] [<Row 0> None <Row 1>]] at 0x7811883b9198>
 
-The HDF5 format does not include columnar representations of arbitrary nested data, as awkward-array does, so what we're actually storing are plain Numpy arrays and the metadata necessary to reconstruct the awkward array.
+The HDF5 format does not include columnar representations of arbitrary nested data, as Awkward Array does, so what we're actually storing are plain Numpy arrays and the metadata necessary to reconstruct the Awkward Array.
 
 .. code-block:: python3
 
-    # Reopen file, without wrapping it as awkward.hdf5 this time.
-    f = h5py.File("awkward.hdf5", "r")
+    # Reopen file, without wrapping it as awkward0.hdf5 this time.
+    f = h5py.File("awkward0.hdf5", "r")
     f
-    # <HDF5 file "awkward.hdf5" (mode r+)>
+    # <HDF5 file "awkward0.hdf5" (mode r+)>
 
     f["array"]
     # <HDF5 group "/array" (9 members)>
@@ -3280,49 +3255,49 @@ The HDF5 format does not include columnar representations of arbitrary nested da
     f["array"].keys()
     # <KeysViewHDF5 ['1', '12', '14', '16', '19', '4', '7', '9', 'schema.json']>
 
-The "schema.json" array is the JSON metadata, containing directives like ``{"call": ["awkward", "JaggedArray", "fromcounts"]}`` and ``{"read": "1"}`` meaning the array named ``"1"``, etc.
+The "schema.json" array is the JSON metadata, containing directives like ``{"call": ["awkward0", "JaggedArray", "fromcounts"]}`` and ``{"read": "1"}`` meaning the array named ``"1"``, etc.
 
 .. code-block:: python3
 
     import json
     json.loads(f["array"]["schema.json"][:].tostring())
-    # {'awkward': '0.12.0rc1',
-    #  'schema': {'call': ['awkward', 'JaggedArray', 'fromcounts'],
-    #   'args': [{'call': ['awkward', 'numpy', 'frombuffer'],
+    # {'awkward0': '0.12.0rc1',
+    #  'schema': {'call': ['awkward0', 'JaggedArray', 'fromcounts'],
+    #   'args': [{'call': ['awkward0', 'numpy', 'frombuffer'],
     #     'args': [{'read': '1'}, {'dtype': 'int64'}, {'json': 3, 'id': 2}],
     #     'id': 1},
-    #    {'call': ['awkward', 'IndexedMaskedArray'],
-    #     'args': [{'call': ['awkward', 'numpy', 'frombuffer'],
+    #    {'call': ['awkward0', 'IndexedMaskedArray'],
+    #     'args': [{'call': ['awkward0', 'numpy', 'frombuffer'],
     #       'args': [{'read': '4'}, {'dtype': 'int64'}, {'json': 10, 'id': 5}],
     #       'id': 4},
-    #      {'call': ['awkward', 'UnionArray', 'fromtags'],
-    #       'args': [{'call': ['awkward', 'numpy', 'frombuffer'],
+    #      {'call': ['awkward0', 'UnionArray', 'fromtags'],
+    #       'args': [{'call': ['awkward0', 'numpy', 'frombuffer'],
     #         'args': [{'read': '7'}, {'dtype': 'uint8'}, {'json': 7, 'id': 8}],
     #         'id': 7},
-    #        {'list': [{'call': ['awkward', 'numpy', 'frombuffer'],
+    #        {'list': [{'call': ['awkward0', 'numpy', 'frombuffer'],
     #           'args': [{'read': '9'}, {'dtype': 'float64'}, {'json': 4, 'id': 10}],
     #           'id': 9},
-    #          {'call': ['awkward', 'JaggedArray', 'fromcounts'],
-    #           'args': [{'call': ['awkward', 'numpy', 'frombuffer'],
+    #          {'call': ['awkward0', 'JaggedArray', 'fromcounts'],
+    #           'args': [{'call': ['awkward0', 'numpy', 'frombuffer'],
     #             'args': [{'read': '12'},
     #              {'dtype': 'int64'},
     #              {'json': 1, 'id': 13}],
     #             'id': 12},
-    #            {'call': ['awkward', 'numpy', 'frombuffer'],
+    #            {'call': ['awkward0', 'numpy', 'frombuffer'],
     #             'args': [{'read': '14'}, {'dtype': 'float64'}, {'ref': 13}],
     #             'id': 14}],
     #           'id': 11},
-    #          {'call': ['awkward', 'Table', 'frompairs'],
+    #          {'call': ['awkward0', 'Table', 'frompairs'],
     #           'args': [{'pairs': [['x',
-    #               {'call': ['awkward', 'numpy', 'frombuffer'],
+    #               {'call': ['awkward0', 'numpy', 'frombuffer'],
     #                'args': [{'read': '16'},
     #                 {'dtype': 'int64'},
     #                 {'json': 2, 'id': 17}],
     #                'id': 16}],
     #              ['y',
-    #               {'call': ['awkward', 'Table', 'frompairs'],
+    #               {'call': ['awkward0', 'Table', 'frompairs'],
     #                'args': [{'pairs': [['z',
-    #                    {'call': ['awkward', 'numpy', 'frombuffer'],
+    #                    {'call': ['awkward0', 'numpy', 'frombuffer'],
     #                     'args': [{'read': '19'}, {'dtype': 'int64'}, {'ref': 17}],
     #                     'id': 19}]]},
     #                 {'json': 0}],
@@ -3335,21 +3310,21 @@ The "schema.json" array is the JSON metadata, containing directives like ``{"cal
     #   'id': 0},
     #  'prefix': 'array/'}
 
-Without awkward-array, these objects can't be meaningfully read back from the HDF5 file.
+Without Awkward Array, these objects can't be meaningfully read back from the HDF5 file.
 
-* ``awkward.fromarrow(arrow, awkwardlib=None)``: convert an `Apache Arrow <https://arrow.apache.org>`__ formatted buffer to an awkward array (zero-copy). The ``awkwardlib`` parameter has the same meaning as above.
+* ``awkward0.fromarrow(arrow)``: convert an `Apache Arrow <https://arrow.apache.org>`__ formatted buffer to an Awkward Array (zero-copy).
 
-* ``awkward.toarrow(array)``: convert an awkward array to an Apache Arrow buffer, if possible (involving a data copy, but no Python loops).
+* ``awkward0.toarrow(array)``: convert an Awkward Array to an Apache Arrow buffer, if possible (involving a data copy, but no Python loops).
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
-                          [4.4, [5.5]],
-                          [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
-                         ])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    b = awkward0.fromiter([[1.1, 2.2, None, 3.3, None],
+                           [4.4, [5.5]],
+                           [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                          ])
 
-    awkward.toarrow(a)
+    awkward0.toarrow(a)
     # <pyarrow.lib.ListArray object at 0x78110846b1a8>
     # [
     #   [
@@ -3364,10 +3339,10 @@ Without awkward-array, these objects can't be meaningfully read back from the HD
     #   ]
     # ]
 
-    awkward.fromarrow(awkward.toarrow(a))
+    awkward0.fromarrow(awkward0.toarrow(a))
     # <JaggedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78110846d550>
 
-    awkward.toarrow(b)
+    awkward0.toarrow(b)
     # <pyarrow.lib.ListArray object at 0x78110846b6d0>
     # [
     #   -- is_valid: all not null
@@ -3488,10 +3463,10 @@ Without awkward-array, these objects can't be meaningfully read back from the HD
     #         ]
     # ]
 
-    awkward.fromarrow(awkward.toarrow(b))
+    awkward0.fromarrow(awkward0.toarrow(b))
     # <JaggedArray [[1.1 2.2 <Row 1> 3.3 <Row 1>] [4.4 [5.5]] [<Row 0> <Row 1> <Row 1>]] at 0x78110846de48>
 
-Unlike HDF5, Arrow is capable of columnar jagged arrays, nullable values, nested structures, etc. If you save an awkward array in Arrow format, someone else can read it without the awkward-array library. There are a few awkward array classes that don't have an Arrow equivalent, though. Below is a list of all translations.
+Unlike HDF5, Arrow is capable of columnar jagged arrays, nullable values, nested structures, etc. If you save an Awkward Array in Arrow format, someone else can read it without the Awkward Array library. There are a few Awkward Array classes that don't have an Arrow equivalent, though. Below is a list of all translations.
 
 * Numpy array → Arrow `BooleanArray <https://arrow.apache.org/docs/python/generated/pyarrow.BooleanArray.html>`__, `IntegerArray <https://arrow.apache.org/docs/python/generated/pyarrow.IntegerArray.html>`__, or `FloatingPointArray <https://arrow.apache.org/docs/python/generated/pyarrow.FloatingPointArray.html>`__.
 * ``JaggedArray`` → Arrow `ListArray <https://arrow.apache.org/docs/python/generated/pyarrow.ListArray.html>`__.
@@ -3508,27 +3483,27 @@ Unlike HDF5, Arrow is capable of columnar jagged arrays, nullable values, nested
 
 Since Arrow is an in-memory format, both ``toarrow`` and ``fromarrow`` are side-effect-free functions with a return value. Functions that write to files have a side-effect (the state of your disk changing) and no return value. Once you've made your Arrow buffer, you have to figure out what to do with it. (You may want to `write it to a stream <https://arrow.apache.org/docs/python/ipc.html>`__ for interprocess communication.)
 
-* ``awkward.fromparquet(where, awkwardlib=None)``: reads from a Parquet file (at filename/URI ``where``) into an awkward array, through pyarrow. The ``awkwardlib`` parameter has the same meaning as above.
+* ``awkward0.fromparquet(where)``: reads from a Parquet file (at filename/URI ``where``) into an Awkward Array, through pyarrow.
 
-* ``awkward.toparquet(where, array, schema=None)``: writes an awkward array to a Parquet file (at filename/URI ``where``), through pyarrow. The Parquet ``schema`` may be inferred from the awkward array or explicitly specified.
+* ``awkward0.toparquet(where, array, schema=None)``: writes an Awkward Array to a Parquet file (at filename/URI ``where``), through pyarrow. The Parquet ``schema`` may be inferred from the Awkward Array or explicitly specified.
 
-Like Arrow and unlike HDF5, Parquet natively stores complex data structures in a columnar format and doesn't need to be wrapped by an interpretation layer like ``awkward.hdf5``. Like HDF5 and unlike Arrow, Parquet is a file format, intended for storage.
+Like Arrow and unlike HDF5, Parquet natively stores complex data structures in a columnar format and doesn't need to be wrapped by an interpretation layer like ``awkward0.hdf5``. Like HDF5 and unlike Arrow, Parquet is a file format, intended for storage.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    b = awkward.fromiter([[1.1, 2.2, None, 3.3, None],
-                          [4.4, [5.5]],
-                          [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
-                         ])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    b = awkward0.fromiter([[1.1, 2.2, None, 3.3, None],
+                           [4.4, [5.5]],
+                           [{"x": 6, "y": {"z": 7}}, None, {"x": 8, "y": {"z": 9}}]
+                          ])
 
-    awkward.toparquet("dataset.parquet", a)
+    awkward0.toparquet("dataset.parquet", a)
 
-    a2 = awkward.fromparquet("dataset.parquet")
+    a2 = awkward0.fromparquet("dataset.parquet")
     a2
     # <ChunkedArray [[1.1 2.2 3.3] [] [4.4 5.5]] at 0x78110846dc50>
 
-Notice that we get a ``ChunkedArray`` back. This is because ``awkward.fromparquet`` is lazy-loading the Parquet file, which might be very large (not in this case, obviously). It's actually a ``ChunkedArray`` (one `row group <https://parquet.apache.org/documentation/latest/#unit-of-parallelization>`__ per chunk) of ``VirtualArrays``, and each ``VirtualArray`` is read when it is accessed (for instance, to print it above).
+Notice that we get a ``ChunkedArray`` back. This is because ``awkward0.fromparquet`` is lazy-loading the Parquet file, which might be very large (not in this case, obviously). It's actually a ``ChunkedArray`` (one `row group <https://parquet.apache.org/documentation/latest/#unit-of-parallelization>`__ per chunk) of ``VirtualArrays``, and each ``VirtualArray`` is read when it is accessed (for instance, to print it above).
 
 .. code-block:: python3
 
@@ -3548,7 +3523,7 @@ The next layer of new structure is that the jagged array is bit-masked. Even tho
     a2.layout
     #  layout
     # [           ()] ChunkedArray(chunks=[layout[0]], chunksizes=[3])
-    # [            0]   VirtualArray(generator=<awkward.arrow._ParquetFile object at 0x78110846df98>, args=(0, ''), kwargs={}, array=layout[0, 0])
+    # [            0]   VirtualArray(generator=<awkward0.arrow._ParquetFile object at 0x78110846df98>, args=(0, ''), kwargs={}, array=layout[0, 0])
     # [         0, 0]     BitMaskedArray(mask=layout[0, 0, 0], content=layout[0, 0, 1], maskedwhen=False, lsborder=True)
     # [      0, 0, 0]       ndarray(shape=1, dtype=dtype('uint8'))
     # [      0, 0, 1]       JaggedArray(starts=layout[0, 0, 1, 0], stops=layout[0, 0, 1, 1], content=layout[0, 0, 1, 2])
@@ -3563,18 +3538,18 @@ Fewer types can be written to Parquet files than Arrow buffers, since pyarrow do
 .. code-block:: python3
 
     try:
-        awkward.toparquet("dataset2.parquet", b)
+        awkward0.toparquet("dataset2.parquet", b)
     except Exception as err:
         print(type(err), str(err))
     # <class 'pyarrow.lib.ArrowNotImplementedError'> Unhandled type for Arrow to Parquet schema conversion: union[dense]<0: double=0, 1: list<item: double>=1, 2: struct<x: int64, y: struct<z: int64>>=2>
 
-* ``awkward.topandas(array, flatten=False)``: convert the array into a Pandas DataFrame (if tabular) or a Pandas Series (otherwise). If ``flatten=False``, wrap the awkward arrays as a new Pandas extension type (not fully implemented). If ``flatten=True``, convert the jaggedness and nested tables into row and column ``pandas.MultiIndex`` without introducing any new types (not always possible).
+* ``awkward0.topandas(array, flatten=False)``: convert the array into a Pandas DataFrame (if tabular) or a Pandas Series (otherwise). If ``flatten=False``, wrap the Awkward Arrays as a new Pandas extension type (not fully implemented). If ``flatten=True``, convert the jaggedness and nested tables into row and column ``pandas.MultiIndex`` without introducing any new types (not always possible).
 
 .. code-block:: python3
 
-    a = awkward.Table(x=awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]]),
-                      y=awkward.fromiter([100, 200, 300, 400]))
-    df = awkward.topandas(a)
+    a = awkward0.Table(x=awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5], [6.6, 7.7, 8.8, 9.9]]),
+                       y=awkward0.fromiter([100, 200, 300, 400]))
+    df = awkward0.topandas(a)
     df
 
 .. raw:: html
@@ -3618,9 +3593,9 @@ Fewer types can be written to Parquet files than Arrow buffers, since pyarrow do
     # 1                   []
     # 2            [4.4 5.5]
     # 3    [6.6 7.7 8.8 9.9]
-    # Name: x, dtype: awkward
+    # Name: x, dtype: awkward0
 
-Note that the ``dtype`` is ``awkward``. The array has not been converted into Numpy ``dtype=object`` (which would imply a performance loss); it has been wrapped as a container that Pandas recognizes. You can get the awkward array back the same way you would a Numpy array:
+Note that the ``dtype`` is ``awkward0``. The array has not been converted into Numpy ``dtype=object`` (which would imply a performance loss); it has been wrapped as a container that Pandas recognizes. You can get the Awkward Array back the same way you would a Numpy array:
 
 .. code-block:: python3
 
@@ -3629,7 +3604,7 @@ Note that the ``dtype`` is ``awkward``. The array has not been converted into Nu
 
 (``JaggedSeries`` is a thin wrapper on ``JaggedArray``; they behave the same way.)
 
-The value of this is that awkward slice semantics can be applied to data in Pandas.
+The value of this is that Awkward slice semantics can be applied to data in Pandas.
 
 .. code-block:: python3
 
@@ -3670,17 +3645,17 @@ The value of this is that awkward slice semantics can be applied to data in Pand
     # 0        [1.1 2.2 3.3]
     # 2            [4.4 5.5]
     # 3    [6.6 7.7 8.8 9.9]
-    # Name: x, dtype: awkward
+    # Name: x, dtype: awkward0
 
 However, Pandas has a (limited) way of handling jaggedness and nested tables, with ``pandas.MultiIndex`` rows and columns, respectively.
 
 .. code-block:: python3
 
     # Nested tables become MultiIndex-valued column names.
-    array = awkward.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
-                              {"a": {"b": 4, "c": {"d": [5, 5.1]}}, "e": 6},
-                              {"a": {"b": 7, "c": {"d": [8, 8.1, 8.2]}}, "e": 9}])
-    df = awkward.topandas(array, flatten=True)
+    array = awkward0.fromiter([{"a": {"b": 1, "c": {"d": [2]}}, "e": 3},
+                               {"a": {"b": 4, "c": {"d": [5, 5.1]}}, "e": 6},
+                               {"a": {"b": 7, "c": {"d": [8, 8.1, 8.2]}}, "e": 9}])
+    df = awkward0.topandas(array, flatten=True)
     df
 
 .. raw:: html
@@ -3754,10 +3729,10 @@ However, Pandas has a (limited) way of handling jaggedness and nested tables, wi
 .. code-block:: python3
 
     # Jagged arrays become MultiIndex-valued rows (index).
-    array = awkward.fromiter([{"a": 1, "b": [[2.2, 3.3, 4.4], [], [5.5, 6.6]]},
-                              {"a": 10, "b": [[1.1], [2.2, 3.3], [], [4.4]]},
-                              {"a": 100, "b": [[], [9.9]]}])
-    df = awkward.topandas(array, flatten=True)
+    array = awkward0.fromiter([{"a": 1, "b": [[2.2, 3.3, 4.4], [], [5.5, 6.6]]},
+                               {"a": 10, "b": [[1.1], [2.2, 3.3], [], [4.4]]},
+                               {"a": 100, "b": [[], [9.9]]}])
+    df = awkward0.topandas(array, flatten=True)
     df
 
 .. raw:: html
@@ -4052,7 +4027,7 @@ It is also possible to get `Pandas Series and DataFrames through Arrow <https://
 
 .. code-block:: python3
 
-    df = awkward.toarrow(array).to_pandas()
+    df = awkward0.toarrow(array).to_pandas()
     df
 
 .. raw:: html
@@ -4101,12 +4076,12 @@ High-level types
 
 The high-level type of an array describes its characteristics in terms of what it *represents*, a *logical* view of the data. By contrast, the layouts (below) describe the nested arrays themselves, a *physical* view of the data.
 
-The logical view of Numpy arrays is described in terms of ``shape`` and ``dtype``. The awkward type of a Numpy array is presented a little differently.
+The logical view of Numpy arrays is described in terms of ``shape`` and ``dtype``. The Awkward type of a Numpy array is presented a little differently.
 
 .. code-block:: python3
 
     a = numpy.array([[1.1, 2.2], [3.3, 4.4], [5.5, 6.6]])
-    t = awkward.type.fromarray(a)
+    t = awkward0.type.fromarray(a)
     t
     # ArrayType(3, 2, dtype('float64'))
 
@@ -4150,7 +4125,7 @@ The reason high-level types are expressed like this, instead of Numpy ``shape`` 
 
 .. code-block:: python3
 
-    a = awkward.fromiter([{"x": 1, "y": []}, {"x": 2, "y": [1.1, 2.2]}, {"x": 3, "y": [1.1, 2.2, 3.3]}])
+    a = awkward0.fromiter([{"x": 1, "y": []}, {"x": 2, "y": [1.1, 2.2]}, {"x": 3, "y": [1.1, 2.2, 3.3]}])
     print(a.type)
     # [0, 3) -> 'x' -> int64
     #           'y' -> [0, inf) -> float64
@@ -4163,8 +4138,8 @@ Fixed-length arrays inside of ``JaggedArrays`` or ``Tables`` are presented with 
 
 .. code-block:: python3
 
-    a = awkward.Table(x=[[1.1, 2.2], [3.3, 4.4], [5.5, 6.6]],
-                      y=awkward.fromiter([[1, 2, 3], [], [4, 5]]))
+    a = awkward0.Table(x=[[1.1, 2.2], [3.3, 4.4], [5.5, 6.6]],
+                       y=awkward0.fromiter([[1, 2, 3], [], [4, 5]]))
     print(a.type)
     # [0, 3) -> 'x' -> [0, 2) -> float64
     #           'y' -> [0, inf) -> int64
@@ -4173,12 +4148,12 @@ Whereas each value of a ``Table`` row (`product type <https://en.wikipedia.org/w
 
 .. code-block:: python3
 
-    a = awkward.fromiter([{"x": 1, "y": "one"}, {"x": 2, "y": "two"}, {"x": 3, "y": "three"}])
+    a = awkward0.fromiter([{"x": 1, "y": "one"}, {"x": 2, "y": "two"}, {"x": 3, "y": "three"}])
     print(a.type)
     # [0, 3) -> 'x' -> int64
     #           'y' -> <class 'str'>
 
-    a = awkward.fromiter([1, 2, 3, "four", "five", "six"])
+    a = awkward0.fromiter([1, 2, 3, "four", "five", "six"])
     print(a.type)
     # [0, 6) -> (int64         |
     #            <class 'str'> )
@@ -4187,7 +4162,7 @@ The parenthesis is to keep ``Table`` fields from being mixed up with ``UnionArra
 
 .. code-block:: python3
 
-    a = awkward.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": "three"}, {"x": 4, "y": "four"}])
+    a = awkward0.fromiter([{"x": 1, "y": 1.1}, {"x": 2, "y": 2.2}, {"x": 3, "y": "three"}, {"x": 4, "y": "four"}])
     print(a.type)
     # [0, 4) -> 'x' -> int64
     #           'y' -> (float64       |
@@ -4197,7 +4172,7 @@ As in mathematics, products and the adjacency operator take precedence over sums
 
 .. code-block:: python3
 
-    a = awkward.fromiter([1, 2, 3, {"x": 4.4, "y": "four"}, {"x": 5.5, "y": "five"}, {"x": 6.6, "y": "six"}])
+    a = awkward0.fromiter([1, 2, 3, {"x": 4.4, "y": "four"}, {"x": 5.5, "y": "five"}, {"x": 6.6, "y": "six"}])
     print(a.type)
     # [0, 6) -> (int64                |
     #            'x' -> float64
@@ -4207,25 +4182,25 @@ Missing data, represented by ``MaskedArrays``, ``BitMaskedArrays``, or ``Indexed
 
 .. code-block:: python3
 
-    a = awkward.fromiter([1, 2, 3, None, None, 4, 5])
+    a = awkward0.fromiter([1, 2, 3, None, None, 4, 5])
     print(a.type)
     # [0, 7) -> ?(int64)
 
     # Inner arrays could be missing values.
-    a = awkward.fromiter([[1.1, 2.2, 3.3], None, [4.4, 5.5]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], None, [4.4, 5.5]])
     print(a.type)
     # [0, 3) -> ?([0, inf) -> float64)
 
     # Numbers in those arrays could be missing values.
-    a = awkward.fromiter([[1.1, 2.2, None], [], [4.4, 5.5]])
+    a = awkward0.fromiter([[1.1, 2.2, None], [], [4.4, 5.5]])
     print(a.type)
     # [0, 3) -> [0, inf) -> ?(float64)
 
-Cross-references and cyclic references are expressed in awkward type objects by creating the same graph structure among the type objects as the arrays. Thus,
+Cross-references and cyclic references are expressed in Awkward type objects by creating the same graph structure among the type objects as the arrays. Thus,
 
 .. code-block:: python3
 
-    tree = awkward.fromiter([
+    tree = awkward0.fromiter([
         {"value": 1.23, "left":    1, "right":    2},     # node 0
         {"value": 3.21, "left":    3, "right":    4},     # node 1
         {"value": 9.99, "left":    5, "right":    6},     # node 2
@@ -4240,8 +4215,8 @@ Cross-references and cyclic references are expressed in awkward type objects by 
     right = tree.contents["right"].content
     left[(left < 0) | (left > 8)] = 0         # satisfy overzealous validity checks
     right[(right < 0) | (right > 8)] = 0
-    tree.contents["left"].content = awkward.IndexedArray(left, tree)
-    tree.contents["right"].content = awkward.IndexedArray(right, tree)
+    tree.contents["left"].content = awkward0.IndexedArray(left, tree)
+    tree.contents["right"].content = awkward0.IndexedArray(right, tree)
 
     tree[0].tolist()
     # {'left': {'left': {'left': {'left': None, 'right': None, 'value': 9.0},
@@ -4267,7 +4242,7 @@ In the print-out, labels (``T0 :=``, ``T1 :=``, ``T2 :=``) are inserted to indic
     #           'right' -> T2
     #           'value' -> float64
 
-The ``ObjectArray`` class turns awkward array structures into Python objects on demand. From an analysis point of view, the elements of the array *are* Python objects, and that is reflected in the type.
+The ``ObjectArray`` class turns Awkward Array structures into Python objects on demand. From an analysis point of view, the elements of the array *are* Python objects, and that is reflected in the type.
 
 .. code-block:: python3
 
@@ -4277,7 +4252,7 @@ The ``ObjectArray`` class turns awkward array structures into Python objects on 
         def __repr__(self):
             return "Point({0}, {1})".format(self.x, self.y)
 
-    a = awkward.fromiter([Point(0, 0), Point(3, 2), Point(1, 1), Point(2, 4), Point(0, 0)])
+    a = awkward0.fromiter([Point(0, 0), Point(3, 2), Point(1, 1), Point(2, 4), Point(0, 0)])
     a
     # <ObjectArray [Point(0, 0) Point(3, 2) Point(1, 1) Point(2, 4) Point(0, 0)] at 0x781106089390>
 
@@ -4302,7 +4277,7 @@ A ``Layout`` object is a mapping from position tuples to ``LayoutNodes``. The sc
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
+    a = awkward0.fromiter([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
     t = a.layout
     t
     #  layout
@@ -4317,7 +4292,7 @@ A ``Layout`` object is a mapping from position tuples to ``LayoutNodes``. The sc
     t[2].array
     # array([1.1, 2.2, 3.3, 4.4, 5.5])
 
-    a = awkward.fromiter([[[1.1, 2.2], [3.3]], [], [[4.4, 5.5]]])
+    a = awkward0.fromiter([[[1.1, 2.2], [3.3]], [], [[4.4, 5.5]]])
     t = a.layout
     t
     #  layout
@@ -4338,15 +4313,15 @@ A ``Layout`` object is a mapping from position tuples to ``LayoutNodes``. The sc
     t[2, 2].array
     # array([1.1, 2.2, 3.3, 4.4, 5.5])
 
-Classes like ``IndexedArray``, ``SparseArray``, ``ChunkedArray``, ``AppendableArray``, and ``VirtualArray`` don't change the high-level type of an array, but they do change the layout. Consider, for instance, an array made with ``awkward.fromiter`` and an array read by ``awkward.fromparquet``.
+Classes like ``IndexedArray``, ``SparseArray``, ``ChunkedArray``, ``AppendableArray``, and ``VirtualArray`` don't change the high-level type of an array, but they do change the layout. Consider, for instance, an array made with ``awkward0.fromiter`` and an array read by ``awkward0.fromparquet``.
 
 .. code-block:: python3
 
-    a = awkward.fromiter([[1.1, 2.2, None, 3.3], [], None, [4.4, 5.5]])
+    a = awkward0.fromiter([[1.1, 2.2, None, 3.3], [], None, [4.4, 5.5]])
 
-    awkward.toparquet("tmp.parquet", a)
+    awkward0.toparquet("tmp.parquet", a)
 
-    b = awkward.fromparquet("tmp.parquet")
+    b = awkward0.fromparquet("tmp.parquet")
 
 At first, it terminates at ``VirtualArray`` because the data haven't been read—we don't know what arrays are associated with it.
 
@@ -4355,7 +4330,7 @@ At first, it terminates at ``VirtualArray`` because the data haven't been read�
     b.layout
     #  layout
     # [    ()] ChunkedArray(chunks=[layout[0]], chunksizes=[4])
-    # [     0]   VirtualArray(generator=<awkward.arrow._ParquetFile object at 0x781106089668>, args=(0, ''), kwargs={})
+    # [     0]   VirtualArray(generator=<awkward0.arrow._ParquetFile object at 0x781106089668>, args=(0, ''), kwargs={})
 
 But after reading,
 
@@ -4371,7 +4346,7 @@ The layout shows that it has more structure than ``a``.
     b.layout
     #  layout
     # [           ()] ChunkedArray(chunks=[layout[0]], chunksizes=[4])
-    # [            0]   VirtualArray(generator=<awkward.arrow._ParquetFile object at 0x781106089668>, args=(0, ''), kwargs={}, array=layout[0, 0])
+    # [            0]   VirtualArray(generator=<awkward0.arrow._ParquetFile object at 0x781106089668>, args=(0, ''), kwargs={}, array=layout[0, 0])
     # [         0, 0]     BitMaskedArray(mask=layout[0, 0, 0], content=layout[0, 0, 1], maskedwhen=False, lsborder=True)
     # [      0, 0, 0]       ndarray(shape=1, dtype=dtype('uint8'))
     # [      0, 0, 1]       JaggedArray(starts=layout[0, 0, 1, 0], stops=layout[0, 0, 1, 1], content=layout[0, 0, 1, 2])
@@ -4428,4 +4403,4 @@ Acknowledgements
 
 Support for this work was provided by NSF cooperative agreement OAC-1836650 (IRIS-HEP), grant OAC-1450377 (DIANA/HEP) and PHY-1520942 (US-CMS LHC Ops).
 
-Thanks especially to the gracious help of `awkward-array contributors <https://github.com/scikit-hep/awkward-array/graphs/contributors>`__!
+Thanks especially to the gracious help of `Awkward Array contributors <https://github.com/scikit-hep/awkward-0.x/graphs/contributors>`__!

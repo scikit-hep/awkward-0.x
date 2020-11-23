@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-array/blob/master/LICENSE
+# BSD 3-Clause License; see https://github.com/scikit-hep/awkward-0.x/blob/master/LICENSE
 
 import unittest
 
 import numpy
 
-from awkward import *
-from awkward.type import *
+from awkward0 import *
+from awkward0.type import *
 
 class Test(unittest.TestCase):
     def runTest(self):
@@ -36,9 +36,9 @@ class Test(unittest.TestCase):
         assert a.pad(3).tolist() == [[None, None, None], [None, None, None]]
 
     def test_issue_208(self):
-        a = awkward.MaskedArray([True, False, False, True, False, True], awkward.fromiter([[1, 2, 3], [4, 5], [6], [7, 8], [10, 11, 12], [999]]))
+        a = awkward0.MaskedArray([True, False, False, True, False, True], awkward0.fromiter([[1, 2, 3], [4, 5], [6], [7, 8], [10, 11, 12], [999]]))
         assert a.flatten().tolist() == [None, 4, 5, 6, None, 10, 11, 12, None]
         assert (a + 100).flatten().tolist() == [None, 104, 105, 106, None, 110, 111, 112, None]
-        a = awkward.MaskedArray([True, False, False, True, False, True], [1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
+        a = awkward0.MaskedArray([True, False, False, True, False, True], [1.1, 2.2, 3.3, 4.4, 5.5, 6.6])
         assert a.flatten().tolist() == [None, 2.2, 3.3, None, 5.5, None]
         assert (a + 100).flatten().tolist() == [None, 102.2, 103.3, None, 105.5, None]
