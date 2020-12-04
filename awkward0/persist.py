@@ -39,6 +39,14 @@ whitelist = [
         ["awkward0.util", "frombuffer"],
         ["awkward0.persist"],
         ["awkward0.arrow", "_ParquetFile", "fromjson"],
+        ["awkward", "*Array"],
+        ["awkward", "Table"],
+        ["awkward", "numpy", "frombuffer"],
+        ["awkward.util", "frombuffer"],
+        ["awkward.persist"],
+        ["awkward.arrow", "_ParquetFile", "fromjson"],
+        ["uproot3_methods.classes.*"],
+        ["uproot3_methods.profiles.*"],
         ["uproot_methods.classes.*"],
         ["uproot_methods.profiles.*"],
         ["uproot.tree", "_LazyFiles"],
@@ -63,6 +71,8 @@ def spec2function(obj, whitelist=whitelist):
                 obj = [awkwardlib] + obj[1:]
             elif obj[0] == "awkward":
                 obj = [awkwardlib] + obj[1:]
+            if obj[0].startswith("uproot_methods"):
+                obj = ["uproot3_methods" + obj[0][14:]] + obj[1:]
             gen, genname = importlib.import_module(obj[0]), obj[1:]
             if not isinstance(gen, types.ModuleType):
                 raise TypeError("first item of a function description must be a module")
@@ -501,8 +511,8 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None, seen=None):
         schema = schema.decode("ascii")
     schema = json.loads(schema)
 
-    if "awkward0" not in schema:
-        raise ValueError("JSON object is not an Awkward Array schema (missing 'awkward0' field)")
+    if "awkward" not in schema:
+        raise ValueError("JSON object is not an Awkward Array schema (missing 'awkward' field)")
 
     prefix = schema.get("prefix", "")
     if seen is None:
