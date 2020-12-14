@@ -20,7 +20,7 @@ In Python:
     >>> new_style_array = ak.from_awkward0(old_style_array)
     >>> old_style_array = ak.to_awkward0(new_style_array)
 """,
-    DeprecationWarning
+    FutureWarning
 )
 
 from awkward0.array.base import AwkwardArray
