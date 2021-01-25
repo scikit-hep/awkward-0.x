@@ -511,8 +511,8 @@ def deserialize(storage, name="", whitelist=whitelist, cache=None, seen=None):
         schema = schema.decode("ascii")
     schema = json.loads(schema)
 
-    if "awkward" not in schema:
-        raise ValueError("JSON object is not an Awkward Array schema (missing 'awkward' field)")
+    if "awkward" not in schema and "awkward0" not in schema:
+        raise ValueError("JSON object is not an Awkward Array schema (missing 'awkward' or 'awkward0' field). schema is: {}".format(schema))
 
     prefix = schema.get("prefix", "")
     if seen is None:
