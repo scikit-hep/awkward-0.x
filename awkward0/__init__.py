@@ -8,21 +8,6 @@ import numpy
 if distutils.version.LooseVersion(numpy.__version__) < distutils.version.LooseVersion("1.13.1"):
     raise ImportError("Numpy 1.13.1 or later required")
 
-import warnings
-warnings.warn(
-    """Consider switching from 'awkward0' to 'awkward', since the new interface became the default in 2020.
-
-    pip install -U awkward
-
-In Python:
-
-    >>> import awkward as ak
-    >>> new_style_array = ak.from_awkward0(old_style_array)
-    >>> old_style_array = ak.to_awkward0(new_style_array)
-""",
-    FutureWarning
-)
-
 from awkward0.array.base import AwkwardArray
 from awkward0.array.chunked import ChunkedArray, AppendableArray
 from awkward0.array.indexed import IndexedArray, SparseArray
