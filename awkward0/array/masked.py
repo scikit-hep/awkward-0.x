@@ -94,7 +94,7 @@ class MaskedArray(awkward0.array.base.AwkwardArrayWithContent):
         if self.check_prop_valid:
             if len(value.shape) != 1:
                 raise ValueError("mask must have 1-dimensional shape")
-        if not issubclass(value.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+        if not issubclass(value.dtype.type, (bool, self.numpy.bool_)):
             value = (value != 0)
         self._mask = value
         self._isvalid = False
@@ -344,7 +344,7 @@ class MaskedArray(awkward0.array.base.AwkwardArrayWithContent):
             return out
 
         if isinstance(self._content, self.numpy.ndarray):
-            if dtype is None and issubclass(self._content.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+            if dtype is None and issubclass(self._content.dtype.type, (bool, self.numpy.bool_)):
                 dtype = self.numpy.dtype(type(identity))
             if ufunc is None:
                 content = self.numpy.zeros(self._content.shape, dtype=self.numpy.float32)
@@ -370,12 +370,12 @@ class MaskedArray(awkward0.array.base.AwkwardArrayWithContent):
             dtype = content.dtype
 
             if identity == self.numpy.inf:
-                if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                if issubclass(dtype.type, (bool, self.numpy.bool_)):
                     identity = True
                 elif self._util_isintegertype(dtype.type):
                     identity = self.numpy.iinfo(dtype.type).max
             elif identity == -self.numpy.inf:
-                if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                if issubclass(dtype.type, (bool, self.numpy.bool_)):
                     identity = False
                 elif self._util_isintegertype(dtype.type):
                     identity = self.numpy.iinfo(dtype.type).min
@@ -503,7 +503,7 @@ class BitMaskedArray(MaskedArray):
         boolmask = cls._util_toarray(boolmask, cls.MaskedArray.fget(None).MASKTYPE, cls.numpy.ndarray)
         if len(boolmask.shape) != 1:
             raise ValueError("boolmask must have 1-dimensional shape")
-        if not issubclass(boolmask.dtype.type, (cls.numpy.bool_, cls.numpy.bool)):
+        if not issubclass(boolmask.dtype.type, (bool, cls.numpy.bool_)):
             boolmask = (boolmask != 0)
 
         if lsborder:
@@ -627,7 +627,7 @@ class BitMaskedArray(MaskedArray):
                 self.numpy.bitwise_and(bitmasks, self._mask[byteposes], bitmasks)
                 return bitmasks.astype(self.numpy.bool_)
 
-            elif len(where.shape) == 1 and issubclass(where.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+            elif len(where.shape) == 1 and issubclass(where.dtype.type, (bool, self.numpy.bool_)):
                 # scales with the size of the mask anyway, so go ahead and unpack the whole mask
                 unpacked = self.numpy.unpackbits(self._mask).view(self.MASKTYPE)
 
@@ -868,7 +868,7 @@ class IndexedMaskedArray(MaskedArray):
             return out
 
         if isinstance(self._content, self.numpy.ndarray):
-            if dtype is None and issubclass(self._content.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+            if dtype is None and issubclass(self._content.dtype.type, (bool, self.numpy.bool_)):
                 dtype = self.numpy.dtype(type(identity))
             if dtype is None:
                 content = self._content
@@ -878,13 +878,13 @@ class IndexedMaskedArray(MaskedArray):
             content = self._content._prepare(ufunc, identity, dtype)
 
         if identity == self.numpy.inf:
-            if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+            if issubclass(dtype.type, (bool, self.numpy.bool_)):
                 identity = True
             elif self._util_isintegertype(dtype.type):
                 identity = self.numpy.iinfo(dtype.type).max
 
         elif identity == -self.numpy.inf:
-            if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+            if issubclass(dtype.type, (bool, self.numpy.bool_)):
                 identity = False
             elif self._util_isintegertype(dtype.type):
                 identity = self.numpy.iinfo(dtype.type).min

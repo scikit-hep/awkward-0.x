@@ -375,11 +375,11 @@ class AwkwardArray(awkward0.util.NDArrayOperatorsMixin):
 
     @classmethod
     def _util_isinteger(cls, x):
-        return isinstance(x, (numbers.Integral, cls.numpy.integer)) and not isinstance(x, (bool, cls.numpy.bool_, cls.numpy.bool))
+        return isinstance(x, (numbers.Integral, cls.numpy.integer)) and not isinstance(x, (bool, cls.numpy.bool_))
 
     @classmethod
     def _util_isintegertype(cls, x):
-        return issubclass(x, cls.numpy.integer) and not issubclass(x, (cls.numpy.bool_, cls.numpy.bool))
+        return issubclass(x, cls.numpy.integer) and not issubclass(x, (bool, cls.numpy.bool_))
 
     @classmethod
     def _util_toarray(cls, value, defaultdtype, passthrough=None):
@@ -621,7 +621,7 @@ class AwkwardArray(awkward0.util.NDArrayOperatorsMixin):
             return False
         elif isinstance(where, (cls.numpy.ndarray, AwkwardArray)) and issubclass(where.dtype.type, (numpy.str, numpy.str_)):
             return True
-        elif isinstance(where, (cls.numpy.ndarray, AwkwardArray)) and issubclass(where.dtype.type, (numpy.object, numpy.object_)) and not issubclass(where.dtype.type, (numpy.bool, numpy.bool_)):
+        elif isinstance(where, (cls.numpy.ndarray, AwkwardArray)) and issubclass(where.dtype.type, (numpy.object, numpy.object_)) and not issubclass(where.dtype.type, (bool, numpy.bool_)):
             return len(where) > 0 and all(isinstance(x, awkward0.util.string) for x in where)
         elif isinstance(where, (cls.numpy.ndarray, AwkwardArray)):
             return False

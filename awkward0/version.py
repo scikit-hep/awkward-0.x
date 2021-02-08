@@ -4,7 +4,7 @@
 
 import re
 
-__version__ = "0.15.4"
+__version__ = "0.15.5"
 version = __version__
 version_info = tuple(re.split(r"[-\.]", __version__))
 

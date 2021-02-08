@@ -24,7 +24,7 @@ import awkward0.type
 import awkward0.version
 
 compression = [
-        {"minsize": 8192, "types": [numpy.bool_, numpy.bool, numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
+        {"minsize": 8192, "types": [bool, numpy.bool_, numpy.integer], "contexts": "*", "pair": (zlib.compress, ("zlib", "decompress"))},
     ]
 
 whitelist = [
@@ -231,7 +231,7 @@ def jsonable(obj):
     elif isinstance(obj, str):
         return str(obj)
 
-    elif isinstance(obj, (bool, numpy.bool_, numpy.bool)):
+    elif isinstance(obj, (bool, numpy.bool_)):
         return bool(obj)      # policy: eliminate Numpy types
 
     elif isinstance(obj, (numbers.Integral, numpy.integer)):

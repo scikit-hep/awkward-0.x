@@ -205,7 +205,7 @@ class VirtualArray(awkward0.array.base.AwkwardArray):
     @persistvirtual.setter
     def persistvirtual(self, value):
         if self.check_prop_valid:
-            if not isinstance(value, (bool, self.numpy.bool_, self.numpy.bool)):
+            if not isinstance(value, (bool, self.numpy.bool_)):
                 raise TypeError("persistvirtual must be boolean")
         self._persistvirtual = bool(value)
 
@@ -454,7 +454,7 @@ class VirtualArray(awkward0.array.base.AwkwardArray):
     def _prepare(self, ufunc, identity, dtype):
         array = self.array
         if isinstance(array, self.numpy.ndarray):
-            if dtype is None and issubclass(array.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+            if dtype is None and issubclass(array.dtype.type, (bool, self.numpy.bool_)):
                 dtype = self.numpy.dtype(type(identity))
             if dtype is None:
                 return array

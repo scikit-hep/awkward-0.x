@@ -570,7 +570,7 @@ class SparseArray(awkward0.array.base.AwkwardArrayWithContent):
 
             return self.copy(length=length, index=index, content=content)[tail]
 
-        elif isinstance(head, SparseArray) and len(head.shape) == 1 and issubclass(head.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+        elif isinstance(head, SparseArray) and len(head.shape) == 1 and issubclass(head.dtype.type, (bool, self.numpy.bool_)):
             head._valid()
             if self._length != head._length:
                 raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(self._length, head._length))
@@ -595,7 +595,7 @@ class SparseArray(awkward0.array.base.AwkwardArrayWithContent):
 
         else:
             head = self._util_toarray(head, self.INDEXTYPE)
-            if len(head.shape) == 1 and issubclass(head.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+            if len(head.shape) == 1 and issubclass(head.dtype.type, (bool, self.numpy.bool_)):
                 if self._length != len(head):
                     raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(self._length, len(head)))
 

@@ -479,7 +479,7 @@ class ChunkedArray(awkward0.array.base.AwkwardArray):
                 else:
                     raise NotImplementedError
 
-            elif len(head.shape) == 1 and issubclass(head.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+            elif len(head.shape) == 1 and issubclass(head.dtype.type, (bool, self.numpy.bool_)):
                 if len(self) != len(head):
                     raise IndexError("boolean index did not match indexed array along dimension 0; dimension is {0} but corresponding boolean dimension is {1}".format(len(self), len(head)))
 
@@ -735,7 +735,7 @@ class ChunkedArray(awkward0.array.base.AwkwardArray):
             if self._chunksizes[chunkid] > 0:
                 this = chunk[:self._chunksizes[chunkid]]
                 if out is None:
-                    if dtype is None and issubclass(this.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                    if dtype is None and issubclass(this.dtype.type, (bool, self.numpy.bool_)):
                         dtype = self.numpy.dtype(type(identity))
                     if dtype is None:
                         dtype = this.dtype

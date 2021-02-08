@@ -163,7 +163,7 @@ class UnionArray(awkward0.array.base.AwkwardArray):
 
     @classmethod
     def uniondtype(cls, arrays):
-        if all(issubclass(x.dtype.type, (cls.numpy.bool_, cls.numpy.bool)) for x in arrays):
+        if all(issubclass(x.dtype.type, (bool, cls.numpy.bool_)) for x in arrays):
             return cls.numpy.dtype(cls.numpy.bool_)
 
         elif all(issubclass(x.dtype.type, (cls.numpy.int8)) for x in arrays):
@@ -501,7 +501,7 @@ class UnionArray(awkward0.array.base.AwkwardArray):
         return ufunc.reduce(prepared)
 
     def _prepare(self, ufunc, identity, dtype):
-        if dtype is None and issubclass(self.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+        if dtype is None and issubclass(self.dtype.type, (bool, self.numpy.bool_)):
             dtype = self.numpy.dtype(type(identity))
         if dtype is None:
             dtype = self.dtype

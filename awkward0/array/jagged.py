@@ -559,7 +559,7 @@ class JaggedArray(awkward0.array.base.AwkwardArrayWithContent):
 
                 return self.copy(starts=head._starts, stops=head._stops, content=self._content[indexes])
 
-            elif len(head.shape) == 1 and issubclass(head._content.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+            elif len(head.shape) == 1 and issubclass(head._content.dtype.type, (bool, self.numpy.bool_)):
                 try:
                     offsets = self.offsets
                     thyself = self
@@ -588,7 +588,7 @@ class JaggedArray(awkward0.array.base.AwkwardArrayWithContent):
 
                 return self.copy(starts=offsets[:-1].reshape(intheadsum.shape), stops=offsets[1:].reshape(intheadsum.shape), content=thyself._content[headcontent])
 
-            elif head.shape == self.shape and issubclass(head._content.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+            elif head.shape == self.shape and issubclass(head._content.dtype.type, (bool, self.numpy.bool_)):
                 index = self.localindex + self.starts
                 flatindex = index.flatten()[head.flatten()]
                 return type(self).fromcounts(head.sum(), self._content[flatindex])
@@ -747,7 +747,7 @@ class JaggedArray(awkward0.array.base.AwkwardArrayWithContent):
                         index += node._starts
                         node = node._content[index]
 
-                elif len(head.shape) == 1 and issubclass(head.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+                elif len(head.shape) == 1 and issubclass(head.dtype.type, (bool, self.numpy.bool_)):
                     if wasslice:
                         stack = []
                         for x in range(nslices):
@@ -826,7 +826,7 @@ class JaggedArray(awkward0.array.base.AwkwardArrayWithContent):
 
                 self._content[indexes] = what
 
-            elif issubclass(where._content.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+            elif issubclass(where._content.dtype.type, (bool, self.numpy.bool_)):
                 index = self.localindex + self.starts
                 flatindex = index.flatten()[where.flatten()]
                 self._content[flatindex] = what
@@ -982,7 +982,7 @@ class JaggedArray(awkward0.array.base.AwkwardArrayWithContent):
                 except TypeError:
                     pass
                 else:
-                    if "first" not in locals() or isinstance(first, (numbers.Number, self.numpy.bool_, self.numpy.bool, self.numpy.number)):
+                    if "first" not in locals() or isinstance(first, (numbers.Number, bool, self.numpy.bool_, self.numpy.number)):
                         inputs[i] = self.numpy.array(inputs[i], copy=False)
                     else:
                         inputs[i] = self.JaggedArray.fromiter(inputs[i])
@@ -1527,7 +1527,7 @@ class JaggedArray(awkward0.array.base.AwkwardArrayWithContent):
                 content = content.copy()
                 content[mask] = identity
 
-        if dtype is None and issubclass(content.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+        if dtype is None and issubclass(content.dtype.type, (bool, self.numpy.bool_)):
             dtype = self.numpy.dtype(type(identity))
         if dtype is None:
             dtype = content.dtype
@@ -1535,13 +1535,13 @@ class JaggedArray(awkward0.array.base.AwkwardArrayWithContent):
             content = content.astype(dtype)
 
         if identity == self.numpy.inf:
-            if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+            if issubclass(dtype.type, (bool, self.numpy.bool_)):
                 identity = True
             elif self._util_isintegertype(dtype.type):
                 identity = self.numpy.iinfo(dtype.type).max
 
         elif identity == -self.numpy.inf:
-            if issubclass(dtype.type, (self.numpy.bool_, self.numpy.bool)):
+            if issubclass(dtype.type, (bool, self.numpy.bool_)):
                 identity = False
             elif self._util_isintegertype(dtype.type):
                 identity = self.numpy.iinfo(dtype.type).min
@@ -1802,13 +1802,13 @@ class JaggedArray(awkward0.array.base.AwkwardArrayWithContent):
                     columns1[n] = x._content
                 elif isinstance(x, Iterable):
                     columns1[n] = first.tojagged(x)._content
-                elif isinstance(x, (numbers.Number, numpy.number, numpy.bool, numpy.bool_)):
+                elif isinstance(x, (numbers.Number, numpy.number, bool, numpy.bool_)):
                     columns1[n] = JaggedArray(first._starts, first._stops, numpy.full(first._stops.max(), columns1, dtype=type(columns1)))._content
                 else:
                     raise TypeError("unrecognized type for JaggedArray.zip: {0}".format(type(x)))
         elif isinstance(columns1, Iterable):
             columns1 = first.tojagged(columns1)._content
-        elif isinstance(columns1, (numbers.Number, numpy.number, numpy.bool, numpy.bool_)):
+        elif isinstance(columns1, (numbers.Number, numpy.number, bool, numpy.bool_)):
             columns1 = JaggedArray(first._starts, first._stops, numpy.full(first._stops.max(), columns1, dtype=type(columns1)))._content
         else:
             raise TypeError("unrecognized type for JaggedArray.zip: {0}".format(type(columns1)))
@@ -1819,7 +1819,7 @@ class JaggedArray(awkward0.array.base.AwkwardArrayWithContent):
                 columns2[i] = x._content
             elif not isinstance(x, dict) and isinstance(x, Iterable):
                 columns2[i] = first.tojagged(x)._content
-            elif isinstance(x, (numbers.Number, numpy.number, numpy.bool, numpy.bool_)):
+            elif isinstance(x, (numbers.Number, numpy.number, bool, numpy.bool_)):
                 columns2[i] = JaggedArray(first._starts, first._stops, numpy.full(first._stops.max(), x, dtype=type(x)))._content
             else:
                 raise TypeError("unrecognized type for JaggedArray.zip: {0}".format(type(x)))
@@ -1830,7 +1830,7 @@ class JaggedArray(awkward0.array.base.AwkwardArrayWithContent):
                 columns3[n] = x._content
             elif not isinstance(x, dict) and isinstance(x, Iterable):
                 columns3[n] = first.tojagged(x)._content
-            elif isinstance(x, (numbers.Number, numpy.number, numpy.bool, numpy.bool_)):
+            elif isinstance(x, (numbers.Number, numpy.number, bool, numpy.bool_)):
                 columns3[n] = JaggedArray(first._starts, first._stops, numpy.full(first._stops.max(), x, dtype=type(x)))._content
             else:
                 raise TypeError("unrecognized type for JaggedArray.zip: {0}".format(type(x)))

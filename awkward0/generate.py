@@ -19,7 +19,7 @@ def typeof(obj):
     if obj is None:
         return None
 
-    elif isinstance(obj, (bool, numpy.bool_, numpy.bool)):
+    elif isinstance(obj, (bool, numpy.bool_)):
         return BoolFillable
     elif isinstance(obj, (numbers.Number, awkward0.numpy.number)):
         return NumberFillable

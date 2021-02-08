@@ -541,7 +541,7 @@ class Table(awkward0.array.base.AwkwardArray):
                 else:
                     return self._view[head]
 
-            elif issubclass(head.dtype.type, (self.numpy.bool, self.numpy.bool_)):
+            elif issubclass(head.dtype.type, (bool, self.numpy.bool_)):
                 length = self._length()
                 if len(head) != length:
                     raise IndexError("boolean index of length {0} does not fit array of length {1}".format(len(head), length))
@@ -713,7 +713,7 @@ class Table(awkward0.array.base.AwkwardArray):
             out = None
             for x in newcolumns.values():
                 assert isinstance(x, self.numpy.ndarray)
-                assert issubclass(x.dtype.type, (self.numpy.bool_, self.numpy.bool))
+                assert issubclass(x.dtype.type, (bool, self.numpy.bool_))
                 if out is None:
                     out = x
                 else:
@@ -856,7 +856,7 @@ class Table(awkward0.array.base.AwkwardArray):
         out = self.copy(contents={})
         for n, x in self._contents.items():
             if isinstance(x, self.numpy.ndarray):
-                if dtype is None and issubclass(x.dtype.type, (self.numpy.bool_, self.numpy.bool)):
+                if dtype is None and issubclass(x.dtype.type, (bool, self.numpy.bool_)):
                     dtype = self.numpy.dtype(type(identity))
                 if dtype is not None:
                     x = x.astype(dtype)
